@@ -290,9 +290,9 @@ describe("Neon player routes (offline SQL adapter)", () => {
     assert.equal((await call(api, "/api/me/run-state", "GET", undefined, B)).status, 403);
   });
 
-  it("grants paid catalog resolve to content and cloud, not to another plan", async () => {
+  it("grants paid catalog resolve to content, not to another plan", async () => {
     const ref = { packageId: "official-world", revision: `sha256:${"ab".repeat(32)}`, questId: "q1" };
-    for (const [plan, entitled] of [["content", true], ["cloud", true], ["other", false]]) {
+    for (const [plan, entitled] of [["content", true], ["cloud", false], ["other", false]]) {
       const db = fakeDb();
       db.state.subscription = { status: "active", plan_slug: plan, period_end: "2099-01-01" };
       let seen = null;

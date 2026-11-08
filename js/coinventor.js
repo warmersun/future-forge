@@ -80,10 +80,10 @@ function noteAiUsage() {
 
 function cloudQuotaText(data) {
   const base = data?.message || data?.error || "Co-inventor unavailable";
-  const url = String(data?.subscribeUrl || "").trim();
+  const url = String(data?.topUpUrl || data?.subscribeUrl || "").trim();
   if (!url) return base;
   if (data.error !== "subscription_required" && data.error !== "quota_spent") return base;
-  return `${base}\n\n[Subscribe](${url})`;
+  return `${base}\n\n[Reset usage ($20)](${url})`;
 }
 
 export { hangupVoice };

@@ -164,6 +164,7 @@ import {
   listCollectedCards,
   upsertSubscription,
   getSubscription,
+  resetAiUsageTopUp,
   getPool,
 } from "../js/server/db.mjs";
 import {
@@ -178,7 +179,7 @@ import { renderCollectorCardShare, SHARE_RENDER_VERSION } from "../js/server/col
 import { RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
 import { clerkPaidSubscriptionRow, planClerkBillingEvent, planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
 import { quotaGrantForUser, quotaGrantUserId, reserveQuota, settleQuota, subscribeUrlFromEnv } from "../js/server/cloud-quota.mjs";
-import { contentEntitled, planSlugsFromEnv, subscriptionEntitled, subscriptionView, usageForAccount } from "../js/server/ai-quota.mjs";
+import { contentEntitled, planStripeWebhookEvent, subscriptionView, topUpUrlFromEnv, usageForAccount, verifyStripeWebhook } from "../js/server/ai-quota.mjs";
 import { sanitizePinList } from "../js/server/pins.mjs";
 import {
   parseProfilePatch,
@@ -2791,12 +2792,11 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         console.warn("[quota] subscription", e?.message || e);
       }
-      const allowedSlugs = planSlugsFromEnv();
-      const entitled = subscriptionEntitled({
+      const entitled = contentEntitled({
         status: sub?.status,
         planSlug: sub?.plan_slug,
         periodEnd: sub?.period_end,
-        allowedSlugs,
+        env: process.env,
       });
       if (!entitled) {
         try {
@@ -2810,13 +2810,9 @@ const server = http.createServer(async (req, res) => {
         }
       }
     }
-    const subscription = subscriptionView(sub, {
-      subscribeUrl: subscribeUrlFromEnv(),
-      allowedSlugs: planSlugsFromEnv(),
-      env: process.env,
-    });
+    const topUpUrl = topUpUrlFromEnv(process.env, ident.userId);
     let usage = null;
-    if (dbOn && subscription.entitled) {
+    if (dbOn) {
       try {
         const pool = getPool();
         usage = pool
@@ -2827,6 +2823,12 @@ const server = http.createServer(async (req, res) => {
         usage = null;
       }
     }
+    const subscription = subscriptionView(sub, {
+      subscribeUrl: subscribeUrlFromEnv(),
+      topUpUrl,
+      topUpEntitled: Boolean(usage && usage.remaining > 0),
+      env: process.env,
+    });
     return sendJson(res, 200, {
       ok: true,
       signedIn: true,
@@ -3303,6 +3305,38 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, action: plan.action });
     } catch (e) {
       console.warn("[clerk webhook]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "webhook_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/webhooks/stripe" || req.url?.startsWith("/api/webhooks/stripe?"))
+  ) {
+    const signingSecret = String(
+      process.env.STRIPE_WEBHOOK_SECRET || process.env.FF_STRIPE_WEBHOOK_SECRET || ""
+    ).trim();
+    if (!signingSecret) {
+      req.resume();
+      return sendJson(res, 404, { ok: false, error: "webhooks_off" });
+    }
+    try {
+      const payload = await readRawBody(req, { maxBytes: 256_000 });
+      let evt;
+      try {
+        evt = verifyStripeWebhook(payload, req.headers["stripe-signature"], signingSecret);
+      } catch {
+        return sendJson(res, 401, { ok: false, error: "invalid_signature" });
+      }
+      const planned = planStripeWebhookEvent(evt);
+      if (!planned.ok) return sendJson(res, 400, { ok: false, error: planned.error });
+      if (planned.action === "reset_ai_usage") {
+        const reset = await resetAiUsageTopUp(planned.userId);
+        if (!reset.ok) return sendJson(res, reset.status || 503, { ok: false, error: reset.error });
+      }
+      return sendJson(res, 200, { ok: true, action: planned.action });
+    } catch (e) {
+      console.warn("[stripe webhook]", e?.message || e);
       return sendJson(res, errorStatus(e), { ok: false, error: "webhook_failed" });
     }
   }
@@ -3874,7 +3908,7 @@ const server = http.createServer(async (req, res) => {
           source: "error",
           message:
             prepared.error === "content_required"
-              ? "This lesson is paid content. It needs the Content plan, which Cloud includes."
+              ? "This lesson is paid content. It needs the Content plan."
               : prepared.error === "subscription_required"
                 ? "A subscription is required for this lesson."
                 : "Sign in to use the tutor on this lesson.",

@@ -1303,18 +1303,28 @@ export async function reserveAiBudget(input) {
 
   try {
     await client.query("BEGIN");
-    await client.query(
-      `INSERT INTO ai_usage_period (clerk_user_id, period_start, spent_points, held_points)
-       VALUES ($1, $2, 0, 0)
-       ON CONFLICT (clerk_user_id, period_start) DO NOTHING`,
-      [uid, periodStart]
-    );
+    if (!input.requireExistingPeriod) {
+      await client.query(
+        `INSERT INTO ai_usage_period (clerk_user_id, period_start, spent_points, held_points)
+         VALUES ($1, $2, 0, 0)
+         ON CONFLICT (clerk_user_id, period_start) DO NOTHING`,
+        [uid, periodStart]
+      );
+    }
     const locked = await client.query(
       `SELECT spent_points, held_points FROM ai_usage_period
        WHERE clerk_user_id = $1 AND period_start = $2
        FOR UPDATE`,
       [uid, periodStart]
     );
+    if (!locked.rows.length) {
+      await client.query("ROLLBACK");
+      return {
+        ok: false,
+        status: 402,
+        error: "subscription_required",
+      };
+    }
     const spent = microInt(locked.rows[0]?.spent_points);
     const held = microInt(locked.rows[0]?.held_points);
     const remaining = Math.max(0, budget - spent - held);
@@ -1350,6 +1360,42 @@ export async function reserveAiBudget(input) {
       holdMicro: hold,
       remainingMicro: remaining - hold,
     };
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Reset a user's top-up AI usage period (`spent_points = 0`), preserving any in-flight holds.
+ * @param {string} userId
+ * @param {string} [periodStart]
+ */
+export async function resetAiUsageTopUp(userId, periodStart = "1970-01-01T00:00:00.000Z") {
+  const db = getPool();
+  const uid = normalizeClerkUserId(userId);
+  if (!db || !uid) return { ok: false, status: 503, error: "db_unavailable" };
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [uid]);
+    await ensureUser(uid, client);
+    await client.query(
+      `INSERT INTO ai_usage_period (clerk_user_id, period_start, spent_points, held_points)
+       VALUES ($1, $2, 0, 0)
+       ON CONFLICT (clerk_user_id, period_start) DO UPDATE SET
+         spent_points = 0,
+         updated_at = now()`,
+      [uid, periodStart]
+    );
+    await client.query("COMMIT");
+    return { ok: true };
   } catch (e) {
     try {
       await client.query("ROLLBACK");

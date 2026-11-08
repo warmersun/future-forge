@@ -602,7 +602,7 @@ export function companionAccessLine(tile, opts = {}) {
       const waived = ent === "catalog.free" || Boolean(sponsor);
       lead = waived
         ? "A subscription is not required for this Quest. Sign-in is still required."
-        : "This Quest is paid content. It needs the Content plan, which Cloud includes.";
+        : "This Quest is paid content. It needs the Content plan.";
     } else {
       lead = "No account is required to open this Quest.";
     }

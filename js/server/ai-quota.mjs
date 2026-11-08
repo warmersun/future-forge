@@ -28,13 +28,13 @@ import { createHmac } from "node:crypto";
 import { timingSafeEqualStr } from "./admin-gate.mjs";
 
 export const SUBSCRIPTION_REQUIRED_MESSAGE =
-  "The hosted co-inventor is a monthly subscription. Self-host if you want it free.";
+  "Hosted AI requires a Warmer Sun Cloud AI top-up ($20 for 15,000 points).";
 
 export const QUOTA_SPENT_MESSAGE =
-  "This period’s co-inventor budget is spent. It comes back when the subscription renews.";
+  "Your 15,000 AI points are spent. Reset your usage ($20 for 15,000 points) to keep using the AI co-inventor, images, voice, and speech.";
 
 export const QUOTA_UNAVAILABLE_MESSAGE =
-  "Could not check the subscription quota. Try again in a moment.";
+  "Could not check the AI usage quota. Try again in a moment.";
 
 /** Tokens or characters per point block. Leftover counts round up to the next block. */
 export const QUOTA_BLOCK = 1000;
@@ -47,7 +47,11 @@ export const DEFAULT_QUOTA_RATES = {
   voicePerMin: 80,
 };
 
-export const DEFAULT_BUDGET_POINTS = 5000;
+export const DEFAULT_BUDGET_POINTS = 15000;
+export const TOPUP_PRICE_USD = 20;
+export const TOPUP_PERIOD_START = "1970-01-01T00:00:00.000Z";
+const STRIPE_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+export const DEFAULT_STRIPE_TOLERANCE_SEC = 300;
 /** Reasoning headroom added on top of the text ceiling. Not the whole deposit. */
 export const DEFAULT_TEXT_HOLD_POINTS = 20;
 export const DEFAULT_TEXT_MAX_OUT = 8192;
@@ -323,22 +327,113 @@ export function settleMicroFor(kind, measure = {}, rates = {}) {
 }
 
 /**
- * Paid catalog access. True for an active content plan or any cloud plan.
- * Cloud includes content. Content does not include hosted AI quota.
- * @param {{ status?: string, planSlug?: string, periodEnd?: unknown, now?: number|Date, env?: NodeJS.ProcessEnv|Record<string, string|undefined>, cloudSlugs?: string[], contentSlugs?: string[] }} [input]
+ * Stripe Payment Link URL for the $20 / 15,000-point AI usage reset.
+ * Appends `client_reference_id` when a Clerk user ID is provided.
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
+ * @param {string} [userId]
+ */
+export function topUpUrlFromEnv(env = process.env, userId = "") {
+  const raw = String(env?.FF_STRIPE_TOPUP_URL || env?.STRIPE_PAYMENT_LINK_URL || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+    const uid = String(userId || "").trim();
+    if (uid && STRIPE_ID_RE.test(uid)) {
+      url.searchParams.set("client_reference_id", uid);
+    }
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Verify a Stripe webhook payload signed with `Stripe-Signature: t=...,v1=...`.
+ * @param {string} rawBody
+ * @param {string|null|undefined} signatureHeader
+ * @param {string} secret
+ * @param {{ nowSec?: number, toleranceSec?: number }} [opts]
+ */
+export function verifyStripeWebhook(rawBody, signatureHeader, secret, opts = {}) {
+  const key = String(secret || "").trim();
+  const header = String(signatureHeader || "").trim();
+  if (!key || !header || typeof rawBody !== "string") {
+    throw new Error("Missing Stripe webhook signature or secret");
+  }
+  let timestamp = null;
+  const signatures = [];
+  for (const part of header.split(",")) {
+    const eq = part.indexOf("=");
+    if (eq <= 0) continue;
+    const k = part.slice(0, eq).trim();
+    const v = part.slice(eq + 1).trim();
+    if (k === "t" && /^\d+$/.test(v)) timestamp = Number(v);
+    if (k === "v1" && /^[0-9a-fA-F]{64}$/.test(v)) signatures.push(v.toLowerCase());
+  }
+  if (!Number.isSafeInteger(timestamp) || signatures.length === 0) {
+    throw new Error("Malformed Stripe-Signature header");
+  }
+  const nowSec = Number.isFinite(opts.nowSec) ? Number(opts.nowSec) : Math.floor(Date.now() / 1000);
+  const toleranceSec = Number.isFinite(opts.toleranceSec)
+    ? Math.max(0, Number(opts.toleranceSec))
+    : DEFAULT_STRIPE_TOLERANCE_SEC;
+  if (Math.abs(nowSec - timestamp) > toleranceSec) {
+    throw new Error("Stripe webhook timestamp outside tolerance");
+  }
+  const expected = createHmac("sha256", key)
+    .update(`${timestamp}.${rawBody}`, "utf8")
+    .digest("hex");
+  const matched = signatures.some((sig) => timingSafeEqualStr(sig, expected));
+  if (!matched) {
+    throw new Error("Stripe webhook signature mismatch");
+  }
+  return JSON.parse(rawBody);
+}
+
+/**
+ * Plan a verified Stripe webhook event.
+ * Paid `checkout.session.completed` (or `checkout.session.async_payment_succeeded`)
+ * resets the buyer's AI usage period (`spent_points = 0`) for `client_reference_id`.
+ * @param {object} evt
+ */
+export function planStripeWebhookEvent(evt) {
+  const id = String(evt?.id || "").trim();
+  if (!STRIPE_ID_RE.test(id)) return { ok: false, error: "invalid_event" };
+  const type = String(evt?.type || "").trim();
+  if (type !== "checkout.session.completed" && type !== "checkout.session.async_payment_succeeded") {
+    return { ok: true, id, action: "ignore" };
+  }
+  const session = evt?.data?.object;
+  if (type === "checkout.session.completed") {
+    const paymentStatus = String(session?.payment_status || "").trim().toLowerCase();
+    if (paymentStatus && paymentStatus !== "paid") {
+      return { ok: true, id, action: "ignore" };
+    }
+  }
+  const rawUser = String(
+    session?.client_reference_id ||
+      session?.metadata?.clerk_user_id ||
+      session?.metadata?.userId ||
+      ""
+  ).trim();
+  if (!STRIPE_ID_RE.test(rawUser)) {
+    return { ok: false, error: "invalid_user" };
+  }
+  return { ok: true, id, action: "reset_ai_usage", userId: rawUser };
+}
+
+/**
+ * Paid catalog access. True only for an active (or in-grace canceled) Content plan.
+ * @param {{ status?: string, planSlug?: string, periodEnd?: unknown, now?: number|Date, env?: NodeJS.ProcessEnv|Record<string, string|undefined>, contentSlugs?: string[] }} [input]
  */
 export function contentEntitled(input = {}) {
   const env = input.env;
-  const cloud = Array.isArray(input.cloudSlugs)
-    ? input.cloudSlugs
-    : env
-      ? planSlugsFromEnv(env)
-      : [...DEFAULT_PLAN_SLUGS];
   const content = Array.isArray(input.contentSlugs)
     ? input.contentSlugs
     : contentPlanSlugsFromEnv(env || {});
   const allowedSlugs = [];
-  for (const slug of [...content, ...cloud]) {
+  for (const slug of content) {
     if (slug && !allowedSlugs.includes(slug)) allowedSlugs.push(slug);
   }
   return subscriptionEntitled({
@@ -351,35 +446,52 @@ export function contentEntitled(input = {}) {
 }
 
 /**
+ * True when the user has purchased a top-up and has points remaining.
+ * @param {object|null|undefined} usageRow
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
+ */
+export function topUpEntitled(usageRow, env = process.env) {
+  if (!usageRow || typeof usageRow !== "object") return false;
+  const budget = budgetMicroFromEnv(env);
+  const spent = usagePoints(usageRow.spent_points ?? usageRow.spent);
+  const held = usagePoints(usageRow.held_points ?? usageRow.held);
+  return budget - spent - held > 0;
+}
+
+/**
  * Public subscription slice of /api/me. Allowance numbers are `usage`, not here.
- * `entitled` is the cloud plan (hosted AI). `content` is paid catalog access.
+ * `entitled` is hosted AI access (top-up balance > 0). `content` is paid catalog access.
  * @param {object|null|undefined} sub
- * @param {{ subscribeUrl?: string, allowedSlugs?: string[], contentSlugs?: string[], env?: NodeJS.ProcessEnv|Record<string, string|undefined>, now?: number|Date }} [opts]
+ * @param {{ subscribeUrl?: string, topUpUrl?: string, topUpEntitled?: boolean, allowedSlugs?: string[], contentSlugs?: string[], env?: NodeJS.ProcessEnv|Record<string, string|undefined>, now?: number|Date }} [opts]
  */
 export function subscriptionView(sub, opts = {}) {
-  const entitled = subscriptionEntitled({
-    status: sub?.status,
-    planSlug: sub?.plan_slug,
-    periodEnd: sub?.period_end,
-    now: opts.now,
-    allowedSlugs: opts.allowedSlugs,
-  });
+  const entitled =
+    typeof opts.topUpEntitled === "boolean"
+      ? opts.topUpEntitled
+      : subscriptionEntitled({
+          status: sub?.status,
+          planSlug: sub?.plan_slug,
+          periodEnd: sub?.period_end,
+          now: opts.now,
+          allowedSlugs: opts.allowedSlugs,
+        });
   const content = contentEntitled({
     status: sub?.status,
     planSlug: sub?.plan_slug,
     periodEnd: sub?.period_end,
     now: opts.now,
     env: opts.env,
-    cloudSlugs: opts.allowedSlugs,
     contentSlugs: opts.contentSlugs,
   });
-  return {
+  const view = {
     entitled,
     content,
     planSlug: sub?.plan_slug || null,
     status: sub?.status || null,
     subscribeUrl: String(opts.subscribeUrl || ""),
   };
+  if (opts.topUpUrl) view.topUpUrl = String(opts.topUpUrl);
+  return view;
 }
 
 export function subscriptionEntitled(input = {}) {
@@ -468,21 +580,26 @@ function usagePeriodEnd(value) {
 
 /**
  * Player-facing allowance. Held points are already unavailable.
- * Remaining is clamped at zero. A non-Cloud account is null.
- * @param {{ entitled?: boolean, budget?: unknown, spent?: unknown, held?: unknown, periodEnd?: unknown }} [input]
+ * Remaining is clamped at zero. Before the first top-up (`hasTopUp: false`),
+ * `remaining` is 0 (`0 used · 0 left`).
+ * @param {{ entitled?: boolean, hasTopUp?: boolean, budget?: unknown, spent?: unknown, held?: unknown, periodEnd?: unknown, topUpUrl?: string }} [input]
  */
 export function usageView(input = {}) {
   if (!input?.entitled) return null;
   const budget = usagePoints(input.budget);
-  const spent = usagePoints(input.spent);
-  const held = usagePoints(input.held);
-  return {
+  const hasTopUp = input.hasTopUp !== false;
+  const spent = hasTopUp ? usagePoints(input.spent) : 0;
+  const held = hasTopUp ? usagePoints(input.held) : 0;
+  const remaining = hasTopUp ? Math.max(0, budget - spent - held) : 0;
+  const view = {
     budget,
     spent,
     held,
-    remaining: Math.max(0, budget - spent - held),
+    remaining,
     periodEnd: usagePeriodEnd(input.periodEnd),
   };
+  if (input.topUpUrl) view.topUpUrl = String(input.topUpUrl);
+  return view;
 }
 
 /**
@@ -494,25 +611,20 @@ export function usageView(input = {}) {
  * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
  */
 export async function usageForAccount(query, userId, sub, env = process.env) {
-  const entitled = subscriptionEntitled({
-    status: sub?.status,
-    planSlug: sub?.plan_slug,
-    periodEnd: sub?.period_end,
-    allowedSlugs: planSlugsFromEnv(env),
-  });
-  if (!entitled) return null;
-  const periodStart = usagePeriodStart(sub);
-  if (!periodStart) return null;
+  const uid = String(userId || "").trim();
+  if (!uid || typeof query !== "function") return null;
   const row = (await query(
     `SELECT spent_points, held_points FROM ai_usage_period
      WHERE clerk_user_id = $1 AND period_start = $2`,
-    [userId, periodStart]
+    [uid, TOPUP_PERIOD_START]
   ))?.rows?.[0] || null;
   return usageView({
     entitled: true,
+    hasTopUp: Boolean(row),
     budget: budgetMicroFromEnv(env),
     spent: row?.spent_points,
     held: row?.held_points,
-    periodEnd: sub?.period_end,
+    periodEnd: null,
+    topUpUrl: topUpUrlFromEnv(env, uid),
   });
 }

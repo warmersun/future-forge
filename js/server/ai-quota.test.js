@@ -19,6 +19,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import {
   budgetMicroFromEnv,
   cloudAiDecision,
@@ -30,6 +31,7 @@ import {
   DEFAULT_TEXT_MAX_OUT,
   holdMicroFor,
   planSlugsFromEnv,
+  planStripeWebhookEvent,
   signQuotaGrant,
   verifyQuotaGrant,
   QUOTA_SPENT_MESSAGE,
@@ -42,9 +44,13 @@ import {
   SUBSCRIPTION_REQUIRED_MESSAGE,
   subscriptionEntitled,
   subscriptionView,
+  TOPUP_PERIOD_START,
+  TOPUP_PRICE_USD,
+  topUpUrlFromEnv,
   usageForAccount,
   usagePeriodStart,
   usageView,
+  verifyStripeWebhook,
   voiceConnectedMinuteMicro,
 } from "./ai-quota.mjs";
 
@@ -59,6 +65,8 @@ describe("quotaRatesFromEnv", () => {
       ttsPerKChar: 15,
       voicePerMin: 80,
     });
+    assert.equal(DEFAULT_BUDGET_POINTS, 15000);
+    assert.equal(TOPUP_PRICE_USD, 20);
     assert.equal(budgetMicroFromEnv({}), DEFAULT_BUDGET_POINTS);
     assert.equal(budgetMicroFromEnv({ FF_CLOUD_AI_BUDGET_USD: "5" }), DEFAULT_BUDGET_POINTS);
   });
@@ -214,15 +222,23 @@ describe("subscriptionEntitled", () => {
       { subscribeUrl: "https://cloud.warmersun.com/subscribe", now: Date.now() }
     );
     assert.equal(paid.entitled, true);
-    assert.equal(paid.content, true);
+    assert.equal(paid.content, false);
     assert.equal(paid.planSlug, "cloud");
     const content = subscriptionView(
       { plan_slug: "content", status: "active", period_end: new Date(future).toISOString() },
-      { subscribeUrl: "https://cloud.warmersun.com/subscribe", allowedSlugs: ["cloud"], now: Date.now() }
+      {
+        subscribeUrl: "https://cloud.warmersun.com/subscribe",
+        topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1",
+        topUpEntitled: true,
+        allowedSlugs: ["cloud"],
+        now: Date.now(),
+      }
     );
-    assert.equal(content.entitled, false);
+    assert.equal(content.entitled, true);
     assert.equal(content.content, true);
+    assert.equal(content.topUpUrl, "https://buy.stripe.com/test_20?client_reference_id=user_1");
     assert.equal(contentEntitled({ status: "active", planSlug: "other", periodEnd: future, now: Date.now() }), false);
+    assert.equal(contentEntitled({ status: "active", planSlug: "content", periodEnd: future, now: Date.now() }), true);
     assert.equal(subscriptionEntitled({ status: "active", planSlug: "content", periodEnd: future, now: Date.now() }), false);
     assert.equal(subscriptionEntitled({ status: "past_due", planSlug: "cloud", periodEnd: future }), false);
   });
@@ -315,41 +331,95 @@ describe("usageView", () => {
     assert.equal(usageView({ entitled: true, budget: 10, periodEnd: "not-a-date" }).periodEnd, null);
   });
 
-  it("reads the same period key as reserve and skips a content plan", async () => {
+  it("reads the top-up period key for any signed-in user and includes topUpUrl", async () => {
     const calls = [];
     const query = async (sql, params) => {
       calls.push({ sql, params });
       return { rows: [{ spent_points: "100", held_points: 5 }] };
     };
     const sub = {
-      plan_slug: "cloud",
+      plan_slug: "content",
       status: "active",
       period_start: "2026-10-13T23:23:17.295Z",
       period_end: "2026-11-13T23:23:17.295Z",
     };
-    const usage = await usageForAccount(query, "user_1", sub, { FF_CLOUD_AI_BUDGET: "15000" });
+    const env = { FF_CLOUD_AI_BUDGET: "15000", FF_STRIPE_TOPUP_URL: "https://buy.stripe.com/test_20" };
+    const usage = await usageForAccount(query, "user_1", sub, env);
     assert.deepEqual(usage, {
       budget: 15000, spent: 100, held: 5, remaining: 14895,
-      periodEnd: "2026-11-13T23:23:17.295Z",
+      periodEnd: null,
+      topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1",
     });
     assert.match(calls[0].sql, /FROM ai_usage_period/);
-    assert.deepEqual(calls[0].params, ["user_1", "2026-10-13T23:23:17.295Z"]);
-    const empty = await usageForAccount(async () => ({ rows: [] }), "user_1", sub, { FF_CLOUD_AI_BUDGET: "15000" });
+    assert.deepEqual(calls[0].params, ["user_1", TOPUP_PERIOD_START]);
+    const empty = await usageForAccount(async () => ({ rows: [] }), "user_1", null, env);
     assert.equal(empty.spent, 0);
     assert.equal(empty.held, 0);
-    assert.equal(empty.remaining, 15000);
-    const content = await usageForAccount(
-      query,
-      "user_1",
-      { plan_slug: "content", status: "active", period_end: "2999-01-01" },
-      {}
-    );
-    assert.equal(content, null);
+    assert.equal(empty.remaining, 0);
+    assert.equal(empty.topUpUrl, "https://buy.stripe.com/test_20?client_reference_id=user_1");
+    assert.equal(await usageForAccount(query, "", sub, env), null);
     assert.equal(calls.length, 1);
     assert.equal(usagePeriodStart({ period_start: "nope" }), null);
     assert.equal(
       usagePeriodStart({}, Date.parse("2026-11-03T22:00:00.000Z")),
       "2026-11-01T00:00:00.000Z"
+    );
+  });
+});
+
+describe("Stripe top-up link & webhook", () => {
+  it("builds a Payment Link URL with client_reference_id", () => {
+    assert.equal(topUpUrlFromEnv({}, "user_1"), "");
+    assert.equal(
+      topUpUrlFromEnv({ FF_STRIPE_TOPUP_URL: "https://buy.stripe.com/test_20" }, "user_1"),
+      "https://buy.stripe.com/test_20?client_reference_id=user_1"
+    );
+    assert.equal(
+      topUpUrlFromEnv({ STRIPE_PAYMENT_LINK_URL: "https://buy.stripe.com/test_20" }, "bad id"),
+      "https://buy.stripe.com/test_20"
+    );
+  });
+
+  it("verifies Stripe webhook signatures and plans paid checkout resets", () => {
+    const secret = "whsec_test_stripe";
+    const nowSec = 1_700_000_000;
+    const payload = JSON.stringify({
+      id: "evt_stripe_1",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_test_1",
+          client_reference_id: "user_1",
+          payment_status: "paid",
+        },
+      },
+    });
+    const sig = crypto
+      .createHmac("sha256", secret)
+      .update(`${nowSec}.${payload}`, "utf8")
+      .digest("hex");
+    const verified = verifyStripeWebhook(payload, `t=${nowSec},v1=${sig}`, secret, { nowSec });
+    assert.deepEqual(planStripeWebhookEvent(verified), {
+      ok: true,
+      id: "evt_stripe_1",
+      action: "reset_ai_usage",
+      userId: "user_1",
+    });
+    assert.throws(
+      () => verifyStripeWebhook(payload, `t=${nowSec - 1000},v1=${sig}`, secret, { nowSec }),
+      /timestamp outside tolerance/
+    );
+    assert.throws(
+      () => verifyStripeWebhook(payload, `t=${nowSec},v1=${"0".repeat(64)}`, secret, { nowSec }),
+      /signature mismatch/
+    );
+    assert.deepEqual(
+      planStripeWebhookEvent({
+        id: "evt_unpaid",
+        type: "checkout.session.completed",
+        data: { object: { client_reference_id: "user_1", payment_status: "unpaid" } },
+      }),
+      { ok: true, id: "evt_unpaid", action: "ignore" }
     );
   });
 });

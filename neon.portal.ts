@@ -46,9 +46,15 @@ export default defineConfig({
           ? { FF_PORTAL_SESSION_SECRET: process.env.FF_PORTAL_SESSION_SECRET }
           : {}),
         FF_API_SECRET: process.env.FF_API_SECRET!,
-        FF_CLOUD_PLAN_SLUGS: process.env.FF_CLOUD_PLAN_SLUGS!,
+        FF_CLOUD_PLAN_SLUGS: process.env.FF_CLOUD_PLAN_SLUGS || "cloud",
         FF_CONTENT_PLAN_SLUGS: process.env.FF_CONTENT_PLAN_SLUGS!,
-        FF_CLOUD_AI_BUDGET: process.env.FF_CLOUD_AI_BUDGET!,
+        FF_CLOUD_AI_BUDGET: process.env.FF_CLOUD_AI_BUDGET || "15000",
+        ...(process.env.FF_STRIPE_TOPUP_URL
+          ? { FF_STRIPE_TOPUP_URL: process.env.FF_STRIPE_TOPUP_URL }
+          : {}),
+        ...(process.env.STRIPE_WEBHOOK_SECRET
+          ? { STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET }
+          : {}),
         FF_QUOTA_TEXT_IN_PER_KTOK: process.env.FF_QUOTA_TEXT_IN_PER_KTOK!,
         FF_QUOTA_TEXT_OUT_PER_KTOK: process.env.FF_QUOTA_TEXT_OUT_PER_KTOK!,
         FF_QUOTA_TEXT_HOLD: process.env.FF_QUOTA_TEXT_HOLD!,

@@ -177,16 +177,16 @@ const signin = (deviceFlow) => `<section class="signin${deviceFlow ? " device" :
     <p class="links"><button id="sign-out" class="button" type="button">Sign out</button></p>
   </div></section>`;
 const subscribe = `<div class="split" data-route="/subscribe"><section class="promise">
-  <p class="eyebrow">Future Forge Hosted4U</p><h1>You invent. We run the app.</h1>
-  <p class="lead">You are buying a month of hosted Future Forge for one person.
-  Pick a real problem, try what just became possible, and see which parts are ready now.</p>
-  <dl><dt>What you are buying</dt><dd>We host Future Forge for one person.
-    The co-inventor, images, voice, and speech are included. $49, billed monthly.</dd>
+  <p class="eyebrow">Future Forge Content</p><h1>Paid Quests &amp; Lessons.</h1>
+  <p class="lead">You are subscribing to the Future Forge Content plan for one person.
+  Unlock paid quests and learning modules across the catalog.</p>
+  <dl><dt>What you are buying</dt><dd>Access to paid catalog quests and lessons for one person. $10, billed monthly.
+    Hosted AI usage is sold separately in the game as $20 top-ups for 15,000 points.</dd>
     <dt>The promise</dt><dd>You lead. The computer stays with you while you try a real place and see what holds.
     The computer does not do it for you.</dd></dl>
   <p class="aside">The software is free under the GNU General Public License, version 3 or later.
     Commercial use and education use are allowed when you run it yourself.
-    This page is a paid hosting subscription for one person. Lessons on the hosted service need a sign-in.</p>
+    This page is a paid content subscription for one person. Lessons on the hosted service need a sign-in.</p>
   <p class="links"><a href="https://warmersun.com/future-forge/get-started/">Run your own copy</a></p></section>
   <section class="checkout" aria-label="Subscribe"><p id="status" role="status">Loading the plan…</p>
   <div id="clerk-mount"></div></section></div>`;
@@ -298,8 +298,9 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
       const me = res.ok ? await res.json().catch(() => null) : null;
       const sub = me?.subscription;
       // Failed/anonymous/malformed responses cannot establish an inactive plan.
-      if (me?.ok === true && me.signedIn === true && typeof sub?.entitled === "boolean") {
-        plan = sub.entitled
+      if (me?.ok === true && me.signedIn === true && (typeof sub?.content === "boolean" || typeof sub?.entitled === "boolean")) {
+        const activePlan = sub.content || sub.entitled;
+        plan = activePlan
           ? `Plan: ${sub.planSlug || "active"} · ${sub.status || "active"}`
           : "no active subscription";
       }

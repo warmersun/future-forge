@@ -169,7 +169,7 @@ export const CATALOG_ACCESS_CHIPS = {
   },
   paid: {
     label: "Paid",
-    title: "This Quest is paid content. It needs the Content plan, which Cloud includes.",
+    title: "This Quest is paid content. It needs the Content plan.",
   },
 };
 

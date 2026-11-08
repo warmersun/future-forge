@@ -28,16 +28,16 @@ import { authorizedPartiesFromEnv, clerkWebhookSecretFromEnv, isJwtShaped } from
 import { normalizeClerkUserId } from "../../js/server/clerk-id.mjs";
 import { isGameSessionToken, verifyGameSessionToken } from "../../js/server/game-session.mjs";
 import {
-  budgetMicroFromEnv, chargeMicro, holdMicroFor, isQuotaKind, monthPeriodStart,
-  planSlugsFromEnv, quotaRatesFromEnv, settleMicroFor, signQuotaGrant,
-  subscriptionEntitled, textMaxOutFromEnv, verifyQuotaGrant,
+  budgetMicroFromEnv, chargeMicro, holdMicroFor, isQuotaKind,
+  planStripeWebhookEvent, quotaRatesFromEnv, settleMicroFor, signQuotaGrant,
+  textMaxOutFromEnv, topUpUrlFromEnv, verifyQuotaGrant, verifyStripeWebhook,
   voiceConnectedMinuteMicro, voiceMaxMsFromEnv,
-  SUBSCRIPTION_REQUIRED_MESSAGE, QUOTA_SPENT_MESSAGE, QUOTA_UNAVAILABLE_MESSAGE,
+  TOPUP_PERIOD_START, SUBSCRIPTION_REQUIRED_MESSAGE, QUOTA_SPENT_MESSAGE, QUOTA_UNAVAILABLE_MESSAGE,
 } from "../../js/server/ai-quota.mjs";
 import { canceledRowFromClerkBillingSubscription, planClerkBillingEvent, planClerkUserEvent, rowFromClerkBillingSubscription } from "../../js/server/clerk-webhooks.mjs";
 import { cloudCorsOriginsFromEnv, cloudOriginAllowed } from "../../js/cloud/portal-origin.js";
 
-const ROUTES = new Set(["/api/me/ai/reserve", "/api/internal/ai/reserve", "/api/me/ai/settle", "/api/webhooks/clerk"]);
+const ROUTES = new Set(["/api/me/ai/reserve", "/api/internal/ai/reserve", "/api/me/ai/settle", "/api/webhooks/clerk", "/api/webhooks/stripe"]);
 const BODY_LIMIT = 8_000;
 const WEBHOOK_LIMIT = 256_000;
 const ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
@@ -95,7 +95,7 @@ async function transaction(pool, work) {
 }
 
 /** Injectable dependencies allow offline tests; the default export is a Neon fetch handler. */
-export function createBillingRoutes({ env = process.env, db, verifyClerk, verifySignedWebhook, getUserBillingSubscription } = {}) {
+export function createBillingRoutes({ env = process.env, db, verifyClerk, verifySignedWebhook, verifySignedStripeWebhook, getUserBillingSubscription } = {}) {
   let pool;
   function database() {
     if (db) return db;
@@ -112,6 +112,8 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
   }));
   const webhookVerifier = verifySignedWebhook || ((headers, rawBody, signingSecret) =>
     verifyWebhook(new Request("https://clerk-webhook.invalid/", { method: "POST", headers, body: rawBody }), { signingSecret }));
+  const stripeWebhookVerifier = verifySignedStripeWebhook || ((headers, rawBody, signingSecret) =>
+    verifyStripeWebhook(rawBody, headers.get("stripe-signature"), signingSecret));
   const loadBilling = getUserBillingSubscription || ((userId) =>
     createClerkClient({ secretKey: env.CLERK_SECRET_KEY || env.FF_CLERK_SECRET_KEY })
       .billing.getUserBillingSubscription(userId));
@@ -131,16 +133,9 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
   }
   async function reserve(cx, userId, body) {
     if (!isQuotaKind(body.kind)) return { ok: false, status: 400, error: "bad_kind" };
-    // Match webhook reconciliation: payer advisory lock, then subscription row.
-    // Reversing these locks can deadlock a reserve against a cancellation.
+    // Match webhook reconciliation: payer advisory lock before reading/updating the usage ledger.
     await cx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [userId]);
-    const sub = (await cx.query(
-      "SELECT plan_slug, status, period_start, period_end FROM subscriptions WHERE clerk_user_id = $1 FOR SHARE", [userId]
-    )).rows[0];
-    if (!subscriptionEntitled({ status: sub?.status, planSlug: sub?.plan_slug, periodEnd: sub?.period_end, allowedSlugs: planSlugsFromEnv(env) })) {
-      return { ok: false, status: 402, error: "subscription_required", message: SUBSCRIPTION_REQUIRED_MESSAGE };
-    }
-    const start = sub.period_start ? new Date(sub.period_start).toISOString() : monthPeriodStart();
+    const start = TOPUP_PERIOD_START;
     // The payer lock also serializes stale cleanup and settlement across periods.
     const stale = await cx.query(
       `UPDATE ai_quota_reservations SET settled = true, settled_points = held_points
@@ -156,15 +151,13 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
       `DELETE FROM ai_quota_reservations WHERE clerk_user_id = $1 AND settled = true
        AND created_at < now() - interval '1 day'`, [userId]
     );
-    await cx.query(
-      `INSERT INTO ai_usage_period (clerk_user_id, period_start, spent_points, held_points)
-       VALUES ($1, $2, 0, 0) ON CONFLICT (clerk_user_id, period_start) DO NOTHING`, [userId, start]
-    );
     const ledger = (await cx.query(
       `SELECT spent_points, held_points FROM ai_usage_period
        WHERE clerk_user_id = $1 AND period_start = $2 FOR UPDATE`, [userId, start]
     )).rows[0];
-    if (!ledger) throw new Error("ledger_missing");
+    if (!ledger) {
+      return { ok: false, status: 402, error: "subscription_required", message: SUBSCRIPTION_REQUIRED_MESSAGE };
+    }
     const remaining = Math.max(0, budgetMicroFromEnv(env) - points(ledger.spent_points) - points(ledger.held_points));
     const rates = quotaRatesFromEnv(env);
     const hold = points(holdMicroFor(body.kind, {
@@ -269,6 +262,27 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
     }
     return { ok: true, action: user.action };
   }
+  async function applyStripeWebhook(cx, evt) {
+    const planned = planStripeWebhookEvent(evt);
+    if (!planned.ok) return { ok: false, status: 400, error: planned.error };
+    const inserted = await cx.query(
+      `INSERT INTO clerk_webhook_events (event_id) VALUES ($1)
+       ON CONFLICT (event_id) DO NOTHING RETURNING event_id`, [planned.id]
+    );
+    if (!inserted.rows.length) return { ok: true, idempotent: true };
+    if (planned.action === "reset_ai_usage") {
+      await cx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [planned.userId]);
+      await cx.query("INSERT INTO users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO NOTHING", [planned.userId]);
+      await cx.query(
+        `INSERT INTO ai_usage_period (clerk_user_id, period_start, spent_points, held_points)
+         VALUES ($1, $2, 0, 0)
+         ON CONFLICT (clerk_user_id, period_start) DO UPDATE SET
+         spent_points = 0, updated_at = now()`,
+        [planned.userId, TOPUP_PERIOD_START]
+      );
+    }
+    return { ok: true, action: planned.action };
+  }
   async function fetch(req) {
     const path = new URL(req.url).pathname;
     const browser = path === "/api/me/ai/reserve";
@@ -308,6 +322,24 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
         return result(applied);
       } catch (e) { return e.response ? result({ ok: false, error: e.response.error }, e.response.status) : failure("webhook_failed", 503); }
     }
+    if (path === "/api/webhooks/stripe") {
+      const signingSecret = String(env.STRIPE_WEBHOOK_SECRET || env.FF_STRIPE_WEBHOOK_SECRET || "").trim();
+      if (!signingSecret) return failure("webhooks_off", 404);
+      let raw;
+      try { raw = await boundedBody(req, WEBHOOK_LIMIT); }
+      catch (e) { return failure(e.message === "payload_too_large" ? "payload_too_large" : "bad_body", e.message === "payload_too_large" ? 413 : 400); }
+      let evt;
+      try { evt = await stripeWebhookVerifier(req.headers, raw, signingSecret); }
+      catch { return failure("invalid_signature", 401); }
+      try {
+        const applied = await transaction(cx, async (client) => {
+          const value = await applyStripeWebhook(client, evt);
+          if (!value.ok) throw Object.assign(new Error(value.error), { response: value });
+          return value;
+        });
+        return result(applied);
+      } catch (e) { return e.response ? result({ ok: false, error: e.response.error }, e.response.status) : failure("webhook_failed", 503); }
+    }
     const internal = path === "/api/internal/ai/reserve";
     const settling = path === "/api/me/ai/settle";
     const shared = equal(req.headers.get("x-ff-secret"), env.FF_API_SECRET);
@@ -329,7 +361,11 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
       }
       const data = settling ? await transaction(cx, (client) => settle(client, body))
         : await transaction(cx, (client) => reserve(client, userId, body));
-      if (data.ok) data.subscribeUrl = subscribeUrl(env);
+      const topUpUrl = userId ? topUpUrlFromEnv(env, userId) : topUpUrlFromEnv(env);
+      if (!settling && (data.ok || data.error === "subscription_required" || data.error === "quota_spent")) {
+        data.subscribeUrl = topUpUrl || subscribeUrl(env);
+        if (topUpUrl) data.topUpUrl = topUpUrl;
+      }
       return result(data, data.ok ? 200 : data.status || 503);
     } catch { return failure("quota_unavailable", 503, QUOTA_UNAVAILABLE_MESSAGE); }
   }

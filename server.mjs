@@ -3075,7 +3075,7 @@ const server = http.createServer(async (req, res) => {
           source: "error",
           message:
             tutorDenied.error === "content_required"
-              ? "This lesson is paid content. It needs the Content plan, which Cloud includes."
+              ? "This lesson is paid content. It needs the Content plan."
               : tutorDenied.error === "subscription_required"
                 ? "A subscription is required for this lesson."
                 : "Sign in to use the tutor on this lesson.",

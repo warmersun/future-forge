@@ -184,7 +184,7 @@ test("Functions package listing is slim; selected mission world is resolved and 
   const f = setup();
   let paid = true;
   const routes = createPublicRoutes({ env: { CLERK_SECRET_KEY: "offline", CLERK_PUBLISHABLE_KEY: "pk_test_offline" },
-    db: { query: async () => ({ rows: paid ? [{ status: "active", plan_slug: "cloud", period_end: new Date("2099-01-01") }] : [] }) },
+    db: { query: async () => ({ rows: paid ? [{ status: "active", plan_slug: "content", period_end: new Date("2099-01-01") }] : [] }) },
     verifyClerk: async () => ({ sub: "user_2y5HvnY8gQd1" }), loadCatalog: async () => f.catalog, packageResolver: f.resolver });
   const req = (path, signedIn = false) => routes.fetch(new Request(`https://cloud.warmersun.com${path}`, { headers: signedIn ? { Authorization: "Bearer eyJoffline.payload.signature" } : {} }));
   const listing = await (await req("/api/quests")).json();

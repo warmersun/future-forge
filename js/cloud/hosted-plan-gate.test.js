@@ -98,6 +98,7 @@ function browser(options = {}) {
     refreshHostedQuests: async () => { calls.refresh++; },
     resolveContinueMission: async () => mission,
     promptCloudSignIn: () => { calls.signIn++; },
+    paintAiUsageMeters: () => {},
     calls,
   };
   runtime = new Function(...Object.keys(dependencies), `${gate}
@@ -292,13 +293,23 @@ describe("actual hosted browser gate", () => {
     assert.equal(b.calls.signIn, 0);
   });
 
-  it("redirects a known unpaid regular mission to subscribe", async () => {
+  it("redirects a known unpaid regular mission to subscribe or topUpUrl, while boot settles the title screen", async () => {
     const b = browser({ me: () => response({ subscription: { entitled: false, subscribeUrl: "https://warmersun.com/portal/subscribe?test" } }) });
+    assert.equal(await b.enforceHostedPlan({ boot: true }), false);
+    assert.deepEqual(b.calls.redirects, []);
     assert.equal(await b.enforceHostedPlan(), true);
     assert.deepEqual(b.calls.redirects, ["https://warmersun.com/portal/subscribe?test"]);
     assert.equal(b.startMission(b.mission), false);
     assert.deepEqual(b.calls.launches, []);
     assert.equal(b.calls.signIn, 0);
+    const topup = browser({
+      me: () => response({
+        subscription: { entitled: false, topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1" },
+        usage: { budget: 15000, spent: 0, held: 0, remaining: 0, topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1" },
+      }),
+    });
+    assert.equal(await topup.enforceHostedPlan(), true);
+    assert.deepEqual(topup.calls.redirects, ["https://buy.stripe.com/test_20?client_reference_id=user_1"]);
   });
 
   it("allows a verified unpaid account-only lesson, but not regular title launches", async () => {

@@ -6003,7 +6003,7 @@ async function fetchFullQuestTile(id, opts = {}) {
       const contentDenied = data.error !== "subscription_required";
       const hold = contentDenied ? "content_required" : "subscription_required";
       const msg = contentDenied
-        ? "This quest is paid content. It needs the Content plan, which Cloud includes."
+        ? "This quest is paid content. It needs the Content plan."
         : "This quest needs a subscription.";
       if (opts.keepUrl) {
         if (deepLinkHold !== hold) {
@@ -6479,7 +6479,7 @@ async function loadQuestIdPreview() {
       not_found: "Quest not found. Check the ID. Local or imported Quests must be published before others can load them.",
       unavailable: "Could not reach the quest service or load this Quest. Try again.",
       sign_in_required: "Quest found. Sign in to play this Quest.",
-      content_required: "Quest found. This quest is paid content. It needs the Content plan, which Cloud includes.",
+      content_required: "Quest found. This quest is paid content. It needs the Content plan.",
       subscription_required: "Quest found. A subscription is required to play this Quest.",
       loaded: "Quest loaded. Choose Play when you are ready.",
     };
@@ -6587,7 +6587,7 @@ async function consumeDeepLink() {
       } else if (looked.status === "content_required") {
         if (deepLinkHold !== "content_required") {
           deepLinkHold = "content_required";
-          flashToast("This quest is paid content. It needs the Content plan, which Cloud includes.");
+          flashToast("This quest is paid content. It needs the Content plan.");
         }
       } else if (deepLinkHold !== "subscription_required") {
         deepLinkHold = "subscription_required";
@@ -8413,7 +8413,7 @@ function redirectHostedSubscribe() {
  * or send it around the sign-in redirect loop. A new play action retries.
  * Share verification, but evaluate each caller's lesson exception separately.
  */
-async function enforceHostedPlan({ mission } = {}) {
+async function enforceHostedPlan({ mission, boot } = {}) {
   if (hostedPlanRedirecting) return true;
   if (!hostedPlanCheck) {
     hostedLaunchSettled = false;
@@ -8447,7 +8447,12 @@ async function enforceHostedPlan({ mission } = {}) {
       hostedPlanState = {
         cloudAi: true,
         entitled: account.subscription.entitled,
-        subscribeUrl: String(account.subscription.subscribeUrl || HOSTED_SUBSCRIBE_URL),
+        subscribeUrl: String(
+          account.usage?.topUpUrl ||
+          account.subscription.topUpUrl ||
+          account.subscription.subscribeUrl ||
+          HOSTED_SUBSCRIBE_URL
+        ),
       };
       hostedLaunchSettled = true;
       paintAiUsageMeters(account.usage ?? null);
@@ -8481,6 +8486,7 @@ async function enforceHostedPlan({ mission } = {}) {
     }
   }
   if (hostedSessionAllowed({ cloudAi: true, signedIn: true, entitled: hostedPlanState.entitled, lesson })) return false;
+  if (boot && !mission && !intent?.token) return false;
   redirectHostedSubscribe();
   return true;
 }
@@ -23996,7 +24002,7 @@ export function init() {
   onClerkSession(() => {
     renderTitleMeta();
     void (async () => {
-      const blocked = await enforceHostedPlan();
+      const blocked = await enforceHostedPlan({ boot: true });
       if (blocked) return;
       void syncCloudProgress();
       void maybePromptDisplayName();
@@ -24020,7 +24026,7 @@ export function init() {
       new Promise((r) => setTimeout(r, 4000)),
     ]);
     await resumePendingDeviceHandshake();
-    const blocked = await enforceHostedPlan();
+    const blocked = await enforceHostedPlan({ boot: true });
     if (!blocked) await consumeDeepLink();
   })();
   // Refresh: Clerk cookie session can arrive after the first title paint.

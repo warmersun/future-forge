@@ -21,17 +21,19 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { createBillingRoutes } from "./billing-routes.mjs";
-import { signQuotaGrant } from "../../js/server/ai-quota.mjs";
+import { signQuotaGrant, TOPUP_PERIOD_START } from "../../js/server/ai-quota.mjs";
 import { mintGameSessionToken } from "../../js/server/game-session.mjs";
 
 const env = {
   FF_API_SECRET: "private-server-secret", CLERK_SECRET_KEY: "clerk-secret",
   FF_PUBLIC_ORIGIN: "https://cloud.warmersun.com", FF_CLOUD_AI_BUDGET: "100",
   FF_QUOTA_IMAGE: "60", CLERK_WEBHOOK_SECRET: "whsec_test",
+  STRIPE_WEBHOOK_SECRET: "whsec_stripe_test",
+  FF_STRIPE_TOPUP_URL: "https://buy.stripe.com/test_20",
 };
 const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEifQ.signature";
 const future = "2099-01-01T00:00:00.000Z";
-const period = "2026-10-01T00:00:00.000Z";
+const period = TOPUP_PERIOD_START;
 
 it("standalone billing preflight accepts private-LAN origins by default, never public HTTP", async () => {
   const lan = "http://192.168.1.140:8765";
@@ -83,7 +85,8 @@ function fakeDb() {
   let data = { users: new Map(), subs: new Map(), ledger: new Map(), reservations: new Map(), events: new Set(), grant: "grant-key" };
   const billing = new Map();
   data.users.set("user_1", { username: null });
-  data.subs.set("user_1", { plan_slug: "cloud", status: "active", period_start: period, period_end: future });
+  data.subs.set("user_1", { plan_slug: "content", status: "active", period_start: period, period_end: future });
+  data.ledger.set(`user_1|${period}`, { spent_points: 0, held_points: 0 });
   let tail = Promise.resolve();
   let failNext = false;
   const log = [];
@@ -97,7 +100,9 @@ function fakeDb() {
     if (sql.includes("UPDATE ai_quota_reservations SET settled = true, settled_points = held_points")) return { rows: [] };
     if (sql.includes("DELETE FROM ai_quota_reservations WHERE clerk_user_id")) return { rows: [] };
     if (sql.includes("INSERT INTO ai_usage_period")) {
-      if (!s.ledger.has(key(a[0], a[1]))) s.ledger.set(key(a[0], a[1]), { spent_points: 0, held_points: 0 });
+      const k = key(a[0], a[1]);
+      if (!s.ledger.has(k)) s.ledger.set(k, { spent_points: 0, held_points: 0 });
+      else if (sql.includes("DO UPDATE SET") && sql.includes("spent_points = 0")) s.ledger.get(k).spent_points = 0;
       return { rows: [] };
     }
     if (sql.includes("SELECT spent_points, held_points FROM ai_usage_period")) {
@@ -184,12 +189,12 @@ function signed(evt) {
 }
 
 describe("staged quota routes", () => {
-  it("locks the payer before the subscription row, in the same order as webhooks", async () => {
+  it("locks the payer before the ledger row, in the same order as webhooks", async () => {
     const db = fakeDb(), api = app(db);
     assert.equal((await call(api, "/api/me/ai/reserve", { kind: "image" }, auth)).status, 200);
     const advisory = db.log.findIndex(([sql]) => sql.includes("pg_advisory_xact_lock"));
-    const subscription = db.log.findIndex(([sql]) => sql.includes("FROM subscriptions") && sql.includes("FOR SHARE"));
-    assert(advisory >= 0 && advisory < subscription, "reserve must take advisory lock before FOR SHARE");
+    const ledgerLock = db.log.findIndex(([sql]) => sql.includes("FROM ai_usage_period") && sql.includes("FOR UPDATE"));
+    assert(advisory >= 0 && advisory < ledgerLock, "reserve must take advisory lock before FOR UPDATE");
     assert.deepEqual(db.log[advisory][1], ["user_1"]);
     db.log.length = 0;
     db.billing.set("user_1", { subscriptionItems: [] });
@@ -266,7 +271,7 @@ describe("staged quota routes", () => {
     assert.deepEqual(db.data.ledger.get(`user_1|${period}`), { spent_points: 60, held_points: 0 });
     assert.equal((await call(a, "/api/me/ai/reserve", { kind: "image" }, auth)).status, 429);
     assert.equal((await call(a, "/api/me/ai/reserve", { kind: "other" }, auth)).status, 400);
-    db.data.subs.get("user_1").status = "past_due";
+    db.data.ledger.delete(`user_1|${period}`);
     assert.equal((await call(a, "/api/me/ai/reserve", { kind: "image" }, auth)).status, 402);
   });
   it("validates internal quota grants and rolls back a failed reserve", async () => {
@@ -275,7 +280,7 @@ describe("staged quota routes", () => {
     assert.equal((await call(api, "/api/internal/ai/reserve", { userId: "other", quotaGrant: grant, kind: "image" }, internal)).status, 403);
     db.failInsert();
     assert.equal((await call(api, "/api/internal/ai/reserve", { userId: "user_1", quotaGrant: grant, kind: "image" }, internal)).status, 503);
-    assert.equal(db.data.ledger.size, 0);
+    assert.equal(db.data.ledger.get(`user_1|${period}`).held_points, 0);
     assert.equal((await call(api, "/api/internal/ai/reserve", { userId: "user_1", quotaGrant: grant, kind: "image" }, internal)).status, 200);
     const res = (await call(api, "/api/me/ai/reserve", { kind: "text", inputTokens: 100 }, auth));
     assert.equal(res.status, 429); // max text output hold exceeds remaining 40 points
@@ -318,7 +323,7 @@ describe("staged Clerk webhook", () => {
     db.billing.set("user_3", { subscriptionItems: [{ plan: { slug: "paid" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 }] });
     const active = signed({ id: "evt_active", type: "subscription.active", data: { payer: { user_id: "user_3" }, status: "active", items: [{ plan: { slug: "paid" }, period_start: 1790812800000, period_end: 4070908800000 }] } });
     assert.equal((await call(api, "/api/webhooks/clerk", active.raw, active.headers)).body.action, "upsert_subscription");
-    assert.equal(db.data.subs.get("user_3").plan_slug, "cloud");
+    assert.equal(db.data.subs.get("user_3").plan_slug, "content");
     const cancel = signed({ id: "evt_cancel", type: "subscriptionItem.canceled", data: { payer: { user_id: "user_3" }, plan: { slug: "paid" }, status: "canceled", period_end: 4070908800000 } });
     db.billing.set("user_3", { subscriptionItems: [] });
     assert.equal((await call(api, "/api/webhooks/clerk", cancel.raw, cancel.headers)).status, 200);
@@ -363,7 +368,7 @@ describe("staged Clerk webhook", () => {
     assert.equal((await call(recovered, "/api/webhooks/clerk", event.raw, event.headers)).status, 200);
     assert.equal(db.data.subs.get("user_1").status, "inactive");
   });
-  it("stores a content plan as content and keeps cloud when both items are active", async () => {
+  it("stores a content plan as content and normalizes paid Clerk items to content", async () => {
     const db = fakeDb(), api = app(db);
     db.billing.set("user_6", { subscriptionItems: [{ plan: { slug: "content" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 }] });
     const content = signed({ id: "evt_content", type: "subscription.active", data: { payer: { user_id: "user_6" }, status: "active" } });
@@ -375,14 +380,41 @@ describe("staged Clerk webhook", () => {
     ] });
     const both = signed({ id: "evt_both", type: "subscription.updated", data: { payer: { user_id: "user_6" }, status: "active" } });
     assert.equal((await call(api, "/api/webhooks/clerk", both.raw, both.headers)).status, 200);
-    assert.equal(db.data.subs.get("user_6").plan_slug, "cloud");
+    assert.equal(db.data.subs.get("user_6").plan_slug, "content");
   });
-  it("rejects hosted AI reserve for a content plan", async () => {
-    const db = fakeDb();
-    db.data.subs.set("user_1", { plan_slug: "content", status: "active", period_start: period, period_end: future });
-    const denied = await call(app(db), "/api/me/ai/reserve", { kind: "image" }, auth);
+  it("rejects hosted AI reserve without a top-up and resets usage after a signed Stripe webhook", async () => {
+    const db = fakeDb(), api = app(db);
+    db.data.ledger.delete(`user_1|${period}`);
+    const denied = await call(api, "/api/me/ai/reserve", { kind: "image" }, auth);
     assert.equal(denied.status, 402);
     assert.equal(denied.body.error, "subscription_required");
+    assert.equal(denied.body.topUpUrl, "https://buy.stripe.com/test_20?client_reference_id=user_1");
+    const ts = Math.floor(Date.now() / 1000);
+    const stripeRaw = JSON.stringify({
+      id: "evt_stripe_topup_1",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_1", client_reference_id: "user_1", payment_status: "paid" } },
+    });
+    const stripeSig = createHmac("sha256", env.STRIPE_WEBHOOK_SECRET).update(`${ts}.${stripeRaw}`).digest("hex");
+    const stripeHeaders = { "stripe-signature": `t=${ts},v1=${stripeSig}` };
+    assert.equal((await call(api, "/api/webhooks/stripe", stripeRaw, { "stripe-signature": "t=1,v1=bad" })).status, 401);
+    const fulfilled = await call(api, "/api/webhooks/stripe", stripeRaw, stripeHeaders);
+    assert.equal(fulfilled.status, 200);
+    assert.equal(fulfilled.body.action, "reset_ai_usage");
+    assert.deepEqual(db.data.ledger.get(`user_1|${period}`), { spent_points: 0, held_points: 0 });
+    const allowed = await call(api, "/api/me/ai/reserve", { kind: "image" }, auth);
+    assert.equal(allowed.status, 200);
+    // Spend points, then send a second Stripe top-up to verify spent_points resets to 0 while preserving held_points.
+    db.data.ledger.get(`user_1|${period}`).spent_points = 40;
+    const stripeRaw2 = JSON.stringify({
+      id: "evt_stripe_topup_2",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_2", client_reference_id: "user_1", payment_status: "paid" } },
+    });
+    const stripeSig2 = createHmac("sha256", env.STRIPE_WEBHOOK_SECRET).update(`${ts}.${stripeRaw2}`).digest("hex");
+    assert.equal((await call(api, "/api/webhooks/stripe", stripeRaw2, { "stripe-signature": `t=${ts},v1=${stripeSig2}` })).status, 200);
+    assert.deepEqual(db.data.ledger.get(`user_1|${period}`), { spent_points: 0, held_points: 60 });
+    assert.equal((await call(api, "/api/webhooks/stripe", stripeRaw2, { "stripe-signature": `t=${ts},v1=${stripeSig2}` })).body.idempotent, true);
   });
   it("preserves canceled paid-through-period entitlement from the current snapshot", async () => {
     const db = fakeDb(), api = app(db);

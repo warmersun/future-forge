@@ -141,7 +141,7 @@ test("Postgres: account refresh holds payer lock before reading Clerk; later can
     getUserBillingSubscription: async () => {
       providerEntered.resolve();
       await releaseProvider.promise;
-      return { subscriptionItems: [{ plan: { slug: "cloud" }, status: "active", periodStart: Date.parse(period), periodEnd: Date.parse(future) }] };
+      return { subscriptionItems: [{ plan: { slug: "content" }, status: "active", periodStart: Date.parse(period), periodEnd: Date.parse(future) }] };
     },
   });
   const billing = webhook(observed(pool, (sql) => {

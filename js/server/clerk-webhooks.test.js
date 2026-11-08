@@ -103,7 +103,7 @@ describe("planClerkBillingEvent", () => {
     assert.equal(p.ok, true);
     assert.equal(p.action, "upsert_subscription");
     assert.equal(p.userId, "user_abc");
-    assert.equal(p.planSlug, "cloud");
+    assert.equal(p.planSlug, "content");
     assert.equal(p.status, "active");
     assert.equal(p.periodStart, new Date(1_700_000_000_000).toISOString());
     assert.equal(p.periodEnd, new Date(1_702_592_000_000).toISOString());
@@ -118,16 +118,16 @@ describe("planClerkBillingEvent", () => {
       data: {
         status: "canceled",
         period_end: 1_702_592_000_000,
-        plan: { slug: "cloud" },
+        plan: { slug: "content" },
         payer: { user_id: "user_abc", email: "a@example.com" },
       },
     });
     assert.equal(canceled.status, "canceled");
-    assert.equal(canceled.planSlug, "cloud");
+    assert.equal(canceled.planSlug, "content");
     assert.equal("email" in canceled, false);
     const due = planClerkBillingEvent({
       type: "subscriptionItem.pastDue",
-      data: { payer: { user_id: "user_abc" }, plan: { slug: "cloud" } },
+      data: { payer: { user_id: "user_abc" }, plan: { slug: "content" } },
     });
     assert.equal(due.status, "past_due");
   });
@@ -148,7 +148,7 @@ describe("planClerkBillingEvent", () => {
     );
   });
 
-  it("stores a paid Clerk plan slug as cloud", () => {
+  it("stores a paid Clerk plan slug as content", () => {
     const p = planClerkBillingEvent(
       {
         type: "subscription.active",
@@ -157,7 +157,7 @@ describe("planClerkBillingEvent", () => {
           payer: { user_id: "user_abc" },
           items: [
             {
-              plan: { slug: "future_forge_hosted4u" },
+              plan: { slug: "content" },
               period_start: 1_700_000_000_000,
               period_end: 1_702_592_000_000,
             },
@@ -166,20 +166,20 @@ describe("planClerkBillingEvent", () => {
       },
       { env: {} }
     );
-    assert.equal(p.planSlug, "cloud");
+    assert.equal(p.planSlug, "content");
     assert.equal(p.status, "active");
     const item = planClerkBillingEvent(
       {
         type: "subscriptionItem.updated",
         data: {
           status: "active",
-          plan: { slug: "future_forge_hosted4u" },
+          plan: { slug: "content" },
           payer: { user_id: "user_abc" },
         },
       },
       { env: {} }
     );
-    assert.equal(item.planSlug, "cloud");
+    assert.equal(item.planSlug, "content");
     const mixed = planClerkBillingEvent(
       {
         type: "subscription.updated",
@@ -188,13 +188,13 @@ describe("planClerkBillingEvent", () => {
           payer: { user_id: "user_abc" },
           items: [
             { plan: { slug: "free_user" } },
-            { plan: { slug: "future_forge_hosted4u" }, period_end: 1_702_592_000_000 },
+            { plan: { slug: "content" }, period_end: 1_702_592_000_000 },
           ],
         },
       },
       { env: {} }
     );
-    assert.equal(mixed.planSlug, "cloud");
+    assert.equal(mixed.planSlug, "content");
     assert.equal(mixed.periodEnd, new Date(1_702_592_000_000).toISOString());
   });
 
@@ -228,7 +228,7 @@ describe("planClerkBillingEvent", () => {
 });
 
 describe("rowFromClerkBillingSubscription", () => {
-  it("maps an active paid plan onto the cloud row", () => {
+  it("maps an active paid plan onto the content row", () => {
     const row = rowFromClerkBillingSubscription(
       {
         status: "active",
@@ -236,7 +236,7 @@ describe("rowFromClerkBillingSubscription", () => {
           { status: "active", plan: { slug: "free_user" }, periodStart: 1, periodEnd: 2 },
           {
             status: "active",
-            plan: { slug: "future_forge_hosted4u" },
+            plan: { slug: "content" },
             periodStart: 1_700_000_000_000,
             periodEnd: 1_702_592_000_000,
           },
@@ -244,13 +244,13 @@ describe("rowFromClerkBillingSubscription", () => {
       },
       { env: {} }
     );
-    assert.equal(row.planSlug, "cloud");
+    assert.equal(row.planSlug, "content");
     assert.equal(row.status, "active");
     assert.equal(row.periodStart, new Date(1_700_000_000_000).toISOString());
     assert.equal(row.periodEnd, new Date(1_702_592_000_000).toISOString());
   });
 
-  it("stores content as content and prefers cloud when both are active", () => {
+  it("stores content as content and normalizes paid items to content", () => {
     const content = rowFromClerkBillingSubscription({
       subscriptionItems: [
         { status: "active", plan: { slug: "content" }, periodStart: 1_700_000_000_000, periodEnd: 1_702_592_000_000 },
@@ -263,25 +263,23 @@ describe("rowFromClerkBillingSubscription", () => {
         { status: "active", plan: { slug: "cloud" }, periodEnd: 1_800_000_000_000 },
       ],
     }, { env: {} });
-    assert.equal(both.planSlug, "cloud");
-    assert.equal(both.periodEnd, new Date(1_800_000_000_000).toISOString());
+    assert.equal(both.planSlug, "content");
     const unknown = rowFromClerkBillingSubscription({
       subscriptionItems: [
         { status: "active", plan: { slug: "content" } },
         { status: "active", plan: { slug: "paid" } },
       ],
     }, { env: {} });
-    assert.equal(unknown.planSlug, "cloud");
+    assert.equal(unknown.planSlug, "content");
   });
 
-  it("prefers a canceled cloud item over canceled content", () => {
+  it("normalizes a canceled paid item to content", () => {
     const row = canceledRowFromClerkBillingSubscription({
       subscriptionItems: [
-        { status: "canceled", plan: { slug: "content" }, periodEnd: 1_702_592_000_000 },
-        { status: "canceled", plan: { slug: "cloud" }, periodEnd: 1_800_000_000_000 },
+        { status: "canceled", plan: { slug: "content" }, periodEnd: 1_800_000_000_000 },
       ],
     }, { env: {} });
-    assert.equal(row.planSlug, "cloud");
+    assert.equal(row.planSlug, "content");
     assert.equal(row.status, "canceled");
     assert.equal(row.periodEnd, new Date(1_800_000_000_000).toISOString());
   });
@@ -295,7 +293,7 @@ describe("rowFromClerkBillingSubscription", () => {
     );
     assert.equal(
       rowFromClerkBillingSubscription({
-        subscriptionItems: [{ status: "canceled", plan: { slug: "future_forge_hosted4u" } }],
+        subscriptionItems: [{ status: "canceled", plan: { slug: "content" } }],
       }),
       null
     );
@@ -310,7 +308,7 @@ describe("rowFromClerkBillingSubscription", () => {
           subscriptionItems: [
             {
               status: "active",
-              plan: { slug: "future_forge_hosted4u" },
+              plan: { slug: "content" },
               periodStart: 1_700_000_000_000,
               periodEnd: 1_702_592_000_000,
             },
@@ -318,6 +316,6 @@ describe("rowFromClerkBillingSubscription", () => {
         };
       },
     });
-    assert.equal(row.planSlug, "cloud");
+    assert.equal(row.planSlug, "content");
   });
 });

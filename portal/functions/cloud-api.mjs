@@ -164,7 +164,7 @@ export function createCloudApi({ env = process.env, db, verifyClerk, verifySigne
       if (path === "/api/quests" || path.startsWith("/api/quests/") ||
         path.startsWith("/api/u/") || path === "/api/board" || path.startsWith("/api/board/"))
         return handlers().public.fetch(request);
-      if (["/api/me/ai/reserve", "/api/internal/ai/reserve", "/api/me/ai/settle", "/api/webhooks/clerk"].includes(path))
+      if (["/api/me/ai/reserve", "/api/internal/ai/reserve", "/api/me/ai/settle", "/api/webhooks/clerk", "/api/webhooks/stripe"].includes(path))
         return handlers().billing.fetch(request);
       const methods = allowedMethods(path);
       if (!methods) return response({ ok: false, error: "not_found" }, 404, cors);
@@ -181,7 +181,7 @@ export function createCloudApi({ env = process.env, db, verifyClerk, verifySigne
     if (path.startsWith("/card/") || path === "/api/quests" || path.startsWith("/api/quests/") ||
       path.startsWith("/api/u/") || path === "/api/board" || path.startsWith("/api/board/"))
       return handlers().public.fetch(request);
-    if (["/api/me/ai/reserve", "/api/internal/ai/reserve", "/api/me/ai/settle", "/api/webhooks/clerk"].includes(path))
+    if (["/api/me/ai/reserve", "/api/internal/ai/reserve", "/api/me/ai/settle", "/api/webhooks/clerk", "/api/webhooks/stripe"].includes(path))
       return handlers().billing.fetch(request);
     if (path === "/api/report" || /^\/api\/me\/quests\/[^/]+\/(score|still)$/.test(path))
       return withCors(await handlers().quest.fetch(request, await requestIdentity(request)), origin);

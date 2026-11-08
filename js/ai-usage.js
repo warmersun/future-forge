@@ -45,6 +45,7 @@ export function usageMeterState(raw) {
   const ratio = budget > 0 ? used / budget : (used > 0 ? 1 : 0);
   const pct = Math.min(100, Math.max(0, Math.round(ratio * 100)));
   const tone = remaining <= 0 ? "empty" : ratio >= 0.8 ? "low" : "ok";
+  const topUpUrl = safeTopUpUrl(raw.topUpUrl);
   return {
     budget,
     spent,
@@ -55,6 +56,8 @@ export function usageMeterState(raw) {
     tone,
     figures: `${groupPoints(used)} used · ${groupPoints(remaining)} left`,
     reset: usageResetLabel(raw.periodEnd),
+    topUpUrl,
+    topUpLabel: "Reset usage · $20 for 15,000 points",
   };
 }
 
@@ -84,6 +87,7 @@ export function aiUsageMarkup() {
     <span data-ai-usage-fill></span>
   </div>
   <p class="ai-usage-reset" data-ai-usage-reset hidden></p>
+  <a class="ai-usage-topup" data-ai-usage-topup href="" hidden>Reset usage · $20 for 15,000 points</a>
 </div>`;
 }
 
@@ -140,6 +144,7 @@ function paintOne(el, state) {
   const meter = el.querySelector?.("[data-ai-usage-meter]");
   const fill = el.querySelector?.("[data-ai-usage-fill]");
   const reset = el.querySelector?.("[data-ai-usage-reset]");
+  const topup = el.querySelector?.("[data-ai-usage-topup]");
   if (!state) {
     setHidden(el, true);
     if (figures) figures.textContent = "";
@@ -147,6 +152,10 @@ function paintOne(el, state) {
     if (reset) {
       setHidden(reset, true);
       reset.textContent = "";
+    }
+    if (topup) {
+      setHidden(topup, true);
+      topup.removeAttribute?.("href");
     }
     return;
   }
@@ -165,6 +174,22 @@ function paintOne(el, state) {
     setHidden(reset, !state.reset);
     reset.textContent = state.reset;
   }
+  if (topup) {
+    setHidden(topup, !state.topUpUrl);
+    if (state.topUpUrl) {
+      topup.setAttribute?.("href", state.topUpUrl);
+      if ("href" in topup) topup.href = state.topUpUrl;
+      topup.textContent = state.topUpLabel;
+    } else {
+      topup.removeAttribute?.("href");
+    }
+  }
+}
+
+function safeTopUpUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw || !/^https?:\/\/\S+$/i.test(raw)) return "";
+  return raw;
 }
 
 function setHidden(el, hidden) {

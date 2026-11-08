@@ -128,14 +128,14 @@ test("private catalog lists safe cards, protects detail, and never falls back on
 });
 
 test("paid access requires active configured plan; malformed tokens cannot authorize", async () => {
-  const f = fixture({ rows: (sql) => sql.includes("FROM subscriptions") ? [{ status: "active", plan_slug: "cloud", period_end: new Date("2099-01-01") }] : [] });
+  const f = fixture({ rows: (sql) => sql.includes("FROM subscriptions") ? [{ status: "active", plan_slug: "content", period_end: new Date("2099-01-01") }] : [] });
   assert.equal((await body(await f.request("/api/quests/paid", { token: jwt })))[0], 200);
   assert.equal((await body(await f.request("/api/quests/paid", { token: "bad" })))[0], 401);
   assert.equal((await body(await f.request("/api/quests/paid", { token: "a.b.c" })))[0], 401);
   const notPaid = fixture({ rows: (sql) => sql.includes("FROM subscriptions") ? [{ status: "active", plan_slug: "other", period_end: new Date("2099-01-01") }] : [] });
   assert.equal((await body(await notPaid.request("/api/quests/paid", { token: jwt })))[1].error, "content_required");
-  const contentPlan = fixture({ rows: (sql) => sql.includes("FROM subscriptions") ? [{ status: "active", plan_slug: "content", period_end: new Date("2099-01-01") }] : [] });
-  assert.equal((await body(await contentPlan.request("/api/quests/paid", { token: jwt })))[0], 200);
+  const cloudPlan = fixture({ rows: (sql) => sql.includes("FROM subscriptions") ? [{ status: "active", plan_slug: "cloud", period_end: new Date("2099-01-01") }] : [] });
+  assert.equal((await body(await cloudPlan.request("/api/quests/paid", { token: jwt })))[1].error, "content_required");
   const unsigned = fixture({ rows: () => [] });
   assert.equal((await body(await unsigned.request("/api/quests/paid", { token: jwt })))[1].error, "content_required");
 });
@@ -143,7 +143,7 @@ test("paid access requires active configured plan; malformed tokens cannot autho
 test("signed game sessions grant account/entitled access, but forged, expired and wrong-secret tokens do not", async () => {
   let clerkCalls = 0;
   const f = fixture({
-    rows: (sql) => sql.includes("FROM subscriptions") ? [{ status: "active", plan_slug: "cloud", period_end: new Date("2099-01-01") }] : [],
+    rows: (sql) => sql.includes("FROM subscriptions") ? [{ status: "active", plan_slug: "content", period_end: new Date("2099-01-01") }] : [],
     overrides: { verifyClerk: async () => { clerkCalls++; return { sub: user }; } },
   });
   const signed = mintGameSessionToken({ userId: user, sessionId: "sess_offline" }, env);

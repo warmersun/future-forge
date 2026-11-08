@@ -40,11 +40,22 @@ test("usage meter states show used versus left and hide a bad payload", () => {
   const empty = usageMeterState({
     budget: 15000, spent: 15000, held: 0, remaining: 0,
     periodEnd: "2026-11-13T23:23:17.295Z",
+    topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1",
   });
   assert.equal(empty.tone, "empty");
   assert.equal(empty.pct, 100);
   assert.equal(empty.figures, "15,000 used · 0 left");
   assert.equal(empty.reset, "Resets Nov 13, 2026");
+  assert.equal(empty.topUpUrl, "https://buy.stripe.com/test_20?client_reference_id=user_1");
+  const notToppedUp = usageMeterState({
+    budget: 15000, spent: 0, held: 0, remaining: 0,
+    topUpUrl: "https://buy.stripe.com/test_20",
+  });
+  assert.equal(notToppedUp.used, 0);
+  assert.equal(notToppedUp.pct, 0);
+  assert.equal(notToppedUp.tone, "empty");
+  assert.equal(notToppedUp.figures, "0 used · 0 left");
+  assert.equal(notToppedUp.topUpUrl, "https://buy.stripe.com/test_20");
   const ok = usageMeterState({ budget: 15000, spent: 100, held: 0, remaining: 14900 });
   assert.equal(ok.tone, "ok");
   assert.equal(ok.pct, 1);
@@ -64,7 +75,11 @@ test("paint writes the figures and hides when usage is null", () => {
   const meter = fakeMeter();
   const root = { querySelectorAll: () => [meter], matches: () => false };
   const state = paintAiUsageMeters(
-    { budget: 15000, spent: 15000, held: 0, remaining: 0, periodEnd: "2026-11-13T23:23:17.295Z" },
+    {
+      budget: 15000, spent: 15000, held: 0, remaining: 0,
+      periodEnd: "2026-11-13T23:23:17.295Z",
+      topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1",
+    },
     root
   );
   assert.equal(state.tone, "empty");
@@ -75,10 +90,14 @@ test("paint writes the figures and hides when usage is null", () => {
   assert.equal(meter.querySelector("[data-ai-usage-meter]").getAttribute("aria-valuetext"), "15,000 used · 0 left");
   assert.equal(meter.querySelector("[data-ai-usage-reset]").textContent, "Resets Nov 13, 2026");
   assert.equal(meter.querySelector("[data-ai-usage-reset]").hidden, false);
+  assert.equal(meter.querySelector("[data-ai-usage-topup]").href, "https://buy.stripe.com/test_20?client_reference_id=user_1");
+  assert.equal(meter.querySelector("[data-ai-usage-topup]").hidden, false);
   paintAiUsageMeters(null, root);
   assert.equal(meter.hidden, true);
   assert.equal(meter.querySelector("[data-ai-usage-figures]").textContent, "");
+  assert.equal(meter.querySelector("[data-ai-usage-topup]").hidden, true);
   assert.match(aiUsageMarkup(), /data-ai-usage/);
+  assert.match(aiUsageMarkup(), /\$20 for 15,000 points/);
 });
 
 test("a meter mounted after the account read picks up the last usage", () => {
@@ -120,6 +139,7 @@ function fakeMeter() {
     "[data-ai-usage-meter]": { attrs: {}, setAttribute(name, value) { this.attrs[name] = value; }, getAttribute(name) { return this.attrs[name]; } },
     "[data-ai-usage-fill]": { style: { width: "" } },
     "[data-ai-usage-reset]": { textContent: "", hidden: true, setAttribute() {}, removeAttribute() {} },
+    "[data-ai-usage-topup]": { href: "", hidden: true, setAttribute() {}, removeAttribute() {} },
   };
   const classes = new Set();
   return {

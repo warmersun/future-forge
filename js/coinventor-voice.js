@@ -41,7 +41,7 @@ import { knownVoiceId } from "./voice-choices.js?v=voice-19";
 
 function cloudQuotaText(data) {
   const base = data?.message || data?.error || "Voice session failed";
-  const url = String(data?.subscribeUrl || "").trim();
+  const url = String(data?.topUpUrl || data?.subscribeUrl || "").trim();
   if (!url) return base;
   if (data.error !== "subscription_required" && data.error !== "quota_spent") return base;
   return `${base} ${url}`;

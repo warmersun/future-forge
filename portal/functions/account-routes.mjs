@@ -25,7 +25,7 @@ import { createClerkClient } from "@clerk/backend";
 import { normalizeClerkUserId } from "../../js/server/clerk-id.mjs";
 import { cloudWriteGate } from "../../js/server/cloud-save.mjs";
 import { parseCollectPath, publicCardDto, collectHttpResult } from "../../js/server/collector-cards.mjs";
-import { planSlugsFromEnv, signQuotaGrant, subscriptionEntitled, subscriptionView, usageForAccount } from "../../js/server/ai-quota.mjs";
+import { contentEntitled, signQuotaGrant, subscriptionView, topUpUrlFromEnv, usageForAccount } from "../../js/server/ai-quota.mjs";
 import { subscribeUrlFromEnv } from "../../js/server/cloud-quota.mjs";
 import { rowFromClerkBillingSubscription } from "../../js/server/clerk-webhooks.mjs";
 import { portalPublicOrigin } from "../../js/cloud/portal-origin.js";
@@ -55,7 +55,6 @@ async function discardBounded(request) {
 /** db is a pg Pool-like interface. identity is supplied ONLY by a verified caller. */
 export function createAccountRoutes({ db, env = process.env, getUserBillingSubscription } = {}) {
   const publicOrigin = portalPublicOrigin(env);
-  const allowedSlugs = planSlugsFromEnv(env);
   const loadBilling = getUserBillingSubscription || (async (userId) => {
     const secretKey = env.CLERK_SECRET_KEY || env.FF_CLERK_SECRET_KEY;
     if (!secretKey) return null;
@@ -83,7 +82,7 @@ export function createAccountRoutes({ db, env = process.env, getUserBillingSubsc
     let sub = null;
     try { sub = (await db.query("SELECT clerk_user_id, plan_slug, status, period_start, period_end FROM subscriptions WHERE clerk_user_id = $1", [uid])).rows[0] || null; }
     catch { /* legacy returns an unentitled subscription view */ }
-    if (!subscriptionEntitled({ status: sub?.status, planSlug: sub?.plan_slug, periodEnd: sub?.period_end, allowedSlugs })) {
+    if (!contentEntitled({ status: sub?.status, planSlug: sub?.plan_slug, periodEnd: sub?.period_end, env })) {
       let cx;
       try {
         cx = await db.connect();
@@ -93,7 +92,7 @@ export function createAccountRoutes({ db, env = process.env, getUserBillingSubsc
         await cx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [uid]);
         sub = (await cx.query("SELECT clerk_user_id, plan_slug, status, period_start, period_end FROM subscriptions WHERE clerk_user_id = $1", [uid])).rows[0] || null;
         let refreshed = sub;
-        if (!subscriptionEntitled({ status: sub?.status, planSlug: sub?.plan_slug, periodEnd: sub?.period_end, allowedSlugs })) {
+        if (!contentEntitled({ status: sub?.status, planSlug: sub?.plan_slug, periodEnd: sub?.period_end, env })) {
           const fresh = rowFromClerkBillingSubscription(await loadBilling(uid), { env });
           if (fresh) {
             // Always bind the verified identity, never provider identity fields.
@@ -113,15 +112,19 @@ export function createAccountRoutes({ db, env = process.env, getUserBillingSubsc
         if (cx) try { await cx.query("ROLLBACK"); } catch { /* original failure wins */ }
       } finally { cx?.release(); }
     }
-    const subscription = subscriptionView(sub, { subscribeUrl: subscribeUrlFromEnv(env), allowedSlugs, env });
+    const topUpUrl = topUpUrlFromEnv(env, uid);
     let usage = null;
-    if (subscription.entitled) {
-      try {
-        usage = await usageForAccount((sql, params) => db.query(sql, params), uid, sub, env);
-      } catch {
-        usage = null;
-      }
+    try {
+      usage = await usageForAccount((sql, params) => db.query(sql, params), uid, sub, env);
+    } catch {
+      usage = null;
     }
+    const subscription = subscriptionView(sub, {
+      subscribeUrl: subscribeUrlFromEnv(env),
+      topUpUrl,
+      topUpEntitled: Boolean(usage && usage.remaining > 0),
+      env,
+    });
     return reply({
       ok: true, signedIn: true, clerk: true, userId: uid, sessionId: identity.sessionId ?? null,
       db: true, solvedIds, quotaGrant, subscription, usage,

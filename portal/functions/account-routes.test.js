@@ -131,7 +131,7 @@ function concurrentSubscriptionDb(onLock) {
   };
 }
 
-const paidSnapshot = { subscriptionItems: [{ plan: { slug: "pro" }, status: "active", periodEnd: 4_000_000_000_000 }] };
+const paidSnapshot = { subscriptionItems: [{ plan: { slug: "content" }, status: "active", periodEnd: 4_000_000_000_000 }] };
 const billingEnv = { ...env, CLERK_SECRET_KEY: "offline-fixture", CLERK_WEBHOOK_SECRET: "offline-fixture" };
 function cancellation(db, getUserBillingSubscription) {
   const webhook = createBillingRoutes({ env: billingEnv, db, getUserBillingSubscription,
@@ -207,7 +207,7 @@ test("account skips provider refresh when webhook made the locked DB row entitle
     assert.equal(await Promise.race([accountWaiting.promise.then(() => "waiting"), pendingAccount.then(() => "finished")]), "waiting");
   } finally { releaseWebhook.resolve(); }
   assert.equal((await pendingWebhook).status, 200);
-  assert.equal((await pendingAccount).body.subscription.entitled, true);
+  assert.equal((await pendingAccount).body.subscription.content, true);
   assert.equal(accountReads, 0);
   assert.equal(db.releases, 2);
 });
@@ -226,24 +226,24 @@ test("/api/me unsigned, disabled, invalid, and signed-in DB unavailable contract
 });
 
 test("signed /api/me reproduces solved IDs, grant and subscription view without secret leakage", async () => {
-  const sub = { plan_slug: "cloud", status: "active", period_end: "2999-01-01" };
-  const db = mockDb({ subscription: sub });
+  const sub = { plan_slug: "content", status: "active", period_end: "2999-01-01" };
+  const db = mockDb({ subscription: sub, usage: { spent_points: 0, held_points: 0 } });
   const handler = createAccountRoutes({ env, db });
   const { status, body } = await result(handler, req(`/api/me?userId=${other}`, "GET", { headers: { "x-user-id": other } }), signed);
   assert.equal(status, 200);
   assert.deepEqual(Object.keys(body), ["ok", "signedIn", "clerk", "userId", "sessionId", "db", "solvedIds", "quotaGrant", "subscription", "usage"]);
   assert.deepEqual({ ...body, quotaGrant: null }, { ok: true, signedIn: true, clerk: true, userId: uid,
     sessionId: "sess_123", db: true, solvedIds: ["a", "b"], quotaGrant: null,
-    subscription: { entitled: true, content: true, planSlug: "cloud", status: "active", subscribeUrl: "https://cloud.warmersun.com/subscribe" },
-    usage: { budget: 5000, spent: 0, held: 0, remaining: 5000, periodEnd: "2999-01-01T00:00:00.000Z" } });
+    subscription: { entitled: true, content: true, planSlug: "content", status: "active", subscribeUrl: "https://cloud.warmersun.com/subscribe" },
+    usage: { budget: 15000, spent: 0, held: 0, remaining: 15000, periodEnd: null } });
   assert.equal(verifyQuotaGrant(body.quotaGrant, "private-key"), uid);
   assert.doesNotMatch(JSON.stringify(body), /private-key|operator-secret|secret-image/);
   assert(db.queries.filter((q) => q.params.includes(uid)).length > 0);
   assert(db.queries.every((q) => !q.params.includes(other)));
 });
 
-test("content plan unlocks paid content and not hosted AI", async () => {
-  const db = mockDb({ subscription: { plan_slug: "content", status: "active", period_end: "2999-01-01" } });
+test("content plan unlocks paid content and not hosted AI until top-up", async () => {
+  const db = mockDb({ subscription: { plan_slug: "content", status: "skipped", period_end: "2999-01-01" } });
   const handler = createAccountRoutes({
     env,
     db,
@@ -256,8 +256,10 @@ test("content plan unlocks paid content and not hosted AI", async () => {
     entitled: false, content: true, planSlug: "content", status: "active",
     subscribeUrl: "https://cloud.warmersun.com/subscribe",
   });
-  assert.equal(body.usage, null);
-  assert.equal(db.queries.some((q) => q.sql.includes("FROM ai_usage_period")), false);
+  assert.deepEqual(body.usage, {
+    budget: 15000, spent: 0, held: 0, remaining: 0, periodEnd: null,
+  });
+  assert.equal(db.queries.some((q) => q.sql.includes("FROM ai_usage_period")), true);
   assert.equal(db.queries.some((q) => q.sql.startsWith("INSERT INTO subscriptions") && q.params[1] === "content"), true);
   assert.equal(db.queries.some((q) => q.params.includes("cloud") && q.sql.startsWith("INSERT INTO subscriptions")), false);
 });
@@ -274,7 +276,7 @@ test("quota key is generated once and signed grant uses persisted key", async ()
 });
 
 test("missing/expired subscription refreshes paid Clerk billing row and reads it back", async () => {
-  const db = mockDb({ subscription: { plan_slug: "cloud", status: "canceled", period_end: "2020-01-01" } });
+  const db = mockDb({ subscription: { plan_slug: "content", status: "canceled", period_end: "2020-01-01" } });
   let calls = 0;
   const handler = createAccountRoutes({ env, db, getUserBillingSubscription: async (id) => {
     assert.equal(id, uid); calls++;
@@ -283,10 +285,10 @@ test("missing/expired subscription refreshes paid Clerk billing row and reads it
     assert(begin >= 0 && lock > begin, "provider fetch must run inside the payer transaction lock");
     assert.deepEqual(db.queries[lock].params, [uid]);
     assert(db.queries.slice(lock + 1).some((q) => q.sql.includes("FROM subscriptions")), "re-read subscription after acquiring lock");
-    return { subscriptionItems: [{ plan: { slug: "pro" }, status: "active", periodStart: 1_700_000_000_000, periodEnd: 4_000_000_000_000 }] };
+    return { subscriptionItems: [{ plan: { slug: "content" }, status: "active", periodStart: 1_700_000_000_000, periodEnd: 4_000_000_000_000 }] };
   } });
   const body = (await result(handler, req("/api/me"), signed)).body;
-  assert.deepEqual(body.subscription, { entitled: true, content: true, planSlug: "pro", status: "active", subscribeUrl: "https://cloud.warmersun.com/subscribe" });
+  assert.deepEqual(body.subscription, { entitled: false, content: true, planSlug: "content", status: "active", subscribeUrl: "https://cloud.warmersun.com/subscribe" });
   assert.equal(calls, 1);
   assert(db.queries.some((q) => q.sql === "COMMIT"));
   assert(db.queries.some((q) => q.sql === "RELEASE"));
@@ -304,7 +306,7 @@ test("partial account read failures keep legacy field defaults and billing refre
   assert.equal(body.subscription.entitled, false);
   assert.equal(body.subscription.planSlug, "free_user");
   assert(db.queries.some((q) => q.sql === "ROLLBACK"));
-  assert.equal(db.queries.at(-1).sql, "RELEASE");
+  assert(db.queries.some((q) => q.sql === "RELEASE"));
   assert.equal(warning.mock.callCount(), 0, "provider error details must not reach logs");
   assert.doesNotMatch(JSON.stringify(body), /secret-error|private failure/);
 });
@@ -318,30 +320,35 @@ test("failed refresh writes or commit roll back and never return uncommitted ent
     assert.equal(response.body.subscription.entitled, false);
     assert.equal(response.body.subscription.status, "inactive");
     assert(db.queries.some((q) => q.sql === "ROLLBACK"));
-    assert.equal(db.queries.at(-1).sql, "RELEASE");
+    assert(db.queries.some((q) => q.sql === "RELEASE"));
     assert.equal((await db.query("SELECT * FROM subscriptions WHERE clerk_user_id = $1", [uid])).rows[0].status, "inactive");
     assert.doesNotMatch(JSON.stringify(response.body), /private.*failure/);
   }
 });
 
-test("cloud /api/me reports spent, held, and remaining points for the subscription period", async () => {
+test("cloud /api/me reports spent, held, and remaining points for the top-up ledger", async () => {
   const db = mockDb({
     subscription: {
-      plan_slug: "cloud", status: "active",
+      plan_slug: "content", status: "active",
       period_start: "2026-10-13T23:23:17.295Z", period_end: "2026-11-13T23:23:17.295Z",
     },
     usage: { spent_points: 12400, held_points: 50 },
   });
   const body = (await result(createAccountRoutes({
-    env: { ...env, FF_CLOUD_AI_BUDGET: "15000" }, db, getUserBillingSubscription: async () => null,
+    env: { ...env, FF_CLOUD_AI_BUDGET: "15000", FF_STRIPE_TOPUP_URL: "https://buy.stripe.com/test_20" },
+    db,
+    getUserBillingSubscription: async () => null,
   }), req("/api/me"), signed)).body;
   assert.deepEqual(body.usage, {
     budget: 15000, spent: 12400, held: 50, remaining: 2550,
-    periodEnd: "2026-11-13T23:23:17.295Z",
+    periodEnd: null,
+    topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_123",
   });
+  assert.equal(body.subscription.entitled, true);
+  assert.equal(body.subscription.topUpUrl, "https://buy.stripe.com/test_20?client_reference_id=user_123");
   assert.deepEqual(
     db.queries.find((q) => q.sql.includes("FROM ai_usage_period")).params,
-    [uid, "2026-10-13T23:23:17.295Z"]
+    [uid, "1970-01-01T00:00:00.000Z"]
   );
   assert.doesNotMatch(JSON.stringify(body), /private-key|FF_CLOUD_AI_BUDGET/);
 });
@@ -349,10 +356,11 @@ test("cloud /api/me reports spent, held, and remaining points for the subscripti
 test("usage ledger failure leaves usage null and keeps the subscription", async () => {
   const db = mockDb({
     fail: "FROM ai_usage_period",
-    subscription: { plan_slug: "cloud", status: "active", period_end: "2999-01-01" },
+    subscription: { plan_slug: "content", status: "active", period_end: "2999-01-01" },
   });
   const body = (await result(createAccountRoutes({ env, db }), req("/api/me"), signed)).body;
-  assert.equal(body.subscription.entitled, true);
+  assert.equal(body.subscription.content, true);
+  assert.equal(body.subscription.entitled, false);
   assert.equal(body.usage, null);
   assert.doesNotMatch(JSON.stringify(body), /private failure/);
 });
@@ -363,10 +371,14 @@ test("quota and subscription query failures never disclose errors or fabricate e
   assert.equal(body.signedIn, true);
   assert.equal(body.subscription.entitled, false);
   assert.equal(body.subscription.planSlug, null);
-  assert.equal(body.usage, null);
+  assert.deepEqual(body.usage, { budget: 15000, spent: 0, held: 0, remaining: 0, periodEnd: null });
   assert.equal(verifyQuotaGrant(body.quotaGrant, "private-key"), uid);
   assert(!JSON.stringify(body).includes("private failure detail"));
-  const noKey = mockDb({ fail: "FROM quota_grant_key", subscription: { plan_slug: "cloud", status: "active" } });
+  const noKey = mockDb({
+    fail: "FROM quota_grant_key",
+    subscription: { plan_slug: "content", status: "active" },
+    usage: { spent_points: 0, held_points: 0 },
+  });
   const withoutGrant = (await result(createAccountRoutes({ env, db: noKey }), req("/api/me"), signed)).body;
   assert.equal(withoutGrant.quotaGrant, null);
   assert.equal(withoutGrant.subscription.entitled, true);

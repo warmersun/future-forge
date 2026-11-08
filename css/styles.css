@@ -414,6 +414,25 @@ body.ff-accounts .topbar-game {
   display: none !important;
 }
 
+.ai-usage-topup {
+  display: inline-block;
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #ffd28a;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+.ai-usage-topup:hover,
+.ai-usage-topup:focus-visible {
+  color: #fff3d1;
+}
+
+.ai-usage-topup[hidden] {
+  display: none !important;
+}
+
 .title-card > .ai-usage {
   margin: 1.15rem auto 0;
   text-align: initial;

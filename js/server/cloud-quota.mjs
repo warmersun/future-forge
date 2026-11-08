@@ -28,16 +28,15 @@ import {
   cloudAiDecision,
   holdMicroFor,
   isQuotaKind,
-  monthPeriodStart,
-  planSlugsFromEnv,
   quotaRatesFromEnv,
   settleMicroFor,
   signQuotaGrant,
   SUBSCRIPTION_REQUIRED_MESSAGE,
   QUOTA_SPENT_MESSAGE,
   QUOTA_UNAVAILABLE_MESSAGE,
-  subscriptionEntitled,
+  TOPUP_PERIOD_START,
   textMaxOutFromEnv,
+  topUpUrlFromEnv,
   verifyQuotaGrant,
   voiceConnectedMinuteMicro,
   voiceMaxMsFromEnv,
@@ -45,7 +44,6 @@ import {
 import {
   getAiReservation,
   getQuotaGrantSecret,
-  getSubscription,
   reserveAiBudget,
   settleAiReservation,
 } from "./db.mjs";
@@ -72,11 +70,12 @@ export function subscribeUrlFromEnv(env = process.env) {
 export async function reserveQuota(input) {
   const env = input.env || process.env;
   const kind = String(input.kind || "");
-  const subscribeUrl = subscribeUrlFromEnv(env);
+  const userId = String(input.userId || "").trim();
+  const topUpUrl = topUpUrlFromEnv(env, userId);
+  const subscribeUrl = topUpUrl || subscribeUrlFromEnv(env);
   if (!isQuotaKind(kind)) {
     return { ok: false, status: 400, error: "bad_kind", subscribeUrl };
   }
-  const userId = String(input.userId || "").trim();
   if (!userId) {
     return {
       ok: false,
@@ -84,36 +83,18 @@ export async function reserveQuota(input) {
       error: "subscription_required",
       message: SUBSCRIPTION_REQUIRED_MESSAGE,
       subscribeUrl,
-    };
-  }
-  const sub = await getSubscription(userId);
-  const now = input.now || Date.now();
-  const entitled = subscriptionEntitled({
-    status: sub?.status,
-    planSlug: sub?.plan_slug,
-    periodEnd: sub?.period_end,
-    now,
-    allowedSlugs: planSlugsFromEnv(env),
-  });
-  if (!entitled) {
-    return {
-      ok: false,
-      status: 402,
-      error: "subscription_required",
-      message: SUBSCRIPTION_REQUIRED_MESSAGE,
-      subscribeUrl,
+      ...(topUpUrl ? { topUpUrl } : {}),
     };
   }
   const rates = quotaRatesFromEnv(env);
-  const periodStart = sub?.period_start
-    ? new Date(sub.period_start).toISOString()
-    : monthPeriodStart(now);
+  const periodStart = TOPUP_PERIOD_START;
   const maxVoiceMs = voiceMaxMsFromEnv(env);
   let reserved;
   try {
     reserved = await reserveAiBudget({
       userId,
       periodStart,
+      requireExistingPeriod: true,
       budgetMicro: budgetMicroFromEnv(env),
       kind,
       quoteHold: (remaining) =>
@@ -134,9 +115,20 @@ export async function reserveQuota(input) {
       error: "quota_unavailable",
       message: QUOTA_UNAVAILABLE_MESSAGE,
       subscribeUrl,
+      ...(topUpUrl ? { topUpUrl } : {}),
     };
   }
   if (!reserved.ok) {
+    if (reserved.error === "subscription_required") {
+      return {
+        ok: false,
+        status: 402,
+        error: "subscription_required",
+        message: SUBSCRIPTION_REQUIRED_MESSAGE,
+        subscribeUrl,
+        ...(topUpUrl ? { topUpUrl } : {}),
+      };
+    }
     const spent = reserved.error === "quota_spent";
     return {
       ok: false,
@@ -144,6 +136,7 @@ export async function reserveQuota(input) {
       error: spent ? "quota_spent" : reserved.error || "quota_unavailable",
       message: spent ? QUOTA_SPENT_MESSAGE : QUOTA_UNAVAILABLE_MESSAGE,
       subscribeUrl,
+      ...(topUpUrl ? { topUpUrl } : {}),
       remainingMicro: reserved.remainingMicro,
     };
   }
@@ -156,7 +149,7 @@ export async function reserveQuota(input) {
   });
   if (!decision.ok) {
     await settleAiReservation({ reservationId: reserved.reservationId, actualMicro: 0 });
-    return { ...decision, subscribeUrl };
+    return { ...decision, subscribeUrl, ...(topUpUrl ? { topUpUrl } : {}) };
   }
   return {
     ok: true,
@@ -168,6 +161,7 @@ export async function reserveQuota(input) {
     maxOutputTokens: kind === "text" ? textMaxOutFromEnv(env) : 0,
     minuteMicro: kind === "voice" ? voiceConnectedMinuteMicro(rates) : 0,
     subscribeUrl,
+    ...(topUpUrl ? { topUpUrl } : {}),
   };
 }
 

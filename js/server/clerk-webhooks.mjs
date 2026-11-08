@@ -23,14 +23,14 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { clerkKeysFromEnv, normalizeClerkUserId } from "./clerk-auth.mjs";
-import { contentPlanSlugsFromEnv, planSlugsFromEnv } from "./ai-quota.mjs";
+import { contentPlanSlugsFromEnv } from "./ai-quota.mjs";
 import { foundingCodes } from "./achievements.mjs";
 import { sanitizeUsername } from "./profile.mjs";
 
 const FREE_PLAN_SLUGS = new Set(["free_user", "free_org"]);
 
 /**
- * Cloud outranks content. Unknown paid slugs normalize to cloud, so they outrank content too.
+ * Paid Clerk plans normalize to the configured Content slug.
  * Free plans rank 0.
  * @param {unknown} raw
  * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
@@ -40,7 +40,6 @@ function storedPlanRank(raw, env) {
   if (!slug || FREE_PLAN_SLUGS.has(slug)) return 0;
   const stored = entitledPlanSlug(slug, env);
   if (!stored || FREE_PLAN_SLUGS.has(stored)) return 0;
-  if (planSlugsFromEnv(env).includes(stored)) return 2;
   if (contentPlanSlugsFromEnv(env).includes(stored)) return 1;
   return 0;
 }
@@ -156,10 +155,9 @@ export function entitledPlanSlug(raw, env = process.env) {
   const slug = String(raw || "").trim();
   if (!slug) return null;
   if (FREE_PLAN_SLUGS.has(slug)) return slug;
-  const cloud = planSlugsFromEnv(env);
-  if (cloud.includes(slug)) return slug;
-  if (contentPlanSlugsFromEnv(env).includes(slug)) return slug;
-  return cloud[0] || "cloud";
+  const content = contentPlanSlugsFromEnv(env);
+  if (content.includes(slug)) return slug;
+  return content[0] || "content";
 }
 
 /**

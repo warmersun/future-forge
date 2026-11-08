@@ -120,7 +120,7 @@ The `cloudapi` function acts as the unified API gateway for Warmer Sun Cloud. It
 
 ##### 2. Account & Collector Cards (`portal/functions/account-routes.mjs`)
 - `GET /api/me`  
-  Returns learner identity, account standing, and active subscription status. A Cloud plan also includes `usage` (`budget`, `spent`, `held`, `remaining`, `periodEnd`). Other signed-in accounts get `usage: null`.
+  Returns learner identity, account standing, active Content subscription status, and hosted AI `usage` (`budget`, `spent`, `held`, `remaining`, `periodEnd`, `topUpUrl`). Signed-in accounts start with `remaining: 0` until a $20 Stripe top-up resets usage to 15,000 points.
 - `GET /api/me/cards`  
   Returns the list of collector cards unlocked and claimed by the learner.
 - `POST /api/me/cards/:id/collect`  
@@ -179,6 +179,8 @@ The `cloudapi` function acts as the unified API gateway for Warmer Sun Cloud. It
   Finalizes and settles actual AI compute points spent against a prior reservation.
 - `POST /api/webhooks/clerk`  
   Svix-verified webhook endpoint listening for Clerk user and billing events (`subscription.created`, `subscription.updated`, `subscription.deleted`, `user.deleted`).
+- `POST /api/webhooks/stripe`  
+  Stripe-verified webhook endpoint listening for Stripe Payment Link events (`checkout.session.completed`, `checkout.session.async_payment_succeeded`) to reset the user's hosted AI usage to 15,000 points.
 
 ---
 
@@ -267,8 +269,10 @@ This section details all environment variables required for each running applica
 | `FF_QUESTS_BUCKET` | **Required** | `quests` | Name of the private Neon Object Storage bucket holding official quest packages. | Neon bucket name (`quests`). Created via `neon.portal.ts` / Neon Console. |
 | `FF_GAME_DEVICE_ORIGINS` | Optional | `https://ff.warmersun.com` | Comma-separated list of additional game origins allowed for device handshake CORS (loopbacks and LAN IPs are allowed automatically). | Add `https://ff.warmersun.com` and any custom Tailscale Funnel origins. |
 | `FF_ALLOW_LAN_ORIGINS` | Optional | `1` | Controls whether private LAN origins (`192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`) are allowed for device handshake CORS. Default `1` (allowed); set to `0` to forbid. | Operator preference. Default is `1`. |
-| `FF_CLOUD_PLAN_SLUGS` | **Required** | `cloud` | Comma-separated list of Clerk subscription plan slugs eligible to spend Cloud AI quota. A Content slug here would grant hosted AI. | Matches the Cloud plan slug in **Clerk Dashboard** &rarr; **Billing** &rarr; **Plans** (e.g. `cloud`). |
-| `FF_CLOUD_AI_BUDGET` | **Required** | `5000` | Points allocated per billing cycle for active subscribers. | Defined by operator pricing model (e.g., `5000` points). |
+| `FF_CONTENT_PLAN_SLUGS` | **Required** | `content` | Comma-separated list of Clerk subscription plan slugs eligible to unlock paid catalog quests (`access: "paid"`). | Matches the Content plan slug in **Clerk Dashboard** &rarr; **Billing** &rarr; **Plans** (`content`, $10/month). |
+| `FF_STRIPE_TOPUP_URL` | **Required** for Top-Ups | `https://buy.stripe.com/...` | Stripe Payment Link URL for purchasing a $20 hosted AI usage reset (15,000 points). The backend appends `?client_reference_id=<clerk_user_id>`. | **Stripe Dashboard** &rarr; **Payment Links** &rarr; Copy Link URL. |
+| `STRIPE_WEBHOOK_SECRET` | **Required** for Top-Ups | `whsec_...` | Stripe webhook signing secret for verifying inbound payment events at `/api/webhooks/stripe`. | **Stripe Dashboard** &rarr; **Developers** &rarr; **Webhooks** &rarr; Select Endpoint (`https://cloud.warmersun.com/api/webhooks/stripe`) &rarr; **Signing secret**. |
+| `FF_CLOUD_AI_BUDGET` | **Required** | `15000` | Points granted per $20 top-up (usage reset). | Defined by operator pricing model (default `15000` points). |
 | `FF_QUOTA_TEXT_IN_PER_KTOK` | **Required** | `2` | Quota points charged per 1,000 prompt input tokens. | Operator policy (see `.env.portal.example`). Default `2`. |
 | `FF_QUOTA_TEXT_OUT_PER_KTOK` | **Required** | `6` | Quota points charged per 1,000 generated output tokens. | Operator policy (see `.env.portal.example`). Default `6`. |
 | `FF_QUOTA_TEXT_HOLD` | **Required** | `20` | Headroom hold points temporarily reserved while awaiting text generation stream. | Operator policy. Default `20`. |
@@ -348,10 +352,13 @@ In **Clerk Dashboard** &rarr; **Configure** &rarr; **Webhooks**:
     - `subscription.created`, `subscription.updated`, `subscription.active`, `subscription.pastDue`
     - `subscriptionItem.active`, `subscriptionItem.updated`, `subscriptionItem.canceled`, `subscriptionItem.ended`, `subscriptionItem.expired`, `subscriptionItem.pastDue`
 
-### 4.3. Clerk Billing (Subscription Plan Slug)
+### 4.3. Clerk Billing & Stripe Top-Ups
 In **Clerk Dashboard** &rarr; **Configure** &rarr; **Billing**:
 - **Enable Billing**: Toggle on Clerk Billing / Pricing features.
-- **Create Plans** (user plans, not organization plans):
-  - **Slug:** `cloud` (must match `FF_CLOUD_PLAN_SLUGS=cloud`). Active subscribers spend Cloud AI quota. The live plan is “Future Forge Hosted4U,” $49 USD monthly.
-  - **Slug:** `content` (must match `FF_CONTENT_PLAN_SLUGS=content`). Name “Content,” $10 USD monthly, public on the user pricing table. Unlocks paid catalog bodies. It does not spend AI quota. Cloud includes Content in the app, so do not add `content` to `FF_CLOUD_PLAN_SLUGS`.
-  *(The backend ignores Clerk's built-in `free_user` plan. Unknown paid slugs are stored as `cloud` so older subscribers keep inference. The slug `content` is stored as itself.)*
+- **Create Plan** (user plan, not organization plan):
+  - **Slug:** `content` (must match `FF_CONTENT_PLAN_SLUGS=content`). Name “Content,” $10 USD monthly, public on the user pricing table. Unlocks paid catalog bodies (`access: "paid"`). It does not grant hosted AI points.
+  *(The Hosted4U / `cloud` subscription plan has been retired in favor of Stripe top-ups. The backend ignores Clerk's built-in `free_user` plan and normalizes paid Clerk subscriptions to `content`.)*
+
+In **Stripe Dashboard**:
+- **Payment Link**: Create a one-time payment product for **$20 USD** (15,000 points usage reset) and create a Payment Link. Set its URL as `FF_STRIPE_TOPUP_URL` on `cloudapi`.
+- **Webhook**: Add an endpoint at `https://cloud.warmersun.com/api/webhooks/stripe` subscribed to `checkout.session.completed` and `checkout.session.async_payment_succeeded`. Set its signing secret as `STRIPE_WEBHOOK_SECRET` on `cloudapi`.
