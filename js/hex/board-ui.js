@@ -194,6 +194,7 @@ export function createHexBoardUi(opts) {
     if (!highlight) return;
     highlight = null;
     render();
+    opts.onPathwayToggle?.(null, null);
   }
 
   function togglePathway(tileId) {

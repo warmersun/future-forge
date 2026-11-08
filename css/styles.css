@@ -3999,6 +3999,22 @@ body:has(.screen-companion.is-titled.active) #ff-account-signin {
   align-self: flex-end;
 }
 
+.hex-island-how:has(.hex-island-how-block.is-active) .hex-island-how-block:not(.is-active) {
+  opacity: 0.42;
+  filter: grayscale(0.7);
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.hex-island-how-block.is-active .hex-island-how-text,
+.hex-island-how-block.is-highlighted .hex-island-how-text,
+.hex-island-how-block.highlighted .hex-island-how-text,
+.hex-island-how-block.has-pathway-highlight .hex-island-how-text,
+.hex-island-how-block[data-highlighted="true"] .hex-island-how-text {
+  background: rgba(59, 130, 246, 0.18);
+  border: 2px solid rgba(59, 130, 246, 0.8);
+  border-radius: 8px;
+}
+
 @media (max-width: 520px) {
   .hex-island-how-row {
     flex-wrap: wrap;

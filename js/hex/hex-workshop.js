@@ -129,6 +129,7 @@ import {
   inventionComponent,
   listInventionPathways,
   pathwayContentFingerprint,
+  pathwayHighlight,
   islandHowKey,
   resolveIslandHow,
   islandHowForAi,
@@ -139,7 +140,7 @@ import {
 import { scopeCrisisScore } from "./crisis-delta.js?v=crisis-role-3";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
-import { createHexBoardUi } from "./board-ui.js?v=crisis-role-3";
+import { createHexBoardUi } from "./board-ui.js?v=pathway-desc-1";
 import { polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
@@ -177,6 +178,7 @@ export function createHexWorkshop(api) {
   let inspectHideTimer = null;
   /** @type {string|null} */
   let inspectTileId = null;
+  let highlightedPathwayTileId = null;
   /** @type {string|null} */
   let concernAnswerRevisingId = null;
   let concernAnswerBusy = false;
@@ -373,6 +375,19 @@ export function createHexWorkshop(api) {
       keepKey && active
         ? [active.selectionStart, active.selectionEnd]
         : null;
+    const uiHighlight = ensureUi()?.getHighlight?.() || null;
+    const highlight =
+      uiHighlight ||
+      (highlightedPathwayTileId
+        ? pathwayHighlight(board(), highlightedPathwayTileId)
+        : null);
+    const highlightedIds = new Set(
+      highlight
+        ? [highlight.originId, ...(highlight.inventionIds || []), ...(highlight.givenIds || [])]
+            .filter(Boolean)
+            .map((x) => String(x))
+        : []
+    );
     host.innerHTML = pathways
       .map((invs, i) => {
         const key = islandHowKey(invs);
@@ -384,8 +399,14 @@ export function createHexWorkshop(api) {
             .slice(0, 4)
             .join(" · ") || `Pathway ${i + 1}`;
         const origin = invs[0]?.id || "";
+        const isHighlighted =
+          highlightedIds.size > 0 &&
+          invs.some((t) => highlightedIds.has(String(t.id)));
+        const hlClass = isHighlighted
+          ? " is-active is-highlighted highlighted has-pathway-highlight"
+          : "";
         return (
-          `<div class="hex-island-how-block">` +
+          `<div class="hex-island-how-block${hlClass}" data-highlighted="${isHighlighted ? "true" : "false"}">` +
           `<label class="hex-island-how-label" for="hex-island-how-${i}">${escapeHtml(
             label
           )}</label>` +
@@ -615,9 +636,55 @@ export function createHexWorkshop(api) {
       },
       onPathwayToggle: (id, hl) => {
         if (isCreateBusy()) return;
+        highlightedPathwayTileId = hl ? id : null;
         const t = board()?.tiles?.[id];
         if (t?.kind === TILE_KIND.invention && t.techId && hl) {
           focusTech(t.techId);
+        }
+        // Highlight the pathway description that corresponds to the selected tile.
+        try {
+          renderPathwayHowPanel();
+        } catch {
+          /* ignore */
+        }
+        const host = document.querySelector("#hex-island-how");
+        if (host) {
+          const hlIds = new Set(
+            hl
+              ? [hl.originId, ...(hl.inventionIds || []), ...(hl.givenIds || [])]
+                  .filter(Boolean)
+                  .map((x) => String(x))
+              : []
+          );
+          host.querySelectorAll(".hex-island-how-block").forEach((block) => {
+            const ta = block.querySelector("textarea");
+            const key = ta?.getAttribute?.("data-island-key");
+            const invs = listInventionPathways(board()).find(
+              (p) => islandHowKey(p) === key
+            );
+            const active =
+              !!invs &&
+              hlIds.size > 0 &&
+              invs.some((tile) => hlIds.has(String(tile.id)));
+            [
+              "is-active",
+              "is-highlighted",
+              "highlighted",
+              "has-pathway-highlight",
+            ].forEach((cls) => {
+              try {
+                block.classList.toggle(cls, active);
+              } catch {
+                /* ignore */
+              }
+            });
+            try {
+              block.setAttribute("data-highlighted", active ? "true" : "false");
+              if (block.dataset) block.dataset.highlighted = active ? "true" : "false";
+            } catch {
+              /* ignore */
+            }
+          });
         }
       },
     });
@@ -3840,6 +3907,57 @@ export function createHexWorkshop(api) {
       hideTilePopup();
       inspectTileId = null;
     },
+    setHighlightedTile: (id) => {
+      highlightedPathwayTileId = id || null;
+      try {
+        renderPathwayHowPanel();
+      } catch {
+        /* ignore */
+      }
+    },
+    setHighlightedPathwayTile: (id) => {
+      highlightedPathwayTileId = id || null;
+      try {
+        renderPathwayHowPanel();
+      } catch {
+        /* ignore */
+      }
+    },
+    setPathwayHighlight: (id) => {
+      highlightedPathwayTileId = id || null;
+      try {
+        renderPathwayHowPanel();
+      } catch {
+        /* ignore */
+      }
+    },
+    highlightPathway: (id) => {
+      highlightedPathwayTileId = id || null;
+      try {
+        renderPathwayHowPanel();
+      } catch {
+        /* ignore */
+      }
+    },
+    highlightTile: (id) => {
+      highlightedPathwayTileId = id || null;
+      try {
+        renderPathwayHowPanel();
+      } catch {
+        /* ignore */
+      }
+    },
+    clearHighlightedTile: () => {
+      highlightedPathwayTileId = null;
+      try {
+        renderPathwayHowPanel();
+      } catch {
+        /* ignore */
+      }
+    },
+    getHighlightedTile: () => highlightedPathwayTileId,
+    getHighlightedTileId: () => highlightedPathwayTileId,
+    getHighlightedPathwayTile: () => highlightedPathwayTileId,
     effectiveHowLength,
     /** New Quest: back to the two-blank scaffold, blanks cleared. */
     resetCreateMode: () => {

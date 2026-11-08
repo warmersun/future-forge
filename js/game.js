@@ -162,7 +162,7 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=hotseat-summon-2";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=pathway-desc-1";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
 import {
   boardHolds,
