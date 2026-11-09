@@ -162,11 +162,11 @@ async function completeDevice(code, token, base) {
   if (!res.ok || !data.ok) throw new Error(data.error || "Could not finish handshake");
 }
 
-const home = (base) => `<section id="app-home" data-route="/"><p class="eyebrow">Future Forge · Warmer Sun Cloud</p>
+const home = (base, signedIn = false) => `<section id="app-home" data-route="/"><p class="eyebrow">Future Forge · Warmer Sun Cloud</p>
   <h1>Invent with us. Run it your way.</h1>
-  <p class="lead">Sign in to continue your Future Forge journey, or choose hosted access. The playable app runs separately from this account portal.</p>
+  <p class="lead">${signedIn ? "You are signed in to Warmer Sun Cloud. The playable app runs separately from this account portal." : "Sign in to continue your Future Forge journey, or choose hosted access. The playable app runs separately from this account portal."}</p>
   <p class="links"><a class="button primary" data-link href="${base}/subscribe">Explore hosted access</a>
-  <a class="button" data-link href="${base}/signin">Sign in</a></p></section>`;
+  ${signedIn ? `<a class="button" data-link href="${base}/signin">Account</a>` : `<a class="button" data-link href="${base}/signin">Sign in</a>`}</p></section>`;
 // A device-code handoff comes straight from the app, so it gets Clerk's form
 // with no portal chrome around it. A plain visit keeps the portal heading.
 const signin = (deviceFlow) => `<section class="signin${deviceFlow ? " device" : ""}" data-route="/signin">${deviceFlow ? "" : '<p class="eyebrow">Future Forge account</p><h1>Sign in</h1>'}
@@ -282,6 +282,13 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
     }
   }
 
+  function updateNavAuth(signedIn) {
+    doc.querySelectorAll?.("[data-nav]").forEach?.((link) => {
+      const navRoute = link.getAttribute?.("data-nav") || link.route;
+      if (navRoute === "/signin") link.textContent = signedIn ? "Account" : "Sign in";
+    });
+  }
+
   async function showSignedIn(id, Clerk, config, token) {
     const status = doc.getElementById("status");
     const mount = doc.getElementById("signin-mount");
@@ -310,9 +317,14 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
     mount.hidden = true;
     account.textContent = `${who} — ${plan}`;
     panel.hidden = false;
+    const heading = doc.querySelector?.(".signin h1");
+    if (heading) heading.textContent = "Account";
+    updateNavAuth(true);
+    doc.title = "Account — Warmer Sun Cloud";
     doc.getElementById("sign-out").onclick = async () => {
       try {
         await Clerk.signOut();
+        updateNavAuth(false);
         if (active(id)) win.location.replace(`${win.location.origin}${base}/signin`);
       } catch (e) {
         if (active(id)) status.textContent = e?.message || String(e);
@@ -336,6 +348,8 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
       const Clerk = win.Clerk;
       await Clerk.load({ ui: { ClerkUI: win.__internal_ClerkUICtor }, appearance: CLERK_APPEARANCE });
       if (!active(id)) return;
+      if (Clerk.session) updateNavAuth(true);
+      Clerk.addListener?.(({ session }) => updateNavAuth(Boolean(session)));
       if (typeof Clerk.mountPricingTable === "function") {
         status.textContent = "";
         Clerk.mountPricingTable(mount, {
@@ -349,11 +363,40 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
     }
   }
 
+  async function checkHomeAuth(id) {
+    if (win.Clerk?.session) {
+      updateNavAuth(true);
+      return;
+    }
+    const hasSessionCookie = typeof document !== "undefined" && typeof document.cookie === "string" &&
+      (document.cookie.includes("__client_uat") || document.cookie.includes("__session"));
+    if (!hasSessionCookie) return;
+    try {
+      const config = await clerkConfig(base, doc);
+      if (!active(id) || !config) return;
+      await loadScript(doc, `https://${config.host}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
+        "data-clerk-publishable-key": config.pk,
+      });
+      if (!active(id) || !win.Clerk) return;
+      if (typeof win.Clerk.load === "function") {
+        await win.Clerk.load({ ui: { ClerkUI: win.__internal_ClerkUICtor }, appearance: CLERK_APPEARANCE });
+      }
+      if (!active(id)) return;
+      if (win.Clerk.session) {
+        updateNavAuth(true);
+        const homeSignIn = doc.querySelector?.('#app-home a[href$="/signin"]');
+        if (homeSignIn) homeSignIn.textContent = "Account";
+      }
+      win.Clerk.addListener?.(({ session }) => updateNavAuth(Boolean(session)));
+    } catch { /* best-effort background check */ }
+  }
+
   function render() {
     const id = ++generation;
     const route = win.location.pathname.slice(base.length) || "/";
     const current = app.innerHTML.match(/data-route="([^"]*)"/);
     const mounted = app.querySelector?.("#app-home, #signin-mount, #clerk-mount") ?? null;
+    const isAuthed = Boolean(win.Clerk?.session);
     // The route only changes when the URL path changes. Clerk's hash routing
     // rewrites the URL and fires popstate; rebuilding on that would unmount the
     // form and remount it, and the remount fires the SSO callback again — the
@@ -362,10 +405,12 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
     const routeChanged = current?.[1] !== route || !mounted;
     if (!routeChanged) {
       doc.querySelectorAll("[data-nav]").forEach((link) => {
-        if (link.getAttribute("data-nav") === route) link.setAttribute("aria-current", "page");
-        else link.removeAttribute("aria-current");
+        const navRoute = link.getAttribute?.("data-nav") || link.route;
+        if (navRoute === route) link.setAttribute?.("aria-current", "page");
+        else link.removeAttribute?.("aria-current");
+        if (navRoute === "/signin") link.textContent = isAuthed ? "Account" : "Sign in";
       });
-      doc.title = `${route === "/signin" ? "Sign in" : route === "/subscribe" ? "Subscribe" : "Home"} — Warmer Sun Cloud`;
+      doc.title = `${route === "/signin" ? (isAuthed ? "Account" : "Sign in") : route === "/subscribe" ? "Subscribe" : "Home"} — Warmer Sun Cloud`;
       if (route === "/signin") void showSignin(id);
       if (route === "/subscribe") void showSubscribe(id);
       return;
@@ -376,13 +421,16 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
     }
     dropSignInMount();
     doc.querySelectorAll("[data-nav]").forEach((link) => {
-      if (link.getAttribute("data-nav") === route) link.setAttribute("aria-current", "page");
-      else link.removeAttribute("aria-current");
+      const navRoute = link.getAttribute?.("data-nav") || link.route;
+      if (navRoute === route) link.setAttribute?.("aria-current", "page");
+      else link.removeAttribute?.("aria-current");
+      if (navRoute === "/signin") link.textContent = isAuthed ? "Account" : "Sign in";
     });
-    doc.title = `${route === "/signin" ? "Sign in" : route === "/subscribe" ? "Subscribe" : "Home"} — Warmer Sun Cloud`;
-    app.innerHTML = route === "/signin" ? signin(deviceFlow) : route === "/subscribe" ? subscribe : home(base);
+    doc.title = `${route === "/signin" ? (isAuthed ? "Account" : "Sign in") : route === "/subscribe" ? "Subscribe" : "Home"} — Warmer Sun Cloud`;
+    app.innerHTML = route === "/signin" ? signin(deviceFlow) : route === "/subscribe" ? subscribe : home(base, isAuthed);
     if (route === "/signin") void showSignin(id);
     if (route === "/subscribe") void showSubscribe(id);
+    if (route === "/") void checkHomeAuth(id);
   }
   doc.addEventListener("click", (event) => {
     const link = event.target.closest?.("a[data-link]");

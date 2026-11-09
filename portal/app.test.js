@@ -19,6 +19,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { spawn } from "node:child_process";
 import net from "node:net";
 import { fileURLToPath } from "node:url";
@@ -36,7 +37,7 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 function fakeUi(initial) {
   const listeners = {};
   const nav = ["/", "/signin", "/subscribe"].map((route) => ({
-    route, attrs: {}, getAttribute: () => route,
+    route, attrs: {}, textContent: route === "/signin" ? "Sign in" : "", getAttribute: () => route,
     setAttribute(name, value) { this.attrs[name] = value; },
     removeAttribute(name) { delete this.attrs[name]; },
   }));
@@ -476,9 +477,11 @@ test("an existing session on a plain visit shows the account instead of signing 
   assert.equal(ui.signInMount.hidden, true);
   assert.match(ui.account.textContent, /Ada Inventor/);
   assert.match(ui.account.textContent, /cloud/);
+  assert.equal(ui.nav[1].textContent, "Account");
   assert.ok(calls.some((u) => u === "https://function.example/api/me"));
   await ui.signOut.onclick();
   assert.equal(signedOut, 1);
+  assert.equal(ui.nav[1].textContent, "Sign in");
   assert.equal(ui.win.location.replaced, "https://portal.example/signin");
 });
 
@@ -648,4 +651,10 @@ test("live portal serves only exact SPA routes/assets; API stays JSON", { timeou
     assert.equal(res.status, 404, route);
     assert.doesNotMatch(res.headers.get("content-type") || "", /text\/html/);
   }
+});
+
+test("portal shell includes App link to https://ff.warmersun.com in navigation", async () => {
+  const html = await fs.promises.readFile(path.join(root, "portal/index.html"), "utf8");
+  assert.match(html, /<a\s+href="https:\/\/ff\.warmersun\.com">App<\/a>/);
+  assert.match(html, /<nav aria-label="Portal navigation">[\s\S]*?Home[\s\S]*?App[\s\S]*?Sign in[\s\S]*?Subscribe[\s\S]*?<\/nav>/);
 });
