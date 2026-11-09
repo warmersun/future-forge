@@ -28,7 +28,7 @@ import { authorizedPartiesFromEnv, clerkWebhookSecretFromEnv, isJwtShaped } from
 import { normalizeClerkUserId } from "../../js/server/clerk-id.mjs";
 import { isGameSessionToken, verifyGameSessionToken } from "../../js/server/game-session.mjs";
 import {
-  budgetMicroFromEnv, chargeMicro, holdMicroFor, isQuotaKind,
+  applyStripeUsageReset, budgetMicroFromEnv, chargeMicro, holdMicroFor, isQuotaKind,
   planStripeWebhookEvent, quotaRatesFromEnv, settleMicroFor, signQuotaGrant,
   textMaxOutFromEnv, topUpUrlFromEnv, verifyQuotaGrant, verifyStripeWebhook,
   voiceConnectedMinuteMicro, voiceMaxMsFromEnv,
@@ -265,28 +265,14 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
     return { ok: true, action: user.action };
   }
   async function applyStripeWebhook(cx, evt) {
-    const planned = planStripeWebhookEvent(evt);
+    const planned = planStripeWebhookEvent(evt, env);
     if (!planned.ok) return { ok: false, status: 400, error: planned.error };
-    const inserted = await cx.query(
-      `INSERT INTO clerk_webhook_events (event_id) VALUES ($1)
-       ON CONFLICT (event_id) DO NOTHING RETURNING event_id`, [planned.id]
-    );
-    if (!inserted.rows.length) return { ok: true, idempotent: true };
-    if (planned.action === "reset_ai_usage") {
-      const topUpBudget = budgetMicroFromEnv(env);
-      await cx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [planned.userId]);
-      await cx.query("INSERT INTO users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO NOTHING", [planned.userId]);
-      await cx.query(
-        `INSERT INTO ai_usage_period (clerk_user_id, period_start, budget_points, spent_points, held_points, updated_at)
-         VALUES ($1, $2, $3, 0, 0, now())
-         ON CONFLICT (clerk_user_id, period_start) DO UPDATE SET
-         budget_points = GREATEST(0, ai_usage_period.budget_points - ai_usage_period.spent_points) + EXCLUDED.budget_points,
-         spent_points = 0,
-         updated_at = now()`,
-        [planned.userId, TOPUP_PERIOD_START, topUpBudget]
-      );
-    }
-    return { ok: true, action: planned.action };
+    if (planned.action !== "reset_ai_usage") return { ok: true, action: planned.action, ...(planned.reason ? { reason: planned.reason } : {}) };
+    return applyStripeUsageReset((sql, params) => cx.query(sql, params), {
+      eventId: planned.id,
+      userId: planned.userId,
+      topUpPoints: budgetMicroFromEnv(env),
+    });
   }
   async function fetch(req) {
     const path = new URL(req.url).pathname;

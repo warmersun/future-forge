@@ -386,23 +386,29 @@ describe("Stripe top-up link & webhook", () => {
   it("verifies Stripe webhook signatures and plans paid checkout resets", () => {
     const secret = "whsec_test_stripe";
     const nowSec = 1_700_000_000;
+    const env = { FF_STRIPE_TOPUP_LINK_ID: "plink_test_20" };
+    const session = {
+      id: "cs_test_1",
+      client_reference_id: "user_1",
+      payment_status: "paid",
+      amount_total: TOPUP_PRICE_USD * 100,
+      currency: "usd",
+      mode: "payment",
+      payment_link: "plink_test_20",
+    };
     const payload = JSON.stringify({
       id: "evt_stripe_1",
       type: "checkout.session.completed",
-      data: {
-        object: {
-          id: "cs_test_1",
-          client_reference_id: "user_1",
-          payment_status: "paid",
-        },
-      },
+      data: { object: session },
     });
     const sig = crypto
       .createHmac("sha256", secret)
       .update(`${nowSec}.${payload}`, "utf8")
       .digest("hex");
     const verified = verifyStripeWebhook(payload, `t=${nowSec},v1=${sig}`, secret, { nowSec });
-    assert.deepEqual(planStripeWebhookEvent(verified), {
+    const fromBuffer = verifyStripeWebhook(Buffer.from(payload), `t=${nowSec},v1=${sig}`, secret, { nowSec });
+    assert.equal(fromBuffer.id, verified.id);
+    assert.deepEqual(planStripeWebhookEvent(verified, env), {
       ok: true,
       id: "evt_stripe_1",
       action: "reset_ai_usage",
@@ -416,21 +422,42 @@ describe("Stripe top-up link & webhook", () => {
       () => verifyStripeWebhook(payload, `t=${nowSec},v1=${"0".repeat(64)}`, secret, { nowSec }),
       /signature mismatch/
     );
-    assert.deepEqual(
-      planStripeWebhookEvent({
-        id: "evt_coupon_free",
-        type: "checkout.session.completed",
-        data: { object: { client_reference_id: "user_1", payment_status: "no_payment_required" } },
-      }),
-      { ok: true, id: "evt_coupon_free", action: "reset_ai_usage", userId: "user_1" }
-    );
-    assert.deepEqual(
-      planStripeWebhookEvent({
-        id: "evt_unpaid",
-        type: "checkout.session.completed",
-        data: { object: { client_reference_id: "user_1", payment_status: "unpaid" } },
-      }),
-      { ok: true, id: "evt_unpaid", action: "ignore" }
-    );
+    const plan = (id, object, type = "checkout.session.completed") => planStripeWebhookEvent({
+      id, type, data: { object: { ...session, ...object } },
+    }, env);
+    assert.equal(plan("evt_coupon_free", { payment_status: "no_payment_required", amount_total: 0 }).action, "ignore");
+    assert.equal(plan("evt_coupon_free", { payment_status: "no_payment_required", amount_total: 0 }).reason, "unpaid");
+    assert.equal(plan("evt_unpaid", { payment_status: "unpaid" }).reason, "unpaid");
+    assert.equal(plan("evt_missing_status", { payment_status: "" }).reason, "unpaid");
+    assert.equal(plan("evt_cheap", { amount_total: 500 }).reason, "amount");
+    assert.equal(plan("evt_eur", { currency: "eur" }).reason, "currency");
+    assert.equal(plan("evt_other_link", { payment_link: "plink_other" }).reason, "link");
+    assert.equal(planStripeWebhookEvent({
+      id: "evt_unconfigured",
+      type: "checkout.session.completed",
+      data: { object: session },
+    }, {}).reason, "link");
+    assert.equal(plan("evt_stranger", { client_reference_id: "" }).reason, "user");
+    assert.equal(plan("evt_stranger", { client_reference_id: "" }).ok, true);
+    assert.deepEqual(plan("evt_async", {}, "checkout.session.async_payment_succeeded"), {
+      ok: true, id: "evt_async", action: "reset_ai_usage", userId: "user_1",
+    });
+    assert.equal(plan("evt_async_intent", {
+      payment_status: "",
+      payment_intent: { status: "succeeded" },
+    }, "checkout.session.async_payment_succeeded").action, "reset_ai_usage");
+    assert.equal(planStripeWebhookEvent({
+      id: "evt_invoice",
+      type: "invoice.paid",
+      data: { object: session },
+    }, env).action, "ignore");
+    assert.deepEqual(plan("evt_price", { payment_link: "" }, "checkout.session.completed"), {
+      ok: true, id: "evt_price", action: "ignore", reason: "link",
+    });
+    assert.equal(planStripeWebhookEvent({
+      id: "evt_by_price",
+      type: "checkout.session.completed",
+      data: { object: { ...session, payment_link: "", line_items: { data: [{ price: { id: "price_20" } }] } } },
+    }, { FF_STRIPE_PRICE_ID: "price_20" }).action, "reset_ai_usage");
   });
 });

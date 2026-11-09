@@ -30,6 +30,7 @@ const env = {
   FF_QUOTA_IMAGE: "60", CLERK_WEBHOOK_SECRET: "whsec_test",
   STRIPE_WEBHOOK_SECRET: "whsec_stripe_test",
   FF_STRIPE_TOPUP_URL: "https://buy.stripe.com/test_20",
+  FF_STRIPE_TOPUP_LINK_ID: "plink_test_20",
 };
 const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEifQ.signature";
 const future = "2099-01-01T00:00:00.000Z";
@@ -403,11 +404,23 @@ describe("staged Clerk webhook", () => {
     assert.equal(denied.body.error, "subscription_required");
     assert.equal(denied.body.topUpUrl, "https://buy.stripe.com/test_20?client_reference_id=user_1");
     const ts = Math.floor(Date.now() / 1000);
-    const stripeRaw = JSON.stringify({
-      id: "evt_stripe_topup_1",
+    const stripeSession = (id, extra = {}) => JSON.stringify({
+      id,
       type: "checkout.session.completed",
-      data: { object: { id: "cs_1", client_reference_id: "user_1", payment_status: "paid" } },
+      data: { object: {
+        id: `cs_${id}`, client_reference_id: "user_1", payment_status: "paid",
+        amount_total: 2000, currency: "usd", mode: "payment", payment_link: "plink_test_20",
+        ...extra,
+      } },
     });
+    const cheapRaw = stripeSession("evt_cheap", { amount_total: 500 });
+    const cheapSig = createHmac("sha256", env.STRIPE_WEBHOOK_SECRET).update(`${ts}.${cheapRaw}`).digest("hex");
+    const cheap = await call(api, "/api/webhooks/stripe", cheapRaw, { "stripe-signature": `t=${ts},v1=${cheapSig}` });
+    assert.equal(cheap.status, 200);
+    assert.equal(cheap.body.action, "ignore");
+    assert.equal(cheap.body.reason, "amount");
+    assert.equal(db.data.ledger.has(`user_1|${period}`), false);
+    const stripeRaw = stripeSession("evt_stripe_topup_1");
     const stripeSig = createHmac("sha256", env.STRIPE_WEBHOOK_SECRET).update(`${ts}.${stripeRaw}`).digest("hex");
     const stripeHeaders = { "stripe-signature": `t=${ts},v1=${stripeSig}` };
     assert.equal((await call(api, "/api/webhooks/stripe", stripeRaw, { "stripe-signature": "t=1,v1=bad" })).status, 401);
@@ -419,20 +432,12 @@ describe("staged Clerk webhook", () => {
     assert.equal(allowed.status, 200);
     // Spend 40 points (leaving 60 unspent), then send a second Stripe top-up (+100) -> budget_points becomes 60 + 100 = 160, spent_points resets to 0 while preserving held_points.
     db.data.ledger.get(`user_1|${period}`).spent_points = 40;
-    const stripeRaw2 = JSON.stringify({
-      id: "evt_stripe_topup_2",
-      type: "checkout.session.completed",
-      data: { object: { id: "cs_2", client_reference_id: "user_1", payment_status: "paid" } },
-    });
+    const stripeRaw2 = stripeSession("evt_stripe_topup_2");
     const stripeSig2 = createHmac("sha256", env.STRIPE_WEBHOOK_SECRET).update(`${ts}.${stripeRaw2}`).digest("hex");
     assert.equal((await call(api, "/api/webhooks/stripe", stripeRaw2, { "stripe-signature": `t=${ts},v1=${stripeSig2}` })).status, 200);
     assert.deepEqual(db.data.ledger.get(`user_1|${period}`), { budget_points: 160, spent_points: 0, held_points: 60 });
     // Third top-up with 0 spent adds another 100 -> budget_points becomes 260.
-    const stripeRaw3 = JSON.stringify({
-      id: "evt_stripe_topup_3",
-      type: "checkout.session.completed",
-      data: { object: { id: "cs_3", client_reference_id: "user_1", payment_status: "paid" } },
-    });
+    const stripeRaw3 = stripeSession("evt_stripe_topup_3");
     const stripeSig3 = createHmac("sha256", env.STRIPE_WEBHOOK_SECRET).update(`${ts}.${stripeRaw3}`).digest("hex");
     assert.equal((await call(api, "/api/webhooks/stripe", stripeRaw3, { "stripe-signature": `t=${ts},v1=${stripeSig3}` })).status, 200);
     assert.deepEqual(db.data.ledger.get(`user_1|${period}`), { budget_points: 260, spent_points: 0, held_points: 60 });

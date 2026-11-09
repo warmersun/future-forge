@@ -158,7 +158,7 @@ For v1 only, `--allow-external-lessons` turns a missing lesson id into a warning
 
 ## Preview and deploy
 
-Use `./scripts/sideload-local-package.sh path/to/out.ffquest` to play a package locally without publishing it. The local, gitignored `./deploy-quest.sh path/to/out.ffquest` is the production wrapper; `--dry-run` publishes nothing and `--yes` permits a non-interactive deployment.
+Use `./scripts/sideload-local-package.sh path/to/out.ffquest` to play a package locally without publishing it. The tracked `./deploy-quest.sh path/to/out.ffquest` is the production wrapper; `--dry-run` publishes nothing and `--yes` permits a non-interactive deployment. `npm test` runs `test/deploy-quest.test.mjs` against that script.
 
 For v1, the wrapper delegates to the Warmer Sun gated deployment workflow. For v2, it prepares a versioned prediction bank on `warmersun.com/predictions/`, lesson content on `warmersun.com/lessons/`, and a retained quest revision in Neon. The v2 portal reader and `FF_PREDICTION_BANK_ROOT` must be deployed before the wrapper's live readiness check can pass. Module-wrapper deployment is not yet supported. See [loose quest resolution](loose-quest-resolution.md) for retention and catalog-writer limitations.
 

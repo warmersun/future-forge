@@ -353,7 +353,9 @@ export function topUpUrlFromEnv(env = process.env, userId = "") {
 export function verifyStripeWebhook(rawBody, signatureHeader, secret, opts = {}) {
   const key = String(secret || "").trim();
   const header = String(signatureHeader || "").trim();
-  if (!key || !header || typeof rawBody !== "string") {
+  // Stripe signs the raw body. A Node request buffer is those bytes, not an object.
+  const body = Buffer.isBuffer(rawBody) ? rawBody.toString("utf8") : rawBody;
+  if (!key || !header || typeof body !== "string") {
     throw new Error("Missing Stripe webhook signature or secret");
   }
   let timestamp = null;
@@ -377,22 +379,61 @@ export function verifyStripeWebhook(rawBody, signatureHeader, secret, opts = {})
     throw new Error("Stripe webhook timestamp outside tolerance");
   }
   const expected = createHmac("sha256", key)
-    .update(`${timestamp}.${rawBody}`, "utf8")
+    .update(`${timestamp}.${body}`, "utf8")
     .digest("hex");
   const matched = signatures.some((sig) => timingSafeEqualStr(sig, expected));
   if (!matched) {
     throw new Error("Stripe webhook signature mismatch");
   }
-  return JSON.parse(rawBody);
+  return JSON.parse(body);
+}
+
+function checkoutSessionPaid(session, type) {
+  const status = String(session?.payment_status || "").trim().toLowerCase();
+  if (status === "paid") return true;
+  if (type !== "checkout.session.async_payment_succeeded") return false;
+  const intent = session?.payment_intent;
+  if (!intent || typeof intent !== "object") return false;
+  return String(intent.status || "").trim().toLowerCase() === "succeeded";
+}
+
+function priceIdsFromSession(session) {
+  const ids = [];
+  for (const group of [session?.line_items?.data, session?.display_items]) {
+    if (!Array.isArray(group)) continue;
+    for (const item of group) {
+      const price = item?.price;
+      const id = typeof price === "string" ? price : price?.id;
+      if (typeof id === "string" && id) ids.push(id);
+    }
+  }
+  return ids;
+}
+
+/**
+ * A $20 top-up is the configured Payment Link, or that price when the payload lists it.
+ * Neither id configured means refuse: another Checkout on the account must not grant points.
+ * @param {object} session
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
+ */
+function checkoutSessionMatchesTopUp(session, env = process.env) {
+  const linkId = String(env?.FF_STRIPE_TOPUP_LINK_ID || "").trim();
+  const priceId = String(env?.FF_STRIPE_PRICE_ID || "").trim();
+  if (!linkId && !priceId) return false;
+  if (linkId && String(session?.payment_link || "").trim() !== linkId) return false;
+  if (priceId && !priceIdsFromSession(session).includes(priceId)) return false;
+  return true;
 }
 
 /**
  * Plan a verified Stripe webhook event.
- * Paid `checkout.session.completed` (or `checkout.session.async_payment_succeeded`)
- * resets the buyer's AI usage period (`spent_points = 0`) for `client_reference_id`.
+ * Only a paid $20 USD checkout for the configured top-up resets usage.
+ * Unpaid, discounted, unattributed, or unrelated sessions return `ignore`
+ * so Stripe does not retry a charge that will never be credited.
  * @param {object} evt
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
  */
-export function planStripeWebhookEvent(evt) {
+export function planStripeWebhookEvent(evt, env = process.env) {
   const id = String(evt?.id || "").trim();
   if (!STRIPE_ID_RE.test(id)) return { ok: false, error: "invalid_event" };
   const type = String(evt?.type || "").trim();
@@ -400,22 +441,61 @@ export function planStripeWebhookEvent(evt) {
     return { ok: true, id, action: "ignore" };
   }
   const session = evt?.data?.object;
-  if (type === "checkout.session.completed") {
-    const paymentStatus = String(session?.payment_status || "").trim().toLowerCase();
-    if (paymentStatus && paymentStatus !== "paid" && paymentStatus !== "no_payment_required") {
-      return { ok: true, id, action: "ignore" };
-    }
+  if (!session || typeof session !== "object") return { ok: true, id, action: "ignore", reason: "unpaid" };
+  if (!checkoutSessionPaid(session, type)) return { ok: true, id, action: "ignore", reason: "unpaid" };
+  if (Number(session.amount_total) !== TOPUP_PRICE_USD * 100) {
+    return { ok: true, id, action: "ignore", reason: "amount" };
   }
+  if (String(session.currency || "").trim().toLowerCase() !== "usd") {
+    return { ok: true, id, action: "ignore", reason: "currency" };
+  }
+  const mode = String(session.mode || "").trim().toLowerCase();
+  if (mode && mode !== "payment") return { ok: true, id, action: "ignore", reason: "mode" };
+  if (!checkoutSessionMatchesTopUp(session, env)) return { ok: true, id, action: "ignore", reason: "link" };
   const rawUser = String(
-    session?.client_reference_id ||
-      session?.metadata?.clerk_user_id ||
-      session?.metadata?.userId ||
+    session.client_reference_id ||
+      session.metadata?.clerk_user_id ||
+      session.metadata?.userId ||
       ""
   ).trim();
-  if (!STRIPE_ID_RE.test(rawUser)) {
-    return { ok: false, error: "invalid_user" };
-  }
+  if (!STRIPE_ID_RE.test(rawUser)) return { ok: true, id, action: "ignore", reason: "user" };
   return { ok: true, id, action: "reset_ai_usage", userId: rawUser };
+}
+
+/**
+ * Record the Stripe event and add one top-up in the same transaction.
+ * A conflict means this event already granted points.
+ * @param {(sql: string, params?: unknown[]) => Promise<{ rows?: object[] }>} query
+ * @param {{ eventId?: string, userId?: string, topUpPoints?: number, periodStart?: string }} [input]
+ */
+export async function applyStripeUsageReset(query, input = {}) {
+  const eventId = String(input.eventId || "").trim();
+  if (!STRIPE_ID_RE.test(eventId)) return { ok: false, status: 400, error: "invalid_event" };
+  const userId = String(input.userId || "").trim();
+  if (!STRIPE_ID_RE.test(userId)) return { ok: true, action: "ignore", reason: "user" };
+  const added = Math.max(0, Math.floor(Number(input.topUpPoints) || 0));
+  const periodStart = input.periodStart || TOPUP_PERIOD_START;
+  const inserted = await query(
+    `INSERT INTO clerk_webhook_events (event_id) VALUES ($1)
+     ON CONFLICT (event_id) DO NOTHING RETURNING event_id`,
+    [eventId]
+  );
+  if (!inserted?.rows?.length) return { ok: true, idempotent: true, action: "reset_ai_usage" };
+  await query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [userId]);
+  await query(
+    "INSERT INTO users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO NOTHING",
+    [userId]
+  );
+  await query(
+    `INSERT INTO ai_usage_period (clerk_user_id, period_start, budget_points, spent_points, held_points, updated_at)
+     VALUES ($1, $2, $3, 0, 0, now())
+     ON CONFLICT (clerk_user_id, period_start) DO UPDATE SET
+     budget_points = GREATEST(0, ai_usage_period.budget_points - ai_usage_period.spent_points) + EXCLUDED.budget_points,
+     spent_points = 0,
+     updated_at = now()`,
+    [userId, periodStart, added]
+  );
+  return { ok: true, action: "reset_ai_usage" };
 }
 
 /**

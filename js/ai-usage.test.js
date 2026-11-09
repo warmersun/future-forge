@@ -249,7 +249,62 @@ test("detects top-up resets and pops up the thank-you modal", () => {
   assert.match(appendedModal.querySelector("[data-ai-topup-thanks-body]").textContent, /30,000 points/);
   assert.equal(meter.querySelector("[data-ai-usage-figures]").textContent, "0 used · 30,000 left");
   assert.equal(didTopUpReset({ remaining: 0 }, null, null), false);
+  const heldUrl = "https://buy.stripe.com/test_20?client_reference_id=user_1";
+  const heldAt = "2026-11-08T23:40:00.000Z";
+  assert.equal(didTopUpReset(
+    { remaining: 9500, spent: 5500, budget: 15000, resetAt: heldAt, topUpUrl: heldUrl },
+    { remaining: 8000, spent: 5000, budget: 15000, resetAt: heldAt },
+    { userKey: "user_1", remaining: 8000, spent: 5000, budget: 15000, resetAt: heldAt, at: Date.parse("2026-11-08T23:49:00.000Z") },
+    "",
+    Date.parse("2026-11-08T23:50:00.000Z")
+  ), false);
   assert.notEqual(showTopUpThankYouModal({ remaining: 30000 }, root), null);
+});
+
+test("a released hold does not open the top-up thank-you", () => {
+  const map = new Map();
+  const storage = {
+    getItem: (k) => (map.has(k) ? map.get(k) : null),
+    setItem: (k, v) => map.set(k, String(v)),
+    removeItem: (k) => map.delete(k),
+  };
+  let appendedModal = null;
+  const doc = {
+    nodeType: 9,
+    body: { appendChild(el) { appendedModal = el; } },
+    querySelector: (sel) => (sel === "[data-ai-topup-thanks]" ? appendedModal : null),
+    createElement() {
+      const classes = new Set();
+      return {
+        className: "",
+        classList: {
+          add(...names) { for (const n of names) classes.add(n); },
+          remove(...names) { for (const n of names) classes.delete(n); },
+          contains: (n) => classes.has(n),
+        },
+        setAttribute() {},
+        addEventListener() {},
+        querySelector: () => ({ textContent: "", addEventListener() {} }),
+      };
+    },
+    addEventListener() {},
+  };
+  const root = { ownerDocument: doc, querySelectorAll: () => [], matches: () => false };
+  const url = "https://buy.stripe.com/test_20?client_reference_id=user_1";
+  const resetAt = "2026-11-08T23:40:00.000Z";
+  const now = Date.parse("2026-11-09T12:00:00.000Z");
+  paintAiUsageMeters(
+    { budget: 15000, spent: 5000, held: 2000, remaining: 8000, resetAt, topUpUrl: url },
+    root,
+    { storage, now }
+  );
+  assert.equal(appendedModal, null);
+  paintAiUsageMeters(
+    { budget: 15000, spent: 5500, held: 0, remaining: 9500, resetAt, topUpUrl: url },
+    root,
+    { storage, now: now + 1000 }
+  );
+  assert.equal(appendedModal, null);
 });
 
 function fakeMeter() {

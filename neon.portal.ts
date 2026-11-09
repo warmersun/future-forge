@@ -51,6 +51,12 @@ export default defineConfig({
         ...(process.env.FF_STRIPE_TOPUP_URL
           ? { FF_STRIPE_TOPUP_URL: process.env.FF_STRIPE_TOPUP_URL }
           : {}),
+        ...(process.env.FF_STRIPE_TOPUP_LINK_ID
+          ? { FF_STRIPE_TOPUP_LINK_ID: process.env.FF_STRIPE_TOPUP_LINK_ID }
+          : {}),
+        ...(process.env.FF_STRIPE_PRICE_ID
+          ? { FF_STRIPE_PRICE_ID: process.env.FF_STRIPE_PRICE_ID }
+          : {}),
         ...(process.env.STRIPE_WEBHOOK_SECRET
           ? { STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET }
           : {}),

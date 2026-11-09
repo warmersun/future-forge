@@ -12,6 +12,8 @@ node_modules/
 .vscode/
 dist/
 coverage/
+__pycache__/
+*.pyc
 
 # Runtime usage metrics (tokens, sessions — local operator data)
 data/
@@ -41,5 +43,3 @@ assets/quests/*
 !assets/quests/companion-moonshots-304/**
 quests/base-onchain-dollars*
 quests/spotlight-drones-sorrel-creek-2026.ffquest
-# Local-only deploy wrapper (never tracked)
-/deploy-quest.sh

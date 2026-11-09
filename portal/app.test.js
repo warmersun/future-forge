@@ -184,7 +184,7 @@ test("SPA renders home, navigates by history, and handles disabled Clerk", async
   ui.win.history.pushState(null, "", "https://portal.example/subscribe");
   ui.win.listeners.popstate();
   await tick();
-  assert.match(ui.app.innerHTML, /\$48 USD\/month/);
+  assert.match(ui.app.innerHTML, /\$8 USD\/month or \$80 USD\/year/);
   assert.doesNotMatch(ui.app.innerHTML, /Open the hosted app|ff\.warmersun\.com/);
   assert.match(ui.status.textContent, /Subscriptions are off/);
 });

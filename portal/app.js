@@ -178,8 +178,8 @@ const signin = (deviceFlow) => `<section class="signin${deviceFlow ? " device" :
   </div></section>`;
 const subscribe = `<div class="split" data-route="/subscribe"><section class="promise">
   <p class="eyebrow">Future Forge Content</p><h1>Paid Quests &amp; Lessons.</h1>
-  <p class="lead">Today all content only needs an account. Premium content is coming with a 3-day free trial ($48 USD/month or $480 USD/year).</p>
-  <dl><dt>What is coming</dt><dd>Access to premium catalog quests and lessons for one person ($48 USD/month or $480 USD/year, with a 3-day free trial).
+  <p class="lead">Today all content only needs an account. Premium content is coming with a 3-day free trial ($8 USD/month or $80 USD/year).</p>
+  <dl><dt>What is coming</dt><dd>Access to premium catalog quests and lessons for one person ($8 USD/month or $80 USD/year, with a 3-day free trial).
     Hosted AI usage is sold separately in the game as $20 USD top-ups for 15,000 points (1 point = $0.001 USD, sold at API price rounded up to cover hosting). There is no free trial of the hosted app.</dd>
     <dt>The promise</dt><dd>You lead. The computer stays with you while you try a real place and see what holds.
     The computer does not do it for you.</dd></dl>

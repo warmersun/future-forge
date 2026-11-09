@@ -238,6 +238,17 @@ export function hasTopUpPending(storage = defaultStorage(), now = Date.now()) {
   }
 }
 
+function resetAtAdvanced(state, baseline) {
+  if (!state?.resetAt) return false;
+  const nextMs = Date.parse(state.resetAt);
+  if (!Number.isFinite(nextMs)) return false;
+  const prevRaw = baseline?.resetAt || "";
+  if (!prevRaw) return true;
+  if (prevRaw === state.resetAt) return false;
+  const prevMs = Date.parse(prevRaw);
+  return Number.isFinite(prevMs) && nextMs > prevMs;
+}
+
 export function didTopUpReset(state, prev, pending, ackedResetAt = "", now = Date.now()) {
   if (!state || state.remaining <= 0) return false;
   if (state.resetAt && ackedResetAt && state.resetAt === ackedResetAt) return false;
@@ -249,28 +260,12 @@ export function didTopUpReset(state, prev, pending, ackedResetAt = "", now = Dat
     now - pending.at <= PENDING_TTL_MS
       ? pending
       : null;
+  // A hold release raises remaining and leaves resetAt alone. Only a newer resetAt is a paid top-up.
   const baseline = activePending || prev;
-  if (baseline && typeof baseline === "object") {
-    if (state.resetAt && baseline.resetAt && state.resetAt !== baseline.resetAt) {
-      const nextMs = Date.parse(state.resetAt);
-      const prevMs = Date.parse(baseline.resetAt);
-      if (Number.isFinite(nextMs) && Number.isFinite(prevMs) && nextMs > prevMs) return true;
-    }
-    if (Number.isFinite(baseline.remaining) && state.remaining > baseline.remaining) {
-      return true;
-    }
-    if (Number.isFinite(baseline.spent) && baseline.spent > 0 && state.spent === 0) {
-      return true;
-    }
-    return false;
-  }
-  if (state.resetAt) {
-    const resetMs = Date.parse(state.resetAt);
-    if (Number.isFinite(resetMs) && now >= resetMs && now - resetMs <= RECENT_RESET_WINDOW_MS) {
-      return true;
-    }
-  }
-  return false;
+  if (baseline && typeof baseline === "object") return resetAtAdvanced(state, baseline);
+  if (!state.resetAt) return false;
+  const resetMs = Date.parse(state.resetAt);
+  return Number.isFinite(resetMs) && now >= resetMs && now - resetMs <= RECENT_RESET_WINDOW_MS;
 }
 
 function checkAndNotifyTopUpReset(state, root, opts = {}) {

@@ -3321,18 +3321,29 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 404, { ok: false, error: "webhooks_off" });
     }
     try {
-      const payload = await readRawBody(req, { maxBytes: 256_000 });
+      const rawPayload = await readRawBody(req, { maxBytes: 256_000 });
+      const payload = Buffer.isBuffer(rawPayload) ? rawPayload.toString("utf8") : String(rawPayload ?? "");
       let evt;
       try {
         evt = verifyStripeWebhook(payload, req.headers["stripe-signature"], signingSecret);
       } catch {
         return sendJson(res, 401, { ok: false, error: "invalid_signature" });
       }
-      const planned = planStripeWebhookEvent(evt);
+      const planned = planStripeWebhookEvent(evt, process.env);
       if (!planned.ok) return sendJson(res, 400, { ok: false, error: planned.error });
       if (planned.action === "reset_ai_usage") {
-        const reset = await resetAiUsageTopUp(planned.userId, TOPUP_PERIOD_START, budgetMicroFromEnv(process.env));
+        const reset = await resetAiUsageTopUp(
+          planned.userId,
+          TOPUP_PERIOD_START,
+          budgetMicroFromEnv(process.env),
+          planned.id
+        );
         if (!reset.ok) return sendJson(res, reset.status || 503, { ok: false, error: reset.error });
+        return sendJson(res, 200, {
+          ok: true,
+          action: reset.action || planned.action,
+          ...(reset.idempotent ? { idempotent: true } : {}),
+        });
       }
       return sendJson(res, 200, { ok: true, action: planned.action });
     } catch (e) {
