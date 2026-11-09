@@ -1,0 +1,28 @@
+{
+  "source": "Caltech ASTRA (Autonomous In-Space Tensioned Reflector Assembly), lead Sergio Pellegrino, funded by DARPA NOM4D (Novel Orbital and Moon Manufacturing, Materials, and Mass-efficient Design), program manager Andrew Detor. Announced 5 Nov 2026 (Caltech news; DARPA news). ScienceDaily rewrite dated 9 Nov 2026 (sourced from Caltech). Launched 30 Mar 2026 on SpaceX Transporter-16 / Momentus Vigoride 7 from Vandenberg; ~1 m³ payload with a 3-axis gantry / armlike manipulator, motorized dispensers of composite fiber tubes and aluminum joints, and Kapton perforated reflective film. Flew with two prebuilt truss bays that were pushed out, then assembled the third bay in low Earth orbit — so the third bay overall is the first (and so far only) bay built in orbit. Aim: 1.4 m-diameter reflector antenna of 11 bays; team says full assembly before Dec 2026 wrap-up is unlikely. Ground team sends commands and verifies from photos in ~7–8 daily passes of ~15 min; flight-spare twin in lab used to debug. DARPA: 'relatively simple gantry robot'; 'no complicated robotics or advanced algorithms'. Caltech/DARPA call it the first autonomous / automated structure assembly in space; attribute if used. Named future uses in sources: large space-telescope mirrors, large radio-frequency antennas / communications, very large solar arrays (space solar power), and (DARPA) large space depots or habitats. 'Repair/extension of satellites' was in the intake brief but is NOT named in these three sources — dropped. Kilometer / hundreds-of-meters scale is NOM4D program goal language, not this demo. Not stored or shown.",
+  "id": "3d5391ff-a35a-41d4-82c1-6cd3693d3369",
+  "techId": "robots",
+  "title": "A robot that builds frameworks in orbit without astronauts",
+  "description": "A robot that slides along three straight tracks inside a box about one cubic metre wide pulls strong, light tubes and metal joints from its own storage, locks them together on a plate into one open framework section, then pushes that section out so the next can begin. Two sections flew already built from Earth; the robot joined a third in orbit.",
+  "capability": "A robot in orbit can now pull tubes and joints from its own storage and join them into a rigid framework section with no astronauts there. So far it has finished only one section of a small antenna demo, and people on the ground still send the steps and fix problems from photos — but it shows large space structures could one day be built where they fly, instead of folded into a rocket.",
+  "useCases": [
+    "The goal: space telescopes with mirrors bigger than any rocket fairing can carry, so astronomers can see farther than folded designs allow. Not built at that scale yet.",
+    "The goal: radio antennas in orbit far larger than a rocket can launch in one piece, for deep-space listening and communications. Only a small demo section exists so far.",
+    "The goal: huge solar arrays assembled in orbit to gather sunlight for power, beyond what can be folded into a rocket. Still a program aim, not this demo."
+  ],
+  "body": "The kit launched packed into a payload about one cubic metre in size. Two framework sections were already built on Earth and were pushed out once in orbit; the robot then joined a third section from tubes and joints stored onboard. That third section is the first one built in space. The planned demo was a 1.4-metre reflector antenna made of eleven such sections; only that first in-orbit section was finished, and the team says the full antenna is unlikely before the mission ends.\n\n\"Autonomous\" here means no astronauts on site. People on the ground still send the build steps and check the results from photos, in short radio windows of about fifteen minutes, several times a day. When something went wrong they recreated the problem on a twin machine in the lab, then sent a fix. The robot itself is a relatively simple arm that moves along three straight tracks — it picks, places, and joins; it does not invent the plan.\n\nNews reports call this the first time a structure has been put together in orbit by a machine with no astronauts there. Talk of frameworks hundreds of metres or kilometres across is the larger research program's goal, not what this small demo has done.",
+  "links": [
+    {
+      "label": "University news on the robotic structure built in orbit",
+      "url": "https://www.caltech.edu/about/news/caltech-robotic-space-demo-successfully-builds-in-space"
+    },
+    {
+      "label": "Program news on automated assembly of a structure in space",
+      "url": "https://www.darpa.mil/news/2026/nom4d-program-demonstrates-automated-in-space-assembly"
+    },
+    {
+      "label": "Science news summary of the orbit build demonstration",
+      "url": "https://www.sciencedaily.com/releases/2026/11/261108233043.htm"
+    }
+  ]
+}
