@@ -178,10 +178,9 @@ const signin = (deviceFlow) => `<section class="signin${deviceFlow ? " device" :
   </div></section>`;
 const subscribe = `<div class="split" data-route="/subscribe"><section class="promise">
   <p class="eyebrow">Future Forge Content</p><h1>Paid Quests &amp; Lessons.</h1>
-  <p class="lead">You are subscribing to the Future Forge Content plan for one person.
-  Unlock paid quests and learning modules across the catalog.</p>
-  <dl><dt>What you are buying</dt><dd>Access to paid catalog quests and lessons for one person. $10, billed monthly.
-    Hosted AI usage is sold separately in the game as $20 top-ups for 15,000 points.</dd>
+  <p class="lead">Today all content only needs an account. Premium content is coming with a 3-day free trial ($48 USD/month or $480 USD/year).</p>
+  <dl><dt>What is coming</dt><dd>Access to premium catalog quests and lessons for one person ($48 USD/month or $480 USD/year, with a 3-day free trial).
+    Hosted AI usage is sold separately in the game as $20 USD top-ups for 15,000 points (1 point = $0.001 USD, sold at API price rounded up to cover hosting). There is no free trial of the hosted app.</dd>
     <dt>The promise</dt><dd>You lead. The computer stays with you while you try a real place and see what holds.
     The computer does not do it for you.</dd></dl>
   <p class="aside">The software is free under the GNU General Public License, version 3 or later.
@@ -246,8 +245,10 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
         // No session: show Clerk's own form. The device code is optional.
         writeBounced(true);
         status.textContent = "";
-        Clerk.mountSignIn(mount, { routing: "hash", forceRedirectUrl: here,
-          signUpForceRedirectUrl: here, appearance: CLERK_APPEARANCE });
+        Clerk.mountSignIn(mount, {
+          routing: "hash", forceRedirectUrl: here,
+          signUpForceRedirectUrl: here, appearance: CLERK_APPEARANCE
+        });
         signInMount = mount;
         return;
       }
