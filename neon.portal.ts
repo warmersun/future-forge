@@ -46,7 +46,6 @@ export default defineConfig({
           ? { FF_PORTAL_SESSION_SECRET: process.env.FF_PORTAL_SESSION_SECRET }
           : {}),
         FF_API_SECRET: process.env.FF_API_SECRET!,
-        FF_CLOUD_PLAN_SLUGS: process.env.FF_CLOUD_PLAN_SLUGS || "cloud",
         FF_CONTENT_PLAN_SLUGS: process.env.FF_CONTENT_PLAN_SLUGS!,
         FF_CLOUD_AI_BUDGET: process.env.FF_CLOUD_AI_BUDGET || "15000",
         ...(process.env.FF_STRIPE_TOPUP_URL

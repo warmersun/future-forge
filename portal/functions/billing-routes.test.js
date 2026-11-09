@@ -101,11 +101,17 @@ function fakeDb() {
     if (sql.includes("DELETE FROM ai_quota_reservations WHERE clerk_user_id")) return { rows: [] };
     if (sql.includes("INSERT INTO ai_usage_period")) {
       const k = key(a[0], a[1]);
-      if (!s.ledger.has(k)) s.ledger.set(k, { spent_points: 0, held_points: 0 });
-      else if (sql.includes("DO UPDATE SET") && sql.includes("spent_points = 0")) s.ledger.get(k).spent_points = 0;
+      const added = Number(a[2]) || 100;
+      if (!s.ledger.has(k)) s.ledger.set(k, { budget_points: added, spent_points: 0, held_points: 0 });
+      else if (sql.includes("DO UPDATE SET") && sql.includes("spent_points = 0")) {
+        const cur = s.ledger.get(k);
+        const curBudget = Number(cur.budget_points) || added;
+        cur.budget_points = Math.max(0, curBudget - (Number(cur.spent_points) || 0)) + added;
+        cur.spent_points = 0;
+      }
       return { rows: [] };
     }
-    if (sql.includes("SELECT spent_points, held_points FROM ai_usage_period")) {
+    if (sql.includes("FROM ai_usage_period") && sql.includes("FOR UPDATE")) {
       const row = s.ledger.get(key(a[0], a[1]));
       return { rows: row ? [{ ...row }] : [] };
     }
@@ -401,10 +407,10 @@ describe("staged Clerk webhook", () => {
     const fulfilled = await call(api, "/api/webhooks/stripe", stripeRaw, stripeHeaders);
     assert.equal(fulfilled.status, 200);
     assert.equal(fulfilled.body.action, "reset_ai_usage");
-    assert.deepEqual(db.data.ledger.get(`user_1|${period}`), { spent_points: 0, held_points: 0 });
+    assert.deepEqual(db.data.ledger.get(`user_1|${period}`), { budget_points: 100, spent_points: 0, held_points: 0 });
     const allowed = await call(api, "/api/me/ai/reserve", { kind: "image" }, auth);
     assert.equal(allowed.status, 200);
-    // Spend points, then send a second Stripe top-up to verify spent_points resets to 0 while preserving held_points.
+    // Spend 40 points (leaving 60 unspent), then send a second Stripe top-up (+100) -> budget_points becomes 60 + 100 = 160, spent_points resets to 0 while preserving held_points.
     db.data.ledger.get(`user_1|${period}`).spent_points = 40;
     const stripeRaw2 = JSON.stringify({
       id: "evt_stripe_topup_2",
@@ -413,7 +419,16 @@ describe("staged Clerk webhook", () => {
     });
     const stripeSig2 = createHmac("sha256", env.STRIPE_WEBHOOK_SECRET).update(`${ts}.${stripeRaw2}`).digest("hex");
     assert.equal((await call(api, "/api/webhooks/stripe", stripeRaw2, { "stripe-signature": `t=${ts},v1=${stripeSig2}` })).status, 200);
-    assert.deepEqual(db.data.ledger.get(`user_1|${period}`), { spent_points: 0, held_points: 60 });
+    assert.deepEqual(db.data.ledger.get(`user_1|${period}`), { budget_points: 160, spent_points: 0, held_points: 60 });
+    // Third top-up with 0 spent adds another 100 -> budget_points becomes 260.
+    const stripeRaw3 = JSON.stringify({
+      id: "evt_stripe_topup_3",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_3", client_reference_id: "user_1", payment_status: "paid" } },
+    });
+    const stripeSig3 = createHmac("sha256", env.STRIPE_WEBHOOK_SECRET).update(`${ts}.${stripeRaw3}`).digest("hex");
+    assert.equal((await call(api, "/api/webhooks/stripe", stripeRaw3, { "stripe-signature": `t=${ts},v1=${stripeSig3}` })).status, 200);
+    assert.deepEqual(db.data.ledger.get(`user_1|${period}`), { budget_points: 260, spent_points: 0, held_points: 60 });
     assert.equal((await call(api, "/api/webhooks/stripe", stripeRaw2, { "stripe-signature": `t=${ts},v1=${stripeSig2}` })).body.idempotent, true);
   });
   it("preserves canceled paid-through-period entitlement from the current snapshot", async () => {

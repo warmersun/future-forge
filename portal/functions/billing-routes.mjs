@@ -152,13 +152,14 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
        AND created_at < now() - interval '1 day'`, [userId]
     );
     const ledger = (await cx.query(
-      `SELECT spent_points, held_points FROM ai_usage_period
+      `SELECT budget_points, spent_points, held_points FROM ai_usage_period
        WHERE clerk_user_id = $1 AND period_start = $2 FOR UPDATE`, [userId, start]
     )).rows[0];
     if (!ledger) {
       return { ok: false, status: 402, error: "subscription_required", message: SUBSCRIPTION_REQUIRED_MESSAGE };
     }
-    const remaining = Math.max(0, budgetMicroFromEnv(env) - points(ledger.spent_points) - points(ledger.held_points));
+    const ledgerBudget = points(ledger.budget_points) || budgetMicroFromEnv(env);
+    const remaining = Math.max(0, ledgerBudget - points(ledger.spent_points) - points(ledger.held_points));
     const rates = quotaRatesFromEnv(env);
     const hold = points(holdMicroFor(body.kind, {
       remainingMicro: remaining, chars: body.chars, inputTokens: body.inputTokens,
@@ -191,13 +192,14 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
     if (row.clerk_user_id !== userId || !equal(row.settle_token, body.settleToken)) return { ok: false, status: 403, error: "quota_forbidden" };
     if (row.settled) return { ok: true, idempotent: true, actualMicro: points(row.settled_points) };
     const ledger = (await cx.query(
-      `SELECT spent_points, held_points FROM ai_usage_period
+      `SELECT budget_points, spent_points, held_points FROM ai_usage_period
        WHERE clerk_user_id = $1 AND period_start = $2 FOR UPDATE`, [userId, row.period_start]
     )).rows[0];
     if (!ledger) throw new Error("ledger_missing");
+    const ledgerBudget = points(ledger.budget_points) || budgetMicroFromEnv(env);
     const actual = settleMicroFor(row.kind, body, quotaRatesFromEnv(env));
     const charged = chargeMicro({ actualMicro: actual, heldMicro: points(row.held_points),
-      budgetMicro: budgetMicroFromEnv(env), spentMicro: points(ledger.spent_points), heldTotalMicro: points(ledger.held_points) });
+      budgetMicro: ledgerBudget, spentMicro: points(ledger.spent_points), heldTotalMicro: points(ledger.held_points) });
     await cx.query(
       `UPDATE ai_usage_period SET spent_points = spent_points + $3,
        held_points = GREATEST(0, held_points - $4)
@@ -271,14 +273,17 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
     );
     if (!inserted.rows.length) return { ok: true, idempotent: true };
     if (planned.action === "reset_ai_usage") {
+      const topUpBudget = budgetMicroFromEnv(env);
       await cx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [planned.userId]);
       await cx.query("INSERT INTO users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO NOTHING", [planned.userId]);
       await cx.query(
-        `INSERT INTO ai_usage_period (clerk_user_id, period_start, spent_points, held_points)
-         VALUES ($1, $2, 0, 0)
+        `INSERT INTO ai_usage_period (clerk_user_id, period_start, budget_points, spent_points, held_points, updated_at)
+         VALUES ($1, $2, $3, 0, 0, now())
          ON CONFLICT (clerk_user_id, period_start) DO UPDATE SET
-         spent_points = 0, updated_at = now()`,
-        [planned.userId, TOPUP_PERIOD_START]
+         budget_points = GREATEST(0, ai_usage_period.budget_points - ai_usage_period.spent_points) + EXCLUDED.budget_points,
+         spent_points = 0,
+         updated_at = now()`,
+        [planned.userId, TOPUP_PERIOD_START, topUpBudget]
       );
     }
     return { ok: true, action: planned.action };

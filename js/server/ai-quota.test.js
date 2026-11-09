@@ -415,6 +415,14 @@ describe("Stripe top-up link & webhook", () => {
     );
     assert.deepEqual(
       planStripeWebhookEvent({
+        id: "evt_coupon_free",
+        type: "checkout.session.completed",
+        data: { object: { client_reference_id: "user_1", payment_status: "no_payment_required" } },
+      }),
+      { ok: true, id: "evt_coupon_free", action: "reset_ai_usage", userId: "user_1" }
+    );
+    assert.deepEqual(
+      planStripeWebhookEvent({
         id: "evt_unpaid",
         type: "checkout.session.completed",
         data: { object: { client_reference_id: "user_1", payment_status: "unpaid" } },

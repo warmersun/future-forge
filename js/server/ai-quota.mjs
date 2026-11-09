@@ -407,7 +407,7 @@ export function planStripeWebhookEvent(evt) {
   const session = evt?.data?.object;
   if (type === "checkout.session.completed") {
     const paymentStatus = String(session?.payment_status || "").trim().toLowerCase();
-    if (paymentStatus && paymentStatus !== "paid") {
+    if (paymentStatus && paymentStatus !== "paid" && paymentStatus !== "no_payment_required") {
       return { ok: true, id, action: "ignore" };
     }
   }
@@ -452,7 +452,8 @@ export function contentEntitled(input = {}) {
  */
 export function topUpEntitled(usageRow, env = process.env) {
   if (!usageRow || typeof usageRow !== "object") return false;
-  const budget = budgetMicroFromEnv(env);
+  const rowBudget = usagePoints(usageRow.budget_points ?? usageRow.budget);
+  const budget = rowBudget > 0 ? rowBudget : budgetMicroFromEnv(env);
   const spent = usagePoints(usageRow.spent_points ?? usageRow.spent);
   const held = usagePoints(usageRow.held_points ?? usageRow.held);
   return budget - spent - held > 0;
@@ -582,7 +583,7 @@ function usagePeriodEnd(value) {
  * Player-facing allowance. Held points are already unavailable.
  * Remaining is clamped at zero. Before the first top-up (`hasTopUp: false`),
  * `remaining` is 0 (`0 used · 0 left`).
- * @param {{ entitled?: boolean, hasTopUp?: boolean, budget?: unknown, spent?: unknown, held?: unknown, periodEnd?: unknown, topUpUrl?: string }} [input]
+ * @param {{ entitled?: boolean, hasTopUp?: boolean, budget?: unknown, spent?: unknown, held?: unknown, periodEnd?: unknown, resetAt?: unknown, topUpUrl?: string }} [input]
  */
 export function usageView(input = {}) {
   if (!input?.entitled) return null;
@@ -591,6 +592,7 @@ export function usageView(input = {}) {
   const spent = hasTopUp ? usagePoints(input.spent) : 0;
   const held = hasTopUp ? usagePoints(input.held) : 0;
   const remaining = hasTopUp ? Math.max(0, budget - spent - held) : 0;
+  const resetAt = hasTopUp ? usagePeriodEnd(input.resetAt) : null;
   const view = {
     budget,
     spent,
@@ -598,6 +600,7 @@ export function usageView(input = {}) {
     remaining,
     periodEnd: usagePeriodEnd(input.periodEnd),
   };
+  if (resetAt) view.resetAt = resetAt;
   if (input.topUpUrl) view.topUpUrl = String(input.topUpUrl);
   return view;
 }
@@ -614,17 +617,20 @@ export async function usageForAccount(query, userId, sub, env = process.env) {
   const uid = String(userId || "").trim();
   if (!uid || typeof query !== "function") return null;
   const row = (await query(
-    `SELECT spent_points, held_points FROM ai_usage_period
+    `SELECT budget_points, spent_points, held_points, updated_at FROM ai_usage_period
      WHERE clerk_user_id = $1 AND period_start = $2`,
     [uid, TOPUP_PERIOD_START]
   ))?.rows?.[0] || null;
+  const defaultBudget = budgetMicroFromEnv(env);
+  const rowBudget = row?.budget_points != null ? usagePoints(row.budget_points) : 0;
   return usageView({
     entitled: true,
     hasTopUp: Boolean(row),
-    budget: budgetMicroFromEnv(env),
+    budget: row && rowBudget > 0 ? rowBudget : defaultBudget,
     spent: row?.spent_points,
     held: row?.held_points,
     periodEnd: null,
+    resetAt: row?.updated_at,
     topUpUrl: topUpUrlFromEnv(env, uid),
   });
 }

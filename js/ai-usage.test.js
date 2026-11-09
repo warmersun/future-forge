@@ -21,9 +21,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   aiUsageMarkup,
+  didTopUpReset,
   paintAiUsageMeters,
   refreshAiUsage,
   repaintAiUsage,
+  showTopUpThankYouModal,
   usageMeterState,
   usageResetLabel,
 } from "./ai-usage.js";
@@ -59,9 +61,21 @@ test("usage meter states show used versus left and hide a bad payload", () => {
   const ok = usageMeterState({ budget: 15000, spent: 100, held: 0, remaining: 14900 });
   assert.equal(ok.tone, "ok");
   assert.equal(ok.pct, 1);
-  const boundary = usageMeterState({ budget: 15000, spent: 11999, held: 0, remaining: 3001 });
-  assert.equal(boundary.tone, "ok");
-  assert.equal(boundary.pct, 80);
+  const boundary75 = usageMeterState({ budget: 15000, spent: 11250, held: 0, remaining: 3750 });
+  assert.equal(boundary75.tone, "ok");
+  assert.equal(boundary75.pct, 75);
+  const above75 = usageMeterState({ budget: 15000, spent: 11251, held: 0, remaining: 3749 });
+  assert.equal(above75.tone, "low");
+  assert.equal(above75.pct, 75);
+  const boundary95 = usageMeterState({ budget: 15000, spent: 14250, held: 0, remaining: 750 });
+  assert.equal(boundary95.tone, "low");
+  assert.equal(boundary95.pct, 95);
+  const above95 = usageMeterState({ budget: 15000, spent: 14251, held: 0, remaining: 749 });
+  assert.equal(above95.tone, "empty");
+  assert.equal(above95.pct, 95);
+  const secondTopUp = usageMeterState({ budget: 30000, spent: 0, held: 0, remaining: 30000 });
+  assert.equal(secondTopUp.tone, "ok");
+  assert.equal(secondTopUp.figures, "0 used · 30,000 left");
   const zero = usageMeterState({ budget: 0, spent: 0, held: 0, remaining: 0 });
   assert.equal(zero.tone, "empty");
   assert.equal(zero.pct, 0);
@@ -131,6 +145,111 @@ test("refresh paints a signed-in usage and leaves the meter on a failed fetch", 
     json: async () => ({ ok: true, signedIn: true, usage: null }),
   }), root);
   assert.equal(meter.hidden, true);
+});
+
+test("detects top-up resets and pops up the thank-you modal", () => {
+  const map = new Map();
+  const storage = {
+    getItem: (k) => (map.has(k) ? map.get(k) : null),
+    setItem: (k, v) => map.set(k, String(v)),
+    removeItem: (k) => map.delete(k),
+  };
+  let appendedModal = null;
+  const doc = {
+    nodeType: 9,
+    body: {
+      appendChild(el) {
+        appendedModal = el;
+      },
+    },
+    querySelector: (sel) => (sel === "[data-ai-topup-thanks]" ? appendedModal : null),
+    createElement() {
+      const classes = new Set();
+      const bodyNode = { textContent: "" };
+      const closeBtn = { addEventListener() {} };
+      return {
+        className: "",
+        hidden: false,
+        innerHTML: "",
+        classList: {
+          add(...names) { for (const n of names) classes.add(n); },
+          remove(...names) { for (const n of names) classes.delete(n); },
+          contains: (n) => classes.has(n),
+        },
+        setAttribute() {},
+        removeAttribute() {},
+        addEventListener() {},
+        querySelector: (sel) => {
+          if (sel === "[data-ai-topup-thanks-body]") return bodyNode;
+          if (sel === "[data-ai-topup-thanks-close]") return closeBtn;
+          return null;
+        },
+      };
+    },
+    addEventListener() {},
+  };
+  const meter = fakeMeter();
+  const root = { ownerDocument: doc, querySelectorAll: () => [meter], matches: () => false };
+
+  // Initial load with 0 left (not topped up yet) does not pop up thank-you.
+  paintAiUsageMeters(
+    { budget: 15000, spent: 0, held: 0, remaining: 0, topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1" },
+    root,
+    { storage, now: 1_700_000_000_000 }
+  );
+  assert.equal(appendedModal, null);
+
+  // First top-up (0 -> 15,000 left) pops up thank-you.
+  paintAiUsageMeters(
+    {
+      budget: 15000,
+      spent: 0,
+      held: 0,
+      remaining: 15000,
+      resetAt: "2026-11-08T23:50:00.000Z",
+      topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1",
+    },
+    root,
+    { storage, now: Date.parse("2026-11-08T23:50:05.000Z") }
+  );
+  assert.notEqual(appendedModal, null);
+  assert.equal(appendedModal.classList.contains("open"), true);
+  assert.match(appendedModal.querySelector("[data-ai-topup-thanks-body]").textContent, /15,000 points/);
+
+  // Close the modal; subsequent refresh with same usage does not re-open it.
+  appendedModal.classList.remove("open");
+  paintAiUsageMeters(
+    {
+      budget: 15000,
+      spent: 0,
+      held: 0,
+      remaining: 15000,
+      resetAt: "2026-11-08T23:50:00.000Z",
+      topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1",
+    },
+    root,
+    { storage, now: Date.parse("2026-11-08T23:50:10.000Z") }
+  );
+  assert.equal(appendedModal.classList.contains("open"), false);
+
+  // Second top-up (15,000 -> 30,000 left) pops up thank-you with 30,000 points.
+  paintAiUsageMeters(
+    {
+      budget: 30000,
+      spent: 0,
+      held: 0,
+      remaining: 30000,
+      resetAt: "2026-11-08T23:55:00.000Z",
+      topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1",
+    },
+    root,
+    { storage, now: Date.parse("2026-11-08T23:55:05.000Z") }
+  );
+  assert.equal(appendedModal.classList.contains("open"), true);
+  assert.match(appendedModal.querySelector("[data-ai-topup-thanks-body]").textContent, /30,000 points/);
+  assert.equal(meter.querySelector("[data-ai-usage-figures]").textContent, "0 used · 30,000 left");
+  assert.equal(didTopUpReset({ remaining: 0 }, null, null), false);
+  assert.notEqual(showTopUpThankYouModal({ remaining: 30000 }, root), null);
 });
 
 function fakeMeter() {

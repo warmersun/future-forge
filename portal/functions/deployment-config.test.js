@@ -29,7 +29,6 @@ const fixtureEnv = {
   CLERK_PUBLISHABLE_KEY: "pk_test_fixture",
   CLERK_WEBHOOK_SECRET: "whsec_fixture",
   FF_API_SECRET: "fixture-api-secret",
-  FF_CLOUD_PLAN_SLUGS: "cloud",
   FF_CONTENT_PLAN_SLUGS: "content",
   FF_CLOUD_AI_BUDGET: "100",
   FF_QUOTA_TEXT_IN_PER_KTOK: "1",
@@ -66,6 +65,5 @@ test("production policy keeps the Clerk-secret fallback when no session key is c
   assert.equal(verifyGameSessionToken(token, env).sub, "user_fixture");
   assert.equal(env.FF_PORTAL_UI_URL, "https://warmersun.com/portal/");
   assert.equal(env.FF_CONTENT_PLAN_SLUGS, "content");
-  assert.equal(env.FF_CLOUD_PLAN_SLUGS, "cloud");
   assert.equal(Object.hasOwn(env, "DATABASE_URL"), false);
 });

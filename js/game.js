@@ -117,7 +117,7 @@ import {
   refreshQuestRatingHosts,
   setQuestRatingNotifier,
 } from "./quest-ratings.js";
-import { paintAiUsageMeters, refreshAiUsage } from "./ai-usage.js";
+import { hasTopUpPending, paintAiUsageMeters, refreshAiUsage } from "./ai-usage.js";
 import {
   parseDeepLink,
   hrefWithoutDeepLink,
@@ -2470,13 +2470,13 @@ function renderMpSeatTabsHtml(seats, bridge) {
       const titleParts = left
         ? [`${s.displayName} left the room`, "— invent still on the table"]
         : [
-            mine ? "Your invent" : `${s.displayName}'s invent`,
-            focus === "editing"
-              ? "— editing"
-              : focus === "viewing"
-                ? "— viewing only"
-                : "— click to open",
-          ];
+          mine ? "Your invent" : `${s.displayName}'s invent`,
+          focus === "editing"
+            ? "— editing"
+            : focus === "viewing"
+              ? "— viewing only"
+              : "— click to open",
+        ];
       if (theirTurn && !left) {
         titleParts.push(mine ? "— your turn" : "— their turn");
       }
@@ -2756,8 +2756,8 @@ function isHotseatPlayChrome() {
   if (isRoomPlayChrome()) return false;
   return Boolean(
     hotseatBridge.isHotseat() ||
-      state.mp?.mode === "hotseat" ||
-      document.body.classList.contains("mp-hotseat")
+    state.mp?.mode === "hotseat" ||
+    document.body.classList.contains("mp-hotseat")
   );
 }
 
@@ -3563,7 +3563,7 @@ function enterRoomPlay(client, opts = {}) {
       if (evt.type === "alone") {
         flashToast(
           evt.message ||
-            "You're the only one still connected — you can keep going alone or leave the room."
+          "You're the only one still connected — you can keep going alone or leave the room."
         );
         renderMpChrome();
         applyEndTurnChrome();
@@ -4602,7 +4602,7 @@ const crisisIntroduction = createCrisisIntroduction({
   document,
   getBoard: () => state.hexBoard,
   repaint: () => hexWorkshop?.paint?.(),
-  onChange: () => { try { tutorialCtl?.refresh?.(); } catch {} },
+  onChange: () => { try { tutorialCtl?.refresh?.(); } catch { } },
   reducedMotion: () => window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches || false,
 });
 
@@ -5254,7 +5254,7 @@ function boardPlate(row, opts = {}) {
           if (!blob || !img.isConnected) return;
           img.src = URL.createObjectURL(blob);
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }
   if (row?.pathwayText) {
@@ -5345,7 +5345,7 @@ async function loadForge() {
     showScreen("title");
     return;
   }
-  refreshAiUsage(apiFetch).catch(() => {});
+  refreshAiUsage(apiFetch).catch(() => { });
   const tz = encodeURIComponent(browserTimeZone());
   let achievements = [];
   let catalog = [];
@@ -5716,8 +5716,7 @@ async function refreshHostedQuests(opts = {}) {
     } else if (opts.force && !opts.silent) {
       const n = state.hostedQuests.length;
       flashToast(
-        `Quests refreshed — ${n} tile${n === 1 ? "" : "s"}${
-          data.remoteCached ? " (cached)" : ""
+        `Quests refreshed — ${n} tile${n === 1 ? "" : "s"}${data.remoteCached ? " (cached)" : ""
         }.`
       );
     }
@@ -5909,12 +5908,12 @@ function collectCatalogBuckets() {
       const rec =
         e.tile && typeof e.tile === "object"
           ? catalogRecordFromValidated(
-              { ok: true, tile: e.tile, mission: null, kind: "module" },
-              { canRemove: true, source: "imported" }
-            )
+            { ok: true, tile: e.tile, mission: null, kind: "module" },
+            { canRemove: true, source: "imported" }
+          )
           : catalogEntryFromApi({ ...e, kind: "module" }, "imported", {
-              canRemove: true,
-            });
+            canRemove: true,
+          });
       const id = String(rec?.id || "");
       if (!id || seenLocal.has(id)) continue;
       seenLocal.add(id);
@@ -6686,10 +6685,10 @@ function learningModuleOutcomeOffer() {
     );
     const contains = missionId
       ? grouped.some((g) =>
-          (g.entries || []).some(
-            (e) => String(e.id || e.mission?.id || "") === missionId
-          )
+        (g.entries || []).some(
+          (e) => String(e.id || e.mission?.id || "") === missionId
         )
+      )
       : false;
     if (contains) {
       kind = k;
@@ -6765,9 +6764,8 @@ function renderQuestHub() {
         ? "Curriculum lessons for the party — same invent loop as other Quests (tutor stays solo)."
         : "Modules of lessons. New lessons land here — pick a module and take the next one.",
       meta: counts.learningLessons
-        ? `${counts.learningGroups} module${counts.learningGroups === 1 ? "" : "s"} · ${
-            counts.learningLessons
-          } lesson${counts.learningLessons === 1 ? "" : "s"}`
+        ? `${counts.learningGroups} module${counts.learningGroups === 1 ? "" : "s"} · ${counts.learningLessons
+        } lesson${counts.learningLessons === 1 ? "" : "s"}`
         : "None loaded yet",
       cta: mpPick ? "Pick a lesson →" : "Open learning →",
     },
@@ -7013,25 +7011,25 @@ function catalogInspectBeatsHtml(mission, tile) {
       const still = briefBeatAuthoredUrl(beat);
       const img = still
         ? `<img class="quest-dev-beat-still" src="${escapeHtml(
-            still
-          )}" alt="" loading="lazy" width="640" height="360" />`
+          still
+        )}" alt="" loading="lazy" width="640" height="360" />`
         : "";
       const prompt =
         !still && beat.imagePrompt
           ? `<p class="muted quest-dev-beat-prompt">imagePrompt: ${escapeHtml(
-              beat.imagePrompt
-            )}</p>`
+            beat.imagePrompt
+          )}</p>`
           : "";
       return `<li class="quest-dev-beat">
         ${img}
         <div class="quest-dev-beat-copy">
           <p class="quest-dev-beat-meta">${i + 1} · ${escapeHtml(
-            beat.role || "other"
-          )}</p>
+        beat.role || "other"
+      )}</p>
           <h5>${escapeHtml(beat.title || `Beat ${i + 1}`)}</h5>
           <div class="quest-dev-md">${renderMarkdownSafe(beat.bodyMd || "", {
-            autolink: true,
-          })}</div>
+        autolink: true,
+      })}</div>
           ${prompt}
         </div>
       </li>`;
@@ -7040,11 +7038,10 @@ function catalogInspectBeatsHtml(mission, tile) {
   return `
     <section class="quest-dev-section">
       <h4>Briefing beats <span class="muted">${escapeHtml(source)}</span></h4>
-      ${
-        job
-          ? `<p class="quest-dev-job-line">${escapeHtml(job)}</p>`
-          : ""
-      }
+      ${job
+      ? `<p class="quest-dev-job-line">${escapeHtml(job)}</p>`
+      : ""
+    }
       <ol class="quest-dev-beats">${items}</ol>
     </section>`;
 }
@@ -7122,13 +7119,11 @@ function openQuestCatalogInspect(entry) {
       isMod
         ? `${tile.module || entry.module || "module"} · ${lessonIds.length} lessons`
         : m.isLearningModule || m.module
-          ? `${m.module || "module"}${
-              m.lesson != null
-                ? ` · Lesson ${m.lesson}${
-                    m.totalLessons != null ? `/${m.totalLessons}` : ""
-                  }`
-                : ""
+          ? `${m.module || "module"}${m.lesson != null
+            ? ` · Lesson ${m.lesson}${m.totalLessons != null ? `/${m.totalLessons}` : ""
             }`
+            : ""
+          }`
           : "—",
     ],
     [
@@ -7180,26 +7175,24 @@ function openQuestCatalogInspect(entry) {
         <h4>Overview</h4>
         <dl class="quest-dev-dl">
           ${overviewBits
-            .map(
-              ([k, v]) =>
-                `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(
-                  String(v)
-                )}</dd></div>`
-            )
-            .join("")}
+        .map(
+          ([k, v]) =>
+            `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(
+              String(v)
+            )}</dd></div>`
+        )
+        .join("")}
         </dl>
-        ${
-          pressureRows
-            ? `<p class="muted" style="margin:0.5rem 0 0.25rem">Pressure</p><ul class="quest-dev-list">${pressureRows}</ul>`
-            : ""
-        }
-        ${
-          !isMod && state.developer
-            ? `<p style="margin:0.75rem 0 0"><a class="btn btn-ghost btn-sm" href="/tools/quest-economy?id=${encodeURIComponent(
-                entry.id || m.id || ""
-              )}" target="_blank" rel="noopener">Economy lab</a></p>`
-            : ""
-        }
+        ${pressureRows
+        ? `<p class="muted" style="margin:0.5rem 0 0.25rem">Pressure</p><ul class="quest-dev-list">${pressureRows}</ul>`
+        : ""
+      }
+        ${!isMod && state.developer
+        ? `<p style="margin:0.75rem 0 0"><a class="btn btn-ghost btn-sm" href="/tools/quest-economy?id=${encodeURIComponent(
+          entry.id || m.id || ""
+        )}" target="_blank" rel="noopener">Economy lab</a></p>`
+        : ""
+      }
       </section>`;
     const jsonSection = `
       <section class="quest-dev-section">
@@ -7221,13 +7214,12 @@ function openQuestCatalogInspect(entry) {
       </section>
       <section class="quest-dev-section">
         <h4>Lessons</h4>
-        ${
-          lessonIds.length
-            ? `<ul class="quest-dev-list">${lessonIds
-                .map((id) => `<li><code>${escapeHtml(id)}</code></li>`)
-                .join("")}</ul>`
-            : `<p class="muted">No lesson ids</p>`
-        }
+        ${lessonIds.length
+        ? `<ul class="quest-dev-list">${lessonIds
+          .map((id) => `<li><code>${escapeHtml(id)}</code></li>`)
+          .join("")}</ul>`
+        : `<p class="muted">No lesson ids</p>`
+      }
       </section>
       ${jsonSection}`
       : `${overviewSection}
@@ -7251,9 +7243,9 @@ function openQuestCatalogInspect(entry) {
       <section class="quest-dev-section">
         <h4>Tutor context <span class="muted">(player-hidden)</span></h4>
         ${mdOrNone(
-          m.aiTutorContext || tile.aiTutorContext,
-          "No aiTutorContext"
-        )}
+        m.aiTutorContext || tile.aiTutorContext,
+        "No aiTutorContext"
+      )}
       </section>
       ${jsonSection}`;
     body.querySelector("#quest-dev-copy-json")?.addEventListener("click", async () => {
@@ -7310,8 +7302,8 @@ function catalogCardHtml(entry, kind, opts = {}) {
   const fromLine = companionFromLine(entry);
   const moveChip = companion
     ? `<span class="companion-chip companion-chip-${escapeHtml(
-        companion.move || "idea"
-      )}">${escapeHtml(stageCopy(companion).moveLabel)}</span>`
+      companion.move || "idea"
+    )}">${escapeHtml(stageCopy(companion).moveLabel)}</span>`
     : "";
   const nextTag = suggested
     ? `<span class="scenario-tag next-lesson-tag" title="Next lesson in this module">Next</span>`
@@ -7319,26 +7311,22 @@ function catalogCardHtml(entry, kind, opts = {}) {
   return `
     <div class="mission-card-wrap catalog-card-wrap" data-catalog-id="${escapeHtml(entry.id)}">
       <div class="catalog-card-face">
-      <button type="button" class="challenge-card challenge-card-visual catalog-play-card ${
-        solved ? "solved" : ""
-      }${suggested ? " is-suggested-lesson" : ""}">
+      <button type="button" class="challenge-card challenge-card-visual catalog-play-card ${solved ? "solved" : ""
+    }${suggested ? " is-suggested-lesson" : ""}">
         <span class="card-visual" aria-hidden="true">
           <img src="${escapeHtml(img)}" alt="" loading="lazy" width="640" height="360" />
         </span>
         <span class="card-body">
-          ${
-            badges || nextTag
-              ? `<span class="num">${nextTag}${badges}</span>`
-              : `<span class="num muted">${escapeHtml(place || "Quest")}</span>`
-          }
+          ${badges || nextTag
+      ? `<span class="num">${nextTag}${badges}</span>`
+      : `<span class="num muted">${escapeHtml(place || "Quest")}</span>`
+    }
           <h3>${escapeHtml(entry.title || m?.title || "Quest")}</h3>
-          ${
-            fromLine || moveChip
-              ? `<p class="catalog-from-line">${moveChip}${
-                  fromLine ? `<span>${escapeHtml(fromLine)}</span>` : ""
-                }</p>`
-              : ""
-          }
+          ${fromLine || moveChip
+      ? `<p class="catalog-from-line">${moveChip}${fromLine ? `<span>${escapeHtml(fromLine)}</span>` : ""
+      }</p>`
+      : ""
+    }
           ${metaLine ? `<p class="muted">${escapeHtml(metaLine)}</p>` : ""}
           <p>${escapeHtml(scene)}</p>
           <span class="cta">${cta}</span>
@@ -7348,31 +7336,28 @@ function catalogCardHtml(entry, kind, opts = {}) {
       <div class="catalog-card-tools">
         ${ratingControlHtml({ questId: entry.id || m?.id || "" })}
         <div class="catalog-card-actions">
-          ${
-            state.developer
-              ? `<button type="button" class="btn btn-ghost btn-sm catalog-dev" data-catalog-dev-id="${escapeHtml(
-                  entry.id
-                )}" title="Inspect tile JSON and Markdown">Developer</button>`
-              : ""
-          }
+          ${state.developer
+      ? `<button type="button" class="btn btn-ghost btn-sm catalog-dev" data-catalog-dev-id="${escapeHtml(
+        entry.id
+      )}" title="Inspect tile JSON and Markdown">Developer</button>`
+      : ""
+    }
           <button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(
-            entry.id || m?.id || ""
-          )}" title="${isLibraryCatalogEntry(entry) ? "Copy this local Quest ID; other installations need the Quest published or imported" : "Copy this Quest ID to load it from Start a Quest"}">Copy Quest ID</button>
+      entry.id || m?.id || ""
+    )}" title="${isLibraryCatalogEntry(entry) ? "Copy this local Quest ID; other installations need the Quest published or imported" : "Copy this Quest ID to load it from Start a Quest"}">Copy Quest ID</button>
           <button type="button" class="btn btn-ghost btn-sm catalog-copy-link" data-copy-quest-link="${escapeHtml(
-            entry.id || m?.id || ""
-          )}" title="Copy a link that opens this Quest on this server">Copy link</button>
-          ${
-            questHasLeaderboard(entry.id || m?.id)
-              ? `<button type="button" class="btn btn-ghost btn-sm catalog-board" data-catalog-board-id="${escapeHtml(
-                  entry.id || m?.id || ""
-                )}">Leaderboard</button>`
-              : ""
-          }
-          ${
-            entry.canRemove
-              ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="Remove from library">Remove</button>`
-              : ""
-          }
+      entry.id || m?.id || ""
+    )}" title="Copy a link that opens this Quest on this server">Copy link</button>
+          ${questHasLeaderboard(entry.id || m?.id)
+      ? `<button type="button" class="btn btn-ghost btn-sm catalog-board" data-catalog-board-id="${escapeHtml(
+        entry.id || m?.id || ""
+      )}">Leaderboard</button>`
+      : ""
+    }
+          ${entry.canRemove
+      ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="Remove from library">Remove</button>`
+      : ""
+    }
         </div>
       </div>
       </div>
@@ -7448,33 +7433,31 @@ function moduleCardHtml(group) {
   const inspectBtn =
     state.developer && group.wrapper
       ? `<button type="button" class="btn btn-ghost btn-sm catalog-dev" data-module-inspect="${escapeHtml(
-          group.key
-        )}" title="Inspect module JSON">Developer</button>`
+        group.key
+      )}" title="Inspect module JSON">Developer</button>`
       : "";
   const moduleActions =
     inspectBtn || group.wrapper?.id
-      ? `<div class="catalog-card-tools"><div class="catalog-card-actions">${inspectBtn}${
-          group.wrapper?.id
-            ? `<button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(group.wrapper.id)}" title="Copy this module's Quest ID">Copy Quest ID</button><button type="button" class="btn btn-ghost btn-sm catalog-copy-link" data-copy-quest-link="${escapeHtml(group.wrapper.id)}" title="Copy a link that opens this module on this server">Copy link</button>`
-            : ""
-        }</div></div>`
+      ? `<div class="catalog-card-tools"><div class="catalog-card-actions">${inspectBtn}${group.wrapper?.id
+        ? `<button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(group.wrapper.id)}" title="Copy this module's Quest ID">Copy Quest ID</button><button type="button" class="btn btn-ghost btn-sm catalog-copy-link" data-copy-quest-link="${escapeHtml(group.wrapper.id)}" title="Copy a link that opens this module on this server">Copy link</button>`
+        : ""
+      }</div></div>`
       : "";
   return `
     <div class="mission-card-wrap catalog-card-wrap" data-module-key="${escapeHtml(
-      group.key
-    )}">
+    group.key
+  )}">
       <div class="catalog-card-face">
       <button type="button" class="challenge-card challenge-card-visual quest-module-card" data-module-key="${escapeHtml(
-        group.key
-      )}">
+    group.key
+  )}">
         <span class="card-visual" aria-hidden="true">
           <img src="${escapeHtml(cover)}" alt="" loading="lazy" width="640" height="360" />
         </span>
         <span class="card-body">
-          <span class="num">${
-            sponsor ||
-            `<span class="scenario-tag learning-tag">Learn</span>`
-          }</span>
+          <span class="num">${sponsor ||
+    `<span class="scenario-tag learning-tag">Learn</span>`
+    }</span>
           <h3>${escapeHtml(label)}</h3>
           ${progress}
           <p>${escapeHtml(summary || status)}</p>
@@ -7498,28 +7481,25 @@ function moduleSummaryHtml(group) {
   const progress = learningModuleProgressHtml(group, { compact: false });
   return `
     <section class="quest-module-summary">
-      ${
+      ${cover
+      ? `<img class="quest-module-cover" src="${escapeHtml(
         cover
-          ? `<img class="quest-module-cover" src="${escapeHtml(
-              cover
-            )}" alt="" width="960" height="540" />`
-          : ""
-      }
+      )}" alt="" width="960" height="540" />`
+      : ""
+    }
       <div class="quest-module-summary-body">
         ${sponsor}
-        ${
-          summary
-            ? `<p class="quest-module-lede">${escapeHtml(summary)}</p>`
-            : ""
-        }
-        ${
-          overview
-            ? `<div class="quest-module-overview">${renderMarkdownSafe(overview, {
-                allowImages: true,
-                autolink: true,
-              })}</div>`
-            : ""
-        }
+        ${summary
+      ? `<p class="quest-module-lede">${escapeHtml(summary)}</p>`
+      : ""
+    }
+        ${overview
+      ? `<div class="quest-module-overview">${renderMarkdownSafe(overview, {
+        allowImages: true,
+        autolink: true,
+      })}</div>`
+      : ""
+    }
         ${progress}
       </div>
     </section>`;
@@ -7606,9 +7586,8 @@ function paintModuleDetail(grid, group, kind, els) {
   }
   if (els.status) {
     els.status.hidden = false;
-    els.status.textContent = `${lessons.length} lesson${
-      lessons.length === 1 ? "" : "s"
-    }`;
+    els.status.textContent = `${lessons.length} lesson${lessons.length === 1 ? "" : "s"
+      }`;
   }
 }
 
@@ -7655,8 +7634,8 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
       <section class="catalog-section" aria-label="${escapeHtml(sec.title)}">
         <h2 class="catalog-section-title">${escapeHtml(sec.title)}</h2>
         <div class="challenge-grid">${sec.entries
-          .map((e) => catalogCardHtml(e, kind, cardOpts))
-          .join("")}</div>
+            .map((e) => catalogCardHtml(e, kind, cardOpts))
+            .join("")}</div>
       </section>`
       )
       .join("");
@@ -7669,8 +7648,8 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
       <section class="catalog-section" aria-label="${escapeHtml(sec.title)}">
         <h2 class="catalog-section-title">${escapeHtml(sec.title)}</h2>
         <div class="challenge-grid">${sec.entries
-          .map((e) => catalogCardHtml(e, kind, cardOpts))
-          .join("")}</div>
+            .map((e) => catalogCardHtml(e, kind, cardOpts))
+            .join("")}</div>
       </section>`
       )
       .join("");
@@ -7782,8 +7761,8 @@ function renderQuestCatalog() {
   } else {
     const modulesHtml = top.groups.length
       ? `<div class="challenge-grid catalog-modules">${top.groups
-          .map(moduleCardHtml)
-          .join("")}</div>`
+        .map(moduleCardHtml)
+        .join("")}</div>`
       : "";
     grid.innerHTML = `${modulesHtml}<div id="catalog-standalone"></div>`;
     wireModuleCards(grid, kind, top.groups);
@@ -7883,8 +7862,8 @@ function renderGlobals() {
     html += `
       <section class="theme-shelf" aria-labelledby="theme-shelf-${escapeHtml(shelf.id)}">
         <h2 id="theme-shelf-${escapeHtml(shelf.id)}" class="theme-shelf-title">${escapeHtml(
-          shelf.title
-        )}</h2>
+      shelf.title
+    )}</h2>
         <div class="challenge-grid">${themes.map(themeCardHtml).join("")}</div>
       </section>`;
   }
@@ -8018,9 +7997,8 @@ function paintMissionCards(list, { disabled = false } = {}) {
         !m.summary && !m.briefMd && (m.scene || "").length > 180 ? "…" : "";
       return `
     <div class="mission-card-wrap">
-      <button type="button" class="challenge-card ${disabled ? "disabled" : ""} ${
-        solved ? "solved" : ""
-      }" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
+      <button type="button" class="challenge-card ${disabled ? "disabled" : ""} ${solved ? "solved" : ""
+        }" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
         <span class="num">${escapeHtml(m.place)} · ${m.startYear || GAME.startYear}
           <span class="scenario-tag ${tag}">${tagLabel}</span>
           ${questMetaBadgesHtml(m)}
@@ -8028,13 +8006,11 @@ function paintMissionCards(list, { disabled = false } = {}) {
         </span>
         <h3>${escapeHtml(m.title)}</h3>
         <p>${escapeHtml(blurb)}${ellipsis}</p>
-        ${
-          m.stakeholder
-            ? `<p class="stakeholder-line">Stakeholder: ${escapeHtml(m.stakeholder)}</p>`
-            : ""
+        ${m.stakeholder
+          ? `<p class="stakeholder-line">Stakeholder: ${escapeHtml(m.stakeholder)}</p>`
+          : ""
         }
-        <span class="cta">${
-          disabled ? "Preparing…" : solved ? "Play again →" : "Invent here →"
+        <span class="cta">${disabled ? "Preparing…" : solved ? "Play again →" : "Invent here →"
         }</span>
       </button>
     </div>`;
@@ -8439,7 +8415,7 @@ async function enforceHostedPlan({ mission, boot } = {}) {
       if (me.status === 401) return hostedPlanUnavailable(true);
       const account = await me.json();
       if (!me.ok || account?.ok !== true || account?.signedIn !== true ||
-          typeof account?.subscription?.entitled !== "boolean") {
+        typeof account?.subscription?.entitled !== "boolean") {
         return hostedPlanUnavailable();
       }
       // The session may have disappeared while the account request was pending.
@@ -8781,8 +8757,8 @@ function startMission(mission, opts = {}) {
   const savedChats = restored.chats;
   const hasSavedChats = Boolean(
     savedChats &&
-      ((Array.isArray(savedChats.tutor) && savedChats.tutor.length) ||
-        (Array.isArray(savedChats.coinventor) && savedChats.coinventor.length))
+    ((Array.isArray(savedChats.tutor) && savedChats.tutor.length) ||
+      (Array.isArray(savedChats.coinventor) && savedChats.coinventor.length))
   );
   ensureCoInventor();
   state.coInventor?.onChallengeStart?.();
@@ -9978,88 +9954,80 @@ function renderTechList() {
 
   const el = $("#tech-list");
   const cardHtml = (t, onShelf) => {
-      const sel = state.selectedTechIds.includes(t.id);
-      const sug = suggested.has(t.id);
-      const isSpot = spotlightId && t.id === spotlightId;
-      const afford = sel ? { ok: true } : canAffordTech(t);
-      const unaffordable = !sel && !afford.ok;
-      const color = DOMAINS[t.domain]?.color || "#94a3b8";
-      const canDo = capabilityLine(t);
-      const why = onShelf ? whyHere(t, state.mission) : "";
-      // Template reasons already begin with the capability line — show it once
-      const canStem = canDo.replace(/[.…]+$/, "");
-      const showCan = !why || !canStem || !why.startsWith(canStem);
-      const cost = budgetWillEnabled() ? techCost(t) : null;
-      const baseCost = budgetWillEnabled() ? techCostRaw(t) : null;
-      const marketHit =
-        budgetWillEnabled() && marketAffectsTech(currentMarketNews(), t);
-      const costTitle = cost
-        ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: ${cost.budget} Budget${cost.will ? `, ${cost.will} Support` : ""}${
-            apEnabled() ? ", 1 AP" : ""
-          }${cost.frontierRisk ? ` · early-tech risk ${cost.frontierRisk}` : ""}${
-            marketHit ? " · market news active" : ""
-          }${unaffordable ? " · cannot afford" : ""}`
-        : apEnabled()
-          ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: 1 AP`
-          : "";
-      // Visible cost chips — not only in tooltip
-      let costHtml = "";
-      if (cost && !sel) {
-        const bDelta =
-          marketHit && baseCost ? cost.budget - baseCost.budget : 0;
-        const wDelta = marketHit && baseCost ? cost.will - baseCost.will : 0;
-        const bits = [
-          `<span class="tech-cost-chip tech-cost-budget${
-            bDelta > 0 ? " tech-cost-up" : bDelta < 0 ? " tech-cost-down" : ""
-          }" title="${isHexInventUi() ? "Budget when you place on the board" : "Budget to add this to your stack"}">${cost.budget}$${
-            bDelta ? ` (${bDelta > 0 ? "+" : ""}${bDelta})` : ""
-          }</span>`,
-        ];
-        if (cost.will > 0 || wDelta) {
-          bits.push(
-            `<span class="tech-cost-chip tech-cost-will${
-              wDelta > 0 ? " tech-cost-up" : wDelta < 0 ? " tech-cost-down" : ""
-            }" title="Support needed to adopt this">Support ${cost.will}${
-              wDelta ? ` (${wDelta > 0 ? "+" : ""}${wDelta})` : ""
-            }</span>`
-          );
-        }
-        if (apEnabled()) {
-          bits.push(
-            `<span class="tech-cost-chip tech-cost-ap" title="Attention this turn">1 AP</span>`
-          );
-        }
-        costHtml = `<span class="tech-cost-row" aria-label="${isHexInventUi() ? "Cost when placed" : "Cost to add"}">${bits.join("")}</span>`;
-      } else if (sel) {
-        costHtml = `<span class="tech-cost-row tech-cost-in-stack"><span class="tech-cost-chip tech-cost-owned">In stack</span></span>`;
-      } else if (apEnabled()) {
-        costHtml = `<span class="tech-cost-row"><span class="tech-cost-chip tech-cost-ap">1 AP</span></span>`;
+    const sel = state.selectedTechIds.includes(t.id);
+    const sug = suggested.has(t.id);
+    const isSpot = spotlightId && t.id === spotlightId;
+    const afford = sel ? { ok: true } : canAffordTech(t);
+    const unaffordable = !sel && !afford.ok;
+    const color = DOMAINS[t.domain]?.color || "#94a3b8";
+    const canDo = capabilityLine(t);
+    const why = onShelf ? whyHere(t, state.mission) : "";
+    // Template reasons already begin with the capability line — show it once
+    const canStem = canDo.replace(/[.…]+$/, "");
+    const showCan = !why || !canStem || !why.startsWith(canStem);
+    const cost = budgetWillEnabled() ? techCost(t) : null;
+    const baseCost = budgetWillEnabled() ? techCostRaw(t) : null;
+    const marketHit =
+      budgetWillEnabled() && marketAffectsTech(currentMarketNews(), t);
+    const costTitle = cost
+      ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: ${cost.budget} Budget${cost.will ? `, ${cost.will} Support` : ""}${apEnabled() ? ", 1 AP" : ""
+      }${cost.frontierRisk ? ` · early-tech risk ${cost.frontierRisk}` : ""}${marketHit ? " · market news active" : ""
+      }${unaffordable ? " · cannot afford" : ""}`
+      : apEnabled()
+        ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: 1 AP`
+        : "";
+    // Visible cost chips — not only in tooltip
+    let costHtml = "";
+    if (cost && !sel) {
+      const bDelta =
+        marketHit && baseCost ? cost.budget - baseCost.budget : 0;
+      const wDelta = marketHit && baseCost ? cost.will - baseCost.will : 0;
+      const bits = [
+        `<span class="tech-cost-chip tech-cost-budget${bDelta > 0 ? " tech-cost-up" : bDelta < 0 ? " tech-cost-down" : ""
+        }" title="${isHexInventUi() ? "Budget when you place on the board" : "Budget to add this to your stack"}">${cost.budget}$${bDelta ? ` (${bDelta > 0 ? "+" : ""}${bDelta})` : ""
+        }</span>`,
+      ];
+      if (cost.will > 0 || wDelta) {
+        bits.push(
+          `<span class="tech-cost-chip tech-cost-will${wDelta > 0 ? " tech-cost-up" : wDelta < 0 ? " tech-cost-down" : ""
+          }" title="Support needed to adopt this">Support ${cost.will}${wDelta ? ` (${wDelta > 0 ? "+" : ""}${wDelta})` : ""
+          }</span>`
+        );
       }
-      // Green ✓ = on stack (placed). Accent outline = focused invent tech.
-      const focused = focusedTechId === t.id;
-      const hex = isHexInventUi();
-      const cardClass = `tech-card ${sel ? "selected" : ""} ${
-        sug ? "recommended" : ""
-      } ${isSpot ? "spotlight-tech" : ""} ${unaffordable ? "unaffordable" : ""}${
-        focused ? " is-focused" : ""
+      if (apEnabled()) {
+        bits.push(
+          `<span class="tech-cost-chip tech-cost-ap" title="Attention this turn">1 AP</span>`
+        );
+      }
+      costHtml = `<span class="tech-cost-row" aria-label="${isHexInventUi() ? "Cost when placed" : "Cost to add"}">${bits.join("")}</span>`;
+    } else if (sel) {
+      costHtml = `<span class="tech-cost-row tech-cost-in-stack"><span class="tech-cost-chip tech-cost-owned">In stack</span></span>`;
+    } else if (apEnabled()) {
+      costHtml = `<span class="tech-cost-row"><span class="tech-cost-chip tech-cost-ap">1 AP</span></span>`;
+    }
+    // Green ✓ = on stack (placed). Accent outline = focused invent tech.
+    const focused = focusedTechId === t.id;
+    const hex = isHexInventUi();
+    const cardClass = `tech-card ${sel ? "selected" : ""} ${sug ? "recommended" : ""
+      } ${isSpot ? "spotlight-tech" : ""} ${unaffordable ? "unaffordable" : ""}${focused ? " is-focused" : ""
       }`;
-      const toggleLabel = hex
-        ? focused
-          ? `Focused ${t.name}`
-          : `Focus ${t.name}`
-        : sel
-          ? `Remove ${t.name} from stack`
-          : `Add ${t.name} to stack`;
-      const toggleMark = hex
-        ? focused
-          ? "●"
-          : "+"
-        : sel
-          ? "✓"
-          : unaffordable
-            ? "!"
-            : "+";
-      return `
+    const toggleLabel = hex
+      ? focused
+        ? `Focused ${t.name}`
+        : `Focus ${t.name}`
+      : sel
+        ? `Remove ${t.name} from stack`
+        : `Add ${t.name} to stack`;
+    const toggleMark = hex
+      ? focused
+        ? "●"
+        : "+"
+      : sel
+        ? "✓"
+        : unaffordable
+          ? "!"
+          : "+";
+    return `
         <div class="${cardClass}" data-id="${t.id}" style="--domain:${color}" role="listitem" tabindex="-1">
           <button type="button" class="tech-card-main" data-tech-focus="${t.id}"
             title="${escapeHtml(t.summary || "")}${escapeHtml(costTitle)} — click to focus">
@@ -10068,9 +10036,8 @@ function renderTechList() {
               <h4>${escapeHtml(t.name)}${isSpot ? ' <span class="tech-spotlight-tag">Spotlight</span>' : ""}</h4>
               ${showCan ? `<p class="tech-can">${escapeHtml(canDo)}</p>` : ""}
               ${why ? `<p class="tech-why">${escapeHtml(why)}</p>` : ""}
-              <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${
-                !grouped && !isSpot && sug ? " · suggested" : ""
-              }${unaffordable ? " · can't afford" : ""}</span>
+              <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${!grouped && !isSpot && sug ? " · suggested" : ""
+      }${unaffordable ? " · can't afford" : ""}</span>
               ${costHtml}
             </span>
           </button>
@@ -10563,27 +10530,21 @@ function renderIdeaFocusBar() {
     <div class="idea-focus-id">${tech.icon || ""} <strong>${escapeHtml(tech.name)}</strong></div>
     <div class="idea-focus-actions">
       ${busyHtml}
-      ${
-        deckOpen
-          ? `<button type="button" class="btn btn-secondary btn-sm" data-idea-refresh-bar ${
-              busy ? "disabled" : ""
-            }>${
-              apEnabled() && thinkingAiApCost(state, "idea-sparks", 1) > 0
-                ? "Refresh · 1 AP"
-                : "Refresh"
-            }</button>
-             <button type="button" class="btn btn-ghost btn-sm" data-idea-close-bar ${
-               busy ? "disabled" : ""
-             }>Close ideas</button>`
-          : `<button type="button" class="btn btn-secondary btn-sm" data-idea-ask ${
-              busy ? "disabled" : ""
-            }>${askAp ? "Ask for ideas · 1 AP" : "Ask for ideas"}</button>`
-      }
-      ${
-        onStack
-          ? `<span class="idea-focus-instack">In stack</span>`
-          : `<button type="button" class="btn btn-primary btn-sm" data-idea-add>Add to stack</button>`
-      }
+      ${deckOpen
+      ? `<button type="button" class="btn btn-secondary btn-sm" data-idea-refresh-bar ${busy ? "disabled" : ""
+      }>${apEnabled() && thinkingAiApCost(state, "idea-sparks", 1) > 0
+        ? "Refresh · 1 AP"
+        : "Refresh"
+      }</button>
+             <button type="button" class="btn btn-ghost btn-sm" data-idea-close-bar ${busy ? "disabled" : ""
+      }>Close ideas</button>`
+      : `<button type="button" class="btn btn-secondary btn-sm" data-idea-ask ${busy ? "disabled" : ""
+      }>${askAp ? "Ask for ideas · 1 AP" : "Ask for ideas"}</button>`
+    }
+      ${onStack
+      ? `<span class="idea-focus-instack">In stack</span>`
+      : `<button type="button" class="btn btn-primary btn-sm" data-idea-add>Add to stack</button>`
+    }
     </div>`;
   bar.querySelector("[data-idea-ask]")?.addEventListener("click", () => openIdeaDeck(tech.id));
   bar.querySelector("[data-idea-refresh-bar]")?.addEventListener("click", () => {
@@ -10600,11 +10561,11 @@ function ideaSparksContext(techId) {
   return {
     challenge: state.mission
       ? {
-          id: state.mission.id,
-          title: state.mission.title,
-          problem: state.mission.scene,
-          recommended: state.mission.suggested,
-        }
+        id: state.mission.id,
+        title: state.mission.title,
+        problem: state.mission.scene,
+        recommended: state.mission.suggested,
+      }
       : null,
     selectedTechIds: [...state.selectedTechIds],
     focusTechId: techId,
@@ -10872,15 +10833,13 @@ function renderSynergy() {
     will: state.will,
     budgetWill: budgetWillEnabled(),
   });
-  const dropNote = `<div class="deploy-drop-preview muted">Deploy crisis drop preview: <strong>−${dropInfo.drop}</strong>${
-    pairs.length
+  const dropNote = `<div class="deploy-drop-preview muted">Deploy crisis drop preview: <strong>−${dropInfo.drop}</strong>${pairs.length
       ? " · elegance scores each synergy pair; drop only needs one pair for +1"
       : ""
-  }${
-    budgetWillEnabled()
+    }${budgetWillEnabled()
       ? ` · will ${state.will ?? 0}${(state.will ?? 0) >= 4 ? " (mandate +1)" : (state.will ?? 0) === 0 ? " (no mandate −1)" : ""}`
       : ""
-  }</div>`;
+    }</div>`;
   if (techs.length === 1) {
     box.innerHTML = `Stack: <strong>${escapeHtml(techs[0].name)}</strong> (${DOMAINS[domains[0]]?.label || domains[0]}). A single tool can be enough if the mechanism is clear.${dropNote}`;
     return;
@@ -10907,11 +10866,10 @@ function renderTiming() {
     ? `Wait → invent year ${nextYear} for <em>this</em> invent only (other players keep their year; shared meters unchanged).`
     : `Wait → ${nextYear} raises crisis.`;
   if (!techs.length) {
-    box.innerHTML = `Year <strong>${state.year}</strong>${mp ? " (this invent)" : ""}. Pick any emTech category. Feasibility judges whether your <em>how it works</em> over-claims this year. <strong>Wait</strong> ${
-      mp
+    box.innerHTML = `Year <strong>${state.year}</strong>${mp ? " (this invent)" : ""}. Pick any emTech category. Feasibility judges whether your <em>how it works</em> over-claims this year. <strong>Wait</strong> ${mp
         ? "advances <em>your invent</em> calendar if you want later conditions for your claims — not the shared place clock."
         : "advances the world (and crisis) if you want later conditions."
-    }`;
+      }`;
     return;
   }
   const stretch = missionLocalTiming(
@@ -11088,9 +11046,8 @@ function buildWaitImplicationsHtml(ctx = {}) {
       <p><strong>When the place can still fall</strong></p>
       <ul class="wait-confirm-list">
         <li>If <em>every</em> invent calendar reaches fail year <strong>${failY}</strong>, the place times out for everyone.</li>
-        <li>Your invent alone at ${nextYear}${
-          yearsLeft === 0 ? " (fail year)" : ` (${yearsLeft}y before fail year)`
-        } does <em>not</em> end the race.</li>
+        <li>Your invent alone at ${nextYear}${yearsLeft === 0 ? " (fail year)" : ` (${yearsLeft}y before fail year)`
+      } does <em>not</em> end the race.</li>
         <li>Meters maxed by deploy play can still end the table for everyone.</li>
       </ul>
       <p class="muted sm">EmTech categories stay pickable either way — Wait is for claim timing, not unlocking cards.</p>`;
@@ -11110,11 +11067,10 @@ function buildWaitImplicationsHtml(ctx = {}) {
     <p><strong>Implications</strong></p>
     <ul class="wait-confirm-list">
       <li>Use Wait when later world conditions help your claims (costs, adoption, infrastructure) — not to “unlock” category cards. EmTechs are always pickable.</li>
-      <li>${
-        yearsLeft === 0
-          ? `Next Wait hits fail year <strong>${failY}</strong> — the mission can end.`
-          : `${yearsLeft} year(s) of buffer before fail year <strong>${failY}</strong> after this Wait.`
-      }</li>
+      <li>${yearsLeft === 0
+      ? `Next Wait hits fail year <strong>${failY}</strong> — the mission can end.`
+      : `${yearsLeft} year(s) of buffer before fail year <strong>${failY}</strong> after this Wait.`
+    }</li>
       <li>Any meter at 5 also ends the mission.</li>
     </ul>`;
 }
@@ -11152,8 +11108,8 @@ function waitTrendCardHtml(trend, opts = {}) {
   const techLine =
     opts.showTech && trend.techId
       ? `<p class="wait-trend-tech muted sm">${escapeHtml(
-          tech?.name || trend.techId
-        )} <code>${escapeHtml(String(trend.techId))}</code></p>`
+        tech?.name || trend.techId
+      )} <code>${escapeHtml(String(trend.techId))}</code></p>`
       : "";
   const milestones = (trend.milestones || [])
     .map((m) => {
@@ -11166,8 +11122,8 @@ function waitTrendCardHtml(trend, opts = {}) {
   const devBtn =
     opts.showDevButton && state.developer
       ? `<button type="button" class="btn btn-ghost btn-sm wait-trend-dev" data-trend-dev-id="${escapeHtml(
-          trend.id
-        )}" title="Inspect trend as players see it, plus JSON">Developer</button>`
+        trend.id
+      )}" title="Inspect trend as players see it, plus JSON">Developer</button>`
       : "";
   return `
     <article class="wait-trend-card${trend.spotlight ? " is-spotlight" : ""}" data-trend-id="${escapeHtml(trend.id)}">
@@ -11402,13 +11358,13 @@ function openTrendCatalogInspect(trend, opts = {}) {
         <dl class="quest-dev-dl">
           <div><dt>id</dt><dd>${escapeHtml(String(trend.id))}</dd></div>
           <div><dt>techId</dt><dd>${escapeHtml(
-            tech
-              ? `${tech.name} (${trend.techId})`
-              : String(trend.techId || "—")
-          )}</dd></div>
+      tech
+        ? `${tech.name} (${trend.techId})`
+        : String(trend.techId || "—")
+    )}</dd></div>
           <div><dt>source</dt><dd>${escapeHtml(
-            String(trend.source || "—")
-          )}</dd></div>
+      String(trend.source || "—")
+    )}</dd></div>
         </dl>
         <div class="trend-dev-player-preview">
           ${waitTrendCardHtml(trend, { showTech: true, showDevButton: false })}
@@ -11463,11 +11419,10 @@ function buildWaitConfirmLayoutHtml(ctx = {}) {
             id="wait-trends-dev-view"
             ${state.developer ? "" : "hidden"}
             aria-pressed="${showAll ? "true" : "false"}"
-            title="${
-              showAll
-                ? "Back to stack-only trends (as players see Look Ahead)"
-                : "Show every catalog and quest trend tile"
-            }"
+            title="${showAll
+      ? "Back to stack-only trends (as players see Look Ahead)"
+      : "Show every catalog and quest trend tile"
+    }"
           >${showAll ? "Player view" : "Developer view"}</button>
         </div>
         <p class="muted sm wait-trends-lede">Log-scale charts for emTechs already on your stack. Milestones are markers on each trend.</p>
@@ -11925,15 +11880,15 @@ function paintPolicyWeather() {
         const name = `${kind} ${r.label}`;
         return `<li class="policy-weather-item${sus ? " is-suspended" : ""}">
           <button type="button" class="policy-weather-pill" data-rule-id="${escapeHtml(
-            r.id
-          )}" title="Read this ${escapeHtml(kind)}"><span class="policy-weather-kind">${escapeHtml(
-            kind
-          )}</span> ${escapeHtml(r.label)}</button>
+          r.id
+        )}" title="Read this ${escapeHtml(kind)}"><span class="policy-weather-kind">${escapeHtml(
+          kind
+        )}</span> ${escapeHtml(r.label)}</button>
           <button type="button" class="policy-weather-x" data-rule-id="${escapeHtml(
-            r.id
-          )}" title="Remove · 1 AP + 1$ → +1 Support" aria-label="Remove ${escapeHtml(
-            name
-          )}">×</button>
+          r.id
+        )}" title="Remove · 1 AP + 1$ → +1 Support" aria-label="Remove ${escapeHtml(
+          name
+        )}">×</button>
         </li>`;
       })
       .join("");
@@ -12166,11 +12121,11 @@ function waitTurn(opts = {}) {
         sess && hotseatBridge.isHotseat()
           ? buildHotseatMpOutcome(sess, { kind: "collapse" })
           : state.mpOutcome || {
-              multiparty: true,
-              mode: roomBridge.isRoom() ? "room" : "hotseat",
-              kind: "collapse",
-              placeStatus: "collapsed",
-            };
+            multiparty: true,
+            mode: roomBridge.isRoom() ? "room" : "hotseat",
+            kind: "collapse",
+            placeStatus: "collapsed",
+          };
       if (hotseatBridge.isHotseat()) leaveHotseat();
       finishOutcome("collapse", { multiparty: true, mpOutcome });
       return;
@@ -12516,8 +12471,8 @@ function challengerSlideHtml(a, hp = 2) {
           <div class="label">Challenger</div>
           <h2>${escapeHtml(a.label)}</h2>
           <p class="challenge-angle-sub">${escapeHtml(a.subtitle || "")} — ${escapeHtml(
-            a.blurb || ""
-          )}</p>
+    a.blurb || ""
+  )}</p>
           ${resolveBlock}
         </div>
       </div>
@@ -12608,9 +12563,9 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
   const winIdx =
     mode === "pick"
       ? Math.max(
-          0,
-          roster.findIndex((a) => a.id === finalAngle.id)
-        )
+        0,
+        roster.findIndex((a) => a.id === finalAngle.id)
+      )
       : 0;
 
   track.innerHTML =
@@ -12922,9 +12877,9 @@ function sourceConstraintFields(mode = "chat", extra = {}) {
       extra.concern ||
       (extra.challengeQuestion
         ? {
-            question: extra.challengeQuestion,
-            connection: extra.challengeSpeech || "",
-          }
+          question: extra.challengeQuestion,
+          connection: extra.challengeSpeech || "",
+        }
         : null),
     concerns: extra.concerns,
   });
@@ -13000,37 +12955,37 @@ async function apiCoInvent(mode, userContent, extra = {}) {
   const context = LEAN_EVAL_MODES.has(mode)
     ? leanCoInventContext(mode, rest)
     : {
-        challenge: state.mission
-          ? {
-              id: state.mission.id,
-              title: state.mission.title,
-              problem: state.mission.scene,
-              recommended: state.mission.suggested,
-            }
-          : null,
-        selectedTechIds: [...state.selectedTechIds],
-        inventionName: state.inventionName,
-        inventionHow: state.inventionHow,
-        inventionImpact: state.inventionImpact,
-        storyFace: state.storyFace,
-        year: state.year,
-        place: state.mission?.place,
-        globalId: state.global?.id || state.mission?.globalId || null,
-        pressure: state.pressure,
-        availableTechs: techsForCoInventMode(mode),
-        grounding: state.mission?.grounding || null,
-        ...sourceConstraintFields(mode, rest),
-        isLearningModule: Boolean(coInventorLearningQuest()),
-        aiTutorContext: coInventorAiTutorContext(),
-        questId: state.mission?.id || null,
-        source: state.mission?.source || null,
-        tutorMode: isLearningTutorSessionActive(),
-        ...rest,
-      };
-    if (rest.rules === undefined) {
-      const rules = rulesForAiContext();
-      if (rules) context.rules = rules;
-    }
+      challenge: state.mission
+        ? {
+          id: state.mission.id,
+          title: state.mission.title,
+          problem: state.mission.scene,
+          recommended: state.mission.suggested,
+        }
+        : null,
+      selectedTechIds: [...state.selectedTechIds],
+      inventionName: state.inventionName,
+      inventionHow: state.inventionHow,
+      inventionImpact: state.inventionImpact,
+      storyFace: state.storyFace,
+      year: state.year,
+      place: state.mission?.place,
+      globalId: state.global?.id || state.mission?.globalId || null,
+      pressure: state.pressure,
+      availableTechs: techsForCoInventMode(mode),
+      grounding: state.mission?.grounding || null,
+      ...sourceConstraintFields(mode, rest),
+      isLearningModule: Boolean(coInventorLearningQuest()),
+      aiTutorContext: coInventorAiTutorContext(),
+      questId: state.mission?.id || null,
+      source: state.mission?.source || null,
+      tutorMode: isLearningTutorSessionActive(),
+      ...rest,
+    };
+  if (rest.rules === undefined) {
+    const rules = rulesForAiContext();
+    if (rules) context.rules = rules;
+  }
   const sent = {
     mode,
     clientSessionId: getClientSessionId(),
@@ -13150,7 +13105,7 @@ function scheduleAiTimingAssess() {
       updateChallengeButton();
       return;
     }
-    runAiTimingAssess(gen).catch(() => {});
+    runAiTimingAssess(gen).catch(() => { });
   }, 1600);
 }
 
@@ -13172,10 +13127,10 @@ async function runAiTimingAssess(gen = _aiTimingGen) {
     const data = await apiCoInvent("assess-feasibility", "[Assess claim timing]", {
       priorTiming: lastSettledTiming
         ? {
-            level: lastSettledTiming.level,
-            year: lastSettledTiming.year,
-            fingerprint: lastSettledTiming.fingerprint,
-          }
+          level: lastSettledTiming.level,
+          year: lastSettledTiming.year,
+          fingerprint: lastSettledTiming.fingerprint,
+        }
         : null,
     });
     if (gen !== _aiTimingGen) return;
@@ -13682,11 +13637,10 @@ function renderScrutinyEncounters() {
     paintChallengerResolve(state.scrutiny.encounters?.[0] || null);
     return;
   }
-  status.textContent = `Your misses ${misses}/${MISS_BUDGET} · Sidestep ${
-    state.scrutiny.pivotUsed || state.elegancePivotPenalty
+  status.textContent = `Your misses ${misses}/${MISS_BUDGET} · Sidestep ${state.scrutiny.pivotUsed || state.elegancePivotPenalty
       ? "used this mission"
       : "once this mission"
-  } · Empty their resolve to deploy`;
+    } · Empty their resolve to deploy`;
   paintChallengerResolve(enc);
 }
 
@@ -13780,15 +13734,14 @@ function paintHudPressureMeters(box) {
         ? " Re-judging under the local rules on the books."
         : crisisMeterTooltipBits(state.hexBoard, k);
       const whySuffix = whyBit ? ` ${whyBit}` : "";
-      return `<span class="meter ${level}${pending ? " is-pending" : ""}"${
-        pending ? ' aria-busy="true"' : ""
-      } title="${escapeHtml(
-        label
-      )}: ${n}/5${goalBit}. Green = at or below the hold line; yellow = above; red = danger. Each year raises; inventing/Scale lowers.${escapeHtml(
-        whySuffix
-      )}"><b>${escapeHtml(
-        label
-      )}</b> ${"●".repeat(n)}${"○".repeat(5 - n)}</span>`;
+      return `<span class="meter ${level}${pending ? " is-pending" : ""}"${pending ? ' aria-busy="true"' : ""
+        } title="${escapeHtml(
+          label
+        )}: ${n}/5${goalBit}. Green = at or below the hold line; yellow = above; red = danger. Each year raises; inventing/Scale lowers.${escapeHtml(
+          whySuffix
+        )}"><b>${escapeHtml(
+          label
+        )}</b> ${"●".repeat(n)}${"○".repeat(5 - n)}</span>`;
     })
     .join("");
 }
@@ -15331,9 +15284,8 @@ function paintSpectatorDefensePanel(activeName) {
   if (status) {
     status.hidden = false;
     if (state.challengeJudging) {
-      status.textContent = `Judging ${who}'s ${
-        mode === "fix" ? "fix" : mode === "sidestep" ? "sidestep" : "defense"
-      }… (read-only)`;
+      status.textContent = `Judging ${who}'s ${mode === "fix" ? "fix" : mode === "sidestep" ? "sidestep" : "defense"
+        }… (read-only)`;
     } else if (mode === "fix") {
       status.textContent = `${who} chose Fix the invention — editing how-it-works…`;
     } else if (mode === "sidestep") {
@@ -15792,11 +15744,11 @@ function enterDeployAsSpectator(invent, activeName, evt) {
       const solved = Boolean(lastDep.solved);
       fb.innerHTML = solved
         ? `<strong>SCALE WON</strong> — ${escapeHtml(
-            activeName || "Player"
-          )} Scaled and held the Quest!`
+          activeName || "Player"
+        )} Scaled and held the Quest!`
         : `<strong>SCALE OK</strong> — ${escapeHtml(
-            activeName || "Player"
-          )} Scaled (partial). Quest improved.`;
+          activeName || "Player"
+        )} Scaled (partial). Quest improved.`;
       state.lastDeployRoll = { stage: "scale", ok: true };
     } else if (lastDep?.type === "scale_fail") {
       fb.className = "challenge-feedback fail";
@@ -16420,16 +16372,14 @@ async function coachChallenge(mode, userText) {
       const panel = $("#challenge-coach-panel");
       if (panel) panel.dataset.draft = draft;
       showChallengeCoach(
-        `<div>Draft for this ${angle.label} attack — edit before submit.${
-          helpCost > 0 ? ` <span class="muted">(1 AP spent)</span>` : ""
+        `<div>Draft for this ${angle.label} attack — edit before submit.${helpCost > 0 ? ` <span class="muted">(1 AP spent)</span>` : ""
         }</div><div class="draft-block"><strong>Draft answer</strong><p>${escapeHtml(
           draft
         )}</p><div class="draft-actions"><button type="button" class="btn btn-primary btn-sm" id="btn-apply-draft">Use this draft</button></div></div>`
       );
     } else {
       showChallengeCoach(
-        `<div><strong>${angle.label} coaching</strong>${
-          helpCost > 0 ? ` <span class="muted">(1 AP spent)</span>` : ""
+        `<div><strong>${angle.label} coaching</strong>${helpCost > 0 ? ` <span class="muted">(1 AP spent)</span>` : ""
         }<br/>${escapeHtml(
           angle.blurb
         )}<br/><br/>• Answer the exact question asked.<br/>• Name a concrete actor, cost, or physical limit in ${escapeHtml(
@@ -16687,15 +16637,13 @@ function renderDeployBay() {
       const pilotAmt = Math.min(remaining, Math.max(1, Math.ceil(pool / 2)) || 0);
       status.textContent =
         `Try Pilot (~${feas.pilotChancePct}% — timing, story, local fit, stack). ` +
-        `Local try: success drops −${pilotAmt} crisis.${
-          pilotBits.length ? ` Cost: ${pilotBits.join(" · ")}.` : ""
+        `Local try: success drops −${pilotAmt} crisis.${pilotBits.length ? ` Cost: ${pilotBits.join(" · ")}.` : ""
         }${lastLine}`;
     } else if (next === "scale") {
       status.textContent =
         `Pilot landed (−${state.dropPilotApplied}). Try Scale (~${feas.scaleChancePct}% — Scale + Sustainable). ` +
         `Success spends remaining −${remaining} and reaches New normal. ` +
-        `Weak on Sustainable if you only shelter people and never touch why the crisis keeps happening.${
-          scaleBits.length ? ` Cost: ${scaleBits.join(" · ")}.` : ""
+        `Weak on Sustainable if you only shelter people and never touch why the crisis keeps happening.${scaleBits.length ? ` Cost: ${scaleBits.join(" · ")}.` : ""
         }${lastLine}`;
     } else {
       // Scaled invent — multiplayer race may still continue if place not fully held
@@ -17369,8 +17317,8 @@ function reopenInventToWorkshop(opts = {}) {
   ) {
     const ok = window.confirm(
       "Abandon this Challenge?\n\n" +
-        "Your invent unlocks for rework — others can contribute again. " +
-        "Challenge progress is cleared. Facing the challenge again costs AP."
+      "Your invent unlocks for rework — others can contribute again. " +
+      "Challenge progress is cleared. Facing the challenge again costs AP."
     );
     if (!ok) return;
   }
@@ -17614,9 +17562,9 @@ function finishOutcome(kind, meta = {}) {
     verdict: meta.verdict ?? state.challengeVerdict ?? state.lastChallengeVerdict ?? null,
     sidestep: Boolean(
       meta.sidestep ||
-        state.elegancePivotPenalty ||
-        state.challengeClearMode === "sidestep" ||
-        state.lastChallengeVerdict === "sidestep"
+      state.elegancePivotPenalty ||
+      state.challengeClearMode === "sidestep" ||
+      state.lastChallengeVerdict === "sidestep"
     ),
     clearMode:
       meta.clearMode ||
@@ -18131,8 +18079,8 @@ function renderMpOutcomeStandings(mp) {
             `<li class="outcome-mp-row is-collapse">
               <span class="outcome-mp-name">${escapeHtml(s.displayName)}</span>
               <span class="outcome-mp-detail muted">${escapeHtml(
-                s.inventionName || "no invent"
-              )}${s.abandoned ? " · abandoned" : ""}</span>
+              s.inventionName || "no invent"
+            )}${s.abandoned ? " · abandoned" : ""}</span>
             </li>`
         )
         .join("");
@@ -18173,10 +18121,10 @@ function renderMpOutcomeStandings(mp) {
           <span class="outcome-mp-score"><strong>${r.score}</strong></span>
           <span class="outcome-mp-badges">${badges.join(" ")}</span>
           <span class="outcome-mp-detail muted">impact ${Math.round(
-            (r.impactNorm || 0) * 100
-          )}% · craft ${Math.round((r.craftNorm || 0) * 100)}% · help ${Math.round(
-            (r.contributionNorm || 0) * 100
-          )}% · race ${Math.round((r.raceNorm || 0) * 100)}%</span>
+          (r.impactNorm || 0) * 100
+        )}% · craft ${Math.round((r.craftNorm || 0) * 100)}% · help ${Math.round(
+          (r.contributionNorm || 0) * 100
+        )}% · race ${Math.round((r.raceNorm || 0) * 100)}%</span>
         </li>`;
       })
       .join("");
@@ -18456,9 +18404,8 @@ function renderOutcome() {
     if (displayTitle) nameEl.removeAttribute("hidden");
     else nameEl.setAttribute("hidden", "");
   }
-  $("#outcome-meta").textContent = `${m?.place || "—"} · ${o.year} · Turn ${o.turn} · waits ${
-    o.waits ?? state.waits ?? 0
-  } · ${state.global?.title || ""}${mp?.multiparty ? " · Friends / hotseat" : ""}`;
+  $("#outcome-meta").textContent = `${m?.place || "—"} · ${o.year} · Turn ${o.turn} · waits ${o.waits ?? state.waits ?? 0
+    } · ${state.global?.title || ""}${mp?.multiparty ? " · Friends / hotseat" : ""}`;
 
   // Unmissable full / partial / collapse strip (meters vs mission goals)
   renderOutcomeResultBanner(o, m);
@@ -18473,9 +18420,8 @@ function renderOutcome() {
       starsEl.innerHTML = `<div class="run-stars" aria-label="${report.stars} stars">${starLabel(
         report.stars
       )}</div>
-        <div class="run-scores muted">Speed ${report.speedScore} · Honesty ${report.honestyScore} · Elegance ${
-        report.eleganceScore
-      }</div>
+        <div class="run-scores muted">Speed ${report.speedScore} · Honesty ${report.honestyScore} · Elegance ${report.eleganceScore
+        }</div>
         <ul class="run-highlights">${(report.highlights || [])
           .map((h) => `<li>${escapeHtml(h)}</li>`)
           .join("")}</ul>`;
@@ -18516,9 +18462,8 @@ function renderOutcome() {
         : "");
     lessons.push({
       type: "good",
-      text: `Solving invent: “${name}” · owner ${mp.inventOwnerName || "—"}${
-        mp.fieldedByName ? ` · fielded by ${mp.fieldedByName}` : ""
-      }.`,
+      text: `Solving invent: “${name}” · owner ${mp.inventOwnerName || "—"}${mp.fieldedByName ? ` · fielded by ${mp.fieldedByName}` : ""
+        }.`,
     });
     lessons.push({
       type: "good",
@@ -18704,8 +18649,8 @@ function renderOutcome() {
         <h4><span>${t.icon}</span> ${escapeHtml(t.name)}</h4>
         <p>${escapeHtml(t.learn)}</p>
         <p style="margin-top:0.4rem;font-size:0.8rem;color:var(--text-mute)"><strong>Now:</strong> ${escapeHtml(
-          t.maturity?.now || ""
-        )}</p>
+        t.maturity?.now || ""
+      )}</p>
       </article>`
     )
     .join("") || "<p class='empty-hint'>No technologies were locked in.</p>";
@@ -18929,8 +18874,8 @@ function enterDeployBayInteractive(invent, opts = {}) {
           : invent.stagedDropPool || 0;
     state.dropPilotApplied =
       invent.deployStage === "pilot_ok" ||
-      invent.deployStage === "scaled" ||
-      invent.deployStage === "new_normal"
+        invent.deployStage === "scaled" ||
+        invent.deployStage === "new_normal"
         ? 1
         : 0;
     state.dropScaleApplied =
@@ -19246,8 +19191,8 @@ function updateVision(opts = {}) {
     onGenerated: followOnly
       ? undefined
       : (meta) => {
-          roomPublishVisionReady(meta);
-        },
+        roomPublishVisionReady(meta);
+      },
     onSettled: typeof opts.onSettled === "function" ? opts.onSettled : undefined,
   });
 }
@@ -19294,9 +19239,8 @@ function renderAiTrace() {
     if (!counts.all) {
       list.innerHTML = `<p class="muted sm" style="padding:0.5rem">No calls yet.</p>`;
     } else if (!rows.length) {
-      list.innerHTML = `<p class="muted sm" style="padding:0.5rem">No ${
-        filter === "image" ? "image" : "text"
-      } calls in this list.</p>`;
+      list.innerHTML = `<p class="muted sm" style="padding:0.5rem">No ${filter === "image" ? "image" : "text"
+        } calls in this list.</p>`;
     } else {
       list.innerHTML = rows
         .map((e) => {
@@ -19306,9 +19250,8 @@ function renderAiTrace() {
             : e.ok
               ? `${e.ms}ms${e.source ? ` · ${escapeHtml(e.source)}` : ""}`
               : "error";
-          return `<button type="button" class="ai-trace-item${
-            selected?.id === e.id ? " is-active" : ""
-          }" data-ai-trace-id="${escapeHtml(e.id)}" role="listitem">
+          return `<button type="button" class="ai-trace-item${selected?.id === e.id ? " is-active" : ""
+            }" data-ai-trace-id="${escapeHtml(e.id)}" role="listitem">
             <strong>${escapeHtml(e.mode)}</strong>
             <span class="muted">${escapeHtml(when)} · ${escapeHtml(st)}</span>
           </button>`;
@@ -19320,9 +19263,8 @@ function renderAiTrace() {
     if (!counts.all) {
       detail.innerHTML = `<p class="muted sm">No calls yet — place an idea, imagine a scene, or summon a challenger.</p>`;
     } else if (!selected) {
-      detail.innerHTML = `<p class="muted sm">No ${
-        filter === "image" ? "image" : "text"
-      } calls — switch the filter to see the rest.</p>`;
+      detail.innerHTML = `<p class="muted sm">No ${filter === "image" ? "image" : "text"
+        } calls — switch the filter to see the rest.</p>`;
     } else {
       const err = selected.error
         ? `<p class="muted sm">Error: ${escapeHtml(selected.error)}</p>`
@@ -19330,8 +19272,8 @@ function renderAiTrace() {
       const preview =
         selected.kind === "image" && selected.previewUrl
           ? `<img class="ai-trace-preview" alt="Imagine result" src="${escapeHtml(
-              selected.previewUrl
-            )}" />`
+            selected.previewUrl
+          )}" />`
           : selected.kind === "image"
             ? `<p class="muted sm">Image preview expired from inspect (prompt and metadata remain).</p>`
             : "";
@@ -19576,14 +19518,14 @@ function maybeSeedCoInventorWelcome() {
   const ypt = mission.yearsPerTurn || GAME.yearsPerTurn;
   const welcome = tutor
     ? `**${place}**, ${year}. ${scene}\n\n` +
-      `I'm your **AI tutor** — one idea at a time (**free AP**). Look at this place in **Future vision**. What's one thing you already notice?\n\n` +
-      `Pick techs and place idea tiles when you're ready. **End tutoring** anytime to invent on your own.`
+    `I'm your **AI tutor** — one idea at a time (**free AP**). Look at this place in **Future vision**. What's one thing you already notice?\n\n` +
+    `Pick techs and place idea tiles when you're ready. **End tutoring** anytime to invent on your own.`
     : `**${place}**, ${year}. ${sceneRaw}\n\n` +
-      `I'm your co-inventor. Pick emTechs and place invention tiles on the **hex board** — categories are never locked by year. ` +
-      `Traffic lights on crisis and concern tiles show whether your pathway is honest.\n\n` +
-      `Use **Art of the possible** for milestones, current capabilities, and use cases. ` +
-      `**Wait** advances the world (+${ypt} years) and raises crisis — not to unlock cards.\n\n` +
-      `What's the first constraint you care about — cost, trust, speed, or who's left out?`;
+    `I'm your co-inventor. Pick emTechs and place invention tiles on the **hex board** — categories are never locked by year. ` +
+    `Traffic lights on crisis and concern tiles show whether your pathway is honest.\n\n` +
+    `Use **Art of the possible** for milestones, current capabilities, and use cases. ` +
+    `**Wait** advances the world (+${ypt} years) and raises crisis — not to unlock cards.\n\n` +
+    `What's the first constraint you care about — cost, trust, speed, or who's left out?`;
   state.coInventor.pushAssistant(
     {
       message: welcome,
@@ -19644,15 +19586,15 @@ function ensureCoInventor() {
       return {
         challenge: state.mission
           ? {
-              id: state.mission.id,
-              title: state.mission.title,
-              problem,
-              stakes: state.mission.place,
-              prompt: `Invent a local solution for ${state.mission.place} in ${state.year}.`,
-              recommended: state.mission.suggested,
-              successLens: "Local fit + timing + clear mechanism",
-              flag: state.global?.kind === "before" ? "prevention" : "present",
-            }
+            id: state.mission.id,
+            title: state.mission.title,
+            problem,
+            stakes: state.mission.place,
+            prompt: `Invent a local solution for ${state.mission.place} in ${state.year}.`,
+            recommended: state.mission.suggested,
+            successLens: "Local fit + timing + clear mechanism",
+            flag: state.global?.kind === "before" ? "prevention" : "present",
+          }
           : null,
         selectedTechIds: [...state.selectedTechIds],
         ...inventDraftFieldsForContext({
@@ -20190,15 +20132,13 @@ function showContributionNotice(opts) {
   el.classList.toggle("is-reject", !ok);
   el.innerHTML = `
     <span class="mp-contrib-banner-title">${ok ? "✓ " : "✗ "}${escapeHtml(resolvedTitle)}</span>
-    ${
-      resolvedReason
-        ? `<p class="mp-contrib-banner-body">${escapeHtml(resolvedReason)}</p>`
-        : ""
+    ${resolvedReason
+      ? `<p class="mp-contrib-banner-body">${escapeHtml(resolvedReason)}</p>`
+      : ""
     }
-    ${
-      resolvedAp
-        ? `<p class="mp-contrib-banner-ap">${escapeHtml(resolvedAp)}</p>`
-        : ""
+    ${resolvedAp
+      ? `<p class="mp-contrib-banner-ap">${escapeHtml(resolvedAp)}</p>`
+      : ""
     }
   `;
   el.hidden = false;
@@ -20280,15 +20220,17 @@ function spendFirstSummonAp() {
     }
     hotseatBridge.hydrateSoloState?.(state, { global: state.global });
     renderHud();
-    return { ok: true, refund: () => {
-      if (!hotseatBridge.refundSummonPayer(payer)) return;
-      if (hotseatBridge.getActiveId() === payer.seat) {
-        const actor = hotseatBridge.getSession().invents[payer.seat];
-        state.ap = actor.ap;
-        state.apSpentThisTurn = actor.apSpentThisTurn;
-        renderHud();
+    return {
+      ok: true, refund: () => {
+        if (!hotseatBridge.refundSummonPayer(payer)) return;
+        if (hotseatBridge.getActiveId() === payer.seat) {
+          const actor = hotseatBridge.getSession().invents[payer.seat];
+          state.ap = actor.ap;
+          state.apSpentThisTurn = actor.apSpentThisTurn;
+          renderHud();
+        }
       }
-    } };
+    };
   }
   const r = dispatchSim("enter_challenge");
   if (!r.ok) {
@@ -20684,11 +20626,11 @@ async function callCoInventMode(mode, userLabel) {
     const ctx = {
       challenge: state.mission
         ? {
-            id: state.mission.id,
-            title: state.mission.title,
-            problem: state.mission.scene,
-            recommended: state.mission.suggested,
-          }
+          id: state.mission.id,
+          title: state.mission.title,
+          problem: state.mission.scene,
+          recommended: state.mission.suggested,
+        }
         : null,
       selectedTechIds: [...state.selectedTechIds],
       inventionName: state.inventionName,
@@ -21339,9 +21281,9 @@ function finishLearnWhileIdeas({ succeeded = false } = {}) {
   const backdrop = $("#modal-backdrop");
   const shouldDock = Boolean(
     s?.autoOpened &&
-      !s.dismissed &&
-      backdrop?.classList.contains("open") &&
-      !backdrop.classList.contains("quest-dev-modal-open")
+    !s.dismissed &&
+    backdrop?.classList.contains("open") &&
+    !backdrop.classList.contains("quest-dev-modal-open")
   );
   if (!shouldDock) {
     learnWhileIdeasSession = null;
@@ -21881,20 +21823,19 @@ function showYearBulletinModal(bulletin, opts = {}) {
     const rows = bulletin.highlights || [];
     list.innerHTML = rows.length
       ? rows
-          .map((h) => {
-            const kind = h.kind === "prediction" ? "Prediction" : h.kind === "trend" ? "Trend" : "Milestone";
-            return `<li class="year-bulletin-item" data-kind="${escapeHtml(h.kind || "")}">
+        .map((h) => {
+          const kind = h.kind === "prediction" ? "Prediction" : h.kind === "trend" ? "Trend" : "Milestone";
+          return `<li class="year-bulletin-item" data-kind="${escapeHtml(h.kind || "")}">
               <span class="year-bulletin-kind">${escapeHtml(kind)}</span>
               <strong>${escapeHtml(h.headline || "")}</strong>
               <span class="year-bulletin-detail">${escapeHtml(h.detail || "")}</span>
-              ${
-                h.attribution
-                  ? `<span class="year-bulletin-attribution">— ${escapeHtml(h.attribution)}</span>`
-                  : ""
-              }
+              ${h.attribution
+              ? `<span class="year-bulletin-attribution">— ${escapeHtml(h.attribution)}</span>`
+              : ""
+            }
             </li>`;
-          })
-          .join("")
+        })
+        .join("")
       : `<li class="year-bulletin-item"><strong>Quiet year</strong><span class="year-bulletin-detail">No major curated highlights — keep claims pilot-honest.</span></li>`;
   }
   // Read aloud: title + intro + highlight list
@@ -22165,16 +22106,15 @@ function renderMarketBanner(opts = {}) {
   const html = `
     <button type="button" class="market-news-banner-btn" data-market-open="1" title="Open market bulletin">
       <span class="market-news-banner-thumb" aria-hidden="true">
-        ${
-          thumb
-            ? `<img src="${escapeHtml(thumb)}" alt="" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.hidden=false)" /><span class="market-news-banner-icon" hidden>${escapeHtml(news.icon || "📰")}</span>`
-            : `<span class="market-news-banner-icon">${escapeHtml(news.icon || "📰")}</span>`
-        }
+        ${thumb
+      ? `<img src="${escapeHtml(thumb)}" alt="" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.hidden=false)" /><span class="market-news-banner-icon" hidden>${escapeHtml(news.icon || "📰")}</span>`
+      : `<span class="market-news-banner-icon">${escapeHtml(news.icon || "📰")}</span>`
+    }
       </span>
       <span class="market-news-banner-text">
         <span class="market-news-banner-kicker">Market · Round ${escapeHtml(
-          String(news.round ?? state.turn ?? 1)
-        )}</span>
+      String(news.round ?? state.turn ?? 1)
+    )}</span>
         <strong>${escapeHtml(news.headline)}</strong>
         <span class="market-news-banner-effects">
           ${escapeHtml(desc.scope)} · ${desc.effects.map(escapeHtml).join(" · ")}
@@ -22533,20 +22473,20 @@ function tourSnapshot() {
     : [];
   const uncoveredTile = uncoveredIds[0]
     ? tiles.find((t) => t && t.id === uncoveredIds[0]) ||
-      board.tiles?.[uncoveredIds[0]]
+    board.tiles?.[uncoveredIds[0]]
     : null;
   const howHost = $("#hex-island-how");
   const howBoxes = howHost ? [...howHost.querySelectorAll("textarea")] : [];
   const islandHowEmpty = Boolean(
     howHost &&
-      !howHost.hidden &&
-      howBoxes.length &&
-      !howBoxes.some((ta) => String(ta.value || "").trim())
+    !howHost.hidden &&
+    howBoxes.length &&
+    !howBoxes.some((ta) => String(ta.value || "").trim())
   );
   const co = state.coInventor;
   const coinventorUsed = Boolean(
     (Array.isArray(co?.messages) && co.messages.length) ||
-      (Array.isArray(co?.histories?.coinventor) && co.histories.coinventor.length)
+    (Array.isArray(co?.histories?.coinventor) && co.histories.coinventor.length)
   );
   const popup = $("#hex-tile-popup");
   const conv = $("#hex-convergence-dialog");
@@ -23121,7 +23061,7 @@ function bind() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ runId: id, share: true }),
-    }).catch(() => {});
+    }).catch(() => { });
   });
   $("#btn-daily-board-back")?.addEventListener("click", () => {
     if (state.boardKind === "players") showScreen(boardReturn || "title");
@@ -24027,8 +23967,22 @@ export function init() {
     ]);
     await resumePendingDeviceHandshake();
     const blocked = await enforceHostedPlan({ boot: true });
+    if (hasTopUpPending()) {
+      for (const delayMs of [2000, 5000]) {
+        setTimeout(() => {
+          if (hasTopUpPending() && isClerkSignedIn()) {
+            void enforceHostedPlan({ boot: true });
+          }
+        }, delayMs);
+      }
+    }
     if (!blocked) await consumeDeepLink();
   })();
+  window.addEventListener("focus", () => {
+    if (isClerkSignedIn() && (hostedPlanState.cloudAi || hasTopUpPending())) {
+      void enforceHostedPlan({ boot: true });
+    }
+  });
   // Refresh: Clerk cookie session can arrive after the first title paint.
   let ticks = 0;
   const iv = setInterval(() => {

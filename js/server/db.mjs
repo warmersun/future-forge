@@ -1305,14 +1305,14 @@ export async function reserveAiBudget(input) {
     await client.query("BEGIN");
     if (!input.requireExistingPeriod) {
       await client.query(
-        `INSERT INTO ai_usage_period (clerk_user_id, period_start, spent_points, held_points)
-         VALUES ($1, $2, 0, 0)
+        `INSERT INTO ai_usage_period (clerk_user_id, period_start, budget_points, spent_points, held_points, updated_at)
+         VALUES ($1, $2, $3, 0, 0, now())
          ON CONFLICT (clerk_user_id, period_start) DO NOTHING`,
-        [uid, periodStart]
+        [uid, periodStart, budget]
       );
     }
     const locked = await client.query(
-      `SELECT spent_points, held_points FROM ai_usage_period
+      `SELECT budget_points, spent_points, held_points FROM ai_usage_period
        WHERE clerk_user_id = $1 AND period_start = $2
        FOR UPDATE`,
       [uid, periodStart]
@@ -1325,9 +1325,10 @@ export async function reserveAiBudget(input) {
         error: "subscription_required",
       };
     }
+    const rowBudget = microInt(locked.rows[0]?.budget_points) || budget;
     const spent = microInt(locked.rows[0]?.spent_points);
     const held = microInt(locked.rows[0]?.held_points);
-    const remaining = Math.max(0, budget - spent - held);
+    const remaining = Math.max(0, rowBudget - spent - held);
     const hold = microInt(input.quoteHold(remaining));
     if (hold > remaining) {
       await client.query("ROLLBACK");
@@ -1373,26 +1374,29 @@ export async function reserveAiBudget(input) {
 }
 
 /**
- * Reset a user's top-up AI usage period (`spent_points = 0`), preserving any in-flight holds.
+ * Reset a user's top-up AI usage period (`spent_points = 0`) and add `topUpPoints` to remaining budget, preserving any in-flight holds.
  * @param {string} userId
  * @param {string} [periodStart]
+ * @param {number} [topUpPoints]
  */
-export async function resetAiUsageTopUp(userId, periodStart = "1970-01-01T00:00:00.000Z") {
+export async function resetAiUsageTopUp(userId, periodStart = "1970-01-01T00:00:00.000Z", topUpPoints = 15000) {
   const db = getPool();
   const uid = normalizeClerkUserId(userId);
   if (!db || !uid) return { ok: false, status: 503, error: "db_unavailable" };
+  const added = Math.max(0, Math.floor(Number(topUpPoints) || 15000));
   const client = await db.connect();
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [uid]);
     await ensureUser(uid, client);
     await client.query(
-      `INSERT INTO ai_usage_period (clerk_user_id, period_start, spent_points, held_points)
-       VALUES ($1, $2, 0, 0)
+      `INSERT INTO ai_usage_period (clerk_user_id, period_start, budget_points, spent_points, held_points, updated_at)
+       VALUES ($1, $2, $3, 0, 0, now())
        ON CONFLICT (clerk_user_id, period_start) DO UPDATE SET
+         budget_points = GREATEST(0, ai_usage_period.budget_points - ai_usage_period.spent_points) + EXCLUDED.budget_points,
          spent_points = 0,
          updated_at = now()`,
-      [uid, periodStart]
+      [uid, periodStart, added]
     );
     await client.query("COMMIT");
     return { ok: true };
@@ -1452,17 +1456,18 @@ export async function settleAiReservation(input) {
     }
     const heldAmt = microInt(row.held_points);
     const period = await client.query(
-      `SELECT spent_points, held_points FROM ai_usage_period
+      `SELECT budget_points, spent_points, held_points FROM ai_usage_period
        WHERE clerk_user_id = $1 AND period_start = $2
        FOR UPDATE`,
       [row.clerk_user_id, row.period_start]
     );
+    const rowBudget = microInt(period.rows[0]?.budget_points) || input.budgetMicro;
     const spent = microInt(period.rows[0]?.spent_points);
     const heldTotal = microInt(period.rows[0]?.held_points);
     const charged = chargeMicro({
       actualMicro: actual,
       heldMicro: heldAmt,
-      budgetMicro: input.budgetMicro,
+      budgetMicro: rowBudget,
       spentMicro: spent,
       heldTotalMicro: heldTotal,
     });
