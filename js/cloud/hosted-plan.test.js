@@ -19,7 +19,11 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./hosted-plan.js";
+import {
+  catalogLessonSkipsPlan,
+  catalogTileRequiresContentPlan,
+  hostedSessionAllowed,
+} from "./hosted-plan.js";
 
 describe("hostedSessionAllowed", () => {
   it("leaves self-host open and requires sign-in on the hosted app", () => {
@@ -40,15 +44,41 @@ describe("hostedSessionAllowed", () => {
     assert.equal(catalogLessonSkipsPlan({ id: "open-quest" }), false);
     assert.equal(catalogLessonSkipsPlan({ access: "paid", isLearningModule: true }), false);
     assert.equal(
+      catalogLessonSkipsPlan({ access: "paid", sponsorName: "Foundation", isLearningModule: true }),
+      true
+    );
+    assert.equal(
+      catalogLessonSkipsPlan({ access: "paid", entitlement: "catalog.free", isLearningModule: true }),
+      true
+    );
+    assert.equal(
       catalogLessonSkipsPlan({ source: "hosted", isLearningModule: true }),
       false
     );
   });
 
-  it("keeps a subscriber and a signed-in lesson", () => {
+  it("identifies paid catalog tiles that require the content plan", () => {
+    assert.equal(catalogTileRequiresContentPlan({ access: "paid" }), true);
+    assert.equal(catalogTileRequiresContentPlan({ mission: { access: "paid" } }), true);
+    assert.equal(catalogTileRequiresContentPlan({ access: "paid", sponsorName: "Foundation" }), false);
+    assert.equal(catalogTileRequiresContentPlan({ access: "paid", entitlement: "catalog.free" }), false);
+    assert.equal(catalogTileRequiresContentPlan({ access: "paid", source: "hosted" }), false);
+    assert.equal(catalogTileRequiresContentPlan({ access: "account" }), false);
+    assert.equal(catalogTileRequiresContentPlan({ access: "open" }), false);
+  });
+
+  it("keeps a subscriber and a signed-in lesson, and requires the content plan for paid access", () => {
     assert.equal(hostedSessionAllowed({ cloudAi: true, signedIn: true, entitled: true }), true);
     assert.equal(
       hostedSessionAllowed({ cloudAi: true, signedIn: true, entitled: false, lesson: true }),
+      true
+    );
+    assert.equal(
+      hostedSessionAllowed({ cloudAi: true, signedIn: true, entitled: true, content: false, paid: true }),
+      false
+    );
+    assert.equal(
+      hostedSessionAllowed({ cloudAi: true, signedIn: true, entitled: false, content: true, paid: true }),
       true
     );
   });

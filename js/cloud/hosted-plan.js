@@ -20,15 +20,40 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 import { isLibraryCatalogEntry } from "../quest-catalog.js";
 
 /**
+ * True when a tile's access level requires payment (the `content` plan).
+ * Waived tiles (`catalog.free` or sponsored) and Library tiles do not bill the player.
+ * @param {object|null|undefined} tile
+ */
+export function catalogTileRequiresContentPlan(tile) {
+  if (!tile || typeof tile !== "object") return false;
+  if (isLibraryCatalogEntry(tile)) return false;
+  const raw = tile.access || tile.mission?.access || tile.tile?.access;
+  if (raw !== "paid") return false;
+  const ent = String(
+    tile.entitlement || tile.mission?.entitlement || tile.tile?.entitlement || ""
+  ).trim();
+  if (ent === "catalog.free") return false;
+  if (
+    String(
+      tile.sponsorName || tile.mission?.sponsorName || tile.tile?.sponsorName || ""
+    ).trim()
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Same rule as the server: a catalog lesson (account access) may skip the plan.
- * Library tiles, open quests, and paid tiles do not.
+ * Library tiles, open quests, and paid tiles that bill the player do not.
  * @param {object|null|undefined} tile
  */
 export function catalogLessonSkipsPlan(tile) {
   if (!tile || typeof tile !== "object") return false;
   if (isLibraryCatalogEntry(tile)) return false;
-  const raw = tile.access || tile.mission?.access;
-  if (raw === "open" || raw === "paid") return false;
+  const raw = tile.access || tile.mission?.access || tile.tile?.access;
+  if (raw === "open") return false;
+  if (raw === "paid") return !catalogTileRequiresContentPlan(tile);
   if (raw === "account") return true;
   if (tile.isLearningModule === true || tile.mission?.isLearningModule === true) return true;
   if (tile.kind === "module") return true;
@@ -36,15 +61,20 @@ export function catalogLessonSkipsPlan(tile) {
 }
 
 /**
- * Hosted app (ff.warmersun.com): play needs a signed-in session, then plan
- * `cloud`. A catalog lesson may continue with sign-in alone. Self-host stays open.
+ * Hosted app (ff.warmersun.com): play needs a signed-in session.
+ * A paid catalog quest (`paid: true`) requires the `content` plan (`content: true`).
+ * A catalog lesson (`lesson: true`, account access) may continue with sign-in alone.
+ * Self-host stays open.
  *
- * @param {{ cloudAi?: boolean, signedIn?: boolean, entitled?: boolean, lesson?: boolean }} input
+ * @param {{ cloudAi?: boolean, signedIn?: boolean, entitled?: boolean, content?: boolean, paid?: boolean, lesson?: boolean }} input
  * @returns {boolean} true when this session may stay in the app
  */
 export function hostedSessionAllowed(input = {}) {
   if (!input.cloudAi) return true;
   if (!input.signedIn) return false;
+  if (input.paid) {
+    return typeof input.content === "boolean" ? input.content : Boolean(input.entitled);
+  }
   if (input.entitled) return true;
   return Boolean(input.lesson);
 }

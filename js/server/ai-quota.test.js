@@ -201,14 +201,18 @@ describe("subscriptionEntitled", () => {
   const future = Date.now() + 86_400_000;
   const past = Date.now() - 86_400_000;
 
-  it("active paid plan is entitled", () => {
+  it("active content plan is entitled", () => {
+    assert.equal(
+      subscriptionEntitled({ status: "active", planSlug: "content", periodEnd: future, now: Date.now() }),
+      true
+    );
     assert.equal(
       subscriptionEntitled({ status: "active", planSlug: "cloud", periodEnd: future, now: Date.now() }),
-      true
+      false
     );
   });
 
-  it("free_user and past_due are not", () => {
+  it("free_user, non-content plans, and past_due are not", () => {
     assert.equal(subscriptionEntitled({ status: "active", planSlug: "free_user", periodEnd: future }), false);
     const view = subscriptionView(
       { plan_slug: "free_user", status: "active", period_end: new Date(future).toISOString() },
@@ -217,50 +221,49 @@ describe("subscriptionEntitled", () => {
     assert.equal(view.entitled, false);
     assert.equal(view.content, false);
     assert.equal(view.subscribeUrl, "https://cloud.warmersun.com/subscribe");
-    const paid = subscriptionView(
+    const legacyCloud = subscriptionView(
       { plan_slug: "cloud", status: "active", period_end: new Date(future).toISOString() },
       { subscribeUrl: "https://cloud.warmersun.com/subscribe", now: Date.now() }
     );
-    assert.equal(paid.entitled, true);
-    assert.equal(paid.content, false);
-    assert.equal(paid.planSlug, "cloud");
+    assert.equal(legacyCloud.entitled, false);
+    assert.equal(legacyCloud.content, false);
+    assert.equal(legacyCloud.planSlug, "cloud");
     const content = subscriptionView(
       { plan_slug: "content", status: "active", period_end: new Date(future).toISOString() },
       {
         subscribeUrl: "https://cloud.warmersun.com/subscribe",
         topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1",
-        topUpEntitled: true,
-        allowedSlugs: ["cloud"],
+        topUpEntitled: false,
         now: Date.now(),
       }
     );
-    assert.equal(content.entitled, true);
+    assert.equal(content.entitled, false);
     assert.equal(content.content, true);
     assert.equal(content.topUpUrl, "https://buy.stripe.com/test_20?client_reference_id=user_1");
     assert.equal(contentEntitled({ status: "active", planSlug: "other", periodEnd: future, now: Date.now() }), false);
     assert.equal(contentEntitled({ status: "active", planSlug: "content", periodEnd: future, now: Date.now() }), true);
-    assert.equal(subscriptionEntitled({ status: "active", planSlug: "content", periodEnd: future, now: Date.now() }), false);
-    assert.equal(subscriptionEntitled({ status: "past_due", planSlug: "cloud", periodEnd: future }), false);
+    assert.equal(subscriptionEntitled({ status: "active", planSlug: "content", periodEnd: future, now: Date.now() }), true);
+    assert.equal(subscriptionEntitled({ status: "past_due", planSlug: "content", periodEnd: future }), false);
   });
 
   it("canceled in period is entitled; after period_end is not", () => {
     assert.equal(
-      subscriptionEntitled({ status: "canceled", planSlug: "cloud", periodEnd: future, now: Date.now() }),
+      subscriptionEntitled({ status: "canceled", planSlug: "content", periodEnd: future, now: Date.now() }),
       true
     );
     assert.equal(
-      subscriptionEntitled({ status: "canceled", planSlug: "cloud", periodEnd: past, now: Date.now() }),
+      subscriptionEntitled({ status: "canceled", planSlug: "content", periodEnd: past, now: Date.now() }),
       false
     );
     assert.equal(
-      subscriptionEntitled({ status: "active", planSlug: "cloud", periodEnd: past, now: Date.now() }),
+      subscriptionEntitled({ status: "active", planSlug: "content", periodEnd: past, now: Date.now() }),
       false
     );
   });
 
   it("reads plan slugs from the env", () => {
-    assert.deepEqual(planSlugsFromEnv({}), ["cloud"]);
-    assert.deepEqual(planSlugsFromEnv({ FF_CLOUD_PLAN_SLUGS: "cloud, studio" }), ["cloud", "studio"]);
+    assert.deepEqual(planSlugsFromEnv({}), ["content"]);
+    assert.deepEqual(planSlugsFromEnv({ FF_CONTENT_PLAN_SLUGS: "content, lessons" }), ["content", "lessons"]);
     assert.deepEqual(contentPlanSlugsFromEnv({}), ["content"]);
     assert.deepEqual(contentPlanSlugsFromEnv({ FF_CONTENT_PLAN_SLUGS: "lessons" }), ["lessons"]);
   });

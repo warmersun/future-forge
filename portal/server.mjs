@@ -396,12 +396,12 @@ const AI_SEARCH_ENABLED = false;
 /** Filled after handleCoInvent is defined (see bottom rooms wire). */
 const roomManager = ROOMS_ENABLED
   ? new RoomManager({
-    maxRooms: MAX_ROOMS,
-    rateLimiter,
-    onRoomStart: (code, meta) => usage.roomStart(code, meta),
-    onRoomEnd: (code, meta) => usage.roomEnd(code, meta),
-    onRoomPlayers: (code, n) => usage.roomTouchPlayers(code, n),
-  })
+      maxRooms: MAX_ROOMS,
+      rateLimiter,
+      onRoomStart: (code, meta) => usage.roomStart(code, meta),
+      onRoomEnd: (code, meta) => usage.roomEnd(code, meta),
+      onRoomPlayers: (code, n) => usage.roomTouchPlayers(code, n),
+    })
   : null;
 
 function quotaDenyMessage(gate, secretCopy, rateCopy) {
@@ -873,12 +873,12 @@ function buildUserPayload({ messages, context, mode }) {
       sourceConstraint,
       mission: context?.challenge
         ? {
-          title: context.challenge.title || null,
-          scene: String(context.challenge.problem || context.challenge.scene || "").slice(
-            0,
-            600
-          ),
-        }
+            title: context.challenge.title || null,
+            scene: String(context.challenge.problem || context.challenge.scene || "").slice(
+              0,
+              600
+            ),
+          }
         : null,
     };
     return JSON.stringify(posePayload);
@@ -1013,13 +1013,13 @@ function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat") {
   const addTechIds = brainstormOnly
     ? []
     : (Array.isArray(proposals.addTechIds) ? proposals.addTechIds : [])
-      .map(String)
-      .filter((id) => ids.has(id));
+        .map(String)
+        .filter((id) => ids.has(id));
   const removeTechIds = brainstormOnly
     ? []
     : (Array.isArray(proposals.removeTechIds) ? proposals.removeTechIds : [])
-      .map(String)
-      .filter((id) => ids.has(id));
+        .map(String)
+        .filter((id) => ids.has(id));
 
   const teaching = (Array.isArray(parsed.teaching) ? parsed.teaching : [])
     .filter((t) => t && ids.has(String(t.techId)))
@@ -1118,7 +1118,7 @@ function sanitizeScenariosResult(parsed, context, source = "ai") {
     source,
     message: String(
       parsed?.message ||
-      `Here are ${scenarios.length} Quests. Pick one to invent for.`
+        `Here are ${scenarios.length} Quests. Pick one to invent for.`
     ).slice(0, 2000),
     scenarios,
     proposals: {
@@ -1164,9 +1164,9 @@ function composeCoInventCall(body) {
     ? fastEvalUserContent(mode, context)
     : isTutor
       ? `Tutor session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
-      `Respond with the required JSON object only. One current idea in a short teaching paragraph (4–8 sentences); full sentences; no quiz questions; answer the learner's question.`
+        `Respond with the required JSON object only. One current idea in a short teaching paragraph (4–8 sentences); full sentences; no quiz questions; answer the learner's question.`
       : `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
-      `Respond with the required JSON object only.`;
+        `Respond with the required JSON object only.`;
 
   if (!fastSpec && promptCompactEnabled() && isConversationalPromptMode(mode)) {
     const inquiry = sanitizeSourceInquiry(context.sourceInquiry, {
@@ -2120,18 +2120,18 @@ async function handleIdeaImage(body) {
   const prompt =
     kind === "challenger"
       ? [
-        "Photoreal 4:3 documentary still of a local pressure or hard question facing a community pathway.",
-        "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
-        rawPrompt ||
-        "People and place under a concrete social, ethical, or natural-world pressure.",
-      ].join(" ")
+          "Photoreal 4:3 documentary still of a local pressure or hard question facing a community pathway.",
+          "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+          rawPrompt ||
+            "People and place under a concrete social, ethical, or natural-world pressure.",
+        ].join(" ")
       : kind === "brief"
         ? [
-          "Photoreal cinematic 16:9 documentary still of a lived local scene for a design-challenge story.",
-          "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
-          rawPrompt || "A specific person in a specific place under concrete tension.",
-        ].join(" ")
-        : [
+            "Photoreal cinematic 16:9 documentary still of a lived local scene for a design-challenge story.",
+            "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+            rawPrompt || "A specific person in a specific place under concrete tension.",
+          ].join(" ")
+      : [
           "Photoreal 4:3 documentary still of a local emerging-tech application.",
           "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
           rawPrompt || "People using a practical tool in a specific neighborhood.",
@@ -4170,10 +4170,10 @@ server.on("error", (err) => {
   if (err && err.code === "EADDRINUSE") {
     console.error(
       `Port ${PORT} is already in use (${HOST}).\n` +
-      `Stop the other Future Forge process, e.g.:\n` +
-      `  fuser -k ${PORT}/tcp\n` +
-      `  # or: pkill -f "node portal/server.mjs"\n` +
-      `Or start on another port: PORT=8766 npm run portal`
+        `Stop the other Future Forge process, e.g.:\n` +
+        `  fuser -k ${PORT}/tcp\n` +
+        `  # or: pkill -f "node portal/server.mjs"\n` +
+        `Or start on another port: PORT=8766 npm run portal`
     );
     process.exit(1);
   }
@@ -4233,7 +4233,8 @@ server.listen(PORT, HOST, async () => {
     try {
       const remote = await fetchOfficialQuestCatalog();
       console.log(
-        `  → ${remote.quests.length} official tile(s)${remote.ok ? "" : " (fetch issues)"}${remote.cached ? " [cache]" : ""
+        `  → ${remote.quests.length} official tile(s)${remote.ok ? "" : " (fetch issues)"}${
+          remote.cached ? " [cache]" : ""
         }`
       );
       if (remote.errors.length) {
@@ -4253,7 +4254,8 @@ server.listen(PORT, HOST, async () => {
     try {
       const remote = await fetchOfficialQuestCatalog();
       console.log(
-        `  → ${remote.quests.length} official tile(s)${remote.ok ? "" : " (fetch issues)"}${remote.cached ? " [cache]" : ""
+        `  → ${remote.quests.length} official tile(s)${remote.ok ? "" : " (fetch issues)"}${
+          remote.cached ? " [cache]" : ""
         }`
       );
       if (remote.errors.length) {
@@ -4276,7 +4278,8 @@ server.listen(PORT, HOST, async () => {
     try {
       const remote = await fetchRemoteTrendCatalog(TRENDS_REMOTE_URL);
       console.log(
-        `  → ${remote.trends.length} trend(s)${remote.ok ? "" : " (fetch issues)"}${remote.cached ? " [cache]" : ""
+        `  → ${remote.trends.length} trend(s)${remote.ok ? "" : " (fetch issues)"}${
+          remote.cached ? " [cache]" : ""
         }`
       );
     } catch (e) {

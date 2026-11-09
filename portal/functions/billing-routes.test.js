@@ -326,11 +326,11 @@ describe("staged Clerk webhook", () => {
   });
   it("upserts paid billing and handles cancellations idempotently; invalid event rolls back", async () => {
     const db = fakeDb(), api = app(db);
-    db.billing.set("user_3", { subscriptionItems: [{ plan: { slug: "paid" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 }] });
-    const active = signed({ id: "evt_active", type: "subscription.active", data: { payer: { user_id: "user_3" }, status: "active", items: [{ plan: { slug: "paid" }, period_start: 1790812800000, period_end: 4070908800000 }] } });
+    db.billing.set("user_3", { subscriptionItems: [{ plan: { slug: "content" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 }] });
+    const active = signed({ id: "evt_active", type: "subscription.active", data: { payer: { user_id: "user_3" }, status: "active", items: [{ plan: { slug: "content" }, period_start: 1790812800000, period_end: 4070908800000 }] } });
     assert.equal((await call(api, "/api/webhooks/clerk", active.raw, active.headers)).body.action, "upsert_subscription");
     assert.equal(db.data.subs.get("user_3").plan_slug, "content");
-    const cancel = signed({ id: "evt_cancel", type: "subscriptionItem.canceled", data: { payer: { user_id: "user_3" }, plan: { slug: "paid" }, status: "canceled", period_end: 4070908800000 } });
+    const cancel = signed({ id: "evt_cancel", type: "subscriptionItem.canceled", data: { payer: { user_id: "user_3" }, plan: { slug: "content" }, status: "canceled", period_end: 4070908800000 } });
     db.billing.set("user_3", { subscriptionItems: [] });
     assert.equal((await call(api, "/api/webhooks/clerk", cancel.raw, cancel.headers)).status, 200);
     assert.equal(db.data.subs.get("user_3").status, "inactive");
@@ -344,9 +344,9 @@ describe("staged Clerk webhook", () => {
   });
   it("reconciles current Clerk state even when distinct signed events arrive reversed or race", async () => {
     const db = fakeDb(), first = app(db), second = app(db);
-    db.billing.set("user_4", { subscriptionItems: [{ plan: { slug: "paid" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 }] });
-    const older = signed({ id: "evt_older", type: "subscriptionItem.canceled", data: { payer: { user_id: "user_4" }, plan: { slug: "paid" }, status: "canceled" } });
-    const newer = signed({ id: "evt_newer", type: "subscription.active", data: { payer: { user_id: "user_4" }, status: "active", items: [{ plan: { slug: "paid" } }] } });
+    db.billing.set("user_4", { subscriptionItems: [{ plan: { slug: "content" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 }] });
+    const older = signed({ id: "evt_older", type: "subscriptionItem.canceled", data: { payer: { user_id: "user_4" }, plan: { slug: "content" }, status: "canceled" } });
+    const newer = signed({ id: "evt_newer", type: "subscription.active", data: { payer: { user_id: "user_4" }, status: "active", items: [{ plan: { slug: "content" } }] } });
     const replies = await Promise.all([
       call(first, "/api/webhooks/clerk", newer.raw, newer.headers),
       call(second, "/api/webhooks/clerk", older.raw, older.headers),
@@ -374,7 +374,7 @@ describe("staged Clerk webhook", () => {
     assert.equal((await call(recovered, "/api/webhooks/clerk", event.raw, event.headers)).status, 200);
     assert.equal(db.data.subs.get("user_1").status, "inactive");
   });
-  it("stores a content plan as content and normalizes paid Clerk items to content", async () => {
+  it("stores a content plan as content and treats non-content Clerk items as inactive", async () => {
     const db = fakeDb(), api = app(db);
     db.billing.set("user_6", { subscriptionItems: [{ plan: { slug: "content" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 }] });
     const content = signed({ id: "evt_content", type: "subscription.active", data: { payer: { user_id: "user_6" }, status: "active" } });
@@ -387,6 +387,13 @@ describe("staged Clerk webhook", () => {
     const both = signed({ id: "evt_both", type: "subscription.updated", data: { payer: { user_id: "user_6" }, status: "active" } });
     assert.equal((await call(api, "/api/webhooks/clerk", both.raw, both.headers)).status, 200);
     assert.equal(db.data.subs.get("user_6").plan_slug, "content");
+    assert.equal(db.data.subs.get("user_6").status, "active");
+    db.billing.set("user_6", { subscriptionItems: [
+      { plan: { slug: "cloud" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 },
+    ] });
+    const cloudOnly = signed({ id: "evt_cloud_only", type: "subscription.updated", data: { payer: { user_id: "user_6" }, status: "active" } });
+    assert.equal((await call(api, "/api/webhooks/clerk", cloudOnly.raw, cloudOnly.headers)).status, 200);
+    assert.equal(db.data.subs.get("user_6").status, "inactive");
   });
   it("rejects hosted AI reserve without a top-up and resets usage after a signed Stripe webhook", async () => {
     const db = fakeDb(), api = app(db);
@@ -433,7 +440,7 @@ describe("staged Clerk webhook", () => {
   });
   it("preserves canceled paid-through-period entitlement from the current snapshot", async () => {
     const db = fakeDb(), api = app(db);
-    db.billing.set("user_5", { subscriptionItems: [{ status: "canceled", plan: { slug: "paid" }, periodEnd: 4070908800000 }] });
+    db.billing.set("user_5", { subscriptionItems: [{ status: "canceled", plan: { slug: "content" }, periodEnd: 4070908800000 }] });
     const event = signed({ id: "evt_grace", type: "subscriptionItem.canceled", data: { payer: { user_id: "user_5" } } });
     assert.equal((await call(api, "/api/webhooks/clerk", event.raw, event.headers)).status, 200);
     assert.equal(db.data.subs.get("user_5").status, "canceled");

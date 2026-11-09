@@ -79,7 +79,7 @@ describe("planClerkUserEvent", () => {
 });
 
 describe("planClerkBillingEvent", () => {
-  it("upserts an active subscription without payer names or email", () => {
+  it("upserts an active content subscription without payer names or email and does not normalize other slugs to content", () => {
     const p = planClerkBillingEvent({
       type: "subscription.active",
       data: {
@@ -93,7 +93,7 @@ describe("planClerkBillingEvent", () => {
         },
         items: [
           {
-            plan: { slug: "cloud" },
+            plan: { slug: "content" },
             period_start: 1_700_000_000_000,
             period_end: 1_702_592_000_000,
           },
@@ -110,6 +110,16 @@ describe("planClerkBillingEvent", () => {
     assert.equal("email" in p, false);
     assert.equal("firstName" in p, false);
     assert.equal("first_name" in p, false);
+    const nonContent = planClerkBillingEvent({
+      type: "subscription.active",
+      data: {
+        id: "csub_2",
+        status: "active",
+        payer: { user_id: "user_abc" },
+        items: [{ plan: { slug: "cloud" } }],
+      },
+    });
+    assert.equal(nonContent.planSlug, "cloud");
   });
 
   it("marks a canceled item and a past-due item", () => {
@@ -250,7 +260,7 @@ describe("rowFromClerkBillingSubscription", () => {
     assert.equal(row.periodEnd, new Date(1_702_592_000_000).toISOString());
   });
 
-  it("stores content as content and normalizes paid items to content", () => {
+  it("stores content as content and ignores non-content paid items", () => {
     const content = rowFromClerkBillingSubscription({
       subscriptionItems: [
         { status: "active", plan: { slug: "content" }, periodStart: 1_700_000_000_000, periodEnd: 1_702_592_000_000 },
@@ -264,16 +274,22 @@ describe("rowFromClerkBillingSubscription", () => {
       ],
     }, { env: {} });
     assert.equal(both.planSlug, "content");
-    const unknown = rowFromClerkBillingSubscription({
-      subscriptionItems: [
-        { status: "active", plan: { slug: "content" } },
-        { status: "active", plan: { slug: "paid" } },
-      ],
-    }, { env: {} });
-    assert.equal(unknown.planSlug, "content");
+    assert.equal(both.periodEnd, new Date(1_702_592_000_000).toISOString());
+    assert.equal(
+      rowFromClerkBillingSubscription({
+        subscriptionItems: [{ status: "active", plan: { slug: "cloud" }, periodEnd: 1_800_000_000_000 }],
+      }, { env: {} }),
+      null
+    );
+    assert.equal(
+      rowFromClerkBillingSubscription({
+        subscriptionItems: [{ status: "active", plan: { slug: "paid" } }],
+      }, { env: {} }),
+      null
+    );
   });
 
-  it("normalizes a canceled paid item to content", () => {
+  it("maps a canceled content item and ignores canceled non-content items", () => {
     const row = canceledRowFromClerkBillingSubscription({
       subscriptionItems: [
         { status: "canceled", plan: { slug: "content" }, periodEnd: 1_800_000_000_000 },
@@ -282,6 +298,14 @@ describe("rowFromClerkBillingSubscription", () => {
     assert.equal(row.planSlug, "content");
     assert.equal(row.status, "canceled");
     assert.equal(row.periodEnd, new Date(1_800_000_000_000).toISOString());
+    assert.equal(
+      canceledRowFromClerkBillingSubscription({
+        subscriptionItems: [
+          { status: "canceled", plan: { slug: "cloud" }, periodEnd: 1_800_000_000_000 },
+        ],
+      }, { env: {} }),
+      null
+    );
   });
 
   it("does not map a free plan or an inactive paid plan", () => {

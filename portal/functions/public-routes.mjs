@@ -251,10 +251,12 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
             if (!currentRef) return reply({ ok: false, error: "package_reference_forbidden" }, 400);
             const ref = { ...currentRef, revision: url.searchParams.get("revision") || currentRef.revision };
             const resolved = await resolver.resolve(ref, { identity: ident, entitled: paid });
-            if (!resolved?.ok) return reply({ ok: false, error: resolved?.code || "package_revision_unavailable", id }, resolved?.status || 409);
+            if (!resolved?.ok) return reply({ ok: false, error: resolved?.code || "package_revision_unavailable", id,
+              ...(resolved?.status === 402 ? { subscribeUrl: "https://warmersun.com/portal/subscribe" } : {}) }, resolved?.status || 409);
             // Recheck the actual release even for an injected resolver. Access query flags are ignored.
             const checked = questReadDecision(resolved.record || resolved.tile, ident, { entitled: paid });
-            if (!checked.allow) return reply({ ok: false, error: checked.error, id, tile: catalogCard(tile) }, checked.status);
+            if (!checked.allow) return reply({ ok: false, error: checked.error, id, tile: catalogCard(tile),
+              ...(checked.status === 402 ? { subscribeUrl: "https://warmersun.com/portal/subscribe" } : {}) }, checked.status);
             return reply({ ok: true, tile: resolved.record || resolved.tile });
           }
           return reply({ ok: true, tile });

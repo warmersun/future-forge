@@ -57,7 +57,7 @@ export const DEFAULT_TEXT_HOLD_POINTS = 20;
 export const DEFAULT_TEXT_MAX_OUT = 8192;
 /** Room seats keep a portal-signed grant this long. Entitlement is rechecked at reserve. */
 export const QUOTA_GRANT_TTL_MS = 12 * 60 * 60 * 1000;
-export const DEFAULT_PLAN_SLUGS = ["cloud"];
+export const DEFAULT_PLAN_SLUGS = ["content"];
 export const DEFAULT_CONTENT_PLAN_SLUGS = ["content"];
 export const DEFAULT_VOICE_MAX_MS = 600_000;
 
@@ -140,16 +140,11 @@ export function textMaxOutFromEnv(env = process.env) {
  * @returns {string[]}
  */
 export function planSlugsFromEnv(env = process.env) {
-  const raw = String(env.FF_CLOUD_PLAN_SLUGS ?? "").trim();
-  if (!raw) return [...DEFAULT_PLAN_SLUGS];
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  return contentPlanSlugsFromEnv(env);
 }
 
 /**
- * Paid-catalog plan slugs. Cloud slugs are not listed here; cloud includes them.
+ * Paid-catalog plan slugs (default `content`).
  * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
  * @returns {string[]}
  */
@@ -497,7 +492,7 @@ export function subscriptionView(sub, opts = {}) {
 
 export function subscriptionEntitled(input = {}) {
   const slug = String(input.planSlug || "").trim();
-  const allowed = Array.isArray(input.allowedSlugs) ? input.allowedSlugs : DEFAULT_PLAN_SLUGS;
+  const allowed = Array.isArray(input.allowedSlugs) ? input.allowedSlugs : DEFAULT_CONTENT_PLAN_SLUGS;
   if (!slug || !allowed.includes(slug)) return false;
   const status = String(input.status || "")
     .trim()

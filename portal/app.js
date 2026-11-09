@@ -299,7 +299,7 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
       const sub = me?.subscription;
       // Failed/anonymous/malformed responses cannot establish an inactive plan.
       if (me?.ok === true && me.signedIn === true && (typeof sub?.content === "boolean" || typeof sub?.entitled === "boolean")) {
-        const activePlan = sub.content || sub.entitled;
+        const activePlan = typeof sub?.content === "boolean" ? sub.content : sub.entitled;
         plan = activePlan
           ? `Plan: ${sub.planSlug || "active"} · ${sub.status || "active"}`
           : "no active subscription";

@@ -30,17 +30,15 @@ import { sanitizeUsername } from "./profile.mjs";
 const FREE_PLAN_SLUGS = new Set(["free_user", "free_org"]);
 
 /**
- * Paid Clerk plans normalize to the configured Content slug.
- * Free plans rank 0.
+ * Only configured Content plan slugs (default `content`) rank as entitled.
+ * Free and other plans rank 0.
  * @param {unknown} raw
  * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
  */
 function storedPlanRank(raw, env) {
   const slug = String(raw || "").trim();
   if (!slug || FREE_PLAN_SLUGS.has(slug)) return 0;
-  const stored = entitledPlanSlug(slug, env);
-  if (!stored || FREE_PLAN_SLUGS.has(stored)) return 0;
-  if (contentPlanSlugsFromEnv(env).includes(stored)) return 1;
+  if (contentPlanSlugsFromEnv(env).includes(slug)) return 1;
   return 0;
 }
 
@@ -145,8 +143,8 @@ export function clerkTimeIso(value) {
 }
 
 /**
- * Paid Clerk plan slugs are stored as the entitled slug the app already checks.
- * free_user and free_org stay themselves so they remain unentitled.
+ * Return the trimmed Clerk plan slug without rewriting non-Content plans.
+ * Only slugs in `contentPlanSlugsFromEnv` (default `content`) are entitled.
  * @param {unknown} raw
  * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
  * @returns {string|null}
@@ -157,12 +155,12 @@ export function entitledPlanSlug(raw, env = process.env) {
   if (FREE_PLAN_SLUGS.has(slug)) return slug;
   const content = contentPlanSlugsFromEnv(env);
   if (content.includes(slug)) return slug;
-  return content[0] || "content";
+  return slug;
 }
 
 /**
  * Map a Clerk Backend billing subscription onto a subscriptions row.
- * Only an active paid item is written. Free plans stay out of the row.
+ * Only an active Content item is written. Free or non-Content plans stay out of the row.
  * @param {object|null|undefined} sub
  * @param {{ env?: NodeJS.ProcessEnv|Record<string, string|undefined> }} [opts]
  * @returns {{ planSlug: string, status: string, periodStart: string|null, periodEnd: string|null } | null}
@@ -170,7 +168,9 @@ export function entitledPlanSlug(raw, env = process.env) {
 function rowFromPaidItem(item, env, status) {
   if (!item) return null;
   const planSlug = entitledPlanSlug(item.plan?.slug, env);
-  if (!planSlug || FREE_PLAN_SLUGS.has(planSlug)) return null;
+  if (!planSlug || FREE_PLAN_SLUGS.has(planSlug) || !contentPlanSlugsFromEnv(env).includes(planSlug)) {
+    return null;
+  }
   return {
     planSlug,
     status,

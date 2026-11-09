@@ -20,7 +20,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./hosted-plan.js";
+import { catalogLessonSkipsPlan, catalogTileRequiresContentPlan, hostedSessionAllowed } from "./hosted-plan.js";
 import { parseDeepLink, sanitizeQuestToken, questLinkOutcome } from "../deep-link.js";
 
 const source = fs.readFileSync(new URL("../game.js", import.meta.url), "utf8");
@@ -50,7 +50,7 @@ function browser(options = {}) {
   const calls = { health: 0, me: 0, signIn: 0, launches: [], titles: [], messages: [], redirects: [], refresh: 0 };
   const config = {
     health: () => response({ cloudAi: true }),
-    me: () => response({ subscription: { entitled: true } }),
+    me: () => response({ subscription: { entitled: true, content: true, planSlug: "content" } }),
     signedIn: true,
     lookup: async () => ({ tile: { source: "remote", access: "account" } }),
     ...options,
@@ -86,6 +86,7 @@ function browser(options = {}) {
     openCloudSignIn: () => { calls.signIn++; },
     flashToast: (message) => calls.messages.push(message),
     catalogLessonSkipsPlan,
+    catalogTileRequiresContentPlan,
     hostedSessionAllowed,
     parseDeepLink,
     sanitizeQuestToken,
@@ -187,7 +188,7 @@ describe("actual hosted browser gate", () => {
     assert.equal(b.calls.me, 1);
     assert.equal(b.settled(), false);
     assert.deepEqual(b.calls.titles, []);
-    pending.resolve(response({ subscription: { entitled: true } }));
+    pending.resolve(response({ subscription: { entitled: true, content: true, planSlug: "content" } }));
     assert.equal(await checking, false);
     await drain();
     assert.deepEqual(b.calls.titles, ["btn-friends"]);
@@ -215,7 +216,7 @@ describe("actual hosted browser gate", () => {
     b.buttons["btn-start"].click();
     await drain();
     assert.deepEqual(b.calls.titles, []);
-    b.config.me = () => response({ subscription: { entitled: true } });
+    b.config.me = () => response({ subscription: { entitled: true, content: true, planSlug: "content" } });
     b.buttons["btn-surprise"].click();
     await drain();
     assert.deepEqual(b.calls.titles, ["btn-surprise"]);
@@ -231,7 +232,7 @@ describe("actual hosted browser gate", () => {
     assert.equal(b.startMission(b.mission, opts), false);
     await drain();
     assert.deepEqual(b.calls.launches, []);
-    pending.resolve(response({ subscription: { entitled: true } }));
+    pending.resolve(response({ subscription: { entitled: true, content: true, planSlug: "content" } }));
     await drain();
     assert.deepEqual(b.calls.launches, [{ mission: b.mission, opts }]);
   });
@@ -362,5 +363,60 @@ describe("actual hosted browser gate", () => {
     assert.equal(b.calls.signIn, 0);
     assert.deepEqual(b.calls.redirects, []);
     assert.match(b.calls.messages.at(-1), /signed in.*retry/i);
+  });
+
+  it("requires the content plan for access=paid quests even when AI top-up is entitled, and redirects to content subscribeUrl", async () => {
+    const topupOnly = browser({
+      me: () => response({
+        subscription: {
+          entitled: true,
+          content: false,
+          planSlug: null,
+          subscribeUrl: "https://warmersun.com/portal/subscribe",
+          topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1",
+        },
+      }),
+    });
+    // Regular title launch (AI top-up gated) succeeds because entitled === true.
+    assert.equal(await topupOnly.enforceHostedPlan(), false);
+    assert.deepEqual(topupOnly.calls.redirects, []);
+    // Paid quest (access: "paid") is blocked because content === false, and redirects to the Content plan subscribeUrl.
+    assert.equal(topupOnly.startMission(topupOnly.mission), false);
+    assert.deepEqual(topupOnly.calls.launches, []);
+    assert.deepEqual(topupOnly.calls.redirects, ["https://warmersun.com/portal/subscribe"]);
+    assert.equal(await topupOnly.enforceHostedPlan({ mission: topupOnly.mission }), true);
+    assert.deepEqual(topupOnly.calls.redirects, ["https://warmersun.com/portal/subscribe"]);
+
+    // A user with the 'content' plan can play access: "paid" quests even if AI top-up entitled is false.
+    const contentOnly = browser({
+      me: () => response({
+        subscription: {
+          entitled: false,
+          content: true,
+          planSlug: "content",
+          subscribeUrl: "https://warmersun.com/portal/subscribe",
+          topUpUrl: "https://buy.stripe.com/test_20?client_reference_id=user_1",
+        },
+      }),
+    });
+    assert.equal(await contentOnly.enforceHostedPlan({ mission: contentOnly.mission }), false);
+    assert.equal(contentOnly.startMission(contentOnly.mission), true);
+    assert.equal(contentOnly.calls.launches.length, 1);
+    assert.deepEqual(contentOnly.calls.redirects, []);
+
+    // A legacy non-'content' planSlug without content: true does not unlock access: "paid" quests.
+    const nonContentSlug = browser({
+      me: () => response({
+        subscription: {
+          entitled: true,
+          planSlug: "cloud",
+          subscribeUrl: "https://warmersun.com/portal/subscribe",
+        },
+      }),
+    });
+    assert.equal(await nonContentSlug.enforceHostedPlan({ mission: nonContentSlug.mission }), true);
+    assert.equal(nonContentSlug.startMission(nonContentSlug.mission), false);
+    assert.deepEqual(nonContentSlug.calls.launches, []);
+    assert.deepEqual(nonContentSlug.calls.redirects, ["https://warmersun.com/portal/subscribe"]);
   });
 });
