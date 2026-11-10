@@ -167,6 +167,21 @@ export function createQuestRequestAuthority({ loadCatalog, resolvePackage, loadR
   };
 }
 
+/**
+ * Player argument fields. A hosted portal that has not been updated omits them
+ * when it rebuilds context. Grounding and the world clock stay the portal's.
+ */
+const ARGUMENT_PLAYER_KEYS = ["claim", "assessments", "acceptedArguments"];
+
+function restoreArgumentPlayerFields(context, client) {
+  if (!context || typeof context !== "object") return context;
+  const src = client && typeof client === "object" ? client : {};
+  for (const key of ARGUMENT_PLAYER_KEYS) {
+    if (context[key] === undefined && src[key] !== undefined) context[key] = src[key];
+  }
+  return context;
+}
+
 /** Game delegates private catalog, run ownership and current billing to the portal. */
 export function createPortalQuestRequestAuthority({ origin, fetchImpl = fetch } = {}) {
   return async (body, { authorization = "" } = {}) => {
@@ -180,7 +195,11 @@ export function createPortalQuestRequestAuthority({ origin, fetchImpl = fetch } 
       const result = await response.json();
       if (!response.ok || !result?.ok) return deny(result?.error || "package_authority_unavailable", response.status || 503);
       if (!result.context || typeof result.context !== "object") return deny("package_authority_unavailable", 503);
-      return { ok: true, body: { ...body, context: result.context } };
+      const client = body?.context && typeof body.context === "object" ? body.context : {};
+      return {
+        ok: true,
+        body: { ...body, context: restoreArgumentPlayerFields(result.context, client) },
+      };
     } catch { return deny("package_authority_unavailable", 503); }
   };
 }

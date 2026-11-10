@@ -437,3 +437,47 @@ it("portal delegation preserves the bearer and run, rejects redirects, and propa
   const offline = createPortalQuestRequestAuthority({ origin: "https://portal.example", fetchImpl: async () => { throw Error("offline"); } });
   assert.equal((await offline(body)).status, 503);
 });
+
+it("portal delegation keeps the argument case when the portal omits it", async () => {
+  const authorize = createPortalQuestRequestAuthority({
+    origin: "https://portal.example",
+    fetchImpl: async () => Response.json({
+      ok: true,
+      context: { questId: "dock", year: 2027, place: "Vale Institute", grounding: "AUTHORED" },
+    }),
+  });
+  const kept = await authorize({
+    mode: "fact-check-argument",
+    context: {
+      year: 2027,
+      claim: "Commercial packs were sold before this year.",
+      assessments: {
+        timings: [{ tileId: "t1", level: "green", reason: "Present." }],
+        pathways: [{ fingerprint: "fp", crisisReasons: { local: "Helps." } }],
+      },
+      acceptedArguments: [{ id: "arg-1", claim: "Packs were sold." }],
+      grounding: "FORGED",
+    },
+  });
+  assert.equal(kept.ok, true);
+  assert.equal(kept.body.context.grounding, "AUTHORED");
+  assert.equal(kept.body.context.claim, "Commercial packs were sold before this year.");
+  assert.equal(kept.body.context.assessments.timings[0].level, "green");
+  assert.equal(kept.body.context.assessments.pathways[0].fingerprint, "fp");
+  assert.equal(kept.body.context.acceptedArguments[0].id, "arg-1");
+  assert.equal(JSON.stringify(kept.body.context).includes("FORGED"), false);
+
+  const authored = createPortalQuestRequestAuthority({
+    origin: "https://portal.example",
+    fetchImpl: async () => Response.json({
+      ok: true,
+      context: { grounding: "AUTHORED", claim: "Portal case." },
+    }),
+  });
+  const preferPortal = await authored({
+    mode: "fact-check-argument",
+    context: { claim: "Client case.", grounding: "FORGED" },
+  });
+  assert.equal(preferPortal.body.context.claim, "Portal case.");
+  assert.equal(preferPortal.body.context.grounding, "AUTHORED");
+});
