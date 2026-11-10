@@ -138,6 +138,7 @@ describe("authoritative quest context", () => {
     );
     assert.equal(result.ok, true);
     assert.equal(result.context.invention, "A dawn loader");
+    assert.equal(result.context.claim, undefined);
     assert.equal(result.context.grounding, "Server grounding. The 2032 row is not granted.");
     assert.equal(result.context.predictionsBank.predictions[0].year, 2026);
     assert.equal(result.context.predictionsBank.predictions[0].headline, "TEST: morning robots");
@@ -165,6 +166,29 @@ describe("authoritative quest context", () => {
           assert.equal(payload.includes(authored), true, `${authored}: ${payload}`);
       }
     } finally { await store.closeAll(); }
+  });
+
+  it("keeps the argument case and the assessments it answers", () => {
+    const result = authoritativeQuestContext(
+      {
+        year: 2027,
+        claim: "Commercial packs were sold before this year.",
+        assessments: {
+          timings: [{ tileId: "t1", level: "green", reason: "Present." }],
+          pathways: [{ fingerprint: "fp", crisisReasons: { local: "Helps." } }],
+        },
+        acceptedArguments: [{ id: "arg-1", claim: "Packs were sold." }],
+        grounding: "FORGED grounding",
+      },
+      resolved
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.context.claim, "Commercial packs were sold before this year.");
+    assert.equal(result.context.assessments.timings[0].level, "green");
+    assert.equal(result.context.assessments.pathways[0].fingerprint, "fp");
+    assert.equal(result.context.acceptedArguments[0].id, "arg-1");
+    assert.equal(result.context.grounding, "Server grounding. The 2032 row is not granted.");
+    assert.equal(JSON.stringify(result.context).includes("FORGED"), false);
   });
 
   it("rejects a year outside the mission and a missing resolved bank", () => {

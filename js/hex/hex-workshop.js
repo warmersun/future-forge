@@ -1679,7 +1679,12 @@ export function createHexWorkshop(api) {
       if (tech) {
         const pol = polarityForTech(focusedTechId);
         const place = api.getPlace?.() || "this place";
-        hint.textContent = `Start from what is scarce in ${place}. Ask for ideas, or fill the two blanks. World: ${WORLD_PLAIN[pol] || pol}.`;
+        const world = WORLD_PLAIN[pol] || pol;
+        hint.textContent = freeWrite
+          ? `Write the case against an assessment, or how it works. World: ${world}.`
+          : `Start from what is scarce in ${place}. Ask for ideas, or fill the two blanks. World: ${world}.`;
+      } else if (freeWrite) {
+        hint.textContent = "Write the case against an assessment, then Mint argument.";
       } else {
         hint.textContent =
           "Pick a technology, or once a pathway is on the board, Write freely and mint an argument against an assessment.";
@@ -4287,12 +4292,22 @@ export function createHexWorkshop(api) {
     getHighlightedTileId: () => highlightedPathwayTileId,
     getHighlightedPathwayTile: () => highlightedPathwayTileId,
     effectiveHowLength,
-    /** New Quest: back to the two-blank scaffold, blanks cleared. */
+    /** New Quest: back to the two-blank scaffold, blanks and case cleared. */
     resetCreateMode: () => {
       freeWrite = false;
       clearScaffold();
+      const ta = document.querySelector("#hex-how-text");
+      if (ta) ta.value = "";
       syncScaffold(focusedTechId ? techById(focusedTechId) : null);
       syncCreateBusyUi();
+    },
+    /**
+     * Continue calls resetCreateMode before the saved board is assigned, which
+     * hides the case box. A placed pathway should show it again so Mint argument
+     * is usable. A tray tile is not a pathway.
+     */
+    resumeArgumentWrite: () => {
+      if (listInventionPathways(board()).length > 0) setFreeWrite(true);
     },
     /** Show the two blanks. Does not clear text already in them. */
     useScaffold: () => {

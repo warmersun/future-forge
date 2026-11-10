@@ -8818,6 +8818,8 @@ function startMission(mission, opts = {}) {
       hex.syncPathwayScores?.();
       if (restored.year != null) hex.refreshAfterYearChange?.();
       hex.importSparkBatches?.(restored.play?.sparkBatches);
+      // resetCreateMode ran before this board existed and put the two blanks back.
+      hex.resumeArgumentWrite?.();
       const trayTiles = Object.values(restored.hexBoard.tiles || {});
       const sparkTech = trayTiles.find(
         (t) =>

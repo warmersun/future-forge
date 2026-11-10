@@ -33,6 +33,7 @@ const PLAYER_KEYS = [
   "answers", "selectedTechIds", "availableTechs", "year", "turn", "mode",
   "challengeAngle", "angle", "concern", "sourceConcern", "concerns",
   "pathway", "concernPathway", "placed", "neighbors", "priorTiming",
+  "claim", "assessments", "acceptedArguments",
   "playerAnswer", "challengeSpeech", "challengeQuestion", "field", "beforeText", "afterText",
   "hexInvent", "hexBoard", "pathways", "pressure", "pressureBase", "metricsPending",
   "budget", "will", "ap", "apMax", "focusTechId", "refresh", "avoidTitles",

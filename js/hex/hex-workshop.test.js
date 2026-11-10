@@ -625,6 +625,68 @@ describe("canMintArgument", () => {
   });
 });
 
+describe("continue restores argument mint", () => {
+  before(() => stubDom());
+
+  function workshop(held) {
+    return createHexWorkshop({
+      getBoard: () => held.board,
+      setBoard: (b) => {
+        held.board = b;
+      },
+      getYear: () => 2027,
+      getPlace: () => "Vale Institute",
+      apEnabled: () => true,
+    });
+  }
+
+  it("opens the case box when a restored board already has a pathway", () => {
+    const held = { board: seededBoard() };
+    const ws = workshop(held);
+    const ta = document.querySelector("#hex-how-text");
+    ta.value = "stale case from the previous quest";
+    ws.resetCreateMode();
+    const btn = document.querySelector("#btn-mint-argument");
+    assert.equal(btn.disabled, true);
+    assert.equal(ta.value, "");
+    assert.equal(ta.hidden, true);
+    ws.resumeArgumentWrite();
+    // Continue restores a focused emTech after the case box opens.
+    ws.focusTech("energy");
+    assert.equal(btn.disabled, false);
+    assert.equal(btn.textContent, "Mint argument · 1 AP");
+    assert.equal(document.querySelector("#hex-scaffold").hidden, true);
+    assert.equal(ta.hidden, false);
+    assert.match(
+      document.querySelector("#hex-tile-create-hint").textContent,
+      /case against an assessment/
+    );
+  });
+
+  it("stays on the two blanks when the restored board has only a tray tile", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 2 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "tray",
+        techId: "ai",
+        howText: "Still in the tray.",
+        year: 2027,
+      })
+    );
+    const ws = workshop({ board });
+    ws.resetCreateMode();
+    ws.resumeArgumentWrite();
+    const btn = document.querySelector("#btn-mint-argument");
+    assert.equal(btn.disabled, true);
+    assert.equal(document.querySelector("#hex-scaffold").hidden, false);
+    assert.equal(document.querySelector("#hex-how-text").hidden, true);
+  });
+});
+
 describe("hex-workshop argument grounding", () => {
   before(() => stubDom());
 
