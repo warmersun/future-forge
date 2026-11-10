@@ -267,11 +267,23 @@ describe("leanCoInventContext arguments", () => {
         grounding: "Inspection is granted.",
         acceptedArguments: [{ id: "arg", claim: "Night crews already walk the quay." }],
         priorTiming: { level: "yellow", reason: "Pilot." },
+        rules: [{ id: "ban", label: "Land ban", body: "No new land clusters." }],
       },
-      leftoverSnap
+      { ...leftoverSnap, briefMd: "Land clusters are banned in this place." }
     );
     assert.equal(ctx.acceptedArguments[0].id, "arg");
     assert.equal(ctx.grounding.includes("Night crews"), false);
     assert.equal(ctx.priorTiming.level, "yellow");
+    assert.match(ctx.briefMd, /Land clusters are banned/);
+    assert.equal(ctx.rules[0].id, "ban");
+  });
+
+  it("score-pathway sends the quest brief", () => {
+    const ctx = leanCoInventContext(
+      "score-pathway",
+      { grounding: "Inspection is granted." },
+      { ...leftoverSnap, briefMd: "The night shift cannot add staff." }
+    );
+    assert.match(ctx.briefMd, /cannot add staff/);
   });
 });

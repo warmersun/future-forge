@@ -27,6 +27,7 @@ import {
   FAST_EVAL_MODES,
   SCORE_PATHWAY_SYSTEM,
   ASSESS_FEASIBILITY_SYSTEM,
+  FACT_CHECK_ARGUMENT_SYSTEM,
   EVALUATE_CONVERGENCE_SYSTEM,
   IDEA_SPARKS_SYSTEM,
   POSE_CHALLENGE_SYSTEM,
@@ -200,6 +201,9 @@ describe("FAST_EVAL_MODES", () => {
     assert.equal(IDEA_SPARKS_SYSTEM.includes(WORLD_CLOCK_CONTEXT_LINE), true);
     assert.equal(POSE_CHALLENGE_SYSTEM.includes("worldClock"), false);
     assert.equal(SCORE_PATHWAY_SYSTEM.includes("worldClock"), false);
+    assert.match(SCORE_PATHWAY_SYSTEM, /hard limit in briefing or in mission\.rules wins/);
+    assert.match(ASSESS_FEASIBILITY_SYSTEM, /hard limit in briefing or in rules wins/);
+    assert.match(ASSESS_FEASIBILITY_SYSTEM, /outranks a not_yet worldClock row/);
     assert.match(SEARCH_SYSTEM_LINE, /cannot override worldClock/);
   });
 });
@@ -938,8 +942,13 @@ describe("fact-check-argument", () => {
     assert.equal(payload.mode, "fact-check-argument");
     assert.match(payload.claim, /quay sensor/);
     assert.equal(payload.assessments.timings[0].level, "yellow");
-    assert.match(payload.grounding, /Inspection is granted/);
-    assert.equal(payload.grounding.includes("quay sensor"), false);
+    assert.equal("grounding" in payload, false);
+    assert.equal("place" in payload, false);
+    assert.equal("sourceConstraint" in payload, false);
+    assert.equal("sourceInquiry" in payload, false);
+    assert.equal("worldClock" in payload, false);
+    assert.equal(FACT_CHECK_ARGUMENT_SYSTEM.includes("grounding"), false);
+    assert.equal(FACT_CHECK_ARGUMENT_SYSTEM.includes("worldClock"), false);
   });
 
   it("carries accepted arguments apart from quest grounding", () => {
@@ -949,22 +958,30 @@ describe("fact-check-argument", () => {
     const score = buildFastPayload("score-pathway", {
       pathway: { inventions: [{ techId: "ai", howText: "Sensors.", year: 2026 }] },
       grounding: "Inspection is granted.",
+      briefMd: "Land clusters are banned in this place.",
+      rules: [{ id: "ban", kind: "law", label: "Land ban", body: "No new land clusters.", status: "active" }],
       acceptedArguments,
       year: 2026,
     });
     assert.deepEqual(score.acceptedArguments, acceptedArguments);
     assert.equal(String(score.grounding).includes("Night crews"), false);
+    assert.match(score.briefing, /Land clusters are banned/);
+    assert.equal(score.mission.rules[0].label, "Land ban");
     const timing = buildFastPayload("assess-feasibility", {
       inventionHow: "Sensors on the quay.",
       selectedTechIds: ["ai"],
       availableTechs: [{ id: "ai", name: "AI", summary: "Models." }],
       year: 2026,
       grounding: "Inspection is granted.",
+      briefMd: "Land clusters are banned in this place.",
+      rules: [{ id: "ban", kind: "law", label: "Land ban", body: "No new land clusters.", status: "active" }],
       acceptedArguments,
       priorTiming: { level: "yellow", reason: "Pilot." },
     });
     assert.deepEqual(timing.acceptedArguments, acceptedArguments);
     assert.equal(String(timing.grounding).includes("Night crews"), false);
+    assert.match(timing.briefing, /Land clusters are banned/);
+    assert.equal(timing.rules[0].label, "Land ban");
     assert.equal(timing.priorTiming.level, "yellow");
   });
 

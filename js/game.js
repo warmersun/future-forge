@@ -13027,6 +13027,7 @@ function leanCoInventContext(mode, extra = {}) {
       place: state.mission?.place,
       globalId: state.global?.id || state.mission?.globalId || null,
       grounding: state.mission?.grounding || null,
+      briefMd: state.mission?.briefMd || "",
       ...fields,
       missionTitle: state.mission?.title || "",
       missionScene: scene,

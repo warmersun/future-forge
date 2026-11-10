@@ -99,9 +99,11 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
   };
 
   if (mode === "score-pathway") {
+    const briefMd = String(rest.briefMd ?? snap.briefMd ?? "").trim();
     return {
       ...base,
       challenge: snap.challenge || null,
+      ...(briefMd ? { briefMd: briefMd.slice(0, 1500) } : {}),
     };
   }
 
@@ -175,6 +177,9 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
       availableTechs: techs,
       priorTiming: rest.priorTiming || null,
     };
+    const briefMd = String(rest.briefMd ?? snap.briefMd ?? "").trim();
+    if (briefMd) out.briefMd = briefMd.slice(0, 1500);
+    if (Array.isArray(rest.rules) && rest.rules.length) out.rules = rest.rules;
     if (Object.prototype.hasOwnProperty.call(rest, "inventionImpact")) {
       const impact = rest.inventionImpact;
       if (String(impact || "").trim()) out.inventionImpact = impact;

@@ -87,7 +87,8 @@ describe("searchToolsForMode", () => {
     assert.equal(SEARCH_TOOLS[0].type, "web_search");
     assert.equal(SEARCH_TOOLS[1].type, "x_search");
     assert.equal(searchSystemLineForMode("fact-check-argument"), SEARCH_FACT_CHECK_LINE);
-    assert.match(SEARCH_FACT_CHECK_LINE, /worldClock/);
+    assert.doesNotMatch(SEARCH_FACT_CHECK_LINE, /worldClock|grounding/);
+    assert.match(SEARCH_FACT_CHECK_LINE, /search results are the whole check/);
     assert.doesNotMatch(SEARCH_FACT_CHECK_LINE, /score green/);
     assert.equal(searchSystemLineForMode("assess-feasibility"), SEARCH_SYSTEM_LINE);
   });

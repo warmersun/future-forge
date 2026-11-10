@@ -229,15 +229,15 @@ describe("co-invent local engine", () => {
     assert.equal(one.proposals.howTarget, "pathway");
   });
 
-  it("fact-check accepts only a long excerpt already in the grounding", () => {
+  it("fact-check rejects every case when the live check is off", () => {
     const grounding =
       "Visible-parcel inspection and sorting instructions are granted from 2026.";
-    const accepted = localCoInvent({
+    const copied = localCoInvent({
       mode: "fact-check-argument",
       context: { claim: grounding, grounding },
     });
-    assert.equal(accepted.verdict, "accept");
-    assert.match(accepted.reason, /already in the Quest grounding/);
+    assert.equal(copied.verdict, "reject");
+    assert.match(copied.reason, /Live fact-check is off/);
     const novel = localCoInvent({
       mode: "fact-check-argument",
       context: {
@@ -247,11 +247,6 @@ describe("co-invent local engine", () => {
     });
     assert.equal(novel.verdict, "reject");
     assert.match(novel.reason, /Live fact-check is off/);
-    const short = localCoInvent({
-      mode: "fact-check-argument",
-      context: { claim: "Visible-parcel inspection", grounding },
-    });
-    assert.equal(short.verdict, "reject");
   });
 
   it("drops howTechId that is not in the catalog", () => {

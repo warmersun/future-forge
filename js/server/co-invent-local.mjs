@@ -762,23 +762,8 @@ function teachingFor(stack, map, limit = 3) {
   });
 }
 
-function localFactCheckArgument(context) {
-  const claim = String(context?.claim || "").trim();
-  const grounding = String(
-    context?.grounding || context?.mission?.grounding || ""
-  ).trim();
-  const slice = claim.slice(0, 80).toLowerCase();
-  const hit = claim.length >= 40 && grounding.toLowerCase().includes(slice);
-  if (hit) {
-    return {
-      source: "local",
-      verdict: "accept",
-      reason: "This case restates a fact already in the Quest grounding.",
-      message: "This case restates a fact already in the Quest grounding.",
-    };
-  }
-  const reason =
-    "Live fact-check is off, and this claim is not already in the Quest grounding.";
+function localFactCheckArgument() {
+  const reason = "Live fact-check is off. This case was not checked.";
   return { source: "local", verdict: "reject", reason, message: reason };
 }
 

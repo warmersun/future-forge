@@ -43,7 +43,7 @@ export const SEARCH_SYSTEM_LINE =
   "Use web_search and x_search to check whether THIS architecture and payload are already demonstrated in year. If they are, score green (or write a real spark). Do not let smaller grounding examples (hoppers, medical boxes) cap payload or force yellow/red. Quest/clinic fit is not timing. Honor only explicit grounding contradictions (limits, denials, not-yet). Search cannot override worldClock: a not_yet row stays ahead in this game's calendar even if search finds a lab demo.";
 
 export const SEARCH_FACT_CHECK_LINE =
-  "Use web_search and x_search to check whether THIS case is already true in year. Accept only if the facts hold and they bear on a listed assessment. Search cannot override worldClock: a not_yet row stays ahead even if search finds a lab demo. Search cannot override an explicit denial in grounding.";
+  "Use web_search and x_search to check whether THIS case is already true in year. Accept only if the facts hold and they bear on a listed assessment. Your knowledge and these search results are the whole check.";
 
 /**
  * Search instruction appended for a mode. Fact-check does not reuse the timing line.
