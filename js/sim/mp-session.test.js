@@ -1615,6 +1615,27 @@ describe("mp-session pay_ap", () => {
     assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
   });
 
+  it("minting an argument costs 1 AP even after the season tax is paid", () => {
+    let s = started();
+    const ap0 = s.invents["seat-0"].ap;
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "chat" },
+    }).session;
+    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "fact-check-argument" },
+    }).session;
+    assert.equal(s.invents["seat-0"].ap, ap0 - 2);
+    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "fact-check-argument" },
+    }).session;
+    assert.equal(s.invents["seat-0"].ap, ap0 - 3);
+  });
+
   it("judge then chat still costs 1 AP for the first thinking ask", () => {
     let s = started();
     const ap0 = s.invents["seat-0"].ap;

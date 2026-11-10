@@ -40,8 +40,6 @@ import {
   isScaffoldComplete,
 } from "../invent-scaffold.js";
 import { termHtml } from "../glossary.js";
-import { isTechDrawerMode } from "../tech-drawer.js";
-
 /** Plain words for a tile's world (bits / atoms / both). */
 const WORLD_PLAIN = {
   bits: "bits (information)",
@@ -62,6 +60,10 @@ import {
   seedCrisisTiles,
   mintInventionTile,
   mintRdTile,
+  mintArgumentTile,
+  unplacedArgumentTiles,
+  findArgumentSpawn,
+  discardTile,
   addTile,
   removeUnplacedTiles,
   unplacedRdTiles,
@@ -92,7 +94,7 @@ import {
   concernPoseText,
   concernReplyText,
   setConcernReply,
-} from "./board-state.js?v=crisis-role-3";
+} from "./board-state.js?v=argument-1";
 import {
   tileTimingCacheKey,
   timingLevelToPct,
@@ -130,23 +132,40 @@ import {
   listInventionPathways,
   pathwayContentFingerprint,
   pathwayHighlight,
+  acceptedArgumentsTouchingTile,
+  acceptedArgumentsForPathway,
+  settledAssessments,
   islandHowKey,
   resolveIslandHow,
   islandHowForAi,
   setIslandHow,
   rekeyIslandHow,
   rulesWeatherKey,
-} from "./evaluate.js?v=crisis-role-3";
+} from "./evaluate.js?v=argument-1";
 import { scopeCrisisScore } from "./crisis-delta.js?v=crisis-role-3";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
-import { createHexBoardUi } from "./board-ui.js?v=pathway-desc-1";
+import { createHexBoardUi, defaultSlots } from "./board-ui.js?v=argument-1";
 import { polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
 import { semanticDigest } from "../semantic-digest.js";
 import { predictionsContextKey, provisionalScenarioTiming } from "../companion-context.js";
 import { attachReadAloud, stopReadAloudFor } from "../read-aloud.js";
+
+/**
+ * Mint argument is on only in free write, once a pathway is on the board,
+ * and while no fact-check is in flight. An emTech focus is not required.
+ * @param {{ freeWrite?: boolean, hasPathway?: boolean, busy?: boolean }} [opts]
+ */
+export function canMintArgument(opts = {}) {
+  return Boolean(opts.freeWrite) && Boolean(opts.hasPathway) && !opts.busy;
+}
+
+/** Every argument mint costs 1 AP when Attention is on. Not the season thinking tax. */
+export function mintArgumentButtonLabel(apOn) {
+  return apOn ? "Mint argument · 1 AP" : "Mint argument";
+}
 
 /**
  * @param {object} api — callbacks into game.js. getRunWorld returns state.runWorld
@@ -168,7 +187,10 @@ export function createHexWorkshop(api) {
   const timingCache = new Map();
   let ideasBusy = false;
   let mintBusy = false;
+  let argumentBusy = false;
   let summonBusy = false;
+  /** How-it-works mode: false = two-blank scaffold (default), true = free textarea. Per Quest. */
+  let freeWrite = false;
   let summonJob = null;
   /** @type {Map<string, { ids: string[], titles: string[] }>} */
   const sparkBatches = new Map();
@@ -262,6 +284,7 @@ export function createHexWorkshop(api) {
 
   function ideaCardsForFocus() {
     const rd = unplacedRdTiles(board());
+    const args = unplacedArgumentTiles(board());
     const waiting = unplacedInventionsForTech(board(), focusedTechId);
     const batchIds = ensureSparkBatch(focusedTechId).ids || [];
     const rank = new Map(batchIds.map((id, i) => [id, i]));
@@ -271,7 +294,7 @@ export function createHexWorkshop(api) {
       if (ai !== bi) return ai - bi;
       return String(a.id).localeCompare(String(b.id));
     });
-    return [...rd, ...inventions];
+    return [...rd, ...args, ...inventions];
   }
 
   function syncCreateBusyUi(preferKind) {
@@ -300,6 +323,7 @@ export function createHexWorkshop(api) {
     const refreshBtn = document.querySelector("#btn-refresh-ideas");
     const mintBtn = document.querySelector("#btn-mint-custom");
     const rdBtn = document.querySelector("#btn-mint-rd");
+    const argBtn = document.querySelector("#btn-mint-argument");
     const how = document.querySelector("#hex-how-text");
     const traySparks = Boolean(focusedTechId && hasUnplacedSparks(focusedTechId));
     if (askBtn) {
@@ -307,6 +331,14 @@ export function createHexWorkshop(api) {
       askBtn.disabled = busy || !focusedTechId || traySparks;
     }
     if (mintBtn) mintBtn.disabled = busy || !focusedTechId;
+    if (argBtn) {
+      argBtn.disabled = !canMintArgument({
+        freeWrite,
+        hasPathway: listInventionPathways(board()).length > 0,
+        busy: argumentBusy,
+      });
+      argBtn.textContent = mintArgumentButtonLabel(Boolean(api.apEnabled?.()));
+    }
     if (rdBtn) {
       rdBtn.disabled = busy;
       rdBtn.textContent = mintRdLabel();
@@ -317,7 +349,7 @@ export function createHexWorkshop(api) {
       colBtn.hidden = !signedIn;
       colBtn.disabled = busy || !signedIn;
     }
-    if (how) how.disabled = busy || !focusedTechId;
+    if (how) how.disabled = busy || (!focusedTechId && !freeWrite);
     if (refreshBtn) {
       const show = Boolean(focusedTechId && hasSparkBatch(focusedTechId));
       refreshBtn.hidden = !show;
@@ -592,10 +624,12 @@ export function createHexWorkshop(api) {
         return api.canOccupy(tile, q, r);
       },
       canLift: (tile) => {
+        if (tile?.verdictPending) return "Wait for the fact-check.";
         if (!api.canLift) return true;
         return api.canLift(tile);
       },
       canDiscard: (tile) => {
+        if (tile?.verdictPending) return "Wait for the fact-check.";
         if (!api.canDiscard) return true;
         return api.canDiscard(tile);
       },
@@ -1097,6 +1131,16 @@ export function createHexWorkshop(api) {
       } else if (t.kind === TILE_KIND.rd) {
         const onField = t.q != null && t.r != null;
         meta.textContent = `R&D · ${formatFactor(t.factor)}${onField ? " · on board" : " · in tray"}`;
+      } else if (t.kind === TILE_KIND.argument) {
+        const onField = t.q != null && t.r != null;
+        const state = t.verdictPending
+          ? "checking"
+          : t.verdict === "accept"
+            ? "accepted"
+            : t.verdict === "reject"
+              ? "rejected"
+              : "unsettled";
+        meta.textContent = `Argument · ${state}${onField ? " · on board" : " · in tray"}`;
       } else {
         const tech = t.techId ? techById(t.techId) : null;
         const onField = t.q != null && t.r != null;
@@ -1331,6 +1375,35 @@ export function createHexWorkshop(api) {
         if (actions.length) {
           parts.push(`<p class="hex-tile-popup-actions">${actions.join("")}</p>`);
         }
+      } else if (t.kind === TILE_KIND.argument) {
+        const claim = String(t.howText || "").trim();
+        if (claim) {
+          parts.push(`<p><strong>Case</strong></p><p>${escapeHtml(claim)}</p>`);
+        } else {
+          parts.push(`<p class="muted">No case written.</p>`);
+        }
+        if (t.verdictPending) {
+          parts.push(`<p class="muted">Checking this claim…</p>`);
+        } else if (t.verdict === "accept" || t.verdict === "reject") {
+          parts.push(argumentVerdictHtml(t.verdict, t.reason));
+        }
+        if (!t.verdictPending) {
+          const actions = [];
+          const canEdit = !api.canEditBoard || Boolean(api.canEditBoard());
+          if (canEdit && t.q != null && t.r != null) {
+            actions.push(
+              `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-lift" data-lift-id="${escapeHtml(t.id)}">Lift off board</button>`
+            );
+          }
+          if (canEdit) {
+            actions.push(
+              `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-discard" data-discard-id="${escapeHtml(t.id)}">Throw away</button>`
+            );
+          }
+          if (actions.length) {
+            parts.push(`<p class="hex-tile-popup-actions">${actions.join("")}</p>`);
+          }
+        }
       } else {
         if (t.howText) {
           parts.push(`<p><strong>How it works</strong></p><p>${escapeHtml(t.howText)}</p>`);
@@ -1488,9 +1561,6 @@ export function createHexWorkshop(api) {
     renderIdeaCards();
   }
 
-  /** How-it-works mode: false = two-blank scaffold (default), true = free textarea. Per Quest. */
-  let freeWrite = false;
-
   function scaffoldEls() {
     return {
       wrap: document.querySelector("#hex-scaffold"),
@@ -1554,8 +1624,17 @@ export function createHexWorkshop(api) {
       els.modeBtn.setAttribute("aria-pressed", freeWrite ? "true" : "false");
     }
     if (els.label) {
-      els.label.textContent = freeWrite ? "How it works" : "How it works — scarce to abundant";
+      els.label.textContent = freeWrite
+        ? tech
+          ? "How it works"
+          : "Your case"
+        : "How it works — scarce to abundant";
       els.label.htmlFor = freeWrite ? "hex-how-text" : "hex-scaffold-scarce";
+    }
+    if (els.ta && freeWrite) {
+      els.ta.placeholder = tech
+        ? "How it works, or the case against an assessment…"
+        : "The case against an assessment — then Mint argument.";
     }
     paintScaffoldPreview();
   }
@@ -1577,6 +1656,7 @@ export function createHexWorkshop(api) {
     }
     freeWrite = Boolean(on);
     syncScaffold(tech);
+    syncCreateBusyUi();
   }
 
   function updateCreatePanel() {
@@ -1601,20 +1681,12 @@ export function createHexWorkshop(api) {
         const place = api.getPlace?.() || "this place";
         hint.textContent = `Start from what is scarce in ${place}. Ask for ideas, or fill the two blanks. World: ${WORLD_PLAIN[pol] || pol}.`;
       } else {
-        hint.textContent = isTechDrawerMode()
-          ? "Open Emerging tech, then start with “For this place”."
-          : "Pick an emTech on the left — start with “For this place”.";
+        hint.textContent =
+          "Pick a technology, or once a pathway is on the board, Write freely and mint an argument against an assessment.";
       }
     }
     syncScaffold(tech);
-    if (body) {
-      const b = board();
-      const hasRd = unplacedRdTiles(b).length > 0;
-      const hasTrayInvent = Object.values(b?.tiles || {}).some(
-        (t) => t && t.kind === TILE_KIND.invention && (t.q == null || t.r == null)
-      );
-      body.hidden = !focusedTechId && !hasRd && !hasTrayInvent;
-    }
+    if (body) body.hidden = false;
     syncCreateBusyUi();
   }
 
@@ -1679,6 +1751,65 @@ export function createHexWorkshop(api) {
         toss.type = "button";
         toss.className = "hex-idea-card-discard";
         toss.setAttribute("aria-label", "Throw away this R&D tile");
+        toss.title = "Throw away";
+        toss.textContent = "×";
+        toss.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        toss.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          throwAwayTile(t.id);
+        });
+        card.appendChild(toss);
+        card.addEventListener("pointerdown", (e) => {
+          if (e.button != null && e.button !== 0) return;
+          ensureUi()?.startTrayDrag(e, t.id, { cardEl: card });
+        });
+        host.appendChild(card);
+        continue;
+      }
+      if (t.kind === TILE_KIND.argument) {
+        const accepted = t.verdict === "accept";
+        const rejected = t.verdict === "reject";
+        const card = document.createElement("article");
+        card.className = "hex-idea-card is-argument";
+        card.setAttribute("role", "listitem");
+        card.dataset.tileId = t.id;
+        card.dataset.id = t.id;
+        const claim = String(t.howText || "Argument").trim();
+        card.title = accepted
+          ? `Accepted — ${claim}`
+          : rejected
+            ? `Rejected — ${claim}`
+            : claim;
+        const visual = document.createElement("div");
+        visual.className = `hex-idea-card-visual hex-idea-card-visual-argument ${
+          accepted ? "is-accept" : rejected ? "is-reject" : "is-pending"
+        }`;
+        visual.textContent = accepted ? "✓" : rejected ? "✕" : "…";
+        visual.setAttribute("aria-hidden", "true");
+        card.appendChild(visual);
+        const body = document.createElement("div");
+        body.className = "hex-idea-card-body";
+        const meta = document.createElement("p");
+        meta.className = "hex-idea-card-meta";
+        meta.textContent = accepted ? "Accepted" : rejected ? "Rejected" : "Checking";
+        body.appendChild(meta);
+        const title = document.createElement("h4");
+        title.className = "hex-idea-card-title";
+        title.textContent = claim.length > 160 ? `${claim.slice(0, 157)}…` : claim;
+        body.appendChild(title);
+        const how = document.createElement("p");
+        how.className = "hex-idea-card-how";
+        how.textContent = String(t.reason || "").trim() || "Dock this against an invention.";
+        body.appendChild(how);
+        card.appendChild(body);
+        const toss = document.createElement("button");
+        toss.type = "button";
+        toss.className = "hex-idea-card-discard";
+        toss.setAttribute("aria-label", "Throw away this argument");
         toss.title = "Throw away";
         toss.textContent = "×";
         toss.addEventListener("pointerdown", (e) => {
@@ -1939,6 +2070,25 @@ export function createHexWorkshop(api) {
           description: paths.map((comp) => pathwayFullText(b, comp)).filter(Boolean).join("\n\n"),
           detail: paths.length ? `Applies ${factor} to this pathway.` : "Not applied to a pathway yet.",
         });
+      } else if (tile?.kind === TILE_KIND.argument) {
+        const pending = Boolean(tile.verdictPending);
+        const state = pending
+          ? "Checking this claim…"
+          : tile.verdict === "accept"
+            ? "Accepted."
+            : tile.verdict === "reject"
+              ? "Rejected."
+              : "On the board.";
+        const touching = neighborTiles(b, tile.id).some(
+          (n) => n.kind === TILE_KIND.invention
+        );
+        appendCaptainLog({
+          kind: "action",
+          title: "Placed an argument",
+          detail: touching
+            ? `${state} Touching a pathway.`
+            : `${state} Not touching a pathway yet.`,
+        });
       } else if (tile?.kind === TILE_KIND.invention) {
         const comp = inventionComponent(b, tile.id);
         const applied = touchDetail(b, comp.length ? [comp] : []);
@@ -2014,7 +2164,38 @@ export function createHexWorkshop(api) {
     });
   }
 
+  function isAcceptedArgumentTile(tile) {
+    return Boolean(
+      tile &&
+        tile.kind === TILE_KIND.argument &&
+        tile.verdict === "accept" &&
+        !tile.verdictPending
+    );
+  }
+
+  /** Accepted argument dock/lift/discard retimes the invention tiles it touches. */
+  function retimeAcceptedArgumentNeighbors(beforeBoard, afterBoard, tileId) {
+    const before = beforeBoard?.tiles?.[tileId];
+    const after = afterBoard?.tiles?.[tileId];
+    if (!isAcceptedArgumentTile(before) && !isAcceptedArgumentTile(after)) return;
+    const ids = new Set();
+    for (const src of [beforeBoard, afterBoard]) {
+      if (!src) continue;
+      for (const n of neighborTiles(src, tileId)) {
+        if (n.kind === TILE_KIND.invention) ids.add(n.id);
+      }
+    }
+    for (const id of ids) {
+      const live = board()?.tiles?.[id];
+      if (!live || live.kind !== TILE_KIND.invention) continue;
+      if (live.q == null || live.r == null) continue;
+      timingCache.delete(id);
+      scheduleTileTiming(id);
+    }
+  }
+
   function afterBoardChange(tileId, kind, extra = {}) {
+    const beforeBoard = extra?.beforeBoard || null;
     logBoardMove(tileId, kind, extra);
     let b = pruneStaleConvergences(board());
     setBoard(b);
@@ -2027,10 +2208,12 @@ export function createHexWorkshop(api) {
         console.warn("[hex convergence]", e)
       );
     }
+    retimeAcceptedArgumentNeighbors(beforeBoard, board(), tileId);
     if (kind === "discard" && inspectTileId === tileId) {
       hideTilePopup();
     }
     syncPathwayScores();
+    syncCreateBusyUi();
     api.onBoardPainted?.();
   }
 
@@ -2472,6 +2655,10 @@ export function createHexWorkshop(api) {
                 description: String(t.description || "").slice(0, 400),
               })),
             concerns,
+            ...(() => {
+              const cases = acceptedArgumentsForPathway(b, inventions);
+              return cases.length ? { acceptedArguments: cases } : {};
+            })(),
             signal,
           });
           if (signal?.aborted) return;
@@ -2623,7 +2810,7 @@ export function createHexWorkshop(api) {
     const tile = board()?.tiles?.[tileId];
     if (!tile || tile.kind !== TILE_KIND.invention) return;
     const year = api.getYear();
-    const key = tileTimingCacheKey(tile, year, sourceKeyNow());
+    const key = tileTimingCacheKey(tile, year, sourceKeyNow(), board());
     const cached = timingCache.get(tileId);
     if (cached?.forKey === key || tile.timingForKey === key) {
       if (
@@ -2701,7 +2888,7 @@ export function createHexWorkshop(api) {
   function timingStillCurrent(tileId, gen, key, isCurrent) {
     const live = board()?.tiles?.[tileId];
     return isCurrent() && timingGens.get(tileId) === gen && live &&
-      tileTimingCacheKey(live, api.getYear(), sourceKeyNow()) === key;
+      tileTimingCacheKey(live, api.getYear(), sourceKeyNow(), board()) === key;
   }
 
   async function runTileTiming(tileId, gen) {
@@ -2711,7 +2898,18 @@ export function createHexWorkshop(api) {
     if (!tile || tile.kind !== TILE_KIND.invention) return;
     const year = api.getYear();
     const sourceKey = sourceKeyNow();
-    const key = tileTimingCacheKey(tile, year, sourceKey);
+    const key = tileTimingCacheKey(tile, year, sourceKey, board());
+    const cases = acceptedArgumentsTouchingTile(board(), tileId);
+    const prior =
+      tile.timingForKey &&
+      (tile.timingLevel === "red" ||
+        tile.timingLevel === "yellow" ||
+        tile.timingLevel === "green")
+        ? {
+            level: tile.timingLevel,
+            reason: String(tile.timingReason || "").slice(0, 400),
+          }
+        : null;
     if (!api.coInvent) {
       const local = localTileTiming(tile, year);
       if (!timingStillCurrent(tileId, gen, key, isCurrent)) return;
@@ -2725,6 +2923,8 @@ export function createHexWorkshop(api) {
         year,
         place: api.getPlace?.() || "",
         grounding: api.getGrounding?.() || null,
+        ...(cases.length ? { acceptedArguments: cases } : {}),
+        ...(prior ? { priorTiming: prior } : {}),
       });
       if (!timingStillCurrent(tileId, gen, key, isCurrent)) return;
       const rawLevel = data.timing?.level || data.timingLevel;
@@ -3021,6 +3221,131 @@ export function createHexWorkshop(api) {
     });
     api.onBoardPainted?.();
     api.commitBoard?.(b);
+  }
+
+  function argumentVerdict(data) {
+    const raw = String(data?.verdict || "").toLowerCase();
+    return raw === "accept" || raw === "reject" ? raw : null;
+  }
+
+  function removePendingArgument(id, claim) {
+    const live = board()?.tiles?.[id];
+    if (!live || live.kind !== TILE_KIND.argument || !live.verdictPending) return;
+    const res = discardTile(board(), id);
+    if (!res.ok) return;
+    setBoard(res.board);
+    ensureUi()?.render();
+    renderTray();
+    if (inspectTileId === id) hideTilePopup();
+    const box = document.querySelector("#hex-how-text");
+    if (box && claim && !String(box.value || "").trim()) box.value = claim;
+    syncCreateBusyUi();
+    api.onBoardPainted?.();
+    api.commitBoard?.(res.board);
+  }
+
+  function settleArgument(id, verdict, reason) {
+    const before = cloneBoard(board());
+    const next = cloneBoard(board());
+    const tile = next.tiles[id];
+    if (!tile || tile.kind !== TILE_KIND.argument) return;
+    tile.verdictPending = false;
+    tile.verdict = verdict;
+    tile.reason = String(reason || "").slice(0, 400);
+    setBoard(next);
+    ensureUi()?.render();
+    renderTray();
+    if (verdict === "accept") {
+      retimeAcceptedArgumentNeighbors(before, next, id);
+      syncPathwayScores();
+    }
+    if (inspectTileId === id) showTilePopup(id);
+    appendCaptainLog({
+      kind: "assessment",
+      title: verdict === "accept" ? "Argument accepted" : "Argument rejected",
+      detail: tile.reason,
+      tone: verdict === "accept" ? "green" : "red",
+    });
+    api.onBoardPainted?.();
+    api.commitBoard?.(board());
+  }
+
+  async function mintArgument() {
+    if (
+      !canMintArgument({
+        freeWrite,
+        hasPathway: listInventionPathways(board()).length > 0,
+        busy: argumentBusy,
+      })
+    ) {
+      return;
+    }
+    if (api.canEditBoard && !api.canEditBoard()) {
+      api.flashToast?.("You can't add ideas on this board right now.");
+      return;
+    }
+    const ta = document.querySelector("#hex-how-text");
+    const claim = String(ta?.value || "").trim();
+    if (claim.length < 12) {
+      api.flashToast?.("Write a bit more of the case.");
+      return;
+    }
+    const pay = api.spendArgumentAp?.();
+    if (pay && pay.ok === false) {
+      api.flashToast?.(pay.reason || "Not enough Attention to check that case.");
+      return;
+    }
+    const year = api.getYear?.() || 2026;
+    const spot = findArgumentSpawn(board(), defaultSlots());
+    const tile = mintArgumentTile({
+      howText: claim,
+      year,
+      q: spot?.q,
+      r: spot?.r,
+      verdictPending: true,
+    });
+    const placed = addTile(board(), tile);
+    const rec = setBoard(placed);
+    if (rec && rec.ok === false) {
+      api.flashToast?.("Could not place that argument.");
+      return;
+    }
+    if (ta) ta.value = "";
+    argumentBusy = true;
+    syncCreateBusyUi();
+    ensureUi()?.render();
+    appendCaptainLog({
+      kind: "action",
+      title: "Minted an argument",
+      detail: "Checking this claim…",
+    });
+    api.onBoardPainted?.();
+    api.commitBoard?.(board());
+    try {
+      const data = api.coInvent
+        ? await api.coInvent("fact-check-argument", "[Fact-check argument]", {
+            claim,
+            assessments: settledAssessments(board()),
+            year,
+            place: api.getPlace?.() || "",
+            grounding: api.getGrounding?.() || null,
+          })
+        : null;
+      const verdict = argumentVerdict(data);
+      if (!verdict) {
+        removePendingArgument(tile.id, claim);
+        api.flashToast?.("Fact-check did not return. The argument was removed.");
+        return;
+      }
+      settleArgument(tile.id, verdict, data?.reason || "");
+    } catch (e) {
+      console.warn("[fact-check-argument]", e);
+      removePendingArgument(tile.id, claim);
+      api.flashToast?.("Fact-check failed. The argument was removed.");
+    } finally {
+      argumentBusy = false;
+      syncCreateBusyUi();
+    }
   }
 
   function prefersReducedMotion() {
@@ -3854,6 +4179,9 @@ export function createHexWorkshop(api) {
     document.querySelector("#btn-mint-rd")?.addEventListener("click", () => {
       mintRd();
     });
+    document.querySelector("#btn-mint-argument")?.addEventListener("click", () => {
+      mintArgument().catch((e) => console.warn(e));
+    });
     document.querySelector("#btn-collector-cards")?.addEventListener("click", () => {
       showCollection().catch((e) => console.warn("[collection]", e));
     });
@@ -3964,11 +4292,15 @@ export function createHexWorkshop(api) {
       freeWrite = false;
       clearScaffold();
       syncScaffold(focusedTechId ? techById(focusedTechId) : null);
+      syncCreateBusyUi();
     },
     /** Show the two blanks. Does not clear text already in them. */
     useScaffold: () => {
       if (freeWrite) setFreeWrite(false);
-      else syncScaffold(focusedTechId ? techById(focusedTechId) : null);
+      else {
+        syncScaffold(focusedTechId ? techById(focusedTechId) : null);
+        syncCreateBusyUi();
+      }
     },
     hasSparkBatch,
     isSummonBusy: () => summonBusy,
@@ -4197,6 +4529,30 @@ export function concernWhyBlockHtml(rows) {
       }</p>`
     : "";
   return `<div class="hex-tile-popup-why">${rowsHtml}${judging}</div>`;
+}
+
+const ARGUMENT_CHECK_SVG =
+  `<svg class="hex-arg-mark" viewBox="0 0 16 16" aria-hidden="true" focusable="false">` +
+  `<polyline points="2.5,8.5 6.2,12.2 13.5,3.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>` +
+  `</svg>`;
+
+const ARGUMENT_CROSS_SVG =
+  `<svg class="hex-arg-mark" viewBox="0 0 16 16" aria-hidden="true" focusable="false">` +
+  `<line x1="3.5" y1="3.5" x2="12.5" y2="12.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>` +
+  `<line x1="12.5" y1="3.5" x2="3.5" y2="12.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>` +
+  `</svg>`;
+
+/** Popup line for a settled argument: colored check or cross, then the one-sentence reason. */
+export function argumentVerdictHtml(verdict, reason) {
+  const accepted = verdict === "accept";
+  if (!accepted && verdict !== "reject") return "";
+  const why = String(reason || "").trim();
+  return (
+    `<p class="hex-arg-verdict ${accepted ? "is-accept" : "is-reject"}">` +
+    `${accepted ? ARGUMENT_CHECK_SVG : ARGUMENT_CROSS_SVG}` +
+    `<span><strong>${accepted ? "Accepted" : "Rejected"}</strong>` +
+    `${why ? ` — ${escapeHtml(why)}` : ""}</span></p>`
+  );
 }
 
 function escapeHtml(s) {

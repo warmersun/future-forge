@@ -237,3 +237,41 @@ describe("leanCoInventContext idea-sparks sees the problem", () => {
     assert.equal("crisisMeters" in ctx, false);
   });
 });
+
+describe("leanCoInventContext arguments", () => {
+  it("fact-check sends the claim and assessments", () => {
+    const ctx = leanCoInventContext(
+      "fact-check-argument",
+      {
+        claim: "The inspection grant already covers the night shift.",
+        assessments: { timings: [{ tileId: "a", level: "red" }], pathways: [] },
+        year: 2026,
+        place: "Kiln Ferry",
+        grounding: "Inspection is granted.",
+      },
+      leftoverSnap
+    );
+    assert.match(ctx.claim, /night shift/);
+    assert.equal(ctx.assessments.timings[0].level, "red");
+    assert.equal(ctx.grounding, "Inspection is granted.");
+    assert.equal(ctx.focusTechId, undefined);
+    assert.equal(ctx.claim.includes("LeftoverName"), false);
+  });
+
+  it("assess-feasibility keeps accepted arguments beside grounding", () => {
+    const ctx = leanCoInventContext(
+      "assess-feasibility",
+      {
+        inventionHow: "Sensors.",
+        selectedTechIds: ["ai"],
+        grounding: "Inspection is granted.",
+        acceptedArguments: [{ id: "arg", claim: "Night crews already walk the quay." }],
+        priorTiming: { level: "yellow", reason: "Pilot." },
+      },
+      leftoverSnap
+    );
+    assert.equal(ctx.acceptedArguments[0].id, "arg");
+    assert.equal(ctx.grounding.includes("Night crews"), false);
+    assert.equal(ctx.priorTiming.level, "yellow");
+  });
+});

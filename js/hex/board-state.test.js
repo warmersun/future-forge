@@ -28,6 +28,9 @@ import {
   boardCrisisRoles,
   mintInventionTile,
   mintRdTile,
+  mintArgumentTile,
+  unplacedArgumentTiles,
+  findArgumentSpawn,
   unplacedRdTiles,
   putConvergence,
   pruneStaleConvergences,
@@ -48,6 +51,7 @@ import {
   ensureConcernRoster,
   sampleConcernRoster,
   neighborTiles,
+  neighbor,
   boardHolds,
   techIdsFromBoard,
   creditedTechIdsFromBoard,
@@ -962,6 +966,71 @@ test("mintRdTile rolls a legal factor and stays in the tray", () => {
   const placed = placeTile(board, "rd1", 0, 0);
   assert.equal(placed.ok, true);
   assert.equal(unplacedRdTiles(placed.board).length, 0);
+});
+
+test("mintArgumentTile stays pending until a verdict and docks on any face", () => {
+  const tile = mintArgumentTile({
+    id: "arg1",
+    howText: "The night crew already walks this quay.",
+    year: 2027,
+  });
+  assert.equal(tile.kind, TILE_KIND.argument);
+  assert.equal(tile.name, "Argument");
+  assert.equal(tile.polarity, "curve");
+  assert.equal(tile.verdictPending, true);
+  assert.equal(tile.verdict, null);
+  assert.equal(tile.reason, "");
+  assert.equal(tile.q, null);
+  assert.equal(isPortableTile(tile), true);
+  let board = createEmptyBoard();
+  board = addTile(board, tile);
+  assert.equal(unplacedArgumentTiles(board).length, 1);
+  const spot = neighbor(0, 0, 0);
+  board = placeTile(board, "arg1", spot.q, spot.r).board;
+  assert.equal(unplacedArgumentTiles(board).length, 0);
+  board = addTile(
+    board,
+    mintInventionTile({ id: "inv", techId: "ai", howText: "Quay sensors warn the crew." })
+  );
+  const beside = placeTile(board, "inv", 0, 0);
+  assert.equal(beside.ok, true, JSON.stringify(beside.blockers));
+  assert.equal(neighborTiles(beside.board, "arg1").some((n) => n.id === "inv"), true);
+
+  let seeded = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Floods: 2 },
+  });
+  seeded = addTile(
+    seeded,
+    mintArgumentTile({
+      id: "arg2",
+      howText: "This meter was scored too high for this year.",
+      verdict: "reject",
+      verdictPending: false,
+      reason: "The case did not check out.",
+    })
+  );
+  const crisis = seeded.tiles["crisis-local"];
+  const next = neighbor(crisis.q, crisis.r, 2);
+  const onCrisis = placeTile(seeded, "arg2", next.q, next.r);
+  assert.equal(onCrisis.ok, true, JSON.stringify(onCrisis.blockers));
+});
+
+test("findArgumentSpawn prefers an empty visible slot that does not touch an invention", () => {
+  let board = createEmptyBoard();
+  board = addTile(
+    board,
+    mintInventionTile({ id: "inv", techId: "ai", howText: "A sensor on the quay." })
+  );
+  board = placeTile(board, "inv", 0, 0).board;
+  const touch = neighbor(0, 0, 0);
+  const far = { q: 4, r: 4 };
+  const spot = findArgumentSpawn(board, [
+    { q: 0, r: 0 },
+    touch,
+    far,
+  ]);
+  assert.deepEqual(spot, far);
 });
 
 test("pruneStaleConvergences keeps a judged pair after lift; drops it after discard", () => {

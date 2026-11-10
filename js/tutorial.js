@@ -154,6 +154,11 @@ export function tutorialCoInventResult(mode, extra) {
       return tutorialConvergence(extra);
     case "idea-sparks":
       return { ideas: [] };
+    case "fact-check-argument":
+      return {
+        verdict: "reject",
+        reason: "Finish the tutorial before arguing an assessment.",
+      };
     default:
       return undefined;
   }

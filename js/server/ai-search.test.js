@@ -28,6 +28,8 @@ import {
   SEARCH_TOOLS,
   SEARCH_MAX_OUTPUT_TOKENS,
   SEARCH_SYSTEM_LINE,
+  SEARCH_FACT_CHECK_LINE,
+  searchSystemLineForMode,
   AI_SEARCH_MODES,
 } from "./ai-search.mjs";
 
@@ -71,22 +73,29 @@ describe("searchToolsForMode", () => {
     assert.equal(searchToolsForMode("chat", true), null);
   });
 
-  it("returns web_search and x_search only for assess and idea-sparks", () => {
+  it("returns web_search and x_search for assess, idea-sparks, and fact-check", () => {
     assert.deepEqual(searchToolsForMode("assess-feasibility", true), SEARCH_TOOLS);
     assert.deepEqual(searchToolsForMode("idea-sparks", true), SEARCH_TOOLS);
+    assert.deepEqual(searchToolsForMode("fact-check-argument", true), SEARCH_TOOLS);
     assert.equal(searchToolsForMode("score-pathway", true), null);
     assert.equal(searchToolsForMode("pose-challenge", true), null);
     assert.equal(searchToolsForMode("chat", true), null);
     assert.ok(AI_SEARCH_MODES.has("assess-feasibility"));
     assert.ok(AI_SEARCH_MODES.has("idea-sparks"));
+    assert.ok(AI_SEARCH_MODES.has("fact-check-argument"));
     assert.equal(SEARCH_TOOLS.length, 2);
     assert.equal(SEARCH_TOOLS[0].type, "web_search");
     assert.equal(SEARCH_TOOLS[1].type, "x_search");
+    assert.equal(searchSystemLineForMode("fact-check-argument"), SEARCH_FACT_CHECK_LINE);
+    assert.match(SEARCH_FACT_CHECK_LINE, /worldClock/);
+    assert.doesNotMatch(SEARCH_FACT_CHECK_LINE, /score green/);
+    assert.equal(searchSystemLineForMode("assess-feasibility"), SEARCH_SYSTEM_LINE);
   });
 
   it("raises token budget for search modes", () => {
     assert.equal(SEARCH_MAX_OUTPUT_TOKENS["assess-feasibility"], 600);
     assert.equal(SEARCH_MAX_OUTPUT_TOKENS["idea-sparks"], 900);
+    assert.equal(SEARCH_MAX_OUTPUT_TOKENS["fact-check-argument"], 500);
     assert.match(SEARCH_SYSTEM_LINE, /web_search/);
     assert.match(SEARCH_SYSTEM_LINE, /x_search/);
     assert.match(SEARCH_SYSTEM_LINE, /score green/);

@@ -39,6 +39,7 @@ describe("AI season tax", () => {
     assert.equal(isAiSeasonTaxMode("judge-scrutiny-move"), false);
     assert.equal(isAiSeasonTaxMode("pose-challenge"), false);
     assert.equal(isAiSeasonTaxMode("vision"), false);
+    assert.equal(isAiSeasonTaxMode("fact-check-argument"), false);
   });
 
   it("first thinking ask of the turn is 1 AP; further thinking is free", () => {
@@ -50,6 +51,9 @@ describe("AI season tax", () => {
     assert.equal(thinkingAiApCost(taxed, "idea-sparks", 1), 0);
     assert.equal(thinkingAiApCost(taxed, "coach-challenge", 1), 0);
     assert.equal(thinkingAiApCost(taxed, "judge-challenge", 1), 1);
+    const argument = applyThinkingAiCharge(taxed, "fact-check-argument", 1);
+    assert.equal(argument.cost, 1);
+    assert.equal(argument.markPaid, false);
   });
 
   it("explicit tutor flag does not pay the tax", () => {

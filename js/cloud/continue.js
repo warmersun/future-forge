@@ -25,7 +25,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  * when skipNewRun is true, then paint the hex workshop from live.hexBoard and overlay play/chats.
  */
 
-import { boardForWire } from "../hex/board-state.js?v=crisis-role-3";
+import { boardForWire } from "../hex/board-state.js?v=argument-1";
 import { normalizeMission } from "../mission-normalize.js";
 import { prepareRunWorld } from "../sim/run-world.js";
 import { parseCompanion } from "../companion.js";

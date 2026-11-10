@@ -24,15 +24,20 @@ import { createHotseatBridge } from "../multiplayer/hotseat-bridge.js";
 import { clearCaptainLog, listCaptainLog } from "../captain-log.js?v=crisis-role-3";
 import {
   createHexWorkshop,
+  canMintArgument,
+  mintArgumentButtonLabel,
   defaultChallengerImagePrompt,
   pathwayArtLabel,
   crisisWhyBlockHtml,
   concernWhyBlockHtml,
+  argumentVerdictHtml,
 } from "./hex-workshop.js";
+import { neighbor } from "./hex-tile-grid.js";
 import {
   cloneBoard,
   addTile,
   mintInventionTile,
+  mintArgumentTile,
   placeTile,
   seedCrisisTiles,
   TILE_KIND,
@@ -321,6 +326,26 @@ describe("hex-workshop why blocks", () => {
     assert.equal(/Never names/i.test(mixed), false);
   });
 
+  it("argumentVerdictHtml draws a colored check or cross, not an emoji", () => {
+    const ok = argumentVerdictHtml("accept", "Packs were sold before this year.");
+    assert.match(ok, /class="hex-arg-verdict is-accept"/);
+    assert.match(ok, /<svg class="hex-arg-mark"/);
+    assert.match(ok, /<polyline /);
+    assert.match(ok, /<strong>Accepted<\/strong>/);
+    assert.match(ok, /Packs were sold before this year/);
+    assert.equal(/[✅❌]/.test(ok), false);
+    const no = argumentVerdictHtml("reject", "Hope is not a checkable case.");
+    assert.match(no, /class="hex-arg-verdict is-reject"/);
+    assert.match(no, /<line /);
+    assert.match(no, /<strong>Rejected<\/strong>/);
+    assert.match(no, /Hope is not a checkable case/);
+    assert.equal(/[✅❌]/.test(no), false);
+    const escaped = argumentVerdictHtml("reject", `a <b>tag</b> & "quote"`);
+    assert.match(escaped, /a &lt;b&gt;tag&lt;\/b&gt; &amp; &quot;quote&quot;/);
+    assert.equal(argumentVerdictHtml("maybe", "no"), "");
+    assert.equal(argumentVerdictHtml("accept", "   "), argumentVerdictHtml("accept", ""));
+  });
+
   it("concernWhyBlockHtml lists every island lamp", () => {
     const html = concernWhyBlockHtml([
       { label: "ai", level: "yellow", reason: "Neighbors can skip the fee.", pending: false },
@@ -582,5 +607,70 @@ describe("hex-workshop summonNextChallenger", () => {
         .length,
       0
     );
+  });
+});
+
+describe("canMintArgument", () => {
+  it("needs free write and a pathway, and waits while a check is in flight", () => {
+    assert.equal(canMintArgument({ freeWrite: false, hasPathway: true, busy: false }), false);
+    assert.equal(canMintArgument({ freeWrite: true, hasPathway: false, busy: false }), false);
+    assert.equal(canMintArgument({ freeWrite: true, hasPathway: true, busy: true }), false);
+    assert.equal(canMintArgument({ freeWrite: true, hasPathway: true, busy: false }), true);
+    assert.equal(canMintArgument({}), false);
+  });
+
+  it("labels the button with a 1 AP cost when Attention is on", () => {
+    assert.equal(mintArgumentButtonLabel(true), "Mint argument · 1 AP");
+    assert.equal(mintArgumentButtonLabel(false), "Mint argument");
+  });
+});
+
+describe("hex-workshop argument grounding", () => {
+  before(() => stubDom());
+
+  it("sends an accepted touching argument with the timing assess", async () => {
+    let board = seededBoard();
+    const inv = board.tiles.a;
+    let spot = null;
+    for (let d = 0; d < 6; d++) {
+      const n = neighbor(inv.q, inv.r, d);
+      const occ = Object.values(board.tiles).find((t) => t.q === n.q && t.r === n.r);
+      if (!occ) {
+        spot = n;
+        break;
+      }
+    }
+    assert.ok(spot);
+    board = addTile(
+      board,
+      mintArgumentTile({
+        id: "arg",
+        howText: "Night crews already walk this quay with a radio.",
+        verdict: "accept",
+        verdictPending: false,
+        reason: "The case holds for this year.",
+      })
+    );
+    board = placeTile(board, "arg", spot.q, spot.r).board;
+    const extras = [];
+    const ws = createHexWorkshop({
+      getBoard: () => board,
+      setBoard: (b) => {
+        board = b;
+      },
+      getYear: () => 2026,
+      getPlace: () => "Kiln Ferry",
+      getGrounding: () => "Inspection is granted.",
+      coInvent: async (mode, _msg, extra) => {
+        extras.push({ mode, extra });
+        return { timing: { level: "green", reason: "ok" } };
+      },
+    });
+    await ws.refreshAfterYearChange();
+    const assess = extras.find((e) => e.mode === "assess-feasibility");
+    assert.ok(assess);
+    assert.equal(assess.extra.acceptedArguments[0].id, "arg");
+    assert.match(assess.extra.acceptedArguments[0].claim, /Night crews/);
+    assert.equal(String(assess.extra.grounding).includes("Night crews"), false);
   });
 });

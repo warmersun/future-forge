@@ -45,13 +45,16 @@ import {
   neighborTiles,
   isPortableTile,
   formatFactor,
-} from "./board-state.js?v=crisis-role-3";
-import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js?v=crisis-role-3";
+} from "./board-state.js?v=argument-1";
+import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js?v=argument-1";
 import { layoutHexLabel } from "./hex-label.js";
 
 const BITS_INK = "#38bdf8";
 const ATOMS_INK = "#f472b6";
 const RD_INK = "#a78bfa";
+const ARGUMENT_INK = "#94a3b8";
+const ARGUMENT_OK = "#4ade80";
+const ARGUMENT_NO = "#f87171";
 const RYG = {
   red: "#ef4444",
   yellow: "#eab308",
@@ -260,6 +263,9 @@ export function createHexBoardUi(opts) {
     if (p.kind === TILE_KIND.rd) {
       return { stroke: RD_INK, lamp: false, level: null };
     }
+    if (p.kind === TILE_KIND.argument) {
+      return { stroke: ARGUMENT_INK, lamp: false, level: null };
+    }
     if (p.polarity === BITS) return { stroke: BITS_INK, lamp: false, level: null };
     if (p.polarity === ATOMS) return { stroke: ATOMS_INK, lamp: false, level: null };
     if (p.polarity === "split") return { stroke: BITS_INK, lamp: false, level: null };
@@ -273,6 +279,9 @@ export function createHexBoardUi(opts) {
    * @returns {"red"|"yellow"|"green"|null}
    */
   function pendingEvalLevel(p) {
+    if (p.kind === TILE_KIND.argument) {
+      return p.verdictPending ? "argument" : null;
+    }
     if (p.kind !== TILE_KIND.crisis && p.kind !== TILE_KIND.concern) return null;
     if (!p.lampPending) return null;
     const lv = String(p.lamp || "red").toLowerCase();
@@ -358,7 +367,8 @@ export function createHexBoardUi(opts) {
     // Pending eval: snake arc on rim in last settled RYG color
     const snakeLevel = pendingEvalLevel(p);
     if (snakeLevel) {
-      const snakeCol = RYG[snakeLevel] || RYG.yellow;
+      const snakeCol =
+        snakeLevel === "argument" ? ARGUMENT_INK : RYG[snakeLevel] || RYG.yellow;
       g.insertAdjacentHTML(
         "beforeend",
         `<path class="hex-eval-snake" d="${d}" fill="none" stroke="${snakeCol}" stroke-width="4.5" stroke-linecap="round" pathLength="100" stroke-dasharray="22 78" pointer-events="none" style="filter:drop-shadow(0 0 4px ${snakeCol})"/>`
@@ -373,19 +383,37 @@ export function createHexBoardUi(opts) {
       );
     }
     const hasBar = p.kind === TILE_KIND.invention;
+    const argumentSettled =
+      p.kind === TILE_KIND.argument &&
+      !p.verdictPending &&
+      (p.verdict === "accept" || p.verdict === "reject");
+    if (argumentSettled) {
+      const ok = p.verdict === "accept";
+      const col = ok ? ARGUMENT_OK : ARGUMENT_NO;
+      const markY = cy - size * 0.32;
+      const s = size * 0.14;
+      const mark = ok
+        ? `<polyline points="${cx - s},${markY} ${cx - s * 0.15},${markY + s * 0.72} ${cx + s},${markY - s * 0.62}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+        : `<line x1="${cx - s * 0.72}" y1="${markY - s * 0.72}" x2="${cx + s * 0.72}" y2="${markY + s * 0.72}" stroke="${col}" stroke-width="5" stroke-linecap="round"/>` +
+          `<line x1="${cx + s * 0.72}" y1="${markY - s * 0.72}" x2="${cx - s * 0.72}" y2="${markY + s * 0.72}" stroke="${col}" stroke-width="5" stroke-linecap="round"/>`;
+      g.insertAdjacentHTML("beforeend", mark);
+    }
     const faceName =
       p.kind === TILE_KIND.rd
         ? `R&D ${formatFactor(p.factor)}`
-        : p.name || "";
+        : p.kind === TILE_KIND.argument
+          ? String(p.howText || p.name || "Argument")
+          : p.name || "";
     const layout = layoutHexLabel(faceName, { size, hasBar, cy });
+    const textShift = argumentSettled ? size * 0.16 : 0;
     const tspans = layout.lines
       .map(
         (line, i) =>
-          `<tspan x="${cx}" y="${layout.lineYs[i]}">${escapeXml(line)}</tspan>`
+          `<tspan x="${cx}" y="${layout.lineYs[i] + textShift}">${escapeXml(line)}</tspan>`
       )
       .join("");
     const titleEl = layout.truncated
-      ? `<title>${escapeXml(p.name || "")}</title>`
+      ? `<title>${escapeXml(p.kind === TILE_KIND.argument ? faceName : p.name || "")}</title>`
       : "";
     g.insertAdjacentHTML(
       "beforeend",
@@ -517,6 +545,31 @@ export function createHexBoardUi(opts) {
         );
         parts.push(
           `<text x="${mx}" y="${my + 3}" text-anchor="middle" fill="${RD_INK}" font-size="9" font-family="system-ui">${label}</text>`
+        );
+      }
+    }
+    // Settled argument touching an invention. Pending tiles draw no bond.
+    for (const t of Object.values(b.tiles || {})) {
+      if (t.kind !== TILE_KIND.argument || t.q == null || t.r == null) continue;
+      if (t.verdictPending) continue;
+      if (t.verdict !== "accept" && t.verdict !== "reject") continue;
+      const accepted = t.verdict === "accept";
+      for (const n of neighborTiles(b, t.id)) {
+        if (n.kind !== TILE_KIND.invention) continue;
+        const pa = gmath.pixel(t.q, t.r);
+        const pb = gmath.pixel(n.q, n.r);
+        const mx = (pa.x + pb.x) / 2;
+        const my = (pa.y + pb.y) / 2;
+        const col = accepted ? ARGUMENT_OK : ARGUMENT_NO;
+        parts.push(
+          `<line x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}" stroke="${col}" stroke-width="${accepted ? 2.4 : 1.4}" opacity="${accepted ? 0.95 : 0.7}"/>`
+        );
+        if (!accepted) continue;
+        parts.push(
+          `<rect x="${mx - 16}" y="${my - 7}" width="32" height="14" rx="3" fill="#070b14" stroke="${col}"/>`
+        );
+        parts.push(
+          `<text x="${mx}" y="${my + 3}" text-anchor="middle" fill="${col}" font-size="9" font-family="system-ui">fact</text>`
         );
       }
     }
@@ -716,7 +769,9 @@ export function createHexBoardUi(opts) {
       const mode = over && !overDiscard && !overIdeas ? "hex" : "card";
       // Crisis/concern never become cards — stay hex while dragging
       const effective =
-        tile.kind === TILE_KIND.invention || tile.kind === TILE_KIND.rd
+        tile.kind === TILE_KIND.invention ||
+        tile.kind === TILE_KIND.rd ||
+        tile.kind === TILE_KIND.argument
           ? mode
           : "hex";
       setGhostMode(ghost, effective);

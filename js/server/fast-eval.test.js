@@ -110,6 +110,7 @@ describe("FAST_EVAL_MODES", () => {
       "coach-challenge",
       "draft-challenge",
       "fill-quest-summary",
+      "fact-check-argument",
     ]) {
       assert.equal(isFastEvalMode(m), true, m);
     }
@@ -911,5 +912,78 @@ describe("assumed premise fast payloads", () => {
     );
     assert.equal(clock.some((row) => row.id === "dock-inspection-2026"), true);
     assert.equal(clock.filter((row) => row.id.startsWith("filler-")).length <= 4, true);
+  });
+});
+
+describe("fact-check-argument", () => {
+  it("keeps the claim and assessments off the grounding string", () => {
+    const payload = buildFastPayload("fact-check-argument", {
+      claim: "The quay sensor net is already routine this year.",
+      year: 2026,
+      place: "Kiln Ferry",
+      grounding: "Inspection is granted. Physical handling is not.",
+      assessments: {
+        timings: [
+          {
+            tileId: "inv",
+            techId: "ai",
+            howText: "Sensors.",
+            level: "yellow",
+            reason: "Pilot.",
+          },
+        ],
+        pathways: [],
+      },
+    });
+    assert.equal(payload.mode, "fact-check-argument");
+    assert.match(payload.claim, /quay sensor/);
+    assert.equal(payload.assessments.timings[0].level, "yellow");
+    assert.match(payload.grounding, /Inspection is granted/);
+    assert.equal(payload.grounding.includes("quay sensor"), false);
+  });
+
+  it("carries accepted arguments apart from quest grounding", () => {
+    const acceptedArguments = [
+      { id: "arg1", claim: "Night crews already walk that quay." },
+    ];
+    const score = buildFastPayload("score-pathway", {
+      pathway: { inventions: [{ techId: "ai", howText: "Sensors.", year: 2026 }] },
+      grounding: "Inspection is granted.",
+      acceptedArguments,
+      year: 2026,
+    });
+    assert.deepEqual(score.acceptedArguments, acceptedArguments);
+    assert.equal(String(score.grounding).includes("Night crews"), false);
+    const timing = buildFastPayload("assess-feasibility", {
+      inventionHow: "Sensors on the quay.",
+      selectedTechIds: ["ai"],
+      availableTechs: [{ id: "ai", name: "AI", summary: "Models." }],
+      year: 2026,
+      grounding: "Inspection is granted.",
+      acceptedArguments,
+      priorTiming: { level: "yellow", reason: "Pilot." },
+    });
+    assert.deepEqual(timing.acceptedArguments, acceptedArguments);
+    assert.equal(String(timing.grounding).includes("Night crews"), false);
+    assert.equal(timing.priorTiming.level, "yellow");
+  });
+
+  it("maps anything other than accept to reject", () => {
+    const accepted = sanitizeFast(
+      "fact-check-argument",
+      { verdict: "accept", reason: "It holds this year." },
+      "ai"
+    );
+    assert.equal(accepted.verdict, "accept");
+    assert.match(accepted.reason, /holds/);
+    const rejected = sanitizeFast(
+      "fact-check-argument",
+      { verdict: "maybe", reason: "No." },
+      "ai"
+    );
+    assert.equal(rejected.verdict, "reject");
+    const empty = sanitizeFast("fact-check-argument", {}, "ai");
+    assert.equal(empty.verdict, "reject");
+    assert.match(empty.reason, /did not check out/);
   });
 });

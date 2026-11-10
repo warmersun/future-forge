@@ -20,6 +20,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 /**
  * First thinking request of a seat-turn costs 1 AP; further thinking that turn is free.
  * Judge / pose / vision stay a full AP each time (acting, not asking).
+ * Minting an argument is also 1 AP each time, even after the season tax is paid.
  */
 
 export const AI_ALWAYS_CHARGE_MODES = new Set([
@@ -29,6 +30,7 @@ export const AI_ALWAYS_CHARGE_MODES = new Set([
   "pose-challenge",
   "vision",
   "assess-feasibility",
+  "fact-check-argument",
 ]);
 
 /**

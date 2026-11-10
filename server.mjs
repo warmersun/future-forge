@@ -99,7 +99,7 @@ import {
   resolveAiSearchEnabled,
   searchToolsForMode,
   SEARCH_MAX_OUTPUT_TOKENS,
-  SEARCH_SYSTEM_LINE,
+  searchSystemLineForMode,
 } from "./js/server/ai-search.mjs";
 import { ideasOrFallback } from "./js/idea-cards.js";
 import { sanitizeScrutiny } from "./js/scrutiny-shared.js";
@@ -1379,7 +1379,7 @@ function composeCoInventCall(body) {
       ? TUTOR_SYSTEM_PROMPT
       : SYSTEM_PROMPT;
   if (searchTools) {
-    systemContent = `${systemContent}\n${SEARCH_SYSTEM_LINE}`;
+    systemContent = `${systemContent}\n${searchSystemLineForMode(mode)}`;
   }
   if (!fastSpec) {
     const inquiry = sanitizeSourceInquiry(context.sourceInquiry, {
@@ -1412,7 +1412,7 @@ function composeCoInventCall(body) {
       worldClockLine: isTutor
         ? `${WORLD_CLOCK_CONTEXT_LINE} When teaching trends and predictions, use due rows as what is real now and not_yet rows as labeled forecasts.`
         : WORLD_CLOCK_CONTEXT_LINE,
-      searchLine: searchTools ? SEARCH_SYSTEM_LINE : "",
+      searchLine: searchTools ? searchSystemLineForMode(mode) : "",
     });
     if (grant) systemContent += grant;
     let payloadJson = buildUserPayload({ messages, context, mode });

@@ -25,17 +25,34 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  * Force off with `--no-ai-search` / `--no-search` (wins over env and enable flags).
  */
 
-export const AI_SEARCH_MODES = new Set(["assess-feasibility", "idea-sparks"]);
+export const AI_SEARCH_MODES = new Set([
+  "assess-feasibility",
+  "idea-sparks",
+  "fact-check-argument",
+]);
 
 export const SEARCH_TOOLS = [{ type: "web_search" }, { type: "x_search" }];
 
 export const SEARCH_MAX_OUTPUT_TOKENS = {
   "assess-feasibility": 600,
   "idea-sparks": 900,
+  "fact-check-argument": 500,
 };
 
 export const SEARCH_SYSTEM_LINE =
   "Use web_search and x_search to check whether THIS architecture and payload are already demonstrated in year. If they are, score green (or write a real spark). Do not let smaller grounding examples (hoppers, medical boxes) cap payload or force yellow/red. Quest/clinic fit is not timing. Honor only explicit grounding contradictions (limits, denials, not-yet). Search cannot override worldClock: a not_yet row stays ahead in this game's calendar even if search finds a lab demo.";
+
+export const SEARCH_FACT_CHECK_LINE =
+  "Use web_search and x_search to check whether THIS case is already true in year. Accept only if the facts hold and they bear on a listed assessment. Search cannot override worldClock: a not_yet row stays ahead even if search finds a lab demo. Search cannot override an explicit denial in grounding.";
+
+/**
+ * Search instruction appended for a mode. Fact-check does not reuse the timing line.
+ * @param {string} mode
+ */
+export function searchSystemLineForMode(mode) {
+  if (String(mode || "") === "fact-check-argument") return SEARCH_FACT_CHECK_LINE;
+  return SEARCH_SYSTEM_LINE;
+}
 
 /**
  * @param {string[]} [argv] — typically `process.argv.slice(2)`

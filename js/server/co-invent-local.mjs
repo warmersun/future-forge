@@ -762,6 +762,26 @@ function teachingFor(stack, map, limit = 3) {
   });
 }
 
+function localFactCheckArgument(context) {
+  const claim = String(context?.claim || "").trim();
+  const grounding = String(
+    context?.grounding || context?.mission?.grounding || ""
+  ).trim();
+  const slice = claim.slice(0, 80).toLowerCase();
+  const hit = claim.length >= 40 && grounding.toLowerCase().includes(slice);
+  if (hit) {
+    return {
+      source: "local",
+      verdict: "accept",
+      reason: "This case restates a fact already in the Quest grounding.",
+      message: "This case restates a fact already in the Quest grounding.",
+    };
+  }
+  const reason =
+    "Live fact-check is off, and this claim is not already in the Quest grounding.";
+  return { source: "local", verdict: "reject", reason, message: reason };
+}
+
 function localCoInvent({ mode, messages, context }) {
   const map = techMap(context);
   const selected = context.selectedTechIds || [];
@@ -778,6 +798,10 @@ function localCoInvent({ mode, messages, context }) {
     inventionImpact: null,
     scrutiny: null,
   };
+
+  if (mode === "fact-check-argument") {
+    return localFactCheckArgument(context);
+  }
 
   if (mode === "idea-sparks") {
     return localIdeaSparksResult(context, base);

@@ -5050,6 +5050,7 @@ body.mp-turn-gate #btn-challenge-draft,
 body.mp-turn-gate #btn-ask-ideas,
 body.mp-turn-gate #btn-refresh-ideas,
 body.mp-turn-gate #btn-mint-custom,
+body.mp-turn-gate #btn-mint-argument,
 body.mp-turn-gate #btn-mint-rd,
 body.mp-turn-gate #hex-idea-cards .hex-idea-card,
 body.mp-turn-gate #hex-discard {
@@ -12802,6 +12803,13 @@ body.hex-board-expanded.ff-accounts .hex-board-wrap.is-expanded .hex-board-statu
   padding-top: 0.15rem;
 }
 
+.hex-mint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
 .hex-create-pending {
   margin: 0;
   padding: 0.4rem 0.55rem;
@@ -13364,6 +13372,29 @@ body.tutorial-popup-front #hex-tile-popup {
   margin: 0 0 0.45rem;
 }
 
+.hex-arg-verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.hex-arg-mark {
+  flex: 0 0 auto;
+  width: 0.95em;
+  height: 0.95em;
+  margin-top: 0.22em;
+}
+
+.hex-arg-verdict.is-accept .hex-arg-mark,
+.hex-arg-verdict.is-accept strong {
+  color: #4ade80;
+}
+
+.hex-arg-verdict.is-reject .hex-arg-mark,
+.hex-arg-verdict.is-reject strong {
+  color: #f87171;
+}
+
 .hex-tile-popup-scene {
   margin: 0.55rem 0 0.75rem;
   padding: 0.35rem 0 0.35rem 0.7rem;
@@ -13459,6 +13490,28 @@ body.tutorial-popup-front #hex-tile-popup {
 
 .hex-idea-card.is-rd {
   border-color: rgba(167, 139, 250, 0.45);
+}
+
+.hex-idea-card.is-argument {
+  border-color: rgba(148, 163, 184, 0.55);
+}
+
+.hex-idea-card-visual-argument {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e293b;
+  color: #94a3b8;
+  font-weight: 800;
+  font-size: 1.6rem;
+}
+
+.hex-idea-card-visual-argument.is-accept {
+  color: #4ade80;
+}
+
+.hex-idea-card-visual-argument.is-reject {
+  color: #f87171;
 }
 
 .hex-idea-card-visual-rd {

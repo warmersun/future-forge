@@ -152,7 +152,9 @@ A hex has six neighbors, so one invention cannot touch every given light. The cl
 
 ### Hex board and the emerging-tech tray
 
-Everything you move is a hexagonal tile: inventions, crisis meters, and challenger concerns. The place and the named person are story, not tiles. Tiles do not rotate. Each hex is a picture under clear glass. Color meaning lives on the rim, the lamp, and the feasibility bar — green is a traffic light, never a “world.”
+Everything you move is a hexagonal tile: inventions, crisis meters, challenger concerns, and arguments. The place and the named person are story, not tiles. Tiles do not rotate. Each hex is a picture under clear glass. Color meaning lives on the rim, the lamp, and the feasibility bar — green is a traffic light, never a “world.”
+
+An argument is a case against an assessment already on the board. Once a pathway is placed, Write freely, type the case, and mint an argument. Each mint costs 1 AP. A fact-check accepts or rejects it. While that check runs, the tile sits on the board with a grey spinning rim. An accepted argument that shares an edge with a pathway is extra demonstrated fact for that pathway’s score and for the timing of the invention tiles it touches. A rejected argument can be read and moved, and is not sent to either judge.
 
 Worlds apply only to invention tiles:
 

@@ -134,6 +134,25 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     };
   }
 
+  if (mode === "fact-check-argument") {
+    const assessments =
+      rest.assessments && typeof rest.assessments === "object" ? rest.assessments : {};
+    return {
+      year,
+      place,
+      ...(globalId ? { globalId } : {}),
+      grounding,
+      ...(sourceConstraint ? { sourceConstraint } : {}),
+      ...(sourceInquiry ? { sourceInquiry } : {}),
+      ...(predictionsBankId ? { predictionsBankId } : {}),
+      ...(packageRef ? { packageRef } : {}),
+      ...(runId ? { runId } : {}),
+      ...(predictionsBank && !packageRef ? { predictionsBank } : {}),
+      claim: String(rest.claim || "").slice(0, 4000),
+      assessments,
+    };
+  }
+
   if (mode === "assess-feasibility") {
     const ids = rest.selectedTechIds || [...(snap.selectedTechIds || [])];
     const techs =
@@ -159,6 +178,9 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     if (Object.prototype.hasOwnProperty.call(rest, "inventionImpact")) {
       const impact = rest.inventionImpact;
       if (String(impact || "").trim()) out.inventionImpact = impact;
+    }
+    if (Array.isArray(rest.acceptedArguments) && rest.acceptedArguments.length) {
+      out.acceptedArguments = rest.acceptedArguments;
     }
     return out;
   }

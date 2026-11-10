@@ -160,6 +160,23 @@ function groundingOf(context) {
   return g ? g.slice(0, GROUNDING_CAP) : null;
 }
 
+function acceptedArgumentsOf(context) {
+  const raw = Array.isArray(context?.acceptedArguments)
+    ? context.acceptedArguments
+    : [];
+  const out = [];
+  for (const row of raw) {
+    const claim = clip(row?.claim || row?.howText, 400);
+    if (!claim) continue;
+    out.push({
+      id: row?.id ? String(row.id).slice(0, 80) : null,
+      claim,
+    });
+    if (out.length >= 8) break;
+  }
+  return out.length ? out : null;
+}
+
 function missionSlice(context) {
   const ch = context?.challenge;
   const title =
@@ -212,6 +229,7 @@ If a crisis role includes a non-empty description, that text is what the meter m
 concerns: for each listed angle, judge ALL inventions in THIS pathway PLUS playerAnswer if present, against challengeSpeech/challengeQuestion. Docking/touching is NOT addressing. If inventChanged is false and there is no playerAnswer, stay red. posedHowText is the invent as it was when this critic was raised — improve yellow/green ONLY if the new pathway honestly answers this critic better than that snapshot. Weakening the invent must not luck into a better lamp. yellow = partial honest address. Green only if the pathway honestly holds the answer. Do not prefer yellow over an honest green. reason is one everyday sentence that cites the mechanism or the unanswered question.
 ${GROUNDING_LINE}
 ${SOURCE_CONSTRAINT_LINE}
+acceptedArguments (if present) are cases the player made against an earlier assessment. A fact-check already accepted them. Treat each as an additional demonstrated fact for this pathway. Revise the score only where a case factually changes the judgment. Ignore a case that does not bear on this pathway. These cases do not ease a crisis meter by themselves. They do not override an explicit denial in grounding or a not_yet calendar row.
 Return JSON only with keys "crisisDelta" and "concerns" (no markdown, no other keys). crisisDelta maps each listed role to {"delta": integer, "reason": "one sentence"}; concerns maps each listed angle to {"level": "red"|"yellow"|"green", "reason": "one sentence"}. Empty lists produce empty objects.`;
 
 export const ASSESS_FEASIBILITY_SYSTEM = `You judge claim TIMING only in Future Forge: is this mechanism possible or already demonstrated in year?
@@ -224,6 +242,7 @@ Write a concrete, complete timing reason of at most 400 characters. Explain what
 ${WORLD_CLOCK_TIMING_LINE}
 ${ASSESS_GROUNDING_LINE}
 ${SOURCE_CONSTRAINT_LINE}
+acceptedArguments (if present) are cases the player made against an earlier timing assessment. A fact-check already accepted them, and they touch this tile. Treat each as demonstrated where it bears on this claim. Revise timing only where a case shows the earlier assessment was too harsh. Ignore a case that does not bear on this claim. They do not override an explicit denial in grounding or a not_yet worldClock row.
 Return JSON only:
 {"timing":{"level":"green","reason":"one sentence"}}`;
 
@@ -291,6 +310,22 @@ ${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"message":"coaching text"}`;
 
+export const FACT_CHECK_ARGUMENT_SYSTEM = `You fact-check one player case in Future Forge. The player is arguing against an assessment the game already made: a tile timing reason, or a pathway score. They are not pitching a new invention.
+
+assessments.timings are settled timing judgments. assessments.pathways are settled pathway-score reasons. The case must bear on at least one of them.
+
+verdict "accept" only when the case is a checkable claim that is already true in year AND it bears on at least one listed assessment.
+verdict "reject" when the case is false, an opinion, a hope, a new how-it-works, too vague to check, contradicted by grounding, or treats a worldClock not_yet row as routine now.
+If assessments are missing or empty, reject: there is no finished assessment to answer.
+
+reason is one complete sentence of at most 400 characters.
+Do not override an explicit denial in grounding. worldClock beats your own knowledge and search: a not_yet row stays ahead.
+${WORLD_CLOCK_TIMING_LINE}
+${ASSESS_GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
+Return JSON only:
+{"verdict":"reject","reason":"one sentence"}`;
+
 export const DRAFT_CHALLENGE_SYSTEM = `You write a solid draft answer the learner can edit and submit.
 Be specific to their pathway (no invention name; inventions[] + howText as one invent): actors, costs or physical limits, anti-defection or affordability as relevant.
 Put the full draft in draftAnswer and a short coaching note in message.
@@ -339,6 +374,9 @@ function buildScorePathwayPayload(context) {
     mission,
     grounding: groundingOf(context),
     sourceConstraint: sourceConstraintOf(context),
+    ...(acceptedArgumentsOf(context)
+      ? { acceptedArguments: acceptedArgumentsOf(context) }
+      : {}),
     pressureBase: context?.pressureBase || {},
     winMax: context?.winMax || {},
     crisisRoles: crisisRoleKeys(context?.crisisRoles).map((role) => {
@@ -396,6 +434,57 @@ function finishScorePathwayPayload(context) {
   return payload;
 }
 
+function buildFactCheckPayload(context) {
+  const assessments =
+    context?.assessments && typeof context.assessments === "object"
+      ? context.assessments
+      : {};
+  const timings = (Array.isArray(assessments.timings) ? assessments.timings : [])
+    .slice(0, 8)
+    .map((t) => ({
+      tileId: t?.tileId ? String(t.tileId).slice(0, 80) : null,
+      techId: t?.techId ? String(t.techId).slice(0, 80) : null,
+      howText: clip(t?.howText, 400),
+      level: ["red", "yellow", "green"].includes(String(t?.level || ""))
+        ? t.level
+        : null,
+      reason: clip(t?.reason, 400),
+    }));
+  const pathways = (Array.isArray(assessments.pathways) ? assessments.pathways : [])
+    .slice(0, 4)
+    .map((p) => ({
+      fingerprint: clip(p?.fingerprint, 120),
+      inventionIds: Array.isArray(p?.inventionIds)
+        ? p.inventionIds.map((id) => String(id).slice(0, 80)).slice(0, 12)
+        : [],
+      crisisReasons:
+        p?.crisisReasons && typeof p.crisisReasons === "object"
+          ? Object.fromEntries(
+              Object.entries(p.crisisReasons)
+                .slice(0, 4)
+                .map(([role, reason]) => [String(role).slice(0, 40), clip(reason, 280)])
+            )
+          : {},
+    }));
+  const techIds = timings.map((t) => t.techId).filter(Boolean);
+  const inquiry = sourceInquiryOf(context, "fact-check-argument");
+  const worldClock = worldClockContext(
+    { ...context, sourceInquiry: inquiry },
+    { techIds, limit: 8, premise: inquiry?.premise }
+  );
+  return {
+    mode: "fact-check-argument",
+    year: context?.year || null,
+    place: context?.place || null,
+    grounding: groundingOf(context),
+    sourceConstraint: sourceConstraintOf(context),
+    claim: clip(context?.claim, 2000),
+    assessments: { timings, pathways },
+    ...(inquiry ? { sourceInquiry: inquiry } : {}),
+    ...(worldClock ? { worldClock } : {}),
+  };
+}
+
 function buildAssessFeasibilityPayload(context) {
   const stack = slimStack(context);
   const inquiry = sourceInquiryOf(context, "assess-feasibility");
@@ -413,6 +502,9 @@ function buildAssessFeasibilityPayload(context) {
     place: context?.place || null,
     grounding: groundingOf(context),
     sourceConstraint: sourceConstraintOf(context),
+    ...(acceptedArgumentsOf(context)
+      ? { acceptedArguments: acceptedArgumentsOf(context) }
+      : {}),
     inventionHow: clip(context?.inventionHow, 1200),
     inventionImpact: clip(context?.inventionImpact, 800),
     stack,
@@ -543,6 +635,7 @@ function buildEvaluateConvergencePayload(context) {
 export function buildFastPayload(mode, context = {}) {
   if (mode === "score-pathway") return finishScorePathwayPayload(context);
   if (mode === "assess-feasibility") return buildAssessFeasibilityPayload(context);
+  if (mode === "fact-check-argument") return buildFactCheckPayload(context);
   if (mode === "evaluate-convergence") {
     return withInquiry(buildEvaluateConvergencePayload(context), context, mode);
   }
@@ -691,6 +784,20 @@ function sanitizeEvaluateConvergence(parsed, source, context) {
   return { source, convergences: out };
 }
 
+function sanitizeFactCheck(parsed, source) {
+  const verdict = String(parsed?.verdict || "").toLowerCase() === "accept"
+    ? "accept"
+    : "reject";
+  let reason = String(parsed?.reason || "").trim().slice(0, 400);
+  if (!reason) {
+    reason =
+      verdict === "accept"
+        ? "The case holds for this year."
+        : "The case did not check out.";
+  }
+  return { source, verdict, reason };
+}
+
 function sanitizeFillQuestSummary(parsed, source) {
   return {
     source,
@@ -712,6 +819,7 @@ export function sanitizeFast(mode, parsed, source = "ai", context = {}) {
   if (mode === "coach-challenge") return sanitizeCoach(parsed, source);
   if (mode === "draft-challenge") return sanitizeDraft(parsed, source);
   if (mode === "fill-quest-summary") return sanitizeFillQuestSummary(parsed, source);
+  if (mode === "fact-check-argument") return sanitizeFactCheck(parsed, source);
   return { source };
 }
 
@@ -781,6 +889,12 @@ export const FAST_EVAL_MODES = {
     userPrefix: "Write this quest summary (JSON state):",
     temperature: 0.4,
     maxOutputTokens: 220,
+  },
+  "fact-check-argument": {
+    system: FACT_CHECK_ARGUMENT_SYSTEM,
+    userPrefix: "Fact-check this case (JSON state):",
+    temperature: 0,
+    maxOutputTokens: 400,
   },
 };
 

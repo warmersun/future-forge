@@ -27,6 +27,7 @@ import {
   mintInventionTile,
   mintRdTile,
   addTile,
+  mintArgumentTile,
   placeTile,
   liftTile,
   discardTile,
@@ -67,6 +68,9 @@ import {
   blendPathwayScore,
   pickPrimaryCrisisReason,
   pathwayContentFingerprint,
+  acceptedArgumentsTouchingTile,
+  acceptedArgumentsForPathway,
+  settledAssessments,
   crisisDeltaValues,
   crisisDeltaReasons,
   reasonsForCrisisTile,
@@ -95,6 +99,7 @@ import {
   pathwayHasTimingPending,
   rulesWeatherKey,
 } from "./evaluate.js";
+import { neighbor } from "./hex-tile-grid.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { buildNeighborEvalContext, applyHeuristicLights } from "./lights.js";
 import { TILE_KIND } from "./board-state.js";
@@ -2765,5 +2770,145 @@ describe("R&D and convergence timing", () => {
     const placed = inv("low", { feasibilityPct: 40 });
     const nabe = inv("high", { feasibilityPct: 80, techId: "solar" });
     assert.equal(pickEnhancedId(placed, nabe), "low");
+  });
+});
+
+describe("accepted arguments", () => {
+  function placeOk(board, id, q, r) {
+    const res = placeTile(board, id, q, r);
+    assert.equal(res.ok, true, JSON.stringify(res.blockers));
+    return res.board;
+  }
+
+  function baseBoard() {
+    let board = createEmptyBoard();
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "inv",
+        techId: "ai",
+        howText: "Quay sensors warn the night crew.",
+        year: 2026,
+        timingLevel: "yellow",
+        timingReason: "The net is still a pilot.",
+        timingPending: false,
+      })
+    );
+    return placeOk(board, "inv", 0, 0);
+  }
+
+  function putArgument(board, opts) {
+    const tile = mintArgumentTile(opts);
+    board = addTile(board, tile);
+    if (opts.q == null || opts.r == null) return board;
+    return placeOk(board, tile.id, opts.q, opts.r);
+  }
+
+  it("sends accepted touching cases and skips pending, rejected, tray, and far tiles", () => {
+    const touchA = neighbor(0, 0, 0);
+    const touchB = neighbor(0, 0, 1);
+    const far = neighbor(touchA.q, touchA.r, 1);
+    assert.notDeepEqual(far, { q: 0, r: 0 });
+    assert.notDeepEqual(far, touchB);
+    let board = baseBoard();
+    const bareKey = pathwayContentFingerprint([board.tiles.inv], board);
+    const bareTiming = tileTimingCacheKey(board.tiles.inv, 2026, "src", board);
+    board = putArgument(board, {
+      id: "arg-pending",
+      howText: "Pending case about the night crew on this quay.",
+      verdictPending: true,
+      q: touchA.q,
+      r: touchA.r,
+    });
+    assert.deepEqual(acceptedArgumentsTouchingTile(board, "inv"), []);
+    assert.equal(
+      pathwayContentFingerprint([board.tiles.inv], board),
+      bareKey
+    );
+    board = discardTile(board, "arg-pending").board;
+
+    board = putArgument(board, {
+      id: "arg-no",
+      howText: "A rejected case about the night crew on this quay.",
+      verdict: "reject",
+      verdictPending: false,
+      reason: "The case did not check out.",
+      q: touchA.q,
+      r: touchA.r,
+    });
+    assert.deepEqual(acceptedArgumentsForPathway(board, [board.tiles.inv]), []);
+    assert.equal(tileTimingCacheKey(board.tiles.inv, 2026, "src", board), bareTiming);
+
+    board = putArgument(board, {
+      id: "arg-tray",
+      howText: "Accepted but still in the tray, so it does not count.",
+      verdict: "accept",
+      verdictPending: false,
+      reason: "Holds.",
+    });
+    board = putArgument(board, {
+      id: "arg-far",
+      howText: "Accepted but two hexes away from the invention.",
+      verdict: "accept",
+      verdictPending: false,
+      reason: "Holds.",
+      q: far.q,
+      r: far.r,
+    });
+    assert.deepEqual(acceptedArgumentsTouchingTile(board, "inv"), []);
+
+    board = putArgument(board, {
+      id: "arg-b",
+      howText: "Second accepted case about the night crew.",
+      verdict: "accept",
+      verdictPending: false,
+      reason: "Holds.",
+      q: touchB.q,
+      r: touchB.r,
+    });
+    board = discardTile(board, "arg-no").board;
+    board = putArgument(board, {
+      id: "arg-a",
+      howText: "First accepted case about the night crew.",
+      verdict: "accept",
+      verdictPending: false,
+      reason: "Holds.",
+      q: touchA.q,
+      r: touchA.r,
+    });
+    const cases = acceptedArgumentsTouchingTile(board, "inv");
+    assert.deepEqual(
+      cases.map((a) => a.id),
+      ["arg-a", "arg-b"]
+    );
+    assert.equal(cases[0].claim.includes("First accepted"), true);
+    assert.deepEqual(
+      acceptedArgumentsForPathway(board, [board.tiles.inv]).map((a) => a.id),
+      ["arg-a", "arg-b"]
+    );
+    assert.notEqual(pathwayContentFingerprint([board.tiles.inv], board), bareKey);
+    assert.notEqual(tileTimingCacheKey(board.tiles.inv, 2026, "src", board), bareTiming);
+    assert.notEqual(
+      tileTimingCacheKey(board.tiles.inv, 2026, "src"),
+      tileTimingCacheKey(board.tiles.inv, 2026, "src", baseBoard())
+    );
+  });
+
+  it("settledAssessments skips a timing that is still pending", () => {
+    let board = baseBoard();
+    board.tiles.inv.timingPending = true;
+    assert.deepEqual(settledAssessments(board).timings, []);
+    board.tiles.inv.timingPending = false;
+    const fp = pathwayContentFingerprint([board.tiles.inv], board);
+    board.pathwayImpacts[fp] = {
+      pending: true,
+      crisisReasons: { local: "Held the block." },
+    };
+    assert.equal(settledAssessments(board).timings[0].level, "yellow");
+    assert.deepEqual(settledAssessments(board).pathways, []);
+    board.pathwayImpacts[fp].pending = false;
+    const settled = settledAssessments(board);
+    assert.equal(settled.pathways.length, 1);
+    assert.equal(settled.pathways[0].crisisReasons.local, "Held the block.");
   });
 });

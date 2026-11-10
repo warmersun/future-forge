@@ -40,6 +40,7 @@ export const TILE_KIND = {
   crisis: "crisis",
   concern: "concern",
   rd: "rd",
+  argument: "argument",
 };
 
 /** Equal-weight R&D mint rolls. */
@@ -356,7 +357,11 @@ export function rollRdFactor(rng = Math.random) {
  * @param {object|null|undefined} tile
  */
 export function isPortableTile(tile) {
-  return tile?.kind === TILE_KIND.invention || tile?.kind === TILE_KIND.rd;
+  return (
+    tile?.kind === TILE_KIND.invention ||
+    tile?.kind === TILE_KIND.rd ||
+    tile?.kind === TILE_KIND.argument
+  );
 }
 
 /**
@@ -512,6 +517,71 @@ export function unplacedRdTiles(board) {
   return Object.values(board?.tiles || {}).filter(
     (t) => t.kind === TILE_KIND.rd && (t.q == null || t.r == null)
   );
+}
+
+/**
+ * Mint an argument tile. Verdict stays pending until the fact-check returns.
+ * Place it on an empty hex; it is not connected until the player docks it.
+ * @param {object} [opts]
+ */
+export function mintArgumentTile(opts = {}) {
+  const id =
+    opts.id ||
+    `arg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  const verdict =
+    opts.verdict === "accept" || opts.verdict === "reject" ? opts.verdict : null;
+  const pending =
+    opts.verdictPending != null ? Boolean(opts.verdictPending) : verdict == null;
+  return {
+    id,
+    kind: TILE_KIND.argument,
+    q: opts.q ?? null,
+    r: opts.r ?? null,
+    polarity: CURVE,
+    name: "Argument",
+    howText: String(opts.howText || opts.claim || "").slice(0, 4000),
+    year: Number(opts.year) || 2026,
+    verdictPending: pending,
+    verdict: pending ? null : verdict,
+    reason: pending ? "" : String(opts.reason || "").slice(0, 400),
+    artUrl: null,
+    imagePrompt: null,
+    lamp: null,
+  };
+}
+
+/**
+ * Unplaced argument tiles (tray).
+ * @param {object|null|undefined} board
+ * @returns {object[]}
+ */
+export function unplacedArgumentTiles(board) {
+  return Object.values(board?.tiles || {}).filter(
+    (t) => t.kind === TILE_KIND.argument && (t.q == null || t.r == null)
+  );
+}
+
+/**
+ * Empty visible slot that does not touch an invention, else any empty slot,
+ * else an isolated cell off the named list.
+ * @param {object} board
+ * @param {Array<{ q: number, r: number }>} [slots]
+ */
+export function findArgumentSpawn(board, slots) {
+  const list = Array.isArray(slots) ? slots : [];
+  const empty = list.filter((s) => s && !tileAt(board, s.q, s.r));
+  const touchesInvention = (q, r) => {
+    for (let d = 0; d < 6; d++) {
+      const n = neighbor(q, r, d);
+      const t = tileAt(board, n.q, n.r);
+      if (t?.kind === TILE_KIND.invention) return true;
+    }
+    return false;
+  };
+  const detached = empty.find((s) => !touchesInvention(s.q, s.r));
+  if (detached) return { q: detached.q, r: detached.r };
+  if (empty[0]) return { q: empty[0].q, r: empty[0].r };
+  return findIsolatedSlot(board);
 }
 
 /**

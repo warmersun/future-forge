@@ -76,7 +76,7 @@ import {
   createEmptyBoard,
   cloneBoard,
   boardForWire,
-} from "../hex/board-state.js?v=crisis-role-3";
+} from "../hex/board-state.js?v=argument-1";
 
 const MAX_PLAYERS = 6;
 const MIN_PLAYERS = 2;

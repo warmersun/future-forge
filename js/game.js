@@ -166,7 +166,7 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=pathway-desc-1";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=argument-1";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
 import {
   boardHolds,
@@ -183,7 +183,7 @@ import {
   concernAnglesOnBoard,
   formatFactor,
   convergencesForAi,
-} from "./hex/board-state.js?v=crisis-role-3";
+} from "./hex/board-state.js?v=argument-1";
 import {
   boardWorstPathwayTiming,
   boardPathwayReevaluating,
@@ -197,7 +197,7 @@ import {
   visionGivensFromBoard,
   visionPeopleMood,
   crisisMeterTooltipBits,
-} from "./hex/evaluate.js?v=crisis-role-3";
+} from "./hex/evaluate.js?v=argument-1";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
@@ -1900,6 +1900,17 @@ function ensureHexWorkshop() {
     apEnabled: () => apEnabled(),
     budgetWillEnabled: () => budgetWillEnabled(),
     spendRdMint: () => spendRdMint(),
+    spendArgumentAp: () => {
+      if (!apEnabled()) return { ok: true };
+      const pay = spendContributionAp("fact-check-argument");
+      // Settle now so the 1 AP sticks and the turn is not left in ai_pending.
+      if (pay?.ok && !pay.roomPaid && state.pendingAi) {
+        dispatchSim("resolve_ai");
+        renderHud();
+        mpSyncFromSolo();
+      }
+      return pay;
+    },
     flashToast: (msg, opts) => flashToast(msg, opts),
     canEditBoard: () => mpHexEditsAllowed(),
     canSummonChallengers: () => {
@@ -12937,6 +12948,7 @@ const LEAN_EVAL_MODES = new Set([
   "coach-challenge",
   "draft-challenge",
   "fill-quest-summary",
+  "fact-check-argument",
 ]);
 
 function slimTechForEval(t) {

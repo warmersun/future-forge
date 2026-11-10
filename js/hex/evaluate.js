@@ -42,7 +42,7 @@ import {
   cloneBoard,
   applyLights,
   PATHWAY_TEXT_MAX,
-} from "./board-state.js?v=crisis-role-3";
+} from "./board-state.js?v=argument-1";
 import {
   CRISIS_REASON_MAX,
   crisisRoleKeys,
@@ -429,7 +429,15 @@ export function pathwayContentFingerprint(inventions, board) {
       return [n.id, n.techId || "", how, timing];
     });
   const resolved = resolveIslandHow(board, inventions);
-  return semanticDigest("pathway-content-v1", [parts, resolved.stored ? resolved.text : ""]);
+  const cases = acceptedArgumentsForPathway(board, inventions).map((a) => [
+    a.id,
+    a.claim,
+  ]);
+  return semanticDigest("pathway-content-v1", [
+    parts,
+    resolved.stored ? resolved.text : "",
+    cases,
+  ]);
 }
 
 /**
@@ -1612,16 +1620,133 @@ export function boardPathwayReevaluating(board) {
  * @param {object} tile
  * @param {number} year
  */
-export function tileTimingCacheKey(tile, year, sourceKey = "") {
+export function tileTimingCacheKey(tile, year, sourceKey = "", board = null) {
   const parts = [
     tile?.id || "",
     Number(year) || 0,
     String(tile?.techId || ""),
     String(tile?.howText || "").trim(),
   ];
+  if (board && tile?.id) {
+    parts.push(
+      acceptedArgumentsTouchingTile(board, tile.id).map((a) => [a.id, a.claim])
+    );
+  }
   const source = String(sourceKey || "");
   if (source) parts.push(source);
   return semanticDigest("tile-timing-v1", parts);
+}
+
+const ARGUMENT_CLIP = 8;
+const ARGUMENT_CLAIM_CAP = 400;
+
+function argumentClaimText(tile) {
+  return String(tile?.howText || "").trim().slice(0, ARGUMENT_CLAIM_CAP);
+}
+
+function isAcceptedArgument(tile) {
+  return Boolean(
+    tile &&
+      tile.kind === TILE_KIND.argument &&
+      tile.verdict === "accept" &&
+      !tile.verdictPending &&
+      tile.q != null &&
+      tile.r != null &&
+      argumentClaimText(tile)
+  );
+}
+
+/**
+ * Accepted argument tiles that share an edge with this invention.
+ * Pending and rejected tiles are omitted. Sorted by id, clipped to 8.
+ * @param {object|null|undefined} board
+ * @param {string} inventionId
+ * @returns {{ id: string, claim: string }[]}
+ */
+export function acceptedArgumentsTouchingTile(board, inventionId) {
+  const tile = board?.tiles?.[inventionId];
+  if (!tile || tile.kind !== TILE_KIND.invention || tile.q == null || tile.r == null) {
+    return [];
+  }
+  const out = [];
+  for (const n of neighborTiles(board, inventionId)) {
+    const live = board.tiles?.[n.id] || n;
+    if (!isAcceptedArgument(live)) continue;
+    out.push({ id: live.id, claim: argumentClaimText(live) });
+  }
+  out.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  return out.slice(0, ARGUMENT_CLIP);
+}
+
+/**
+ * Accepted arguments that edge-touch any invention in this pathway.
+ * @param {object|null|undefined} board
+ * @param {object[]} inventions
+ * @returns {{ id: string, claim: string }[]}
+ */
+export function acceptedArgumentsForPathway(board, inventions) {
+  const ids = new Set((inventions || []).map((t) => t?.id).filter(Boolean));
+  if (!ids.size) return [];
+  const byId = new Map();
+  for (const t of Object.values(board?.tiles || {})) {
+    if (!isAcceptedArgument(t)) continue;
+    const touches = neighborTiles(board, t.id).some(
+      (n) => n.kind === TILE_KIND.invention && ids.has(n.id)
+    );
+    if (!touches) continue;
+    byId.set(t.id, { id: t.id, claim: argumentClaimText(t) });
+  }
+  return [...byId.values()]
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    .slice(0, ARGUMENT_CLIP);
+}
+
+/**
+ * Settled AI assessments an argument can answer.
+ * Pending timings and pending pathway scores are omitted.
+ * @param {object|null|undefined} board
+ */
+export function settledAssessments(board) {
+  const timings = [];
+  for (const t of Object.values(board?.tiles || {})) {
+    if (!t || t.kind !== TILE_KIND.invention) continue;
+    if (t.q == null || t.r == null) continue;
+    if (t.timingPending) continue;
+    const level = t.timingLevel;
+    if (level !== "red" && level !== "yellow" && level !== "green") continue;
+    timings.push({
+      tileId: t.id,
+      techId: t.techId || null,
+      howText: String(t.howText || "").slice(0, ARGUMENT_CLAIM_CAP),
+      level,
+      reason: String(t.timingReason || "").slice(0, ARGUMENT_CLAIM_CAP),
+    });
+  }
+  timings.sort((a, b) => String(a.tileId).localeCompare(String(b.tileId)));
+  const pathways = [];
+  const seen = new Set();
+  for (const invs of listInventionPathways(board)) {
+    const fp = pathwayContentFingerprint(invs, board);
+    if (seen.has(fp)) continue;
+    seen.add(fp);
+    const impact = board?.pathwayImpacts?.[fp];
+    if (!impact || impact.pending) continue;
+    const crisisReasons = {};
+    for (const [role, reason] of Object.entries(impact.crisisReasons || {})) {
+      const text = String(reason || "").trim();
+      if (text) crisisReasons[role] = text.slice(0, 280);
+    }
+    pathways.push({
+      fingerprint: fp,
+      inventionIds: invs.map((t) => t.id),
+      crisisReasons,
+    });
+    if (pathways.length >= 4) break;
+  }
+  return {
+    timings: timings.slice(0, 8),
+    pathways,
+  };
 }
 
 /**
@@ -1819,7 +1944,7 @@ export function pathwayHighlight(board, tileId) {
     };
   }
 
-  if (tile.kind === TILE_KIND.rd) {
+  if (tile.kind === TILE_KIND.rd || tile.kind === TILE_KIND.argument) {
     const seeds = neighborTiles(board, tileId).filter(
       (n) => n.kind === TILE_KIND.invention && n.q != null
     );
