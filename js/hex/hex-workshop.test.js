@@ -31,6 +31,7 @@ import {
   crisisWhyBlockHtml,
   concernWhyBlockHtml,
   argumentVerdictHtml,
+  concernAnswerGradeHtml,
 } from "./hex-workshop.js";
 import { neighbor } from "./hex-tile-grid.js";
 import {
@@ -346,15 +347,32 @@ describe("hex-workshop why blocks", () => {
     assert.equal(argumentVerdictHtml("accept", "   "), argumentVerdictHtml("accept", ""));
   });
 
+  it("concernAnswerGradeHtml uses a check, an amber dash, or a cross", () => {
+    const hit = concernAnswerGradeHtml("hit", "Names who pays.");
+    assert.match(hit, /class="hex-arg-verdict hex-concern-answer-grade is-accept"/);
+    assert.match(hit, /<polyline /);
+    assert.match(hit, /<strong>Hit<\/strong>/);
+    const glance = concernAnswerGradeHtml("glance", "Names a limit, not who pays.");
+    assert.match(glance, /is-glance/);
+    assert.match(glance, /<line x1="3.5" y1="8"/);
+    assert.match(glance, /<strong>Glance<\/strong>/);
+    const miss = concernAnswerGradeHtml("miss", "Too vague.");
+    assert.match(miss, /is-reject/);
+    assert.match(miss, /<line x1="3.5" y1="3.5"/);
+    assert.match(miss, /<strong>Miss<\/strong>/);
+    assert.equal(/[✅❌]/.test(hit + glance + miss), false);
+  });
+
   it("concernWhyBlockHtml lists every island lamp", () => {
     const html = concernWhyBlockHtml([
       { label: "ai", level: "yellow", reason: "Neighbors can skip the fee.", pending: false },
       { label: "drones", level: "red", reason: "Still unanswered.", pending: false },
     ]);
-    assert.match(html, /yellow/);
+    assert.match(html, /ai/);
     assert.match(html, /Neighbors can skip/);
-    assert.match(html, /red/);
+    assert.match(html, /drones/);
     assert.match(html, /Still unanswered/);
+    assert.equal(html.includes("hex-tile-popup-lamp"), false);
     const mixed = concernWhyBlockHtml([
       { label: "ai", level: "yellow", reason: "Neighbors can skip the fee.", pending: false },
       { label: "drones", level: "red", reason: "", pending: true },

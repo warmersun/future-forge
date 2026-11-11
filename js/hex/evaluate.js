@@ -563,16 +563,36 @@ export function concernInventChanged(concernTile, inventions, board) {
   return !posed.includes(fp);
 }
 
+/** Shown when a Miss cannot raise a critic whose pathway is unchanged. */
+export const CONCERN_MISS_UNCHANGED_REASON =
+  "A miss does not answer this while the pathway is unchanged.";
+
+/**
+ * A Miss cannot raise this critic unless this pathway changed since it was posed.
+ * Hit, Glance, and an answer with no stored grade do not block.
+ * @param {{ answerQuality?: string|null, posedFingerprints?: string[] }} concernTile
+ * @param {object[]} inventions
+ * @param {object|null|undefined} [board]
+ */
+export function concernMissBlocksLamp(concernTile, inventions, board) {
+  const quality = String(concernTile?.answerQuality || "").toLowerCase();
+  if (quality !== "miss") return false;
+  return !concernInventChanged(concernTile, inventions, board);
+}
+
 /**
  * Offline heuristic score for a pathway (no AI).
  * Mild −1 on roles with mature how-text.
  * Concerns stay red until a written answer exists (never green offline).
+ * A Miss stays red unless this pathway changed since the critic was posed.
  * Docking / mature how-text is not itself an address.
  * @param {object[]} inventions
  * @param {number} year
  * @param {object} [opts]
  * @param {string[]} [opts.concernAngles]
  * @param {Record<string, string|null|undefined>} [opts.concernAnswers]
+ * @param {Record<string, string|null|undefined>} [opts.concernQualities]
+ * @param {Record<string, boolean|null|undefined>} [opts.concernChanged]
  */
 export function heuristicPathwayScore(inventions, year, opts = {}) {
   const howLen = inventions
@@ -634,14 +654,28 @@ export function heuristicPathwayScore(inventions, year, opts = {}) {
     opts.concernAnswers && typeof opts.concernAnswers === "object"
       ? opts.concernAnswers
       : {};
+  const qualities =
+    opts.concernQualities && typeof opts.concernQualities === "object"
+      ? opts.concernQualities
+      : {};
+  const changed =
+    opts.concernChanged && typeof opts.concernChanged === "object"
+      ? opts.concernChanged
+      : {};
   const concerns = {};
   for (const angle of opts.concernAngles || []) {
     const hasAnswer = Boolean(String(answers[angle] || "").trim());
+    const quality = String(qualities[angle] || "").toLowerCase();
+    const inventChanged = Boolean(changed[angle]);
+    const missBlocks = quality === "miss" && !inventChanged;
+    const eased = hasAnswer && !missBlocks;
     concerns[angle] = {
-      level: hasAnswer ? "yellow" : "red",
-      reason: hasAnswer
-        ? "Written answer is on file — confirm the pathway honestly holds it."
-        : "Still unanswered — docking is not enough.",
+      level: eased ? "yellow" : "red",
+      reason: missBlocks
+        ? CONCERN_MISS_UNCHANGED_REASON
+        : eased
+          ? "Written answer is on file — confirm the pathway honestly holds it."
+          : "Still unanswered — docking is not enough.",
     };
   }
   return clampPathwayScore(
@@ -1053,6 +1087,8 @@ export function applyPathwayPressure(board, opts = {}) {
       let reason = "Still unanswered.";
       let touching = false;
       const hasAnswer = Boolean(String(t.playerAnswer || "").trim());
+      const answerQuality = String(t.answerQuality || "").toLowerCase();
+      const missPreview = answerQuality === "miss";
       for (const { fingerprint, inventions } of pathways) {
         const impact = next.pathwayImpacts[fingerprint];
         if (!impact) continue;
@@ -1078,13 +1114,15 @@ export function applyPathwayPressure(board, opts = {}) {
       }
       lights.push({
         id: t.id,
-        level: touching ? lamp || (hasAnswer ? "yellow" : "red") : "red",
+        level: touching ? lamp || (hasAnswer && !missPreview ? "yellow" : "red") : "red",
         reason: touching
           ? lamp
             ? reason
-            : hasAnswer
-              ? "Written answer is on file — confirm the pathway honestly holds it."
-              : "Still unanswered — docking is not enough."
+            : missPreview
+              ? CONCERN_MISS_UNCHANGED_REASON
+              : hasAnswer
+                ? "Written answer is on file — confirm the pathway honestly holds it."
+                : "Still unanswered — docking is not enough."
           : hasAnswer
             ? "Answer is on file — the light stays red until a pathway docks."
             : "Still unanswered.",
@@ -2282,12 +2320,14 @@ export function assessGlobalSustainPrior(cluster, opts = {}) {
  * Concern prior — heuristic never awards green.
  * Nothing docked is always red, even with a saved written answer.
  * Docking alone is not an address — stay red until a written answer exists.
+ * An explicit Miss stays red. Text with no stored grade can still preview yellow.
  * @param {object} cluster
  * @param {object|null} [given]
  * @returns {{ level: "red"|"yellow"|"green", note: string }}
  */
 export function assessConcernPrior(cluster, given = null) {
   const hasAnswer = Boolean(String(given?.playerAnswer || "").trim());
+  const quality = String(given?.answerQuality || "").toLowerCase();
   if (!cluster?.anyTouch) {
     return {
       level: "red",
@@ -2296,10 +2336,13 @@ export function assessConcernPrior(cluster, given = null) {
         : "Still unanswered — dock a pathway, then answer the critic or change the pathway so it addresses this challenge.",
     };
   }
-  if (!hasAnswer) {
+  if (!hasAnswer || quality === "miss") {
     return {
       level: "red",
-      note: "Still unanswered — docking is not enough. Answer the critic or change the pathway so it addresses this challenge.",
+      note:
+        quality === "miss"
+          ? "A miss does not answer this. Answer the question, or change the pathway."
+          : "Still unanswered — docking is not enough. Answer the critic or change the pathway so it addresses this challenge.",
     };
   }
   return {

@@ -92,6 +92,8 @@ import {
   pickConcernSpawn,
   clampConcernLamp,
   concernInventChanged,
+  concernMissBlocksLamp,
+  CONCERN_MISS_UNCHANGED_REASON,
   boardBondsLevel,
   hexPathwayPanel,
   bandToLamp,
@@ -1343,6 +1345,23 @@ describe("clampConcernLamp", () => {
       false
     );
   });
+
+  it("a miss blocks the lamp only while the posed pathway is unchanged", () => {
+    const invs = [{ id: "a", techId: "ai", howText: "New.", timingLevel: "green" }];
+    const fp = pathwayContentFingerprint(invs);
+    const unchanged = { answerQuality: "miss", posedFingerprints: [fp] };
+    const changed = { answerQuality: "miss", posedFingerprints: ["other"] };
+    assert.equal(concernMissBlocksLamp(unchanged, invs), true);
+    assert.equal(concernMissBlocksLamp(changed, invs), false);
+    assert.equal(
+      concernMissBlocksLamp({ answerQuality: "hit", posedFingerprints: [fp] }, invs),
+      false
+    );
+    assert.equal(
+      concernMissBlocksLamp({ answerQuality: "glance", posedFingerprints: [fp] }, invs),
+      false
+    );
+  });
 });
 
 describe("applyPathwayPressure (cached scores)", () => {
@@ -1676,6 +1695,31 @@ describe("applyPathwayPressure (cached scores)", () => {
       concernAnswers: { moloch: "A bonded escrow pays only after proof." },
     });
     assert.equal(answered.concerns.moloch.level, "yellow");
+
+    const miss = heuristicPathwayScore(inventions, 2026, {
+      concernAngles: ["moloch"],
+      concernAnswers: { moloch: "asdfasdfasdf" },
+      concernQualities: { moloch: "miss" },
+    });
+    assert.equal(miss.concerns.moloch.level, "red");
+    assert.equal(miss.concerns.moloch.reason, CONCERN_MISS_UNCHANGED_REASON);
+
+    for (const quality of ["hit", "glance"]) {
+      const graded = heuristicPathwayScore(inventions, 2026, {
+        concernAngles: ["moloch"],
+        concernAnswers: { moloch: "A bonded escrow pays only after proof." },
+        concernQualities: { moloch: quality },
+      });
+      assert.equal(graded.concerns.moloch.level, "yellow");
+    }
+
+    const missChanged = heuristicPathwayScore(inventions, 2026, {
+      concernAngles: ["moloch"],
+      concernAnswers: { moloch: "asdfasdfasdf" },
+      concernQualities: { moloch: "miss" },
+      concernChanged: { moloch: true },
+    });
+    assert.equal(missChanged.concerns.moloch.level, "yellow");
   });
 
   it("heuristicPathwayScore does not ease meters for a UBI bill", () => {
@@ -2133,6 +2177,13 @@ describe("assessConcernPrior + written answers", () => {
 
     const yellow = assessConcernPrior(touching, answered);
     assert.equal(yellow.level, "yellow");
+
+    const miss = assessConcernPrior(touching, {
+      playerAnswer: "asdfasdfasdf",
+      answerQuality: "miss",
+    });
+    assert.equal(miss.level, "red");
+    assert.match(miss.note, /miss does not answer/i);
   });
 });
 
@@ -2219,6 +2270,43 @@ describe("invalidatePathwaysTouchingGiven", () => {
     assert.equal(
       applied.board.tiles["concern-moloch"].playerAnswer.includes("escrow"),
       true
+    );
+  });
+
+  it("a miss does not preview yellow before the pathway is scored", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    board = addTile(board, {
+      id: "concern-moloch",
+      kind: TILE_KIND.concern,
+      q: board.tiles["crisis-local"].q - 3,
+      r: board.tiles["crisis-local"].r,
+      polarity: "curve",
+      name: "Moloch",
+      angle: "moloch",
+      lamp: "yellow",
+      playerAnswer: "asdfasdfasdf",
+      answerQuality: "miss",
+    });
+    const concern = board.tiles["concern-moloch"];
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "ai1",
+        techId: "ai",
+        howText: "Shared ledger.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    board = placeOk(board, "ai1", concern.q + 1, concern.r);
+    const applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.board.tiles["concern-moloch"].lamp, "red");
+    assert.equal(
+      applied.board.tiles["concern-moloch"].lampReason,
+      CONCERN_MISS_UNCHANGED_REASON
     );
   });
 

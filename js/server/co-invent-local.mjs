@@ -891,11 +891,16 @@ function localCoInvent({ mode, messages, context }) {
       const angle = c?.angle;
       if (!angle) continue;
       const hasAnswer = Boolean(String(c.playerAnswer || "").trim());
+      const quality = String(c.answerQuality || "").toLowerCase();
+      const missBlocks = quality === "miss" && !c.inventChanged;
+      const eased = hasAnswer && !missBlocks;
       concerns[angle] = {
-        level: hasAnswer ? "yellow" : "red",
-        reason: hasAnswer
-          ? "Written answer is on file — confirm the pathway honestly holds it."
-          : "Still unanswered — docking is not enough.",
+        level: eased ? "yellow" : "red",
+        reason: missBlocks
+          ? "A miss does not answer this while the pathway is unchanged."
+          : eased
+            ? "Written answer is on file — confirm the pathway honestly holds it."
+            : "Still unanswered — docking is not enough.",
       };
     }
     const clamped = clampPathwayScore(

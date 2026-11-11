@@ -128,6 +128,8 @@ import {
   pickConcernSpawn,
   clampConcernLamp,
   concernInventChanged,
+  concernMissBlocksLamp,
+  CONCERN_MISS_UNCHANGED_REASON,
   inventionComponent,
   listInventionPathways,
   pathwayContentFingerprint,
@@ -1093,6 +1095,15 @@ export function createHexWorkshop(api) {
       if (t.kind === TILE_KIND.invention) {
         const tech = t.techId ? techById(t.techId) : null;
         title.textContent = tech?.name || t.techId || "emTech idea";
+      } else if (t.kind === TILE_KIND.concern) {
+        const lamp =
+          t.lamp === "green" || t.lamp === "yellow" || t.lamp === "red"
+            ? t.lamp
+            : "red";
+        const name = t.name || "Tile";
+        title.innerHTML =
+          `<span class="hex-tile-popup-lamp ${lamp}" title="${lamp}" aria-hidden="true"></span>` +
+          escapeHtml(name);
       } else {
         title.textContent = t.name || "Tile";
       }
@@ -1298,47 +1309,55 @@ export function createHexWorkshop(api) {
             parts.push(`<p><strong>Their answer</strong></p><p>${escapeHtml(reply.answer)}</p>`);
           }
         } else {
+          const pathwayPhrase = posedPathwayPhrase(board(), t);
           parts.push(
-            `<p class="muted">This critic is a veto on the island it was raised against. Docking does not address it. Answer here, or change that touching pathway (edit how-it-works, add or lift invent tiles) so it honestly answers the question.</p>`
+            `<p class="muted">This challenge was raised against ${escapeHtml(pathwayPhrase)}. Answer the question, change that pathway, or both.</p>`
           );
         }
         if (canAnswer && showForm) {
           parts.push(
-            `<label class="hex-tile-popup-answer-label" for="hex-concern-answer">Your answer</label>` +
+            `<div class="hex-concern-answer">` +
+              `<label class="hex-tile-popup-answer-label" for="hex-concern-answer">Your answer</label>` +
               `<textarea id="hex-concern-answer" class="hex-tile-popup-answer" rows="5" maxlength="2000" ${
                 reply.pending || concernAnswerBusy ? "disabled" : ""
               }>${escapeHtml(reply.answer)}</textarea>` +
               `<p class="hex-tile-popup-answer-actions"><button type="button" class="btn btn-primary btn-sm" id="hex-concern-answer-submit" ${
                 reply.pending || concernAnswerBusy ? "disabled" : ""
-              }>Answer this critic</button></p>`
+              }>Answer this critic</button></p>` +
+              (reply.pending || concernAnswerBusy
+                ? `<p class="muted">Judging…</p>`
+                : "") +
+            `</div>`
           );
-          if (reply.pending || concernAnswerBusy) {
-            parts.push(`<p class="muted">Judging…</p>`);
-          }
         } else if (canAnswer) {
-          const qLabel =
-            reply.quality === "hit"
-              ? "Hit"
-              : reply.quality === "miss"
-                ? "Miss"
-                : "Glance";
-          parts.push(`<p><strong>Your answer</strong></p><p>${escapeHtml(reply.answer)}</p>`);
+          const pathwayPhrase = posedPathwayPhrase(board(), t);
+          const nextStep =
+            reply.quality === "miss"
+              ? `<p class="hex-concern-answer-next">${escapeHtml(CONCERN_MISS_UNCHANGED_REASON)} Answer the question, change ${escapeHtml(pathwayPhrase)}, or both.</p>`
+              : "";
           parts.push(
-            `<p><strong>${escapeHtml(qLabel)}</strong>${
-              reply.feedback ? ` — ${escapeHtml(reply.feedback)}` : ""
-            }</p>`
-          );
-          parts.push(
-            `<p><button type="button" class="btn btn-ghost btn-sm" id="hex-concern-answer-revise">Revise answer</button></p>`
+            `<div class="hex-concern-answer">` +
+              `<p class="hex-concern-answer-kicker">Your answer</p>` +
+              `<p class="hex-concern-answer-text">${escapeHtml(reply.answer)}</p>` +
+              concernAnswerGradeHtml(reply.quality, reply.feedback) +
+              nextStep +
+              `<p class="hex-concern-answer-actions"><button type="button" class="btn btn-ghost btn-sm" id="hex-concern-answer-revise">Revise answer</button></p>` +
+            `</div>`
           );
         }
         parts.push(
           lampExplainHtml(t.lamp, "concern", {
             answeredUndocked: Boolean(reply.answer) && !docked,
+            quality: reply.quality,
+            pathwayPhrase: posedPathwayPhrase(board(), t),
           })
         );
         const concernWhy = concernWhyBlockHtml(
-          reasonsForConcernTile(board(), t)
+          reasonsForConcernTile(board(), t).filter(
+            (r) =>
+              reply.quality !== "miss" ||
+              r.reason !== CONCERN_MISS_UNCHANGED_REASON
+          )
         );
         if (concernWhy) parts.push(concernWhy);
       } else if (t.kind === TILE_KIND.rd) {
@@ -2571,6 +2590,8 @@ export function createHexWorkshop(api) {
   function dockedConcernScoreOpts(board, inventions) {
     const docked = concernsReachedFromPathway(board, inventions);
     const concernAnswers = {};
+    const concernQualities = {};
+    const concernChanged = {};
     const concernAngles = [];
     const concerns = [];
     for (const t of docked) {
@@ -2578,7 +2599,10 @@ export function createHexWorkshop(api) {
       concernAngles.push(t.angle);
       const reply = concernReplyText(t);
       const pose = concernPoseText(t);
+      const inventChanged = concernInventChanged(t, inventions, board);
       concernAnswers[t.angle] = reply.answer || "";
+      concernQualities[t.angle] = reply.quality;
+      concernChanged[t.angle] = inventChanged;
       concerns.push({
         angle: t.angle,
         challengeSpeech: pose.speech || null,
@@ -2586,12 +2610,12 @@ export function createHexWorkshop(api) {
         playerAnswer: reply.answer || null,
         answerQuality: reply.quality,
         priorLevel: t.lamp || "red",
-        inventChanged: concernInventChanged(t, inventions, board),
+        inventChanged,
         posedHowText: String(t.posedHowText || "").slice(0, 1600),
         ...(t.sourceInquiry ? { sourceInquiry: t.sourceInquiry } : {}),
       });
     }
-    return { concernAngles, concernAnswers, concerns };
+    return { concernAngles, concernAnswers, concernQualities, concernChanged, concerns };
   }
 
   async function runPathwayScore(fp, signal) {
@@ -2611,14 +2635,21 @@ export function createHexWorkshop(api) {
         .map((id) => b.tiles?.[id])
         .filter((t) => t && t.kind === TILE_KIND.invention);
 
-      const { concernAngles, concernAnswers, concerns } = dockedConcernScoreOpts(
-        b,
-        inventions
-      );
+      const { concernAngles, concernAnswers, concernQualities, concernChanged, concerns } =
+        dockedConcernScoreOpts(b, inventions);
       const globalId = api.getGlobal?.()?.id || mission?.globalId || "";
       const rules = api.getRules?.() || mission?.rules || [];
       const crisisRoles = boardCrisisRoles(b);
-      const heurOpts = { concernAngles, concernAnswers, globalId, mission, rules, crisisRoles };
+      const heurOpts = {
+        concernAngles,
+        concernAnswers,
+        concernQualities,
+        concernChanged,
+        globalId,
+        mission,
+        rules,
+        crisisRoles,
+      };
       const concernKey = pathwayConcernScoreKey(b, inventions);
       const scoreCurrent = () => isCurrent() && !signal?.aborted &&
         pathwayJobs.get(fp)?.abort.signal === signal &&
@@ -2690,13 +2721,18 @@ export function createHexWorkshop(api) {
           const row = score.concerns[t.angle];
           if (!row) continue;
           const hasAnswer = Boolean(String(t.playerAnswer || "").trim());
-          const allowImprove =
-            hasAnswer || concernInventChanged(t, inventions, b);
-          const prior =
-            t.lamp === "yellow" || t.lamp === "green" || t.lamp === "red"
-              ? t.lamp
-              : "red";
-          row.level = clampConcernLamp(prior, row.level, allowImprove);
+          if (concernMissBlocksLamp(t, inventions, b)) {
+            row.level = "red";
+            row.reason = CONCERN_MISS_UNCHANGED_REASON;
+          } else {
+            const allowImprove =
+              hasAnswer || concernInventChanged(t, inventions, b);
+            const prior =
+              t.lamp === "yellow" || t.lamp === "green" || t.lamp === "red"
+                ? t.lamp
+                : "red";
+            row.level = clampConcernLamp(prior, row.level, allowImprove);
+          }
         }
       }
       applySettledPathwayScore(
@@ -4418,6 +4454,60 @@ export function createHexWorkshop(api) {
 }
 
 /**
+ * "the Drones · Batteries pathway" for the emTechs this critic was raised against.
+ * Several posed pathways are joined. Missing tiles fall back to a plain phrase.
+ * @param {object|null|undefined} board
+ * @param {object|null|undefined} concernTile
+ */
+function posedPathwayPhrase(board, concernTile) {
+  const ids = Array.isArray(concernTile?.posedInventionIds)
+    ? concernTile.posedInventionIds.map(String)
+    : [];
+  const idSet = new Set(ids);
+  const tiles = ids
+    .map((id) => board?.tiles?.[id])
+    .filter((t) => t && t.kind === TILE_KIND.invention);
+  if (!tiles.length) return "the pathway this challenge was raised against";
+
+  const groups = [];
+  const seen = new Set();
+  const unplaced = [];
+  for (const t of tiles) {
+    if (seen.has(t.id)) continue;
+    if (t.q == null || t.r == null) {
+      unplaced.push(t);
+      seen.add(t.id);
+      continue;
+    }
+    const group = inventionComponent(board, t.id).filter((n) => idSet.has(String(n.id)));
+    for (const n of group) seen.add(n.id);
+    if (group.length) groups.push(group);
+  }
+  if (!groups.length && unplaced.length) groups.push(unplaced);
+
+  const labels = groups.map((group) => emTechPathwayName(group)).filter(Boolean);
+  if (!labels.length) return "the pathway this challenge was raised against";
+  const wrapped = labels.map((label) => `the ${label} pathway`);
+  if (wrapped.length === 1) return wrapped[0];
+  if (wrapped.length === 2) return `${wrapped[0]} and ${wrapped[1]}`;
+  return `${wrapped.slice(0, -1).join(", ")}, and ${wrapped.at(-1)}`;
+}
+
+/** Up to three emTech display names, joined like a pathway label. */
+function emTechPathwayName(inventions) {
+  const names = [];
+  const seen = new Set();
+  for (const t of inventions || []) {
+    const name = String(techById(t?.techId)?.name || t?.techId || "").trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    names.push(name);
+    if (names.length >= 3) break;
+  }
+  return names.join(" · ");
+}
+
+/**
  * Traffic-light line for crisis / concern popups (band meaning only).
  * Per-island AI/heuristic why lives in crisisWhyBlockHtml / concernWhyBlockHtml.
  * @param {string|null|undefined} lamp
@@ -4449,11 +4539,18 @@ function lampExplainHtml(lamp, kind, opts = {}) {
       meaning =
         "unanswered at the light. Your answer is on file; the light stays red until a pathway touches.";
     } else {
+      const pathway = opts.pathwayPhrase || "the pathway this challenge was raised against";
+      const named = pathway.charAt(0).toUpperCase() + pathway.slice(1);
       meaning =
-        "unanswered. This veto stays red until you answer the critic or change the touching invent. Docking alone does not move the light.";
+        opts.quality === "miss"
+          ? `${named} has not answered this.`
+          : `${named} has not answered this. Answer the question, change that pathway, or both.`;
     }
   }
-  return `<p><span class="hex-tile-popup-lamp ${escapeHtml(level)}"></span><strong>${escapeHtml(label)}</strong> — ${meaning}</p>`;
+  if (kind === "concern") {
+    return `<p>${escapeHtml(meaning)}</p>`;
+  }
+  return `<p><span class="hex-tile-popup-lamp ${escapeHtml(level)}"></span><strong>${escapeHtml(label)}</strong> — ${escapeHtml(meaning)}</p>`;
 }
 
 export function crisisWhyBlockHtml(rows) {
@@ -4524,16 +4621,8 @@ export function concernWhyBlockHtml(rows) {
   }
   const rowsHtml = settled
     .map((r) => {
-      const lvl =
-        r.level === "green" || r.level === "yellow" || r.level === "red"
-          ? r.level
-          : "red";
       const why = r.reason ? ` — ${escapeHtml(r.reason)}` : "";
-      return `<p class="muted"><span class="hex-tile-popup-lamp ${escapeHtml(
-        lvl
-      )}"></span><strong>${escapeHtml(lvl)}</strong> · ${escapeHtml(
-        r.label
-      )}${why}</p>`;
+      return `<p class="muted">${escapeHtml(r.label)}${why}</p>`;
     })
     .join("");
   const judging = pendingCount
@@ -4557,6 +4646,11 @@ const ARGUMENT_CROSS_SVG =
   `<line x1="12.5" y1="3.5" x2="3.5" y2="12.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>` +
   `</svg>`;
 
+const ANSWER_GLANCE_SVG =
+  `<svg class="hex-arg-mark" viewBox="0 0 16 16" aria-hidden="true" focusable="false">` +
+  `<line x1="3.5" y1="8" x2="12.5" y2="8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>` +
+  `</svg>`;
+
 /** Popup line for a settled argument: colored check or cross, then the one-sentence reason. */
 export function argumentVerdictHtml(verdict, reason) {
   const accepted = verdict === "accept";
@@ -4567,6 +4661,21 @@ export function argumentVerdictHtml(verdict, reason) {
     `${accepted ? ARGUMENT_CHECK_SVG : ARGUMENT_CROSS_SVG}` +
     `<span><strong>${accepted ? "Accepted" : "Rejected"}</strong>` +
     `${why ? ` — ${escapeHtml(why)}` : ""}</span></p>`
+  );
+}
+
+/** Answer grade: green check, amber dash, or red cross, then the judge's note. */
+export function concernAnswerGradeHtml(quality, feedback) {
+  const q = quality === "hit" || quality === "miss" ? quality : "glance";
+  const mark =
+    q === "hit" ? ARGUMENT_CHECK_SVG : q === "miss" ? ARGUMENT_CROSS_SVG : ANSWER_GLANCE_SVG;
+  const cls = q === "hit" ? "is-accept" : q === "miss" ? "is-reject" : "is-glance";
+  const label = q === "hit" ? "Hit" : q === "miss" ? "Miss" : "Glance";
+  const why = String(feedback || "").trim();
+  return (
+    `<p class="hex-arg-verdict hex-concern-answer-grade ${cls}">` +
+    mark +
+    `<span><strong>${label}</strong>${why ? ` — ${escapeHtml(why)}` : ""}</span></p>`
   );
 }
 
