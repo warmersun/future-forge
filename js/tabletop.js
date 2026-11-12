@@ -31,7 +31,7 @@ const STORAGE_PREFIX = "future-forge:tabletop-panel:";
 export const TABLETOP_STATIONS = [
   { id: "emtech", label: "Tech", name: "Emerging tech" },
   { id: "brief", label: "Brief", name: "Briefing" },
-  { id: "outlook", label: "Outlook", name: "Capability outlook" },
+  { id: "outlook", label: "Capability Outlook", name: "Capability Outlook" },
   { id: "invent", label: "Invent", name: "Invent" },
   { id: "board", label: "Board", name: "Hex board" },
   { id: "vision", label: "Vision", name: "Future vision" },

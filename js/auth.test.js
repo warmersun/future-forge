@@ -30,6 +30,7 @@ import {
   formatClerkLoginLine,
   setCloudProfileCache,
   getCloudProfileCache,
+  syncAccountChipInset,
 } from "./auth.js";
 
 describe("clerkFrontendApiHost", () => {
@@ -530,5 +531,77 @@ describe("client device handoff (offline browser behavior)", () => {
     assert.equal(await browser.auth.resumePendingDeviceHandshake(), false);
     assert.equal(browser.values.has(pendingKey), false);
     assert.equal(browser.statusCalls().length, 0);
+  });
+});
+
+describe("syncAccountChipInset", () => {
+  it("tracks both --ff-account-w and --ff-account-h when visible and clears when hidden", (t) => {
+    let rect = { width: 245.2, height: 32.4 };
+    const mount = { hidden: false, getBoundingClientRect: () => rect };
+    const props = new Map();
+    const beforeDoc = Object.getOwnPropertyDescriptor(globalThis, "document");
+    Object.defineProperty(globalThis, "document", {
+      value: {
+        getElementById: (id) => (id === "ff-account" ? mount : null),
+        documentElement: {
+          style: {
+            setProperty: (k, v) => props.set(k, v),
+            removeProperty: (k) => props.delete(k),
+          },
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    t.after(() => {
+      if (beforeDoc) Object.defineProperty(globalThis, "document", beforeDoc);
+      else delete globalThis.document;
+    });
+
+    syncAccountChipInset();
+    assert.equal(props.get("--ff-account-w"), "246px");
+    assert.equal(props.get("--ff-account-h"), "33px");
+
+    rect = { width: 0, height: 0 };
+    syncAccountChipInset();
+    assert.equal(props.get("--ff-account-w"), "246px");
+    assert.equal(props.get("--ff-account-h"), "33px");
+
+    mount.hidden = true;
+    syncAccountChipInset();
+    assert.equal(props.has("--ff-account-w"), false);
+    assert.equal(props.has("--ff-account-h"), false);
+  });
+
+  it("resyncs insets via ResizeObserver when #ff-account resizes or unhides", async (t) => {
+    const observers = [];
+    const beforeRO = Object.getOwnPropertyDescriptor(globalThis, "ResizeObserver");
+    Object.defineProperty(globalThis, "ResizeObserver", {
+      value: class {
+        constructor(cb) { this.cb = cb; this.targets = []; observers.push(this); }
+        observe(el) { this.targets.push(el); }
+      },
+      configurable: true,
+      writable: true,
+    });
+    t.after(() => {
+      if (beforeRO) Object.defineProperty(globalThis, "ResizeObserver", beforeRO);
+      else delete globalThis.ResizeObserver;
+    });
+
+    const browser = await authBrowser(t, {});
+    assert.equal(observers.length, 1, "expected ResizeObserver attached to #ff-account");
+    const rootStyle = globalThis.document.documentElement.style;
+    const setCalls = [];
+    rootStyle.setProperty = (k, v) => setCalls.push([k, v]);
+    const mount = globalThis.document.getElementById("ff-account");
+    mount.hidden = false;
+    mount.getBoundingClientRect = () => ({ width: 311.1, height: 34.8 });
+    observers[0].cb();
+    assert.deepEqual(setCalls, [
+      ["--ff-account-w", "312px"],
+      ["--ff-account-h", "35px"],
+    ]);
+    assert.ok(browser.auth);
   });
 });

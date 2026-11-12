@@ -49,3 +49,17 @@ test("future vision sits immediately after the hex board", () => {
   const marked = [...rail.matchAll(/data-tabletop-station="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(marked, ids);
 });
+
+test("outlook station is named Capability Outlook in registry and rail", () => {
+  const station = TABLETOP_STATIONS.find((s) => s.id === "outlook");
+  assert.deepEqual(station, {
+    id: "outlook",
+    label: "Capability Outlook",
+    name: "Capability Outlook",
+  });
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const match = html.match(/data-tabletop-station="outlook"([^>]*)>([^<]+)</);
+  assert.ok(match, "expected outlook station chip in index.html");
+  assert.match(match[1], /aria-label="Capability Outlook"/);
+  assert.equal(match[2].trim(), "Capability Outlook");
+});

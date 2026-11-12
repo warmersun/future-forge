@@ -168,7 +168,7 @@ import {
 import { localPose } from "./challenge-pose.js";
 import { createHexWorkshop } from "./hex/hex-workshop.js?v=tabletop-1";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=tabletop-1";
-import { initTabletop } from "./tabletop.js?v=tabletop-1";
+import { initTabletop } from "./tabletop.js?v=tabletop-2";
 import {
   boardHolds,
   deriveBoardProse,

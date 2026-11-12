@@ -130,10 +130,18 @@ button:disabled {
 }
 
 #ff-account-who {
+  display: block;
   max-width: 10rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+#ff-account-signin,
+#ff-account-manage,
+#ff-account-signout {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 #ff-account-who[hidden],
@@ -4453,6 +4461,11 @@ body.mp-hotseat .topbar-game {
   gap: 0.35rem 0.5rem;
 }
 
+body.ff-accounts.mp-room .topbar-game,
+body.ff-accounts.mp-hotseat .topbar-game {
+  flex-wrap: wrap;
+}
+
 body.mp-room .topbar-game .brand .brand-name,
 body.mp-hotseat .topbar-game .brand .brand-name {
   /* Active-player chip already identifies the session — free horizontal room */
@@ -4924,6 +4937,17 @@ body.mp-hotseat .hud-product {
   gap: 0.4rem;
   flex-shrink: 0;
 }
+
+.hud-utility-row {
+  display: contents;
+}
+
+:where(#screen-workshop .topbar-game .brand) { order: 1; }
+:where(#screen-workshop .topbar-game .progress-pills) { order: 2; }
+:where(#screen-workshop .topbar-game .hud-clock) { order: 3; }
+:where(#screen-workshop .topbar-game .hud-product) { order: 4; }
+:where(#screen-workshop .topbar-game .hud-crisis-wrap) { order: 5; }
+:where(#screen-workshop .topbar-game .hud-actions) { order: 6; }
 
 .hud-ap,
 .hud-budget,
@@ -14985,6 +15009,10 @@ body.ff-second-pane > #side-coinventor {
    Coarse pointers, 720px–1399px. Phones and desktop stay on their layouts.
    The quest briefing walk (body.is-quest-briefing) still owns the screen. */
 @media (min-width: 720px) and (max-width: 1399px) and (any-pointer: coarse) {
+  body.ff-tabletop #screen-workshop.active {
+    animation: none;
+  }
+
   body.ff-tabletop:not(.is-quest-briefing) #screen-workshop.active {
     display: flex;
     flex-direction: column;
@@ -14993,21 +15021,107 @@ body.ff-second-pane > #side-coinventor {
     overflow: hidden;
   }
 
+  body.ff-tabletop:has(#screen-workshop.active) #ff-account {
+    top: calc(var(--topbar-pad-y) + env(safe-area-inset-top, 0px));
+    height: auto;
+    min-height: 1.7rem;
+    max-width: calc(100vw - var(--page-gutter) * 2 - 13.5rem);
+  }
+
+  body.ff-tabletop:has(#screen-workshop.active) #ff-account-who {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
   body.ff-tabletop #screen-workshop .progress-pills.invent-steps {
     display: none;
   }
 
   body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .topbar-game {
     flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
     gap: 0.35rem 0.55rem;
+    padding-inline: var(--page-gutter);
     padding-top: calc(var(--topbar-pad-y) + env(safe-area-inset-top, 0px));
+    padding-bottom: var(--topbar-pad-y);
     background:
       linear-gradient(180deg, rgba(18, 24, 42, 0.98), rgba(7, 11, 20, 0.92));
     box-shadow: 0 1px 0 rgba(255, 179, 71, 0.18);
   }
 
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .hud-utility-row {
+    order: 1;
+    flex: 1 0 100%;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.55rem;
+    min-width: 0;
+  }
+
+  /* Reserve row-1 space for the fixed account overlay inside the utility row alone
+     so full-width indicators and the rail beneath always clear it without overlap. */
+  body.ff-tabletop.ff-accounts:not(.is-quest-briefing):has(#ff-account:not([hidden])) #screen-workshop .hud-utility-row {
+    min-height: var(--ff-account-h, 2.1rem);
+    padding-right: calc(var(--ff-account-w, 12.5rem) + 0.75rem);
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .topbar-game .brand {
+    order: 1;
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .topbar-game .mp-active-player {
+    max-width: clamp(6rem, 20vw, 11rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   body.ff-tabletop #screen-workshop .hud-product {
     height: 1.7rem;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .hud-product {
+    order: 2;
+    margin: 0 auto 0 0;
+    flex: 0 1 auto;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .hud-actions {
+    order: 3;
+    flex-shrink: 0;
+    margin: 0;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .hud-clock {
+    order: 2;
+    width: auto;
+    margin: 0 auto 0 0;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .hud-crisis-wrap {
+    order: 3;
+    width: auto;
+    margin: 0;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .hud-pressure {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 100%;
   }
 
   body.is-quest-briefing #tabletop-rail {

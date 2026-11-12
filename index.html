@@ -28,7 +28,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=tabletop-1" />
+    <link rel="stylesheet" href="css/styles.css?v=tabletop-2" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -1072,8 +1072,25 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
     <!-- WORKSHOP -->
     <section id="screen-workshop" class="screen">
       <header class="topbar topbar-game">
-        <div class="brand">
-          <span class="mp-active-player" id="mp-active-player" hidden aria-live="polite"></span>
+        <div class="hud-utility-row">
+          <div class="brand">
+            <span class="mp-active-player" id="mp-active-player" hidden aria-live="polite"></span>
+          </div>
+          <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
+              <img src="assets/brand/ff-by-warmersun-transparent-bg.png" alt="" width="1242" height="347" />
+            </a>
+          <div class="hud-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-abandon">Abandon</button>
+            <button
+              type="button"
+              class="btn-help"
+              id="btn-help"
+              title="What to do next"
+              aria-label="Help: what to do next"
+            >
+              ?
+            </button>
+          </div>
         </div>
         <div class="progress-pills invent-steps" aria-label="Quest steps">
           <span class="pill active" data-step="invent">Invent</span>
@@ -1087,9 +1104,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             <span class="hud-will" id="hud-will" hidden title="Support">Support 3</span>
           </span>
         </div>
-        <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
-            <img src="assets/brand/ff-by-warmersun-transparent-bg.png" alt="" width="1242" height="347" />
-          </a>
         <div
           class="hud-crisis-wrap"
           id="hud-crisis-wrap"
@@ -1097,18 +1111,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
         >
           <span class="hud-crisis-label"><dfn class="term" data-term="crisis-meter" tabindex="0" role="button" title="Tap for plain words">Crisis</dfn></span>
           <div class="hud-pressure" id="hud-pressure"></div>
-        </div>
-        <div class="hud-actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-abandon">Abandon</button>
-          <button
-            type="button"
-            class="btn-help"
-            id="btn-help"
-            title="What to do next"
-            aria-label="Help: what to do next"
-          >
-            ?
-          </button>
         </div>
       </header>
 
@@ -1131,7 +1133,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
         <div class="tabletop-rail-scroll" role="tablist" aria-orientation="horizontal">
           <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="emtech" aria-controls="solo-tech-library" aria-label="Emerging tech" tabindex="-1">Tech</button>
           <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="brief" aria-controls="ws-briefing" aria-label="Briefing" tabindex="-1">Brief<span class="tabletop-badge" data-tabletop-badge="brief" hidden></span></button>
-          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="outlook" aria-controls="invent-capability-explorer" aria-label="Capability outlook" tabindex="-1">Outlook</button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="outlook" aria-controls="invent-capability-explorer" aria-label="Capability Outlook" tabindex="-1">Capability Outlook</button>
           <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="invent" aria-controls="hex-tile-create" aria-label="Invent" tabindex="-1">Invent<span class="tabletop-badge" data-tabletop-badge="invent" hidden></span></button>
           <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="board" aria-controls="hex-board" aria-label="Hex board" tabindex="-1">Board</button>
           <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="vision" aria-controls="side-vision" aria-label="Future vision" tabindex="-1">Vision</button>
@@ -2596,6 +2598,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=tabletop-1"></script>
+    <script type="module" src="js/main.js?v=tabletop-2"></script>
   </body>
 </html>

@@ -779,22 +779,38 @@ function renderAccountChip() {
 }
 
 let accountInsetBound = false;
+let accountChipObserver = null;
 
 function bindAccountChipInset() {
   if (accountInsetBound || typeof window === "undefined") return;
   accountInsetBound = true;
   window.addEventListener("resize", () => syncAccountChipInset());
+  window.visualViewport?.addEventListener?.("resize", () => syncAccountChipInset());
+  if (typeof document !== "undefined") {
+    document.fonts?.ready?.then?.(() => syncAccountChipInset());
+    if (typeof ResizeObserver === "function") {
+      const mount = document.getElementById("ff-account");
+      if (mount) {
+        accountChipObserver = new ResizeObserver(() => syncAccountChipInset());
+        accountChipObserver.observe(mount);
+      }
+    }
+  }
 }
 
-function syncAccountChipInset() {
+export function syncAccountChipInset() {
   if (typeof document === "undefined") return;
   const mount = document.getElementById("ff-account");
   const root = document.documentElement;
   if (!root) return;
   if (!mount || mount.hidden) {
     root.style.removeProperty("--ff-account-w");
+    root.style.removeProperty("--ff-account-h");
     return;
   }
-  const w = mount.getBoundingClientRect().width;
+  const rect = mount.getBoundingClientRect?.();
+  const w = Number(rect?.width) || 0;
+  const h = Number(rect?.height) || 0;
   if (w > 0) root.style.setProperty("--ff-account-w", `${Math.ceil(w)}px`);
+  if (h > 0) root.style.setProperty("--ff-account-h", `${Math.ceil(h)}px`);
 }
