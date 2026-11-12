@@ -1123,6 +1123,55 @@ export function placeTile(board, tileId, q, r) {
 }
 
 /**
+ * First hex a tray tile may occupy. Neighbors of the crisis named by
+ * `tile.eases` come first; the rest follow `slots` order. A cell is legal
+ * when `placeTile` accepts it (empty, and worlds can dock).
+ * @param {object} board
+ * @param {string} tileId
+ * @param {Array<{ q: number, r: number }>} [slots]
+ * @returns {{ q: number, r: number }|null}
+ */
+export function firstLegalHex(board, tileId, slots) {
+  const list = Array.isArray(slots)
+    ? slots.filter((s) => s && Number.isFinite(Number(s.q)) && Number.isFinite(Number(s.r)))
+    : [];
+  const tile = board?.tiles?.[tileId];
+  if (!tile || !list.length) return null;
+
+  const inSlots = new Set(list.map((s) => keyOf(Number(s.q), Number(s.r))));
+  const seen = new Set();
+  /** @type {Array<{ q: number, r: number }>} */
+  const ordered = [];
+  const push = (q, r) => {
+    const qq = Number(q);
+    const rr = Number(r);
+    const key = keyOf(qq, rr);
+    if (seen.has(key) || !inSlots.has(key)) return;
+    seen.add(key);
+    ordered.push({ q: qq, r: rr });
+  };
+
+  const ease = String(tile.eases || "").trim().toLowerCase();
+  if (ease) {
+    for (const crisis of Object.values(board.tiles || {})) {
+      if (crisis?.kind !== TILE_KIND.crisis || crisis.q == null || crisis.r == null) continue;
+      const label = String(crisis.name || crisis.meterKey || "").trim().toLowerCase();
+      if (label !== ease) continue;
+      for (let d = 0; d < 6; d++) {
+        const n = neighbor(crisis.q, crisis.r, d);
+        push(n.q, n.r);
+      }
+    }
+  }
+  for (const s of list) push(s.q, s.r);
+
+  for (const cell of ordered) {
+    if (placeTile(board, tileId, cell.q, cell.r).ok) return cell;
+  }
+  return null;
+}
+
+/**
  * Lift a tile off the field (keeps it in tiles dict; q/r null).
  * Crisis tiles should generally stay — allow lift only for inventions by default.
  * @param {object} board

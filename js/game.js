@@ -166,8 +166,9 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=argument-1";
-import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=tabletop-1";
+import { createCrisisIntroduction } from "./crisis-introduction.js?v=tabletop-1";
+import { initTabletop } from "./tabletop.js?v=tabletop-1";
 import {
   boardHolds,
   deriveBoardProse,
@@ -4613,11 +4614,17 @@ function hangupVoiceOnScreenChange(prevScreenId, nextScreenId) {
 /** Set while startTutorial navigates home so showScreen does not cancel the run. */
 let keepTutorialOnTitle = false;
 
+let tabletopCtl = null;
+
 const crisisIntroduction = createCrisisIntroduction({
   document,
   getBoard: () => state.hexBoard,
   repaint: () => hexWorkshop?.paint?.(),
-  onChange: () => { try { tutorialCtl?.refresh?.(); } catch {} },
+  onChange: () => {
+    try { tutorialCtl?.refresh?.(); } catch { /* tutorial not constructed yet */ }
+    try { tabletopCtl?.onCrisesChanged?.(); } catch { /* tabletop not constructed yet */ }
+  },
+  onLanding: () => tabletopCtl?.landCrisis?.() || null,
   reducedMotion: () => window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches || false,
 });
 
@@ -4657,6 +4664,7 @@ function showScreen(id) {
   if (id === "global") renderGlobals();
   if (id === "mission") renderMissions();
   if (id === "workshop") {
+    tabletopCtl?.onWorkshopEnter?.(state.mission?.id || "");
     renderWorkshop();
     ensureCoInventor();
     setSideTab(state.sideTab || "vision");
@@ -4666,6 +4674,8 @@ function showScreen(id) {
       if (roomBridge.isRoom()) scheduleRoomVisionRefresh({ immediate: true });
       else updateVision({ immediate: true });
     });
+    if (document.body.classList.contains("is-quest-briefing")) tabletopCtl?.refresh?.();
+    else tabletopCtl?.onBriefingSettled?.();
   }
   if (id === "outcome") renderOutcome();
   if (id === "cloud") void loadForge();
@@ -9090,6 +9100,7 @@ function renderWorkshop() {
         }
         if (snap?.mode !== "off") return;
         crisisIntroduction.show();
+        tabletopCtl?.onBriefingSettled?.();
         ensureCoInventor();
         try {
           updateVision({ debounceMs: 80, force: true });
@@ -24021,6 +24032,7 @@ async function refreshDeveloperModeFromHealth() {
     if (next === state.developer) return;
     state.developer = next;
     syncDeveloperAiTraceTab();
+    tabletopCtl?.refresh?.();
     syncPortfolioDevChrome();
     if (state.screen === "quest-catalog") renderQuestCatalog();
     if (_waitConfirmCtx) syncWaitTrendCharts();
@@ -24065,6 +24077,21 @@ export function init() {
   bind();
   syncDeveloperAiTraceTab();
   initTechDrawers();
+  tabletopCtl = initTabletop({
+    storage: typeof sessionStorage !== "undefined" ? sessionStorage : null,
+    getQuestId: () => state.mission?.id || "",
+    crisisCount: () => crisisIntroduction.count(),
+    unplacedCount: () => Number(document.querySelector("#hex-idea-cards")?.dataset.count || 0),
+    rulesOn: () => budgetWillEnabled(),
+    inspectOn: () => state.developer,
+    onVision: () => setSideTab("vision"),
+    onLog: () => setSideTab("log"),
+    onInspect: () => setSideTab("aitrace"),
+    onCoInventor: () => {
+      document.querySelector("#screen-workshop .vision-panel")?.classList.remove("is-co-collapsed");
+      ensureCoInventor();
+    },
+  });
   try {
     ensureHexWorkshop().wireDom();
   } catch (e) {

@@ -84,6 +84,7 @@ import {
   placedTechEconomy,
   isCollectorTile,
   unplacedInventionsForTech,
+  firstLegalHex,
   cloneBoard,
   boardCrisisRoles,
   TILE_KIND,
@@ -94,7 +95,7 @@ import {
   concernPoseText,
   concernReplyText,
   setConcernReply,
-} from "./board-state.js?v=argument-1";
+} from "./board-state.js?v=tabletop-1";
 import {
   tileTimingCacheKey,
   timingLevelToPct,
@@ -1730,6 +1731,67 @@ export function createHexWorkshop(api) {
       .join("");
   }
 
+  function onTabletop() {
+    return typeof document !== "undefined" && document.body?.classList?.contains("ff-tabletop");
+  }
+
+  let tabletopPlacedNotice = null;
+
+  function addCardToBoard(id) {
+    const cell = firstLegalHex(board(), id, defaultSlots());
+    if (!cell) {
+      api.flashToast?.("No open hex for this tile.");
+      return;
+    }
+    const name = board()?.tiles?.[id]?.name || "Tile";
+    tabletopPlacedNotice = { name };
+    const ok = ensureUi()?.occupy(id, cell.q, cell.r);
+    if (!ok) {
+      tabletopPlacedNotice = null;
+      renderIdeaCards();
+      return;
+    }
+    api.flashToast?.("Added to the board.");
+    renderIdeaCards();
+  }
+
+  function appendPlaceButton(body, tile) {
+    const place = document.createElement("button");
+    place.type = "button";
+    place.className = "btn btn-primary btn-sm hex-idea-card-place";
+    place.textContent = "Add to board";
+    const stop = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    place.addEventListener("pointerdown", stop);
+    place.addEventListener("click", (e) => {
+      stop(e);
+      addCardToBoard(tile.id);
+    });
+    body.appendChild(place);
+  }
+
+  function renderPlaceNotice(host) {
+    if (!host || !tabletopPlacedNotice || !onTabletop()) return;
+    const note = document.createElement("p");
+    note.className = "hex-place-confirm";
+    const label = document.createElement("span");
+    label.textContent = `${tabletopPlacedNotice.name} is on the board. `;
+    const move = document.createElement("button");
+    move.type = "button";
+    move.className = "btn-link";
+    move.textContent = "Move it";
+    move.addEventListener("click", () => {
+      tabletopPlacedNotice = null;
+      document.dispatchEvent(
+        new CustomEvent("ff-tabletop-go", { detail: { station: "board" } })
+      );
+    });
+    note.append(label, move);
+    host.prepend(note);
+  }
+
   function renderIdeaCards() {
     const host = document.querySelector("#hex-idea-cards");
     if (!host) return;
@@ -1738,6 +1800,7 @@ export function createHexWorkshop(api) {
     host.innerHTML = "";
     host.dataset.count = String(waiting.length);
     if (!waiting.length) {
+      renderPlaceNotice(host);
       syncCreateBusyUi();
       return;
     }
@@ -1770,6 +1833,7 @@ export function createHexWorkshop(api) {
         how.textContent =
           "Dock this against an invention pathway. The factor multiplies that pathway's honesty chance — including 0.75× misses.";
         body.appendChild(how);
+        appendPlaceButton(body, t);
         card.appendChild(body);
         const toss = document.createElement("button");
         toss.type = "button";
@@ -1829,6 +1893,7 @@ export function createHexWorkshop(api) {
         how.className = "hex-idea-card-how";
         how.textContent = String(t.reason || "").trim() || "Dock this against an invention.";
         body.appendChild(how);
+        appendPlaceButton(body, t);
         card.appendChild(body);
         const toss = document.createElement("button");
         toss.type = "button";
@@ -1861,9 +1926,13 @@ export function createHexWorkshop(api) {
       card.dataset.tileId = t.id;
       card.dataset.id = t.id;
       if (t.techId) card.dataset.techId = t.techId;
-      card.title = inStack
-        ? "In stack — drag onto the board"
-        : "Considering — drag onto the board to add to stack";
+      card.title = onTabletop()
+        ? inStack
+          ? "In stack — Add to board"
+          : "Considering — Add to board"
+        : inStack
+          ? "In stack — drag onto the board"
+          : "Considering — drag onto the board to add to stack";
 
       const visual = document.createElement("div");
       visual.className = "hex-idea-card-visual";
@@ -1931,6 +2000,7 @@ export function createHexWorkshop(api) {
         eases.textContent = `Eases: ${t.eases}`;
         body.appendChild(eases);
       }
+      appendPlaceButton(body, t);
       card.appendChild(body);
 
       const toss = document.createElement("button");
@@ -1959,6 +2029,7 @@ export function createHexWorkshop(api) {
       });
       host.appendChild(card);
     }
+    renderPlaceNotice(host);
     syncCreateBusyUi();
   }
 
@@ -3140,12 +3211,18 @@ export function createHexWorkshop(api) {
         kind: "action",
         title: isRefresh ? `AI refreshed ${mintedTiles.length} ideas` : `AI minted ${mintedTiles.length} ideas`,
         ideas: mintedTiles.map(ideaLog),
-        detail: "In the tray — drag them onto the board.",
+        detail: onTabletop()
+          ? "In the tray — add them to the board."
+          : "In the tray — drag them onto the board.",
       });
       api.flashToast?.(
         isRefresh
-          ? `Refreshed ${ideas.length} idea tiles — drag them onto the board.`
-          : `Minted ${ideas.length} idea tiles — drag them onto the board.`
+          ? onTabletop()
+            ? `Refreshed ${ideas.length} idea tiles — Add to board.`
+            : `Refreshed ${ideas.length} idea tiles — drag them onto the board.`
+          : onTabletop()
+            ? `Minted ${ideas.length} idea tiles — Add to board.`
+            : `Minted ${ideas.length} idea tiles — drag them onto the board.`
       );
       api.onBoardPainted?.();
       api.commitBoard?.(b);
@@ -3222,12 +3299,18 @@ export function createHexWorkshop(api) {
       clearScaffold();
       renderIdeaCards();
       ensureUi()?.render();
-      api.flashToast?.("Tile minted — drag it onto the board.");
+      api.flashToast?.(
+        onTabletop()
+          ? "Tile minted — Add to board."
+          : "Tile minted — drag it onto the board."
+      );
       appendCaptainLog({
         kind: "action",
         title: "Minted",
         ideas: [ideaLog(tile)],
-        detail: "In the tray — drag it onto the board.",
+        detail: onTabletop()
+          ? "In the tray — add it to the board."
+          : "In the tray — drag it onto the board.",
       });
       api.onBoardPainted?.();
       api.commitBoard?.(b);
@@ -4124,7 +4207,11 @@ export function createHexWorkshop(api) {
       ensureUi()?.render();
       api.onBoardPainted?.();
       api.commitBoard?.(board());
-      api.flashToast?.("Collector card ready — drag it onto the board. It costs nothing.");
+      api.flashToast?.(
+        onTabletop()
+          ? "Collector card ready — Add to board. It costs nothing."
+          : "Collector card ready — drag it onto the board. It costs nothing."
+      );
     } finally {
       setCreateBusy("mint", false);
     }

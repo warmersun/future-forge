@@ -35,15 +35,21 @@ class Element {
   cloneNode() { return new Element(this.tag); }
   animate() { return this.animationFactory(); }
 }
-function setup({ reduced = false, geometry = true } = {}) {
+function setup({ reduced = false, geometry = true, onLanding = null, rectFor } = {}) {
   const board = seedCrisisTiles({ crisisRoles: ['support', 'local'], pressure: { Scarcity: 3, Illness: 2 }, pressureDesc: { Scarcity: 'Not enough water' } });
   board.tiles['crisis-support'].lamp = 'green';
   const before = JSON.stringify(board);
   const panel = new Element(), host = new Element(), body = new Element();
-  const tiles = Object.values(board.tiles).map((t) => { const e = new Element(); e.dataset.id = t.id; if (!geometry) e.getBoundingClientRect = () => ({ width: 0, height: 0 }); return e; });
+  const tiles = Object.values(board.tiles).map((t) => {
+    const e = new Element();
+    e.dataset.id = t.id;
+    if (rectFor) e.getBoundingClientRect = () => rectFor(t.id);
+    else if (!geometry) e.getBoundingClientRect = () => ({ width: 0, height: 0 });
+    return e;
+  });
   const doc = { body, createElement: (tag) => new Element(tag), querySelector: (q) => q === '#crisis-briefing' ? panel : host, querySelectorAll: () => tiles };
   let renders = 0;
-  const ctl = createCrisisIntroduction({ document: doc, getBoard: () => board, repaint: () => renders++, reducedMotion: () => reduced });
+  const ctl = createCrisisIntroduction({ document: doc, getBoard: () => board, repaint: () => renders++, reducedMotion: () => reduced, onLanding });
   return { board, before, panel, host, body, doc, ctl, renders: () => renders };
 }
 test('root-cause role is labelled from the tile rather than its position', () => {
@@ -94,6 +100,32 @@ test('flight guards duplicates, reveals only on landing and reset cancels safely
   assert.equal(x.ctl.count(), 1); assert.equal(cancelled, true); assert.equal(x.body.children.length, 0);
   b.click(); x.ctl.reset(); resolve(); await Promise.resolve();
   assert.equal(x.ctl.count(), 0); assert.equal(x.body.children.length, 0);
+});
+test('landing hook runs before the destination is measured', async () => {
+  let ready = false;
+  let measuredBeforeReady = false;
+  Element.prototype.animationFactory = () => ({ finished: new Promise(() => {}), cancel() {} });
+  const x = setup({
+    rectFor: () => {
+      if (!ready) measuredBeforeReady = true;
+      return ready
+        ? { left: 8, top: 8, width: 30, height: 30, right: 38, bottom: 38 }
+        : { width: 0, height: 0 };
+    },
+    onLanding: () => {
+      assert.equal(measuredBeforeReady, false);
+      ready = true;
+      return Promise.resolve();
+    },
+  });
+  x.ctl.prepare(x.board, true);
+  x.ctl.show();
+  x.host.querySelectorAll('button')[0].click();
+  await Promise.resolve();
+  assert.equal(ready, true);
+  assert.equal(measuredBeforeReady, false);
+  assert.equal(x.body.children.length, 1);
+  assert.equal(x.ctl.count(), 2);
 });
 test('missing geometry reveals immediately and restored or empty boards do not hide tiles', () => {
   const x = setup({ geometry: false }); x.ctl.prepare(x.board, true); x.ctl.show();

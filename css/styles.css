@@ -14980,3 +14980,469 @@ body.ff-second-pane > #side-coinventor {
   color: #f8fafc;
   background: rgba(248, 250, 252, 0.08);
 }
+
+/* —— iPad tabletop: one station at a time ——
+   Coarse pointers, 720px–1399px. Phones and desktop stay on their layouts.
+   The quest briefing walk (body.is-quest-briefing) still owns the screen. */
+@media (min-width: 720px) and (max-width: 1399px) and (any-pointer: coarse) {
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop.active {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  body.ff-tabletop #screen-workshop .progress-pills.invent-steps {
+    display: none;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .topbar-game {
+    flex-wrap: wrap;
+    gap: 0.35rem 0.55rem;
+    padding-top: calc(var(--topbar-pad-y) + env(safe-area-inset-top, 0px));
+    background:
+      linear-gradient(180deg, rgba(18, 24, 42, 0.98), rgba(7, 11, 20, 0.92));
+    box-shadow: 0 1px 0 rgba(255, 179, 71, 0.18);
+  }
+
+  body.ff-tabletop #screen-workshop .hud-product {
+    height: 1.7rem;
+  }
+
+  body.is-quest-briefing #tabletop-rail {
+    display: none !important;
+  }
+
+  #tabletop-rail[hidden] {
+    display: none !important;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #tabletop-rail:not([hidden]) {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+    min-height: 3.25rem;
+    padding: 0.4rem var(--page-gutter) 0.45rem;
+    background:
+      radial-gradient(80% 120% at 10% 0%, rgba(255, 179, 71, 0.14), transparent 55%),
+      rgba(8, 12, 22, 0.96);
+    border-bottom: 1px solid rgba(255, 179, 71, 0.22);
+    box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .tabletop-nav {
+    flex: 0 0 auto;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 179, 71, 0.45);
+    background: rgba(26, 18, 8, 0.72);
+    color: #ffd7a8;
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  .tabletop-nav:hover,
+  .tabletop-nav:focus-visible {
+    background: rgba(255, 179, 71, 0.18);
+    color: #fff4e6;
+    outline: none;
+  }
+
+  .tabletop-rail-scroll {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabletop-rail-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabletop-chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 2.35rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(15, 23, 42, 0.55);
+    color: #dbe4f3;
+    font-size: 0.82rem;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+  }
+
+  .tabletop-chip[hidden] {
+    display: none !important;
+  }
+
+  .tabletop-chip.is-active {
+    border-color: transparent;
+    background: linear-gradient(180deg, #ffd28a, #ffb347 42%, #ff8a5b);
+    color: #1a1208;
+    box-shadow: 0 6px 16px rgba(255, 138, 91, 0.28);
+  }
+
+  .tabletop-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.15rem;
+    height: 1.15rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: rgba(26, 18, 8, 0.18);
+    color: inherit;
+    font-size: 0.68rem;
+    font-weight: 750;
+  }
+
+  .tabletop-chip:not(.is-active) .tabletop-badge {
+    background: rgba(56, 189, 248, 0.2);
+    color: #e0f2fe;
+  }
+
+  .tabletop-badge[hidden] {
+    display: none !important;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .workshop-layout {
+    display: block;
+    position: relative;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    width: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .workshop-layout > .tech-library,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .workshop-layout > .invent-center,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .workshop-layout > .vision-panel,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .tech-dock-handle,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .tech-dock-edge,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .tech-drawer-backdrop,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .hex-emtech-bar,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .side-tabs,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .btn-second-screen,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .tech-rail-pin,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .tech-drawer-open,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .tech-drawer-close,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .hex-board-expand,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .vision-split-handle,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .co-collapse-toggle {
+    display: none !important;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .workshop-layout > .tech-library,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .workshop-layout > .invent-center,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .workshop-layout > .vision-panel {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    transform: none !important;
+    grid-column: auto;
+    grid-row: auto;
+    z-index: 1;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="emtech"] .workshop-layout > .tech-library {
+    display: flex !important;
+    flex-direction: column;
+    background:
+      radial-gradient(90% 40% at 0% 0%, rgba(56, 189, 248, 0.08), transparent 50%),
+      rgba(7, 11, 20, 0.94);
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="brief"] .invent-center,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="outlook"] .invent-center,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="invent"] .invent-center,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="pathway"] .invent-center,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="rules"] .invent-center {
+    display: flex !important;
+    flex-direction: column;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.85rem var(--page-gutter) 1.4rem;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="board"] .invent-center {
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .invent-center > * {
+    display: none !important;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="brief"] .invent-center > .challenge-banner {
+    display: block !important;
+    width: min(48rem, 100%);
+    margin-inline: auto;
+    padding: 1.15rem 1.3rem 1.5rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 16px;
+    background:
+      radial-gradient(80% 50% at 100% 0%, rgba(255, 179, 71, 0.1), transparent 55%),
+      rgba(15, 23, 42, 0.72);
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .challenge-banner .ws-mission-scene,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .challenge-banner .quest-brief {
+    max-height: none;
+    overflow: visible;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="outlook"] .invent-center > #invent-capability-explorer:not([hidden]) {
+    display: block !important;
+    width: min(56rem, 100%);
+    margin-inline: auto;
+  }
+
+  #tabletop-outlook-empty {
+    display: none !important;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="outlook"]:has(#invent-capability-explorer[hidden]) #tabletop-outlook-empty {
+    display: block !important;
+    width: min(36rem, 100%);
+    margin: 2.5rem auto;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 1.05rem;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="invent"] .invent-center > .invent-form,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="board"] .invent-center > .invent-form,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="pathway"] .invent-center > .invent-form,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="rules"] .invent-center > .invent-form {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 0.85rem;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop .invent-form > *:not(dialog) {
+    display: none !important;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="invent"] .invent-form > #hex-tile-create {
+    display: flex !important;
+    width: min(42rem, 100%);
+    margin-inline: auto;
+    border-radius: 16px;
+    padding: 1rem 1.1rem 1.2rem;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="board"] .invent-form {
+    overflow: hidden;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="board"] .invent-form > .hex-board-dock,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="board"] .hex-board-wrap,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="board"] .hex-board {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="board"] .hex-board svg {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="pathway"] .invent-form > #pathway-panel,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="pathway"] .invent-form > .foot-hint,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="pathway"] .invent-form > #challenge-ready-hint,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="pathway"] .invent-form > #mp-contrib-banner:not([hidden]) {
+    display: block !important;
+    width: min(42rem, 100%);
+    margin-inline: auto;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="pathway"] .invent-form > .game-actions {
+    display: flex !important;
+    width: min(42rem, 100%);
+    margin-inline: auto;
+    gap: 0.7rem;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="rules"] .invent-form > #policy-weather:not([hidden]) {
+    display: block !important;
+    width: min(42rem, 100%);
+    margin-inline: auto;
+    padding: 1rem 1.1rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.72);
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="vision"] .vision-panel,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="log"] .vision-panel,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="inspect"] .vision-panel,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="coinventor"] .vision-panel {
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden;
+    background: #070b14;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="vision"] .vision-co-stack,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="log"] .vision-co-stack,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="inspect"] .vision-co-stack,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="coinventor"] .vision-co-stack {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="vision"] #side-vision {
+    display: flex !important;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="vision"] #side-coinventor,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="vision"] #side-log,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="vision"] #side-aitrace,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="log"] #side-vision,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="log"] #side-coinventor,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="log"] #side-aitrace,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="inspect"] #side-vision,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="inspect"] #side-coinventor,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="inspect"] #side-log,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="coinventor"] #side-vision,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="coinventor"] #side-log,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="coinventor"] #side-aitrace {
+    display: none !important;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="vision"] .vision-canvas-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="vision"] .vision-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="log"] #side-log,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="inspect"] #side-aitrace {
+    display: flex !important;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="coinventor"] #side-coinventor {
+    display: flex !important;
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+    height: 100%;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="coinventor"] .co-messages,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="coinventor"] .co-compose,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="coinventor"] .co-actions {
+    display: flex !important;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="emtech"] .tech-list {
+    display: flex;
+    flex-direction: column;
+    align-content: start;
+    gap: 1rem;
+    padding: 0.85rem 0.85rem 1.4rem;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="emtech"] .tech-group-place,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="emtech"] .tech-group-all[open] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+    align-content: start;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="emtech"] .tech-group-place > :not(.tech-card),
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="emtech"] .tech-group-all[open] > :not(.tech-card) {
+    grid-column: 1 / -1;
+  }
+
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="emtech"] .filter-row {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    flex-wrap: wrap;
+    overflow: visible;
+    padding: 0.75rem 0.85rem 0.55rem;
+    background: rgba(7, 11, 20, 0.96);
+  }
+
+  body.ff-tabletop .hex-idea-card-place {
+    display: inline-flex;
+    align-self: flex-start;
+    margin-top: 0.35rem;
+    min-height: 2.4rem;
+  }
+
+  body.ff-tabletop .hex-idea-cards {
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  }
+
+  .hex-place-confirm {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0.65rem 0.8rem;
+    border-radius: 12px;
+    background: rgba(255, 179, 71, 0.12);
+    border: 1px solid rgba(255, 179, 71, 0.35);
+    color: #ffe7c2;
+  }
+}
+
+@media (min-width: 1100px) and (max-width: 1399px) and (any-pointer: coarse) {
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="emtech"] .tech-group-place,
+  body.ff-tabletop:not(.is-quest-briefing) #screen-workshop[data-tabletop-panel="emtech"] .tech-group-all[open] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.hex-idea-card-place {
+  display: none;
+}

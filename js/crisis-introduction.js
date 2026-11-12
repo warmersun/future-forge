@@ -19,7 +19,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 // Presentation only: the seeded board remains the source of truth.
 import { CRISIS_ROLE_DEFAULT_NAMES } from './hex/board-state.js?v=argument-1';
-export function createCrisisIntroduction({ document: doc, getBoard, repaint, onChange = () => {}, reducedMotion = () => false }) {
+export function createCrisisIntroduction({ document: doc, getBoard, repaint, onChange = () => {}, reducedMotion = () => false, onLanding = null }) {
   let pending = new Set();
   let active = false;
   let flying = null;
@@ -118,28 +118,37 @@ export function createCrisisIntroduction({ document: doc, getBoard, repaint, onC
       onChange();
     };
     const from = button.getBoundingClientRect();
-    const destination = tileElement(id);
-    let to = destination?.getBoundingClientRect();
-    // On narrow layouts the board can be below the briefing. Keep the flight's
-    // origin fixed on screen, but bring its landing into view before measuring.
-    const view = doc.defaultView;
-    if (to?.width && to?.height && view &&
-        (to.top < 0 || to.bottom > view.innerHeight || to.left < 0 || to.right > view.innerWidth)) {
-      destination.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
-      to = destination.getBoundingClientRect();
+    const fly = () => {
+      if (generation !== token || flying !== id) return;
+      const destination = tileElement(id);
+      let to = destination?.getBoundingClientRect();
+      // On narrow layouts the board can be below the briefing. Keep the flight's
+      // origin fixed on screen, but bring its landing into view before measuring.
+      const view = doc.defaultView;
+      if (to?.width && to?.height && view &&
+          (to.top < 0 || to.bottom > view.innerHeight || to.left < 0 || to.right > view.innerWidth)) {
+        destination.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        to = destination.getBoundingClientRect();
+      }
+      if (reducedMotion() || !from.width || !from.height || !to?.width || !to?.height || !button.animate) { finish(); return; }
+      ghost = button.cloneNode(true);
+      ghost.disabled = true;
+      ghost.setAttribute('aria-hidden', 'true');
+      Object.assign(ghost.style, { position: 'fixed', left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, margin: '0', zIndex: '9999', pointerEvents: 'none' });
+      doc.body.append(ghost);
+      const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+      const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+      try {
+        animation = ghost.animate([{ transform: 'translate(0, 0) scale(1)', opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(.3)`, opacity: .4 }], { duration: 650, easing: 'ease-in-out', fill: 'forwards' });
+        animation.finished.then(finish, finish);
+      } catch { finish(); }
+    };
+    const land = typeof onLanding === 'function' ? onLanding(id) : null;
+    if (land && typeof land.then === 'function') {
+      land.then(fly, fly);
+      return;
     }
-    if (reducedMotion() || !from.width || !from.height || !to?.width || !to?.height || !button.animate) { finish(); return; }
-    ghost = button.cloneNode(true);
-    ghost.disabled = true;
-    ghost.setAttribute('aria-hidden', 'true');
-    Object.assign(ghost.style, { position: 'fixed', left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, margin: '0', zIndex: '9999', pointerEvents: 'none' });
-    doc.body.append(ghost);
-    const dx = to.left + to.width / 2 - (from.left + from.width / 2);
-    const dy = to.top + to.height / 2 - (from.top + from.height / 2);
-    try {
-      animation = ghost.animate([{ transform: 'translate(0, 0) scale(1)', opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(.3)`, opacity: .4 }], { duration: 650, easing: 'ease-in-out', fill: 'forwards' });
-      animation.finished.then(finish, finish);
-    } catch { finish(); }
+    fly();
   }
   return { prepare, reset, show, isHidden, count };
 }

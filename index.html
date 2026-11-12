@@ -28,7 +28,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=argument-1" />
+    <link rel="stylesheet" href="css/styles.css?v=tabletop-1" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -1126,6 +1126,24 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
         <p id="mp-view-hint" class="mp-view-hint muted" hidden></p>
       </div>
 
+      <nav id="tabletop-rail" class="tabletop-rail" aria-label="Workshop stations" hidden>
+        <button type="button" class="tabletop-nav" id="tabletop-prev" aria-label="Previous station">‹</button>
+        <div class="tabletop-rail-scroll" role="tablist" aria-orientation="horizontal">
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="emtech" aria-controls="solo-tech-library" aria-label="Emerging tech" tabindex="-1">Tech</button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="brief" aria-controls="ws-briefing" aria-label="Briefing" tabindex="-1">Brief<span class="tabletop-badge" data-tabletop-badge="brief" hidden></span></button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="outlook" aria-controls="invent-capability-explorer" aria-label="Capability outlook" tabindex="-1">Outlook</button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="invent" aria-controls="hex-tile-create" aria-label="Invent" tabindex="-1">Invent<span class="tabletop-badge" data-tabletop-badge="invent" hidden></span></button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="board" aria-controls="hex-board" aria-label="Hex board" tabindex="-1">Board</button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="vision" aria-controls="side-vision" aria-label="Future vision" tabindex="-1">Vision</button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="pathway" aria-controls="pathway-panel" aria-label="Pathway" tabindex="-1">Pathway</button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="rules" aria-controls="policy-weather" aria-label="Local rules" tabindex="-1">Rules</button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="log" aria-controls="side-log" aria-label="Log" tabindex="-1">Log</button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="inspect" aria-controls="side-aitrace" aria-label="AI inspect" tabindex="-1">Inspect<span class="tabletop-badge" data-tabletop-badge="inspect" hidden></span></button>
+          <button type="button" class="tabletop-chip" role="tab" data-tabletop-station="coinventor" aria-controls="side-coinventor" aria-label="AI co-inventor" tabindex="-1">Co-inventor</button>
+        </div>
+        <button type="button" class="tabletop-nav" id="tabletop-next" aria-label="Next station">›</button>
+      </nav>
+
       <div class="workshop-layout">
         <aside class="tech-library" id="solo-tech-library">
           <div class="tech-library-body">
@@ -1191,7 +1209,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               <span class="tech-drawer-count" data-tech-drawer-count hidden></span>
             </button>
           </div>
-          <div class="challenge-banner">
+          <div class="challenge-banner" id="ws-briefing">
             <div class="label" id="ws-global-label">Global theme</div>
             <h2 id="ws-mission-title">—</h2>
             <p id="ws-mission-place" class="mission-place"></p>
@@ -1220,6 +1238,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           </div>
 
           <section id="invent-capability-explorer" class="capability-explorer" aria-label="Capability outlook" hidden></section>
+          <p id="tabletop-outlook-empty" class="tabletop-empty">Pick an emerging tech to see the capability outlook.</p>
 
           <div class="invent-form invent-form-hex">
             <!-- Hidden prose mirrors — derived from hexBoard for AI / MP / outcome -->
@@ -2577,6 +2596,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=continue-run-1"></script>
+    <script type="module" src="js/main.js?v=tabletop-1"></script>
   </body>
 </html>

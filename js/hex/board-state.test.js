@@ -42,6 +42,7 @@ import {
   formatFactor,
   isPortableTile,
   placeTile,
+  firstLegalHex,
   liftTile,
   discardTile,
   summonConcerns,
@@ -225,6 +226,48 @@ test("seedCrisisTiles defaults missing description to empty string", () => {
     pressure: { Outbreak: 2 },
   });
   assert.equal(board.tiles["crisis-local"].description, "");
+});
+
+test("firstLegalHex prefers an open neighbor of the eased crisis", () => {
+  let board = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Scarcity: 3 },
+  });
+  board = addTile(
+    board,
+    mintInventionTile({ id: "idea", techId: "solar", name: "Shade", eases: "Scarcity" })
+  );
+  const slots = [
+    { q: 0, r: 0 },
+    { q: 2, r: 3 },
+  ];
+  assert.deepEqual(firstLegalHex(board, "idea", slots), { q: 2, r: 3 });
+});
+
+test("firstLegalHex skips an occupied hex and a world mismatch", () => {
+  let board = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Scarcity: 3 },
+  });
+  board = addTile(board, mintInventionTile({ id: "bits", techId: "ai", name: "Model" }));
+  const parked = placeTile(board, "bits", 3, 3);
+  assert.equal(parked.ok, true);
+  board = parked.board;
+  board = addTile(
+    board,
+    mintInventionTile({ id: "atoms", techId: "drones", name: "Cart", eases: "Scarcity" })
+  );
+  assert.equal(placeTile(board, "atoms", 2, 3).ok, false);
+  const slots = [
+    { q: 0, r: 0 },
+    { q: 2, r: 3 },
+    { q: 2, r: 2 },
+  ];
+  assert.deepEqual(firstLegalHex(board, "atoms", slots), { q: 2, r: 2 });
+  board.tiles.atoms.eases = "Not a meter";
+  assert.deepEqual(firstLegalHex(board, "atoms", slots), { q: 0, r: 0 });
+  assert.equal(firstLegalHex(board, "missing", slots), null);
+  assert.equal(firstLegalHex(board, "atoms", []), null);
 });
 
 test("placeTile refuses bits against atoms", () => {
