@@ -1,0 +1,28 @@
+{
+  "source": "Jiang, Chen et al., \"Skin-mimetic adaptive gradient electrode for ambulatory noninvasive brain-computer interfaces\", npj Flexible Electronics, published 31 Oct 2026 (received 12 May 2026; accepted 1 Oct 2026; article in press), open access CC BY-NC-ND 4.0, DOI 10.1038/s41528-026-00650-5, https://www.nature.com/articles/s41528-026-00650-5. Team mainly at Guangxi University (School of Physical Science and Technology / Advanced Institute for Brain and Intelligence); co-authors at Wuming Hospital of Guangxi Medical University, Tsinghua University (State Key Laboratory of New Ceramics and Fine Processing; corresponding Hui Wu), Sichuan University, the Leibniz Institute for Neurobiology in Magdeburg, and the Chongqing Institute for Brain and Intelligence (corresponding Sen Lin also). Corresponding authors: Jianfeng Zhang, Hui Wu, Sen Lin. Coverage: Inside BCI, 10 Nov 2026; The Star reprint of South China Morning Post, 10 Nov 2026. All player-facing counts were checked against the paper PDF and the supplementary PDF. Eight healthy adults (ages 21–26, including three women) were recruited for the eye-closed and SSVEP paradigms; figure analyses of typing precision report five subjects; methods also mention one additional subject for a short mVEP series. For long recordings, two male subjects completed the 8-hour and 14-hour sessions respectively (one person per session). Typing speed is not reported in the paper or the supplement. No cost figure and no company named to make or license the contacts. Epilepsy warning, long-duration sleep monitoring, and daily healthcare are named as possible real-world uses; no tests in people with epilepsy. Skin biocompatibility was checked on mice for 1, 6, and 12 hours, with no erythema or inflammation reported; no long-term human wear safety study is reported. Inside BCI's phrasing that the contacts could in principle replace those in existing caps follows the paper's claim that the contacts attach to the metal snaps of commercial EEG caps (NeuSen W wireless system, Boruikang, used in the tests) — treated as form factor, not used as a player-facing use case. Not stored or shown.",
+  "id": "8aac2f00-948d-41fe-9635-5b0daed07906",
+  "techId": "bci",
+  "title": "A brain-signal cap that keeps reading through a whole waking day",
+  "description": "The contacts in a brain-signal cap are a gel that sets while one end is warm and the other is cool. The end that touches the scalp stays soft, and the end that meets the electronics stays firm, like the layers of skin. Tiny pores release moisture slowly, so the signal holds instead of fading as ordinary wet gel dries.",
+  "capability": "A cap with soft contacts can now keep reading clean brain signals through a whole waking day of ordinary life, instead of fading after a couple of hours in a lab chair when the usual wet gel dries out. Volunteer tests held for more than fourteen hours at rest and more than eight hours of walking, eating, reading and sleeping. This is early testing, not a product yet.",
+  "useCases": [
+    "Typing without hands by looking at flashing characters on a screen, for hours rather than a short lab visit. Volunteer tests stayed above 94 percent accurate.",
+    "Recording brain signals through a normal day of walking, eating, reading and sleeping, instead of only in a lab chair. Shown for more than eight hours in one person.",
+    "The goal: watching someone's sleep through a whole night with a comfortable cap, without the gel drying out. Named as a possible use; not a dedicated sleep study."
+  ],
+  "body": "Usual rigid metal contacts with wet gel typically keep a stable signal for only two to four hours before the gel dries. These new contacts were fitted into an ordinary cap that records from eight spots on the head and sends the signals wirelessly. In one test, a person wore the cap for more than fourteen hours at rest and kept typing accurately by looking at flashing keys; in another, a person wore it for more than eight hours while walking, eating, reading and sleeping. Typing accuracy stayed above 94 percent. Typing speed was not reported.\n\nEach of those long tests was done with one person. The shorter typing tests were with a small group of healthy young adults. No price has been published, and no company has been named to make or sell the contacts. The authors name early warning of epileptic seizures as a possible use; that has not been tested in people with epilepsy. Skin safety was checked on mice for up to twelve hours, not in a long-term study of people wearing the cap day after day. This is early volunteer work, not a finished product.",
+  "links": [
+    {
+      "label": "The research paper (open access)",
+      "url": "https://www.nature.com/articles/s41528-026-00650-5"
+    },
+    {
+      "label": "Research news summary of the 14-hour cap tests",
+      "url": "https://insidebci.com/research/2026-11-10-guangxi-tsinghua-gradient-hydrogel-eeg-electrode-14-hours-npj-flexible-electronics/"
+    },
+    {
+      "label": "News report on day-long typing by looking at a screen",
+      "url": "https://www.thestar.com.my/tech/tech-news/2026/11/10/chinas-comfortable-brain-reading-device-achieves-94-mind-typing-accuracy-in-day-long-use"
+    }
+  ]
+}
