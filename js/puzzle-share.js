@@ -180,7 +180,8 @@ export async function renderPuzzle(snapshot, challenge = DEFAULT_CHALLENGE) {
   await document.fonts?.ready;
   const hero = await loadImage(snapshot.visionUrl);
   const { boardImage, trayImage } = await renderPuzzleBoard(snapshot);
-  const width = 3840, height = 2160, margin = 80, content = 1000;
+  const width = 3840, height = 2160, margin = 56, content = 1114;
+  const fullWidth = width - 2 * margin;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   const ctx = canvas.getContext('2d');
@@ -194,9 +195,9 @@ export async function renderPuzzle(snapshot, challenge = DEFAULT_CHALLENGE) {
     currentGroup = { start: y, from: commands.length, width: groupWidth };
     groups.set(name, currentGroup);
   }
-  function text(value, { size = 32, color = INK, weight = 400, x = margin, w = content, gap = 18 } = {}) {
+  function text(value, { size = 38, color = INK, weight = 400, x = margin, w = content, gap = 14 } = {}) {
     ctx.font = `${weight} ${size}px Arial, sans-serif`;
-    const lines = wrapText(ctx, value, w), top = y, lineHeight = size * 1.4;
+    const lines = wrapText(ctx, value, w), top = y, lineHeight = size * 1.25;
     commands.push(() => {
       ctx.font = `${weight} ${size}px Arial, sans-serif`; ctx.fillStyle = color; ctx.textBaseline = 'top';
       lines.forEach((line, i) => ctx.fillText(line, x, top + i * lineHeight));
@@ -204,14 +205,14 @@ export async function renderPuzzle(snapshot, challenge = DEFAULT_CHALLENGE) {
     y += lines.length * lineHeight + gap;
   }
   function section(label) {
-    y += 32;
+    y += 14;
     const top = y;
     commands.push(() => { ctx.fillStyle = '#2b4050'; ctx.fillRect(margin, top, content, 2); });
-    y += 30;
-    text(label.toUpperCase(), { size: 25, color: '#6ee7cb', weight: 700, gap: 28 });
+    y += 18;
+    text(label.toUpperCase(), { size: 30, color: '#6ee7cb', weight: 700, gap: 18 });
   }
   begin('header', width - 2 * margin);
-  text('FUTURE FORGE     /     THE INVENTING PUZZLE', { size: 28, color: '#6ee7cb', weight: 700, gap: 20, w: 3680 });
+  text('FUTURE FORGE     /     THE INVENTING PUZZLE', { size: 28, color: '#6ee7cb', weight: 700, gap: 12, w: fullWidth });
   const titleTop = y;
   const level = snapshot.evaluation?.level || 'red';
   commands.push(() => {
@@ -224,18 +225,18 @@ export async function renderPuzzle(snapshot, challenge = DEFAULT_CHALLENGE) {
     ctx.beginPath(); ctx.arc(cx, cy, 27, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#edf3f6'; ctx.lineWidth = 3; ctx.stroke();
   });
-  text(snapshot.title, { size: 84, weight: 700, gap: 16, x: margin + 104, w: 3576 });
-  text(`YEAR ${snapshot.year ?? '—'}   •   TURN ${snapshot.turn ?? '—'}${snapshot.collapseYear ? `   •   COLLAPSE YEAR ${snapshot.collapseYear}` : ''}`, { size: 28, color: MUTED, gap: 22, w: 3680 });
-  if (snapshot.evaluation?.pending) text('Pathway re-evaluating · showing the last settled light', { size: 23, color: MUTED, gap: 12, w: 3680 });
-  text(challenge.trim() || DEFAULT_CHALLENGE, { size: 40, weight: 700, color: '#f4d77d', gap: 20, w: 3680 });
+  text(snapshot.title, { size: 84, weight: 700, gap: 8, x: margin + 104, w: fullWidth - 104 });
+  text(`YEAR ${snapshot.year ?? '—'}   •   TURN ${snapshot.turn ?? '—'}${snapshot.collapseYear ? `   •   COLLAPSE YEAR ${snapshot.collapseYear}` : ''}`, { size: 30, color: MUTED, gap: 10, w: fullWidth });
+  if (snapshot.evaluation?.pending) text('Pathway re-evaluating · showing the last settled light', { size: 28, color: MUTED, gap: 12, w: fullWidth });
+  text(challenge.trim() || DEFAULT_CHALLENGE, { size: 42, weight: 700, color: '#f4d77d', gap: 10, w: fullWidth });
   begin('vision');
   if (hero) {
     const top = y;
     const h = Math.round(content * hero.height / hero.width);
     commands.push(() => { ctx.drawImage(hero, margin, top, content, h); });
-    y += h + 20;
-    text('FUTURE VISION  /  The world at this moment', { size: 21, color: MUTED });
-  } else text('FUTURE VISION  /  No image generated yet', { size: 25, color: MUTED });
+    y += h + 12;
+    text('FUTURE VISION  /  The world at this moment', { size: 28, color: MUTED });
+  } else text('FUTURE VISION  /  No image generated yet', { size: 30, color: MUTED });
   begin('briefing');
   section('The briefing');
   const cardTop = y;
@@ -244,22 +245,22 @@ export async function renderPuzzle(snapshot, challenge = DEFAULT_CHALLENGE) {
     ctx.fillStyle = '#132534'; ctx.fillRect(margin, cardTop, content, cardBottom - cardTop);
     ctx.fillStyle = '#6ee7cb'; ctx.fillRect(margin, cardTop, 5, cardBottom - cardTop);
   });
-  y += 28;
+  y += 22;
   let objective = false;
   for (const block of snapshot.briefingBlocks || [{ type: 'paragraph', text: snapshot.briefing }]) {
     if (block.type === 'heading') {
       objective = /your (job|mission|task|challenge)|objective/i.test(block.text);
-      y += 12;
-      text(block.text.toUpperCase(), { size: 25, weight: 700, color: objective ? '#f4d77d' : '#6ee7cb', x: margin + 32, w: content - 64, gap: 12 });
+      y += 8;
+      text(block.text.toUpperCase(), { size: 30, weight: 700, color: objective ? '#f4d77d' : '#6ee7cb', x: margin + 24, w: content - 48, gap: 10 });
     } else {
-      text(`${block.type === 'bullet' ? '•  ' : ''}${block.text}`, { size: objective ? 33 : 30, weight: objective ? 700 : 400, color: objective ? '#f4d77d' : INK, x: margin + 32, w: content - 64, gap: 24 });
+      text(`${block.type === 'bullet' ? '•  ' : ''}${block.text}`, { size: objective ? 39 : 36, weight: objective ? 700 : 400, color: objective ? '#f4d77d' : INK, x: margin + 24, w: content - 48, gap: 18 });
     }
   }
   y += 8;
   cardBottom = y;
   begin('board');
   section('The board');
-  text('Read the position. Find a pathway that changes the outcome.', { color: MUTED, size: 25 });
+  text('Read the position. Find a pathway that changes the outcome.', { color: MUTED, size: 30 });
   function boardPicture(img, maxHeight) {
     const h = Math.min(maxHeight, content * img.height / img.width);
     const w = h * img.width / img.height, top = y;
@@ -269,17 +270,17 @@ export async function renderPuzzle(snapshot, challenge = DEFAULT_CHALLENGE) {
   if (boardImage) boardPicture(boardImage, 480);
   else text('The board is empty. Make the first move.', { color: MUTED });
   if (trayImage) {
-    text('IN THE TRAY', { size: 21, color: MUTED, gap: 8 });
+    text('IN THE TRAY', { size: 28, color: MUTED, gap: 8 });
     boardPicture(trayImage, 130);
   }
   begin('crises');
   section('The crises to solve');
-  text('Meters run from 0 to 5. Lower is better. Negative pathway scores ease pressure; positive scores add pressure.', { color: MUTED, size: 25 });
+  text('Meters run from 0 to 5. Lower is better. Negative pathway scores ease pressure; positive scores add pressure.', { color: MUTED, size: 30 });
   if (!snapshot.crises.length) text('No crisis meters in this position.', { color: MUTED });
   for (const crisis of snapshot.crises) {
     y += 12;
     const { value, color } = puzzleMeter(crisis.value, crisis.goal);
-    text(crisis.name, { size: 32, weight: 700, color, gap: 14 });
+    text(crisis.name, { size: 38, weight: 700, color, gap: 14 });
     const top = y;
     commands.push(() => {
       for (let i = 0; i < 5; i++) {
@@ -289,7 +290,7 @@ export async function renderPuzzle(snapshot, challenge = DEFAULT_CHALLENGE) {
       }
       if (crisis.goal != null) {
         ctx.save();
-        ctx.font = '400 25px Arial, sans-serif';
+        ctx.font = '400 30px Arial, sans-serif';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = color;
         ctx.fillText(`target ≤ ${crisis.goal}`, margin + 210, top + 16);
@@ -298,23 +299,23 @@ export async function renderPuzzle(snapshot, challenge = DEFAULT_CHALLENGE) {
     });
     y += 55;
     text(crisis.description || 'No description provided.');
-    if (!crisis.scores.length) text('No docked pathway is scoring against this crisis.', { size: 25, color: MUTED });
+    if (!crisis.scores.length) text('No docked pathway is scoring against this crisis.', { size: 30, color: MUTED });
     for (const score of crisis.scores) {
-      text(`${score.label}  /  ${score.pending ? 'AWAITING SCORE' : `${score.delta > 0 ? '+' : ''}${score.delta} PRESSURE`}`, { size: 23, color: puzzleDeltaColor(score.delta, score.pending), weight: 700, gap: 10 });
-      text(score.pending ? 'Evaluation is still pending in this snapshot.' : score.reason || 'No rationale provided.', { size: 26 });
+      text(`${score.label}  /  ${score.pending ? 'AWAITING SCORE' : `${score.delta > 0 ? '+' : ''}${score.delta} PRESSURE`}`, { size: 30, color: puzzleDeltaColor(score.delta, score.pending), weight: 700, gap: 10 });
+      text(score.pending ? 'Evaluation is still pending in this snapshot.' : score.reason || 'No rationale provided.', { size: 32 });
     }
   }
   begin('pathways');
   section('The pathways');
   if (!snapshot.paths.length) text('No pathways yet. What would you invent first?', { color: MUTED });
   for (const path of snapshot.paths) {
-    text(path.label, { size: 32, weight: 700, color: '#6ee7cb', gap: 12 });
-    text(path.status.toUpperCase(), { size: 23, color: MUTED });
+    text(path.label, { size: 38, weight: 700, color: '#6ee7cb', gap: 12 });
+    text(path.status.toUpperCase(), { size: 28, color: MUTED });
     text(path.howText || 'No pathway description written yet.');
   }
   begin('footer', width - 2 * margin);
-  text('What would you change next — and why would it work?', { size: 38, weight: 700, w: 3680 });
-  text('FUTURE FORGE  /  Invent with emerging technologies  /  warmersun.com', { size: 26, color: MUTED, w: 3680 });
+  text('What would you change next — and why would it work?', { size: 38, weight: 700, w: fullWidth });
+  text('FUTURE FORGE  /  Invent with emerging technologies  /  warmersun.com', { size: 26, color: MUTED, w: fullWidth });
   begin('end');
   canvas.height = height;
   ctx.fillStyle = BG; ctx.fillRect(0, 0, width, canvas.height);
@@ -330,18 +331,24 @@ export async function renderPuzzle(snapshot, challenge = DEFAULT_CHALLENGE) {
     commands.slice(g.from, g.to).forEach(draw => draw());
     ctx.restore();
   }
-  drawGroup('header', 80, 60, 3680, 340);
-  drawGroup('vision', 80, 450, 1560, 680, true);
-  drawGroup('board', 80, 1150, 1560, 840, true);
+  // Narrower visual column and tighter gutters give the reading columns more room.
+  const bodyTop = 350, bodyHeight = 1660;
+  const visualWidth = 1420, gutter = 40;
+  const proseX = margin + visualWidth + gutter;
+  const crisesX = proseX + content + gutter;
+  drawGroup('header', margin, 44, fullWidth, 280);
+  drawGroup('vision', margin, bodyTop, visualWidth, 680, true);
+  drawGroup('board', margin, bodyTop + 696, visualWidth, bodyHeight - 696, true);
   const briefing = groups.get('briefing'), pathways = groups.get('pathways');
   const proseHeight = briefing.end - briefing.start + pathways.end - pathways.start;
-  const proseScale = Math.min(1, 1500 / proseHeight);
+  const proseGap = 16;
+  const proseScale = Math.min(1, (bodyHeight - proseGap) / proseHeight);
   const briefingHeight = (briefing.end - briefing.start) * proseScale;
-  drawGroup('briefing', 1700, 450, 1000, briefingHeight);
-  drawGroup('pathways', 1700, 450 + briefingHeight + 30, 1000, (pathways.end - pathways.start) * proseScale);
-  drawGroup('crises', 2760, 450, 1000, 1540);
-  ctx.fillStyle = '#2b4050'; ctx.fillRect(80, 2020, 3680, 2);
-  drawGroup('footer', 80, 2050, 3680, 90);
+  drawGroup('briefing', proseX, bodyTop, content, briefingHeight);
+  drawGroup('pathways', proseX, bodyTop + briefingHeight + proseGap, content, (pathways.end - pathways.start) * proseScale);
+  drawGroup('crises', crisesX, bodyTop, content, bodyHeight);
+  ctx.fillStyle = '#2b4050'; ctx.fillRect(margin, 2030, fullWidth, 2);
+  drawGroup('footer', margin, 2048, fullWidth, 90);
   const blob = await new Promise((resolve, reject) => {
     try { canvas.toBlob(b => b ? resolve(b) : reject(new Error('Image export failed. Please try again.')), 'image/png'); }
     catch { reject(new Error('The Future Vision image does not allow export. Reload its image and try again.')); }
