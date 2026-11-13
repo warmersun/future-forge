@@ -162,7 +162,7 @@ Worlds apply only to invention tiles:
 |--------|-------|----------|
 | All six blue | bits | AI, networks, computing, gene sequencing |
 | All six pink | atoms | drones, energy, robots, transport |
-| Split — left blue, right pink | converter | IoT, 3D printing, materials, synthetic biology, VR |
+| Split — left blue, right pink | converter | crypto, IoT, 3D printing, materials, synthetic biology, VR |
 
 Two hexes connect only when the faces that touch are the same world.
 

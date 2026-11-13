@@ -10007,7 +10007,7 @@ function renderFilters() {
 function domainFilterHint(domainId) {
   const lines = {
     power:
-      "Power — energy runs the world of atoms; computing runs the world of bits.",
+      "Power — energy runs the world of atoms; computing runs the world of bits; crypto bridges both.",
     automator:
       "Automator — robots act in atoms; AI judges and decides in bits.",
     mover:
