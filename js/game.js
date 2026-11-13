@@ -43,6 +43,7 @@ import {
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer } from "./vision.js?v=usage-2";
+import { puzzleSnapshot, openPuzzleShare, puzzleHasPendingEvaluation } from "./puzzle-share.js";
 import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
 import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
@@ -1535,6 +1536,36 @@ function flushStoryEdits(key = storyEditKey()) {
 }
 /** Last settled traffic-light color (red|yellow|green) for the panel circle */
 let lastFeasibilityLightLevel = "red";
+let puzzleAiInFlight = 0;
+
+function puzzleShareWaiting() {
+  const vision = state.vision;
+  return Boolean(
+    puzzleAiInFlight || state.aiBusy || writeCommitInFlight || ideaSparkInflight.size ||
+    isAiTimingAssessPending() || isChallengePosePending() || challengeCombatBusy ||
+    state.coInventor?.busy || state.coInventor?.turnOwner || state.coInventor?._voicePending ||
+    vision?.busy || vision?.queue || vision?.timer || vision?._queueFlush || vision?._followRetry ||
+    puzzleHasPendingEvaluation(state.hexBoard)
+  );
+}
+
+function syncPuzzleShareButton() {
+  const waiting = puzzleShareWaiting();
+  document.querySelectorAll('[data-share-puzzle]').forEach(button => {
+    const disabled = !state.mission || waiting;
+    const title = waiting ? 'Wait for AI work and evaluations to finish before sharing.' : 'Create a puzzle image to post on social media';
+    if (button.disabled !== disabled) button.disabled = disabled;
+    if (button.title !== title) button.title = title;
+  });
+  return waiting;
+}
+
+async function trackPuzzleAi(work) {
+  puzzleAiInFlight++;
+  syncPuzzleShareButton();
+  try { return await work(); }
+  finally { puzzleAiInFlight--; syncPuzzleShareButton(); }
+}
 /**
  * Last settled Timing dim — used so same claims cannot go harsher after year advance
  * (AI→local handoff or non-deterministic re-assess).
@@ -2280,6 +2311,7 @@ function isMpInventSpectator() {
  * Call after any path that might re-enable Lobby / Wait / End turn / Face challenge / Co-inventor.
  */
 function syncInventActionButtons() {
+  syncPuzzleShareButton();
   const b = mpBridge();
   const spectator = isMpInventSpectator();
   const inventBusy = isInventActionBusy();
@@ -9736,6 +9768,7 @@ function pathwayTimingAllowsAct() {
 }
 
 function renderFeasibility() {
+  syncPuzzleShareButton();
   const box = $("#feasibility");
   if (!box) return;
   const board = state.hexBoard;
@@ -10769,7 +10802,11 @@ async function fetchIdeaSparks(techId, opts = {}) {
   }
 }
 
-async function fetchIdeaImage(idea) {
+function fetchIdeaImage(idea) {
+  return trackPuzzleAi(() => fetchIdeaImageRequest(idea));
+}
+
+async function fetchIdeaImageRequest(idea) {
   const id =
     idea.artId ||
     ideaImageId({
@@ -13080,7 +13117,11 @@ function recordAiTrace(info) {
   pushAiTrace(info);
 }
 
-async function apiCoInvent(mode, userContent, extra = {}) {
+function apiCoInvent(mode, userContent, extra = {}) {
+  return trackPuzzleAi(() => apiCoInventRequest(mode, userContent, extra));
+}
+
+async function apiCoInventRequest(mode, userContent, extra = {}) {
   const { signal, ...rest } = extra;
   const context = LEAN_EVAL_MODES.has(mode)
     ? leanCoInventContext(mode, rest)
@@ -24058,6 +24099,21 @@ async function loadPredictionsFromServer() {
 }
 
 export function init() {
+  document.querySelectorAll('[data-share-puzzle]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (!state.mission) return flashToast('Start a Quest to share a puzzle.');
+      if (syncPuzzleShareButton()) return flashToast('Wait for AI work and evaluations to finish before sharing.');
+      openPuzzleShare(puzzleSnapshot({
+        mission: state.mission, board: state.hexBoard, pressure: state.pressure,
+        year: state.year, turn: state.turn, techById, lastFeasibilityLightLevel,
+        visionUrl: state.vision?.currentUrl || state.vision?.img?.getAttribute('src') || '',
+      }));
+    });
+  });
+  // Vision and conversation controllers own their async state. Keep the control
+  // current between board renders; the click guard also checks synchronously.
+  syncPuzzleShareButton();
+  setInterval(syncPuzzleShareButton, 200);
   forgetLegacySparkKey();
   setQuestRatingNotifier(flashToast);
   bindQuestRatingClicks(document);
