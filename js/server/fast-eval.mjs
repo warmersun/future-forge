@@ -24,7 +24,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 import { ideasOrFallback } from "../idea-cards.js";
 import { crisisRoleKeys, scopeCrisisScore } from "../hex/crisis-delta.js";
-import { tilePolarity } from "../hex/polarity.js";
 import { FILL_QUEST_SUMMARY_SYSTEM, clipSummary } from "../quest-summary.js";
 import { worldClockForYear } from "../sim/world-foresight.js";
 import {
@@ -619,11 +618,7 @@ function convergenceTileSlice(t) {
     techId: t?.techId || null,
     techName: clip(t?.techName, 80) || null,
     howText: clip(t?.howText || t?.howText, 800),
-    polarity:
-      tilePolarity(
-        t ? { ...t, kind: t.kind || "invention" } : null,
-        t?.polarity ?? ""
-      ) || null,
+    polarity: t?.polarity || null,
   };
 }
 

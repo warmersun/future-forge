@@ -464,22 +464,6 @@ describe("buildFastPayload", () => {
     assert.equal(p.neighbors[0].name, "Clinic drone");
     assert.equal(p.neighbors[0].techName, "Drones");
     assert.equal(p.neighbors[0].id, "b");
-    assert.equal(p.placed.polarity, null);
-  });
-
-  it("evaluate-convergence upgrades legacy crypto bits polarity to split", () => {
-    const p = buildFastPayload("evaluate-convergence", {
-      placed: {
-        id: "c",
-        name: "Crypto Ledger",
-        techId: "crypto",
-        techName: "Crypto-Currency",
-        polarity: "bits",
-        howText: "Shared settlement rail.",
-      },
-      neighbors: [],
-    });
-    assert.equal(p.placed.polarity, "split");
   });
 
   it("pose payload has no proposals key", () => {

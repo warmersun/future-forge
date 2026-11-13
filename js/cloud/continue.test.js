@@ -195,26 +195,4 @@ describe("package Continue wire and restoration", () => {
     assert.equal(restored.source, "imported");
     assert.equal(prepareRunWorld(restored, { restoring: true }).world.trust, "local-import");
   });
-
-  it("upgrades legacy saved crypto tile polarity to split on Continue restore", () => {
-    const restored = continueModule.applyContinueSnapshot({}, {
-      questId: ref.questId,
-      packageRef: ref,
-      board: {
-        tiles: {
-          "c-old": {
-            id: "c-old",
-            kind: "invention",
-            techId: "crypto",
-            polarity: "bits",
-            name: "Crypto Ledger",
-            q: null,
-            r: null,
-          },
-        },
-      },
-      play: { mission: mission() },
-    });
-    assert.equal(restored.hexBoard.tiles["c-old"].polarity, "split");
-  });
 });

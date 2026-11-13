@@ -27,7 +27,7 @@ import { emptyRunWorld } from "../sim/run-world.js";
 import { clonePressure } from "../sim/pressure.js";
 import { cloneRules } from "../sim/policy-rules.js";
 import { inventYear, inventWaits } from "../sim/mp-session.js?v=crisis-role-3";
-import { preferIncomingHexBoard, mergeBoardArt } from "../hex/board-state.js?v=crypto-split-1";
+import { preferIncomingHexBoard, mergeBoardArt } from "../hex/board-state.js?v=argument-1";
 import {
   deriveInventPhase,
   inventPhaseToUiPhase,

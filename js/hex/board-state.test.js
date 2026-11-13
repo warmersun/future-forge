@@ -73,9 +73,8 @@ import {
   setConcernReply,
   mintConcernTiles,
 } from "./board-state.js";
-import { clampChallengerCount, TECHS } from "../data.js";
-import { polarityForTech, TECH_POLARITY, SPLIT, tilePolarity } from "./polarity.js";
-import { createHexBoardUi } from "./board-ui.js";
+import { clampChallengerCount } from "../data.js";
+import { polarityForTech, TECH_POLARITY } from "./polarity.js";
 import {
   applyHeuristicLights,
   ideaMature,
@@ -87,15 +86,9 @@ import { BITS, ATOMS } from "./hex-tile-grid.js";
 test("polarity map covers catalog families", () => {
   assert.equal(polarityForTech("ai"), BITS);
   assert.equal(polarityForTech("drones"), ATOMS);
-  assert.equal(polarityForTech("iot"), SPLIT);
-  assert.equal(polarityForTech("crypto"), SPLIT);
-  assert.equal(TECH_POLARITY.crypto, SPLIT);
-  assert.equal(TECH_POLARITY.synbio, SPLIT);
+  assert.equal(polarityForTech("iot"), "split");
+  assert.equal(TECH_POLARITY.synbio, "split");
   assert.equal(TECH_POLARITY["gene-sequencing"], BITS);
-  for (const t of TECHS) {
-    assert.equal(Object.hasOwn(TECH_POLARITY, t.id), true, `missing polarity for ${t.id}`);
-    assert.equal(t.polarity, polarityForTech(t.id), `catalog polarity mismatch for ${t.id}`);
-  }
 });
 
 test("preferIncomingHexBoard keeps a richer local mint over a stale subset", () => {
@@ -260,142 +253,6 @@ test("placeTile allows split converter between bits and atoms", () => {
   // Drones east of IoT (atoms face)
   r = placeTile(board, "dr1", 1, 0);
   assert.equal(r.ok, true);
-});
-
-test("crypto bridges bits on the left and atoms on the right", () => {
-  let board = createEmptyBoard();
-  board = addTile(board, mintInventionTile({ id: "c1", techId: "crypto", name: "Crypto" }));
-  board = addTile(board, mintInventionTile({ id: "net1", techId: "networks", name: "Networks" }));
-  board = addTile(board, mintInventionTile({ id: "rb1", techId: "robots", name: "Robots" }));
-  board = placeTile(board, "c1", 0, 0).board;
-  assert.equal(board.tiles.c1.polarity, SPLIT);
-  // Refuses bits on east (atoms) face and atoms on west (bits) face
-  assert.equal(placeTile(board, "net1", 1, 0).ok, false);
-  assert.equal(placeTile(board, "rb1", -1, 0).ok, false);
-  // Accepts bits on west face and atoms on east face
-  let r = placeTile(board, "net1", -1, 0);
-  assert.equal(r.ok, true);
-  r = placeTile(r.board, "rb1", 1, 0);
-  assert.equal(r.ok, true);
-});
-
-test("legacy saved crypto tile upgrades from bits to split for docking and borders", () => {
-  const stale = {
-    id: "crypto-old",
-    kind: TILE_KIND.invention,
-    techId: "crypto",
-    name: "Crypto Ledger",
-    polarity: BITS,
-    q: null,
-    r: null,
-  };
-  assert.equal(tilePolarity(stale), SPLIT);
-  // Explicit custom split override stays split; explicit empty fallback is preserved
-  assert.equal(tilePolarity({ kind: TILE_KIND.invention, techId: "ai", polarity: SPLIT }), SPLIT);
-  assert.equal(tilePolarity({ id: "minimal", kind: TILE_KIND.invention }, ""), "");
-
-  let board = createEmptyBoard();
-  board.tiles.minimal = { id: "minimal", kind: TILE_KIND.invention };
-  board.tiles[stale.id] = stale;
-  board = cloneBoard(board);
-  assert.equal(board.tiles[stale.id].polarity, SPLIT);
-  assert.equal(Object.hasOwn(board.tiles.minimal, "polarity"), false);
-  delete board.tiles.minimal;
-
-  board = addTile(board, mintInventionTile({ id: "dr1", techId: "drones", name: "Drones" }));
-  board = placeTile(board, stale.id, 0, 0).board;
-  assert.equal(placeTile(board, "dr1", 1, 0).ok, true);
-  assert.equal(placeTile(board, "dr1", -1, 0).ok, false);
-
-  // Verify board-ui paints 3 blue (#38bdf8) + 3 red/pink (#f472b6) edges for both fresh and stale crypto
-  const prevDoc = globalThis.document;
-  const makeNode = (tag) => ({
-    tag,
-    attrs: {},
-    style: {},
-    dataset: {},
-    children: [],
-    htmlChunks: [],
-    classList: {
-      add() {},
-      remove() {},
-      toggle() {},
-      contains() { return false; },
-    },
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    appendChild(child) { this.children.push(child); return child; },
-    insertAdjacentHTML(_where, html) { this.htmlChunks.push(html); },
-    querySelector() { return null; },
-    querySelectorAll() { return []; },
-    addEventListener() {},
-    getBoundingClientRect() { return { width: 520, height: 520, left: 0, top: 0 }; },
-  });
-  try {
-    globalThis.document = {
-      createElement: (tag) => makeNode(tag),
-      createElementNS: (_ns, tag) => makeNode(tag),
-      querySelector: () => null,
-      querySelectorAll: () => [],
-    };
-    const svg = makeNode("svg");
-    const trayStale = {
-      id: "crypto-tray",
-      kind: TILE_KIND.invention,
-      techId: "crypto",
-      name: "Old Tray Crypto",
-      polarity: BITS,
-      q: null,
-      r: null,
-    };
-    const placedStale = {
-      id: "crypto-board-old",
-      kind: TILE_KIND.invention,
-      techId: "crypto",
-      name: "Old Board Crypto",
-      polarity: BITS,
-      q: 1,
-      r: 0,
-    };
-    const placedFresh = mintInventionTile({ id: "crypto-board", techId: "crypto", name: "Crypto", q: 0, r: 0 });
-    const uiBoard = {
-      tiles: {
-        [trayStale.id]: trayStale,
-        [placedStale.id]: placedStale,
-        [placedFresh.id]: placedFresh,
-      },
-    };
-    const ui = createHexBoardUi({ svg, getBoard: () => uiBoard, setBoard() {}, getYear: () => 2026 });
-
-    const edgeColors = (html) => [...html.matchAll(/<line\b[^>]*\bstroke="([^"]+)"/g)].map((m) => m[1]);
-    const trayEl = ui.createTrayTileElement(trayStale);
-    assert.equal(trayEl.dataset.polarity, SPLIT);
-    const trayG = trayEl.children[0].children[0];
-    const trayStrokes = edgeColors(trayG.htmlChunks.join(""));
-    assert.equal(trayStrokes.filter((c) => c === "#38bdf8").length, 3);
-    assert.equal(trayStrokes.filter((c) => c === "#f472b6").length, 3);
-
-    ui.render();
-    for (const id of [placedFresh.id, placedStale.id]) {
-      const boardG = svg.children.find((c) => c.dataset.id === id);
-      assert.ok(boardG);
-      const boardStrokes = edgeColors(boardG.htmlChunks.join(""));
-      assert.equal(boardStrokes.filter((c) => c === "#38bdf8").length, 3);
-      assert.equal(boardStrokes.filter((c) => c === "#f472b6").length, 3);
-    }
-  } finally {
-    if (prevDoc === undefined) delete globalThis.document;
-    else globalThis.document = prevDoc;
-  }
-
-  const evalBoard = {
-    tiles: {
-      "crisis-local": { id: "crisis-local", kind: TILE_KIND.crisis, name: "Floods", role: "local", polarity: "curve", lamp: "red", q: 0, r: 0 },
-      "crypto-eval": { id: "crypto-eval", kind: TILE_KIND.invention, techId: "crypto", name: "Old Crypto", polarity: BITS, q: 1, r: 0 },
-    },
-  };
-  const evalCtx = buildNeighborEvalContext(evalBoard, { year: 2026 });
-  assert.equal(evalCtx.givens[0].neighbors[0].polarity, SPLIT);
 });
 
 test("invention may always sit against crisis (curve)", () => {

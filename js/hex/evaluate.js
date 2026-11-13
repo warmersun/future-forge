@@ -41,9 +41,8 @@ import {
   CRISIS_ROLE_BLURBS,
   cloneBoard,
   applyLights,
-  tilePolarity,
   PATHWAY_TEXT_MAX,
-} from "./board-state.js?v=crypto-split-1";
+} from "./board-state.js?v=argument-1";
 import {
   CRISIS_REASON_MAX,
   crisisRoleKeys,
@@ -1572,8 +1571,8 @@ export function heuristicConverges(a, b) {
   if (a.kind !== TILE_KIND.invention || b.kind !== TILE_KIND.invention) {
     return false;
   }
-  const pa = String(tilePolarity(a, a.polarity ?? "") || "");
-  const pb = String(tilePolarity(b, b.polarity ?? "") || "");
+  const pa = String(a.polarity || "");
+  const pb = String(b.polarity || "");
   if (pa === "split" || pb === "split") return true;
   const ta = String(a.techId || "");
   const tb = String(b.techId || "");

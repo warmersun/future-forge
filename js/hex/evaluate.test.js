@@ -2855,9 +2855,6 @@ describe("R&D and convergence timing", () => {
     assert.equal(heuristicConverges(same, otherTech), true);
     const split = inv("d", { polarity: "split" });
     assert.equal(heuristicConverges(same, split), true);
-    const staleCryptoA = inv("ca", { techId: "crypto", polarity: "bits" });
-    const staleCryptoB = inv("cb", { techId: "crypto", polarity: "bits" });
-    assert.equal(heuristicConverges(staleCryptoA, staleCryptoB), true);
     const placed = inv("low", { feasibilityPct: 40 });
     const nabe = inv("high", { feasibilityPct: 80, techId: "solar" });
     assert.equal(pickEnhancedId(placed, nabe), "low");

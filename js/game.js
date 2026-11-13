@@ -82,7 +82,7 @@ import {
   formatScrutinyLog,
 } from "./captain-log.js?v=crisis-role-3";
 import { getClientSessionId } from "./client-session.js";
-import { applyContinueSnapshot, snapshotForWire, slimMissionForContinue, resolvePackageContinueMission, validateContinueWorld } from "./cloud/continue.js?v=crypto-split-1";
+import { applyContinueSnapshot, snapshotForWire, slimMissionForContinue, resolvePackageContinueMission, validateContinueWorld } from "./cloud/continue.js?v=crisis-role-3";
 import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-20";
 import {
   publicPortfolio,
@@ -166,7 +166,7 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=crypto-split-1";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=argument-1";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
 import {
   boardHolds,
@@ -183,8 +183,7 @@ import {
   concernAnglesOnBoard,
   formatFactor,
   convergencesForAi,
-  tilePolarity,
-} from "./hex/board-state.js?v=crypto-split-1";
+} from "./hex/board-state.js?v=argument-1";
 import {
   boardWorstPathwayTiming,
   boardPathwayReevaluating,
@@ -198,7 +197,7 @@ import {
   visionGivensFromBoard,
   visionPeopleMood,
   crisisMeterTooltipBits,
-} from "./hex/evaluate.js?v=crypto-split-1";
+} from "./hex/evaluate.js?v=argument-1";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
@@ -4558,7 +4557,7 @@ function summarizeHexBoardForAi(board) {
       .map((t) => ({
         id: t.id,
         techId: t.techId,
-        polarity: tilePolarity(t, t.polarity),
+        polarity: t.polarity,
         year: t.year,
         howText: String(t.howText || "").slice(0, 400),
         onBoard: t.q != null && t.r != null,
@@ -8814,7 +8813,7 @@ function startMission(mission, opts = {}) {
   try {
     const hex = ensureHexWorkshop();
     if (restored.skipSeed && restored.hexBoard) {
-      state.hexBoard = cloneBoard(restored.hexBoard);
+      state.hexBoard = restored.hexBoard;
       hex.paint();
       hex.syncPathwayScores?.();
       if (restored.year != null) hex.refreshAfterYearChange?.();
@@ -10008,7 +10007,7 @@ function renderFilters() {
 function domainFilterHint(domainId) {
   const lines = {
     power:
-      "Power — energy runs the world of atoms; computing runs the world of bits; crypto bridges both.",
+      "Power — energy runs the world of atoms; computing runs the world of bits.",
     automator:
       "Automator — robots act in atoms; AI judges and decides in bits.",
     mover:

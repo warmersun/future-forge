@@ -94,7 +94,7 @@ import {
   concernPoseText,
   concernReplyText,
   setConcernReply,
-} from "./board-state.js?v=crypto-split-1";
+} from "./board-state.js?v=argument-1";
 import {
   tileTimingCacheKey,
   timingLevelToPct,
@@ -143,12 +143,12 @@ import {
   setIslandHow,
   rekeyIslandHow,
   rulesWeatherKey,
-} from "./evaluate.js?v=crypto-split-1";
+} from "./evaluate.js?v=argument-1";
 import { scopeCrisisScore } from "./crisis-delta.js?v=crisis-role-3";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
-import { createHexBoardUi, defaultSlots } from "./board-ui.js?v=crypto-split-1";
-import { polarityForTech, tilePolarity } from "./polarity.js?v=crypto-split-1";
+import { createHexBoardUi, defaultSlots } from "./board-ui.js?v=argument-1";
+import { polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
 import { semanticDigest } from "../semantic-digest.js";
@@ -1156,8 +1156,7 @@ export function createHexWorkshop(api) {
         const tech = t.techId ? techById(t.techId) : null;
         const onField = t.q != null && t.r != null;
         const pending = t.timingPending ? " · re-checking timing…" : "";
-        const pol = tilePolarity(t, "");
-        meta.textContent = `Invention · ${tech?.name || t.techId || "idea"} · ${pol} · year ${t.year || "?"}${onField ? "" : " · in tray"}${pending}`;
+        meta.textContent = `Invention · ${tech?.name || t.techId || "idea"} · ${t.polarity || ""} · year ${t.year || "?"}${onField ? "" : " · in tray"}${pending}`;
       }
     }
     if (body) {
@@ -1457,9 +1456,8 @@ export function createHexWorkshop(api) {
             parts.push(`<p class="muted">${escapeHtml(t.timingReason)}</p>`);
           }
         }
-        const worldPol = tilePolarity(t, "");
         parts.push(
-          `<p class="muted">${termHtml("world", "World")}: ${escapeHtml(WORLD_PLAIN[worldPol] || worldPol || "?")} — bits dock on the left faces, atoms on the right.</p>`
+          `<p class="muted">${termHtml("world", "World")}: ${escapeHtml(WORLD_PLAIN[t.polarity] || t.polarity || "?")} — bits dock on the left faces, atoms on the right.</p>`
         );
         const actions = [];
         const canEdit = !api.canEditBoard || Boolean(api.canEditBoard());
@@ -3412,7 +3410,7 @@ export function createHexWorkshop(api) {
       techId: t.techId || null,
       techName: t.techId ? techById(t.techId)?.name || null : null,
       howText: t.howText,
-      polarity: tilePolarity(t, t.polarity),
+      polarity: t.polarity,
     };
   }
 
@@ -4703,7 +4701,7 @@ function summarizeBoardForScrutiny(board, inventionIds = null) {
         id: t.id,
         name: t.name,
         techId: t.techId,
-        polarity: tilePolarity(t, t.polarity),
+        polarity: t.polarity,
         year: t.year,
         howText: String(t.howText || "").slice(0, 400),
         onBoard: t.q != null && t.r != null,
