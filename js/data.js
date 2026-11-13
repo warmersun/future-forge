@@ -25,6 +25,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 import { SCENARIO_ANGLE_PACKS as SEED_ANGLE_PACKS } from "./scenario-seeds.js";
 import { SCENARIO_PACK_SUMMARIES } from "./scenario-pack-summaries.js";
 import { briefMdFromLivedStory } from "./brief-beats.js";
+import { polarityForTech } from "./hex/polarity.js";
 
 export const GAME = {
   title: "Future Forge",
@@ -497,39 +498,8 @@ export const MISSIONS = [
 /**
  * emTech catalog — broad categories, always pickable.
  * readyYear = soft horizon hint only (when "near" use cases get more common), NOT a lock.
+ * World polarity (bits | atoms | split) is sourced from ./hex/polarity.js.
  */
-/** World polarity — bits | atoms | split (converter). See docs/workshop-hex-invent-surface.md */
-const TECH_WORLD = {
-  computing: "bits",
-  crypto: "bits",
-  quantum: "bits",
-  ai: "bits",
-  networks: "bits",
-  "quantum-internet": "bits",
-  "gene-sequencing": "bits",
-  energy: "atoms",
-  solar: "atoms",
-  wind: "atoms",
-  geothermal: "atoms",
-  tidal: "atoms",
-  wave: "atoms",
-  nuclear: "atoms",
-  battery: "atoms",
-  robots: "atoms",
-  transportation: "atoms",
-  "self-driving": "atoms",
-  drones: "atoms",
-  space: "atoms",
-  "alt-proteins": "atoms",
-  iot: "split",
-  print3d: "split",
-  materials: "split",
-  nano: "split",
-  synbio: "split",
-  "genetic-engineering": "split",
-  vr: "split",
-  bci: "split",
-};
 
 export const TECHS = [
   // —— Power: energy, crypto, computing ——
@@ -775,7 +745,7 @@ function tech(id, name, icon, domain, readyYear, curve, summary, learn, inventio
     domain,
     readyYear, // soft horizon only
     curve,
-    polarity: TECH_WORLD[id] || "bits",
+    polarity: polarityForTech(id),
     summary,
     learn,
     inventionHint,

@@ -74,8 +74,8 @@ import {
   setConcernReply,
   mintConcernTiles,
 } from "./board-state.js";
-import { clampChallengerCount } from "../data.js";
-import { polarityForTech, TECH_POLARITY } from "./polarity.js";
+import { clampChallengerCount, TECHS } from "../data.js";
+import { polarityForTech, TECH_POLARITY, SPLIT } from "./polarity.js";
 import {
   applyHeuristicLights,
   ideaMature,
@@ -87,9 +87,15 @@ import { BITS, ATOMS } from "./hex-tile-grid.js";
 test("polarity map covers catalog families", () => {
   assert.equal(polarityForTech("ai"), BITS);
   assert.equal(polarityForTech("drones"), ATOMS);
-  assert.equal(polarityForTech("iot"), "split");
-  assert.equal(TECH_POLARITY.synbio, "split");
+  assert.equal(polarityForTech("iot"), SPLIT);
+  assert.equal(polarityForTech("crypto"), SPLIT);
+  assert.equal(TECH_POLARITY.crypto, SPLIT);
+  assert.equal(TECH_POLARITY.synbio, SPLIT);
   assert.equal(TECH_POLARITY["gene-sequencing"], BITS);
+  for (const t of TECHS) {
+    assert.equal(Object.hasOwn(TECH_POLARITY, t.id), true, `missing polarity for ${t.id}`);
+    assert.equal(t.polarity, polarityForTech(t.id), `catalog polarity mismatch for ${t.id}`);
+  }
 });
 
 test("preferIncomingHexBoard keeps a richer local mint over a stale subset", () => {
@@ -295,6 +301,23 @@ test("placeTile allows split converter between bits and atoms", () => {
   board = r.board;
   // Drones east of IoT (atoms face)
   r = placeTile(board, "dr1", 1, 0);
+  assert.equal(r.ok, true);
+});
+
+test("crypto bridges bits on the left and atoms on the right", () => {
+  let board = createEmptyBoard();
+  board = addTile(board, mintInventionTile({ id: "c1", techId: "crypto", name: "Crypto" }));
+  board = addTile(board, mintInventionTile({ id: "net1", techId: "networks", name: "Networks" }));
+  board = addTile(board, mintInventionTile({ id: "rb1", techId: "robots", name: "Robots" }));
+  board = placeTile(board, "c1", 0, 0).board;
+  assert.equal(board.tiles.c1.polarity, SPLIT);
+  // Refuses bits on east (atoms) face and atoms on west (bits) face
+  assert.equal(placeTile(board, "net1", 1, 0).ok, false);
+  assert.equal(placeTile(board, "rb1", -1, 0).ok, false);
+  // Accepts bits on west face and atoms on east face
+  let r = placeTile(board, "net1", -1, 0);
+  assert.equal(r.ok, true);
+  r = placeTile(r.board, "rb1", 1, 0);
   assert.equal(r.ok, true);
 });
 
