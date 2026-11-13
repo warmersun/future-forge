@@ -31,6 +31,7 @@ export const SPLIT = "split";
 export const TECH_POLARITY = {
   // bits
   computing: BITS,
+  crypto: BITS,
   quantum: BITS,
   ai: BITS,
   networks: BITS,
@@ -52,7 +53,6 @@ export const TECH_POLARITY = {
   space: ATOMS,
   "alt-proteins": ATOMS,
   // split (converter)
-  crypto: SPLIT,
   iot: SPLIT,
   print3d: SPLIT,
   materials: SPLIT,
