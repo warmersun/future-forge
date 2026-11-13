@@ -111,6 +111,8 @@ export class VisionRenderer {
   destroy() {
     clearTimeout(this.timer);
     clearTimeout(this._queueFlush);
+    this.timer = null;
+    this._queueFlush = null;
     if (this._followRetry) {
       clearTimeout(this._followRetry);
       this._followRetry = null;
@@ -359,6 +361,10 @@ export class VisionRenderer {
   }
 
   async flush() {
+    clearTimeout(this.timer);
+    clearTimeout(this._queueFlush);
+    this.timer = null;
+    this._queueFlush = null;
     const state = this.pending;
     if (!state?.challenge) return;
     if (state.shouldRun && !state.shouldRun()) {

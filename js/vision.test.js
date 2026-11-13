@@ -56,6 +56,19 @@ function mockRoot(img) {
 }
 
 describe("visionFailureText", () => {
+  it("clears queued-work handles on flush and destroy so sharing can resume", async () => {
+    const vision = new VisionRenderer(mockRoot(mockImg()));
+    vision.timer = setTimeout(() => {}, 10000);
+    vision._queueFlush = setTimeout(() => {}, 10000);
+    await vision.flush();
+    assert.equal(vision.timer, null);
+    assert.equal(vision._queueFlush, null);
+    vision.timer = setTimeout(() => {}, 10000);
+    vision._queueFlush = setTimeout(() => {}, 10000);
+    vision.destroy();
+    assert.equal(vision.timer, null);
+    assert.equal(vision._queueFlush, null);
+  });
   it("shows the quota sentence instead of the raw code", () => {
     assert.equal(
       visionFailureText({ error: "quota_spent", message: "This period’s co-inventor budget is spent. It comes back when the subscription renews." }, 429),
