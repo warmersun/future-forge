@@ -25,7 +25,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 import { SCENARIO_ANGLE_PACKS as SEED_ANGLE_PACKS } from "./scenario-seeds.js";
 import { SCENARIO_PACK_SUMMARIES } from "./scenario-pack-summaries.js";
 import { briefMdFromLivedStory } from "./brief-beats.js";
-import { polarityForTech } from "./hex/polarity.js";
+import { polarityForTech } from "./hex/polarity.js?v=crypto-split-1";
 
 export const GAME = {
   title: "Future Forge",

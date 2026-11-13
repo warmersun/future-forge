@@ -18,7 +18,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 */
 
 // Presentation only: the seeded board remains the source of truth.
-import { CRISIS_ROLE_DEFAULT_NAMES } from './hex/board-state.js?v=argument-1';
+import { CRISIS_ROLE_DEFAULT_NAMES } from './hex/board-state.js?v=crypto-split-1';
 export function createCrisisIntroduction({ document: doc, getBoard, repaint, onChange = () => {}, reducedMotion = () => false }) {
   let pending = new Set();
   let active = false;

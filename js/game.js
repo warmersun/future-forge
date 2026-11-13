@@ -82,7 +82,7 @@ import {
   formatScrutinyLog,
 } from "./captain-log.js?v=crisis-role-3";
 import { getClientSessionId } from "./client-session.js";
-import { applyContinueSnapshot, snapshotForWire, slimMissionForContinue, resolvePackageContinueMission, validateContinueWorld } from "./cloud/continue.js?v=crisis-role-3";
+import { applyContinueSnapshot, snapshotForWire, slimMissionForContinue, resolvePackageContinueMission, validateContinueWorld } from "./cloud/continue.js?v=crypto-split-1";
 import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-20";
 import {
   publicPortfolio,
@@ -166,7 +166,7 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=argument-1";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=crypto-split-1";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
 import {
   boardHolds,
@@ -183,7 +183,8 @@ import {
   concernAnglesOnBoard,
   formatFactor,
   convergencesForAi,
-} from "./hex/board-state.js?v=argument-1";
+  tilePolarity,
+} from "./hex/board-state.js?v=crypto-split-1";
 import {
   boardWorstPathwayTiming,
   boardPathwayReevaluating,
@@ -197,7 +198,7 @@ import {
   visionGivensFromBoard,
   visionPeopleMood,
   crisisMeterTooltipBits,
-} from "./hex/evaluate.js?v=argument-1";
+} from "./hex/evaluate.js?v=crypto-split-1";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
@@ -4557,7 +4558,7 @@ function summarizeHexBoardForAi(board) {
       .map((t) => ({
         id: t.id,
         techId: t.techId,
-        polarity: t.polarity,
+        polarity: tilePolarity(t, t.polarity),
         year: t.year,
         howText: String(t.howText || "").slice(0, 400),
         onBoard: t.q != null && t.r != null,
@@ -8813,7 +8814,7 @@ function startMission(mission, opts = {}) {
   try {
     const hex = ensureHexWorkshop();
     if (restored.skipSeed && restored.hexBoard) {
-      state.hexBoard = restored.hexBoard;
+      state.hexBoard = cloneBoard(restored.hexBoard);
       hex.paint();
       hex.syncPathwayScores?.();
       if (restored.year != null) hex.refreshAfterYearChange?.();

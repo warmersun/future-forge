@@ -30,7 +30,7 @@ import {
   normalizeMissionPressure,
   parseResourceOverrides,
 } from "../quest-tile.js";
-import { polarityForTech } from "../hex/polarity.js";
+import { polarityForTech } from "../hex/polarity.js?v=crypto-split-1";
 import { clampCrisisDelta } from "../hex/crisis-delta.js";
 import { crisisMeterLevel, isCollapsed, isWin } from "./collapse.js";
 import { clonePressure, maxPressure, applyPressureRiseYears } from "./pressure.js";

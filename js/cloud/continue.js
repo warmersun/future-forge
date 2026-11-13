@@ -25,7 +25,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  * when skipNewRun is true, then paint the hex workshop from live.hexBoard and overlay play/chats.
  */
 
-import { boardForWire } from "../hex/board-state.js?v=argument-1";
+import { boardForWire, cloneBoard } from "../hex/board-state.js?v=crypto-split-1";
 import { normalizeMission } from "../mission-normalize.js";
 import { prepareRunWorld } from "../sim/run-world.js";
 import { parseCompanion } from "../companion.js";
@@ -203,7 +203,7 @@ export function applyContinueSnapshot(live, snapshot) {
   next.skipNewRun = true;
   if (snapshot.runId) next.cloudRunId = String(snapshot.runId);
   if (snapshot.board && typeof snapshot.board === "object") {
-    next.hexBoard = snapshot.board;
+    next.hexBoard = cloneBoard(snapshot.board);
     next.skipSeed = true;
   }
   const y = Number(snapshot.year);

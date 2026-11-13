@@ -31,7 +31,7 @@ import {
   keyOf,
   canDock,
 } from "./hex-tile-grid.js";
-import { polarityForTech, SPLIT } from "./polarity.js";
+import { polarityForTech, tilePolarity, SPLIT } from "./polarity.js?v=crypto-split-1";
 import { GAME, clampChallengerCount } from "../data.js";
 import { crisisRoleKeys, crisisDeltaValues, crisisDeltaReasons } from "./crisis-delta.js?v=crisis-role-3";
 
@@ -140,6 +140,14 @@ function cloneSourceInquiry(raw) {
 
 function cloneTile(tile) {
   const copy = { ...tile };
+  const upgraded = tilePolarity(copy, "");
+  if (
+    copy.kind === TILE_KIND.invention &&
+    upgraded &&
+    upgraded !== copy.polarity
+  ) {
+    copy.polarity = upgraded;
+  }
   const snap = cloneSourceInquiry(tile?.sourceInquiry);
   if (snap) copy.sourceInquiry = snap;
   else delete copy.sourceInquiry;
@@ -1068,7 +1076,7 @@ export function gridFromBoard(board, gridOpts = {}) {
     if (t.q == null || t.r == null) continue;
     g.set(t.q, t.r, {
       id: t.id,
-      polarity: t.polarity || CURVE,
+      polarity: tilePolarity(t, CURVE),
       kind: t.kind,
     });
   }
@@ -1106,7 +1114,7 @@ export function placeTile(board, tileId, q, r) {
     if (!other) continue;
     // World rules only between two invention tiles
     if (tile.kind === TILE_KIND.invention && other.kind === TILE_KIND.invention) {
-      if (!canDock(tile.polarity, other.polarity, d)) {
+      if (!canDock(tilePolarity(tile, CURVE), tilePolarity(other, CURVE), d)) {
         blockers.push({ dir: d, other, need: "world" });
       }
     }
@@ -1598,4 +1606,4 @@ export function removeUnplacedTiles(board, ids) {
   return next;
 }
 
-export { BITS, ATOMS, CURVE, SPLIT, keyOf, canDock, neighbor };
+export { BITS, ATOMS, CURVE, SPLIT, tilePolarity, keyOf, canDock, neighbor };

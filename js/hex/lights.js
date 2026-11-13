@@ -29,6 +29,7 @@ import {
   cloneBoard,
   concernPoseText,
   concernReplyText,
+  tilePolarity,
 } from "./board-state.js";
 import {
   ideaMature,
@@ -196,7 +197,7 @@ export function buildNeighborEvalContext(board, opts = {}) {
         neighbors: inventions.map((n) => ({
           id: n.id,
           techId: n.techId,
-          polarity: n.polarity,
+          polarity: tilePolarity(n, n.polarity),
           year: n.year,
           howText: n.howText,
           feasibilityPct: n.feasibilityPct,

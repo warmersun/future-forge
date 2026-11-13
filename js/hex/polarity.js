@@ -74,6 +74,26 @@ export function polarityForTech(techId, fallback = BITS) {
 }
 
 /**
+ * Effective world polarity for a tile. Upgrades legacy saved invention tiles
+ * whose catalog emTech now bridges both worlds as a split converter (e.g. crypto).
+ * @param {object|null|undefined} tile
+ * @param {string|null|undefined} [fallback]
+ * @returns {"bits"|"atoms"|"split"|"curve"}
+ */
+export function tilePolarity(tile, fallback = CURVE) {
+  if (!tile || typeof tile !== "object") return fallback ?? CURVE;
+  if (
+    tile.kind === "invention" &&
+    tile.techId &&
+    Object.hasOwn(TECH_POLARITY, tile.techId)
+  ) {
+    const catalog = polarityForTech(tile.techId, fallback);
+    if (catalog === SPLIT && tile.polarity !== SPLIT) return SPLIT;
+  }
+  return tile.polarity || (fallback ?? CURVE);
+}
+
+/**
  * Attach polarity onto a tech object (mutates and returns).
  * @param {object} tech
  */

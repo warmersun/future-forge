@@ -45,8 +45,9 @@ import {
   neighborTiles,
   isPortableTile,
   formatFactor,
-} from "./board-state.js?v=argument-1";
-import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js?v=argument-1";
+  tilePolarity,
+} from "./board-state.js?v=crypto-split-1";
+import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js?v=crypto-split-1";
 import { layoutHexLabel } from "./hex-label.js";
 
 const BITS_INK = "#38bdf8";
@@ -234,7 +235,7 @@ export function createHexBoardUi(opts) {
 
   function inventDockOk(tile, other, dir) {
     if (tile.kind === TILE_KIND.invention && other.kind === TILE_KIND.invention) {
-      return canDock(tile.polarity, other.polarity, dir);
+      return canDock(tilePolarity(tile, CURVE), tilePolarity(other, CURVE), dir);
     }
     return true;
   }
@@ -266,9 +267,10 @@ export function createHexBoardUi(opts) {
     if (p.kind === TILE_KIND.argument) {
       return { stroke: ARGUMENT_INK, lamp: false, level: null };
     }
-    if (p.polarity === BITS) return { stroke: BITS_INK, lamp: false, level: null };
-    if (p.polarity === ATOMS) return { stroke: ATOMS_INK, lamp: false, level: null };
-    if (p.polarity === "split") return { stroke: BITS_INK, lamp: false, level: null };
+    const pol = tilePolarity(p, CURVE);
+    if (pol === BITS) return { stroke: BITS_INK, lamp: false, level: null };
+    if (pol === ATOMS) return { stroke: ATOMS_INK, lamp: false, level: null };
+    if (pol === "split") return { stroke: BITS_INK, lamp: false, level: null };
     return { stroke: "#94a3b8", lamp: false, level: null };
   }
 
@@ -345,12 +347,13 @@ export function createHexBoardUi(opts) {
       );
     }
     const corners = hexCorners(cx, cy, size);
+    const pol = tilePolarity(p, CURVE);
     for (let i = 0; i < 6; i++) {
       const a = corners[i];
       const b = corners[(i + 1) % 6];
       let col = t.stroke;
-      if (p.kind === TILE_KIND.invention && p.polarity === "split") {
-        col = facePolarity(p.polarity, i) === BITS ? BITS_INK : ATOMS_INK;
+      if (p.kind === TILE_KIND.invention && pol === "split") {
+        col = facePolarity(pol, i) === BITS ? BITS_INK : ATOMS_INK;
       }
       const hot =
         hover && hover.id === p.id && hover.dirs && hover.dirs.includes(i);
@@ -712,12 +715,13 @@ export function createHexBoardUi(opts) {
     e.preventDefault();
     e.stopPropagation();
     opts.onInspectCancel?.();
+    const pol = tilePolarity(tile, CURVE);
     hover = {
       id,
       dirs:
-        tile.polarity === BITS
+        pol === BITS
           ? BITS_EDGES
-          : tile.polarity === ATOMS
+          : pol === ATOMS
             ? ATOMS_EDGES
             : [...BITS_EDGES, ...ATOMS_EDGES],
     };
@@ -1039,7 +1043,7 @@ export function createHexBoardUi(opts) {
     btn.type = "button";
     btn.className = "hex-tray-tile";
     btn.dataset.id = tile.id;
-    btn.dataset.polarity = tile.polarity || "curve";
+    btn.dataset.polarity = tilePolarity(tile, CURVE);
     btn.style.width = `${pw}px`;
     btn.style.height = `${ph}px`;
     btn.title = "Drag onto the board";
