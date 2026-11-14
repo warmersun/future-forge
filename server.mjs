@@ -30,7 +30,7 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 import OpenAI from "openai";
-import { GAME } from "./js/data.js";
+import { GAME, configureWorldDocking } from "./js/data.js";
 import {
   buildWorldCard,
   resolveShot,
@@ -261,6 +261,7 @@ function loadEnvFile() {
 // Must run before reading FF_* config from process.env
 // HTTP integration tests use fixture-only env and must never load real keys.
 if (process.env.FF_SKIP_GAME_ENV_FILE !== "1") loadEnvFile();
+configureWorldDocking(process.env);
 
 const QUESTS_DIR = resolveQuestsDir(ROOT);
 ensureQuestsDir(QUESTS_DIR);
@@ -2491,6 +2492,9 @@ const server = http.createServer(async (req, res) => {
       ai,
       auth: authInfo.source ? "configured" : null,
       rooms: ROOMS_ENABLED,
+      config: {
+        FF_ENFORCE_BITS_VS_ATOMS_WORLDS: GAME.enforceWorldDocking,
+      },
       features: {
         actionPoints: Boolean(GAME.features?.actionPoints),
         budgetWill: Boolean(GAME.features?.budgetWill),

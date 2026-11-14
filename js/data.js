@@ -38,6 +38,8 @@ export const GAME = {
    * Clamped to 1..4. Default 1.
    */
   challengerCount: 1,
+  /** From FF_ENFORCE_BITS_VS_ATOMS_WORLDS. Colors always remain. */
+  enforceWorldDocking: true,
   features: {
     runReport: true,
     actionPoints: true,
@@ -53,6 +55,12 @@ export const GAME = {
   maxBudget: 10,
   maxWill: 5,
 };
+
+/** Apply the same public docking configuration on the server and in the browser. */
+export function configureWorldDocking(config = {}) {
+  const value = String(config?.FF_ENFORCE_BITS_VS_ATOMS_WORLDS ?? "").trim().toLowerCase();
+  GAME.enforceWorldDocking = !["0", "false", "off", "no"].includes(value);
+}
 
 /**
  * @param {unknown} n
@@ -501,7 +509,6 @@ export const MISSIONS = [
 /** World polarity — bits | atoms | split (converter). See docs/workshop-hex-invent-surface.md */
 const TECH_WORLD = {
   computing: "bits",
-  crypto: "bits",
   quantum: "bits",
   ai: "bits",
   networks: "bits",
@@ -521,6 +528,7 @@ const TECH_WORLD = {
   drones: "atoms",
   space: "atoms",
   "alt-proteins": "atoms",
+  crypto: "split",
   iot: "split",
   print3d: "split",
   materials: "split",
