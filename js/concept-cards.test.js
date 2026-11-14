@@ -82,6 +82,15 @@ describe("concept card content", () => {
     assert.equal(conceptById("nope"), null);
     assert.equal(conceptById("learn").id, "learn");
   });
+  it("time guidance can use the active mode and Quest consequences", () => {
+    const card = conceptById("wait-vs-end-turn", { timeConsequences: {
+      endTurn: "Pass the seat; the round decides the calendar.",
+      wait: "Wait advances three years with this Quest’s rises.",
+    } });
+    assert.match(card.body, /Pass the seat/);
+    assert.match(card.body, /three years/);
+    assert.doesNotMatch(conceptById("wait-vs-end-turn").body, /leaves the meters alone/);
+  });
 });
 
 describe("resolveConceptCard triggers", () => {
@@ -91,11 +100,11 @@ describe("resolveConceptCard triggers", () => {
     assert.equal(resolveConceptCard(undefined), null);
     assert.equal(resolveConceptCard("nope"), null);
   });
-  it("learn fires on first focus and targets the Learn button (opens the tray)", () => {
+  it("learn fires on first focus and targets the reachable evidence surface", () => {
     const c = resolveConceptCard(base({ focusedTechId: "solar" }));
     assert.equal(c.id, "learn");
-    assert.equal(c.target.selector, "#btn-learn-tech");
-    assert.equal(c.openTray, true);
+    assert.equal(c.target.selector, "#invent-capability-explorer");
+    assert.equal(c.surface, "evidence");
   });
   it("look-ahead fires when the first tile exists and outranks learn", () => {
     const c = resolveConceptCard(base({ focusedTechId: "solar", unplacedInventionCount: 1 }));

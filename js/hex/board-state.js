@@ -213,6 +213,8 @@ export function cloneBoard(board) {
                   ])
                 )
               : {},
+          ...(row?.assessmentSource === "ai" || row?.assessmentSource === "heuristic"
+            ? { assessmentSource: row.assessmentSource } : {}),
           pending: Boolean(row?.pending),
           concernsPending: Boolean(row?.concernsPending),
           ...(row?.concernKey != null
@@ -1120,6 +1122,38 @@ export function placeTile(board, tileId, q, r) {
   tile.q = q;
   tile.r = r;
   return { ok: true, board: next, blockers: [] };
+}
+
+/**
+ * Preview a legal open cell without changing the board. Prefer neighbors of
+ * the named crisis, then other crises, then the supplied board slots. This is
+ * a placement suggestion, not an assessment of the idea's effectiveness.
+ */
+export function firstLegalHex(board, tileId, slots = []) {
+  const tile = board?.tiles?.[tileId];
+  if (!tile) return null;
+  const cells = slots.filter((s) => s && Number.isInteger(s.q) && Number.isInteger(s.r));
+  const allowed = new Set(cells.map((s) => keyOf(s.q, s.r)));
+  const seen = new Set();
+  const ordered = [];
+  const push = (cell) => {
+    const key = keyOf(cell.q, cell.r);
+    if (!allowed.has(key) || seen.has(key)) return;
+    seen.add(key);
+    ordered.push({ q: cell.q, r: cell.r });
+  };
+  const ease = String(tile.eases || "").trim().toLowerCase();
+  const crises = Object.values(board.tiles || {}).filter(
+    (t) => t?.kind === TILE_KIND.crisis && t.q != null && t.r != null
+  );
+  crises.sort((a, b) => Number(String(b.name || b.meterKey || "").toLowerCase() === ease) -
+    Number(String(a.name || a.meterKey || "").toLowerCase() === ease));
+  for (const crisis of crises) {
+    for (let d = 0; d < 6; d++) push(neighbor(crisis.q, crisis.r, d));
+  }
+  for (const cell of cells) push(cell);
+  return ordered.find((cell) => (cell.q !== tile.q || cell.r !== tile.r) &&
+    placeTile(board, tileId, cell.q, cell.r).ok) || null;
 }
 
 /**

@@ -45,8 +45,8 @@ import {
   neighborTiles,
   isPortableTile,
   formatFactor,
-} from "./board-state.js?v=argument-1";
-import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js?v=argument-1";
+} from "./board-state.js?v=focused-workshop-1";
+import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js?v=focused-workshop-1";
 import { layoutHexLabel } from "./hex-label.js";
 
 const BITS_INK = "#38bdf8";
@@ -124,6 +124,7 @@ export function createHexBoardUi(opts) {
   if (!svg) throw new Error("createHexBoardUi: svg required");
   const slots = opts.slots || defaultSlots();
   let dragId = null;
+  let placementPreview = null;
   let hover = null;
   let dragMoved = false;
   let dragStartXY = null;
@@ -457,16 +458,17 @@ export function createHexBoardUi(opts) {
     for (const s of slots) {
       const { x, y } = gmath.pixel(s.q, s.r);
       const valid = dragId ? slotValid(dragId, s.q, s.r) : false;
+      const preview = placementPreview && placementPreview.q === s.q && placementPreview.r === s.r;
       const spawn = isSpawnSlot(s.q, s.r);
-      const fill = spawn
+      const fill = preview ? "rgba(56,189,248,.35)" : spawn
         ? "rgba(239,68,68,.28)"
         : valid
           ? "rgba(56,189,248,.16)"
           : "rgba(148,163,184,.05)";
-      const stroke = spawn ? "rgba(239,68,68,.85)" : "rgba(148,163,184,.18)";
-      const dash = spawn ? "0" : "3 3";
+      const stroke = preview ? "#38bdf8" : spawn ? "rgba(239,68,68,.85)" : "rgba(148,163,184,.18)";
+      const dash = preview || spawn ? "0" : "3 3";
       parts.push(
-        `<path class="hex-slot${spawn ? " hex-spawn-slot" : ""}" data-q="${s.q}" data-r="${s.r}" d="${hexPath(x, y, gmath.size - 1)}" fill="${fill}" stroke="${stroke}" stroke-width="${spawn ? "2.4" : "1"}" stroke-dasharray="${dash}"/>`
+        `<path class="hex-slot${preview ? " hex-placement-preview" : ""}${spawn ? " hex-spawn-slot" : ""}" data-q="${s.q}" data-r="${s.r}" d="${hexPath(x, y, gmath.size - 1)}" fill="${fill}" stroke="${stroke}" stroke-width="${preview ? "5" : spawn ? "2.4" : "1"}" stroke-dasharray="${dash}"/>`
       );
     }
     if (
@@ -1115,6 +1117,10 @@ export function createHexBoardUi(opts) {
     liftInvention,
     discardInvention,
     occupy,
+    setPlacementPreview: (cell) => {
+      placementPreview = cell ? { q: cell.q, r: cell.r } : null;
+      render();
+    },
     refresh: render,
     createTrayTileElement,
     getDisplayedHexSizePx,

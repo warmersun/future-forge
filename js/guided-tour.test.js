@@ -23,6 +23,7 @@ import {
   resolveTourStep,
   queryTourTarget,
   createGuidedTour,
+  tourTargetVisible,
 } from "./guided-tour.js";
 import { conceptById } from "./concept-cards.js";
 
@@ -588,6 +589,18 @@ describe("guided tour overlay", () => {
     }
   });
 
+  it("a background recommendation refresh cannot reveal a different working surface", async () => {
+    installFakeDom();
+    try {
+      const reveals = [];
+      const tour = createGuidedTour({ ensureTargetVisible: (step) => reveals.push(step.id) });
+      await tour.open(base());
+      await tour.refresh(base({ focusedTechId: "ai", howTextLength: 40 }));
+      assert.deepEqual(reveals, ["E1"]);
+      assert.equal(tour.currentStep().id, "F2");
+    } finally { restoreDom(); }
+  });
+
   it("close restores focus to the opener", async () => {
     installFakeDom();
     try {
@@ -599,6 +612,45 @@ describe("guided tour overlay", () => {
     } finally {
       restoreDom();
     }
+  });
+
+  it("a rejected stale return context cannot focus the previous run’s opener", async () => {
+    installFakeDom();
+    try {
+      const opener = fakeEl("button", "old-opener");
+      const tour = createGuidedTour({ onOpen: () => "old-run", onClose: () => false });
+      await tour.open(base(), { opener });
+      tour.close();
+      assert.notEqual(opener.didFocus, true);
+    } finally { restoreDom(); }
+  });
+
+  it("preserves one return context across refreshed advice and concepts", async () => {
+    installFakeDom();
+    try {
+      let captures = 0;
+      const returns = [];
+      const context = { surface: "idea", run: "a" };
+      const tour = createGuidedTour({ onOpen: () => { captures++; return context; }, onClose: (value) => returns.push(value) });
+      await tour.open(base());
+      await tour.refresh(base({ focusedTechId: "ai" }));
+      await tour.openConcept(conceptById("learn"));
+      assert.equal(captures, 1);
+      tour.close();
+      assert.deepEqual(returns, [context]);
+      tour.close();
+      assert.equal(returns.length, 1);
+    } finally { restoreDom(); }
+  });
+});
+
+describe("target visibility", () => {
+  it("rejects route CSS hiding even when hidden/inert attributes are absent", () => {
+    const target = { closest: () => null, getClientRects: () => [], getBoundingClientRect: () => ({ width: 0, height: 0 }) };
+    assert.equal(tourTargetVisible(target), false);
+    target.getClientRects = () => [{}];
+    target.getBoundingClientRect = () => ({ width: 100, height: 30 });
+    assert.equal(tourTargetVisible(target), true);
   });
 });
 

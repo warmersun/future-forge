@@ -94,7 +94,7 @@ export const CONCEPT_CARDS = [
     id: "wait-vs-end-turn",
     order: 5,
     title: "Jump the curve, pay in crisis",
-    body: "End turn moves one year and leaves the meters alone. Wait +2 years moves your technologies up the curve — and the crisis meters rise. Timing is choosing when that trade is worth it.",
+    body: "Solo End turn advances one year and applies the Quest’s yearly crisis rises. Wait advances further, applying rises for each year. In Friends, End turn passes the seat and follows round rules. Read the action’s consequences before committing. Neither refills Budget.",
     glossaryId: "wait",
     kicker: CONCEPT_KICKER,
     target: sel("#wait-confirm-ok"),
@@ -108,6 +108,7 @@ export const CONCEPT_CARDS = [
     glossaryId: "art-of-the-possible",
     kicker: CONCEPT_KICKER,
     target: sel('.co-chip[data-mode="art-of-the-possible"]'),
+    surface: "help",
     openSideTab: "vision",
   },
   {
@@ -117,8 +118,8 @@ export const CONCEPT_CARDS = [
     body: "Learn is a short primer on one family: what it is, what already works, where the curve is heading, and how to invent with it here. Best read while ideas generate.",
     glossaryId: "learn",
     kicker: CONCEPT_KICKER,
-    target: sel("#btn-learn-tech"),
-    openTray: true,
+    target: sel("#invent-capability-explorer"),
+    surface: "evidence",
   },
 ];
 
@@ -133,8 +134,12 @@ export function listConcepts() {
  * @param {string} id
  * @returns {ConceptCard|null}
  */
-export function conceptById(id) {
-  return BY_ID.get(String(id || "")) || null;
+export function conceptById(id, snapshot) {
+  const card = BY_ID.get(String(id || "")) || null;
+  if (card?.id === "wait-vs-end-turn" && snapshot?.timeConsequences) {
+    return { ...card, body: `${snapshot.timeConsequences.endTurn} ${snapshot.timeConsequences.wait}` };
+  }
+  return card;
 }
 
 /** Normalize the raw workshop snapshot (same field names as guided-tour snapOf). */

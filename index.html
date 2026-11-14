@@ -28,7 +28,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=argument-1" />
+    <link rel="stylesheet" href="css/styles.css?v=focused-workshop-2" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -1099,7 +1099,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           <div class="hud-pressure" id="hud-pressure"></div>
         </div>
         <div class="hud-actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-abandon">Abandon</button>
           <button
             type="button"
             class="btn-help"
@@ -1124,6 +1123,41 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           </button>
         </div>
         <p id="mp-view-hint" class="mp-view-hint muted" hidden></p>
+      </div>
+
+      <div id="workshop-navigation" class="workshop-navigation">
+        <div id="workshop-context" class="workshop-context">
+          <strong id="workshop-context-title"></strong>
+          <span id="workshop-context-job"></span>
+        </div>
+        <nav class="workshop-destinations" aria-label="Workshop">
+          <button type="button" class="btn btn-secondary btn-sm" data-workshop-go="board">Board</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-workshop-go="idea">Add an idea</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-workshop-go="help">Ask for help</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-workshop-go="briefing">Briefing</button>
+          <details id="workshop-more-tools" class="workshop-more-tools">
+            <summary>More tools</summary>
+            <div class="workshop-tools-menu">
+              <button type="button" class="btn btn-ghost btn-sm" data-workshop-go="evidence">Capability outlook</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-workshop-go="rules">Local rules · Lobby</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-workshop-go="vision">Future vision</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-workshop-go="log">Log · assessments</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-workshop-go="inspect" hidden>Developer · Inspect</button>
+              <label class="workshop-layout-label">Layout
+                <select id="workshop-layout-choice" aria-label="Workshop layout">
+                  <option value="focus">Focus</option>
+                  <option value="overview" selected>Overview</option>
+                </select>
+              </label>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-abandon">Abandon Quest</button>
+            </div>
+          </details>
+        </nav>
+        <div id="workshop-guidance" class="workshop-guidance">
+          <div><strong id="workshop-guidance-title" role="status" aria-live="polite"></strong><p id="workshop-guidance-body"></p></div>
+          <button type="button" class="btn btn-ghost btn-sm" id="workshop-guidance-reveal">Show me where</button>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="workshop-return" hidden>Back to Board</button>
       </div>
 
       <div class="workshop-layout">
@@ -1236,6 +1270,16 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             <section id="idea-panel" hidden></section>
 
             <section class="hex-tile-create" id="hex-tile-create" aria-label="Invent">
+              <div id="workshop-chosen-tech" class="workshop-chosen-tech" hidden>
+                <strong id="workshop-tech-name"></strong>
+                <span id="workshop-tech-description" class="muted"></span>
+                <button type="button" class="btn btn-ghost btn-sm" data-workshop-go="idea" data-workshop-change-tech>Change technology</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-workshop-go="evidence">Learn</button>
+              </div>
+              <div class="workshop-idea-routes">
+                <button type="button" class="btn btn-secondary btn-sm" data-workshop-route="write">Write an idea</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="workshop-view-ideas" data-workshop-route="ask" hidden>View ideas</button>
+              </div>
               <div class="hex-tile-create-head">
                 <div class="hex-tile-create-head-row">
                   <h3 class="hex-tile-create-title" id="hex-tile-create-title">Invent</h3>
@@ -1285,8 +1329,12 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                   ></textarea>
                   <div class="hex-mint-actions">
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-custom">Mint tile</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-argument" disabled>Mint argument</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-rd">Mint R&D</button>
+                    <details class="workshop-secondary-mints">
+                      <summary>Arguments and R&D</summary>
+                      <p class="muted sm">Answer a hard question with an argument, or improve a technology's timing with R&D.</p>
+                      <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-argument" disabled>Mint argument</button>
+                      <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-rd">Mint R&D</button>
+                    </details>
                   </div>
                 </div>
                 <div
@@ -1443,8 +1491,11 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                     <p class="feasibility-summary" id="feasibility-summary">Place invention tiles and ease the crisis lights.</p>
                   </div>
                 </div>
-                <ul class="feasibility-dims" id="feasibility-dims"></ul>
-                <p class="feasibility-foot" id="feasibility-foot"></p>
+                <details id="workshop-assessment-details" open>
+                  <summary>Bonds, Coverage and Timing · Details</summary>
+                  <ul class="feasibility-dims" id="feasibility-dims"></ul>
+                  <p class="feasibility-foot" id="feasibility-foot"></p>
+                </details>
               </div>
 
               <div class="hex-island-how" id="hex-island-how" hidden></div>
@@ -2580,6 +2631,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=continue-run-1"></script>
+    <script type="module" src="js/main.js?v=focused-workshop-1"></script>
   </body>
 </html>

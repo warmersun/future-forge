@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Focused Workshop · interaction prototype</title>
+  <style>
+    :root { color-scheme: dark; font: 17px/1.55 system-ui,sans-serif; background:#101c25; color:#e9f1ef; --muted:#aec0c3; --line:#3b525b; --accent:#9ce6cd; }
+    * { box-sizing:border-box; }
+    body { margin:0; }
+    button,input,textarea,select { font:inherit; }
+    button,select { min-height:44px; border:1px solid var(--line); border-radius:10px; background:#20343e; color:inherit; padding:.55rem .8rem; cursor:pointer; }
+    button:hover { border-color:var(--accent); }
+    button:disabled { opacity:.55; cursor:default; }
+    button[aria-pressed="true"],.primary { background:var(--accent); color:#132c29; font-weight:650; }
+    :focus-visible { outline:3px solid #f4d989; outline-offset:4px; }
+    [hidden] { display:none !important; }
+    h1,h2,h3,p { margin:0 0 .75rem; }
+    h1 { font-size:1.1rem; } h2 { font-size:1.5rem; line-height:1.25; } h3 { font-size:1.1rem; }
+    a { color:var(--accent); }
+    .muted,small { color:var(--muted); }
+    .fixture { background:#334031; padding:.6rem max(1rem,calc((100vw - 1200px)/2)); font-size:.8rem; }
+    .shell { max-width:1200px; margin:auto; padding:1rem; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding-bottom:1rem; border-bottom:1px solid var(--line); }
+    .balances,.row { display:flex; align-items:center; flex-wrap:wrap; gap:.65rem; }
+    .balances span { white-space:nowrap; }
+    nav { display:flex; flex-wrap:wrap; gap:.5rem; margin:1rem 0; }
+    nav .spacer { flex:1; }
+    .guidance { display:flex; align-items:center; justify-content:space-between; gap:1rem; border:1px solid var(--line); border-left:4px solid var(--accent); padding:.85rem 1rem; border-radius:10px; margin:1rem 0; }
+    .guidance p { margin:0; }
+    .guidance button { flex-shrink:0; }
+    .work { display:grid; gap:1rem; }
+    .panel { background:#182a34; border:1px solid var(--line); border-radius:16px; padding:clamp(1rem,3vw,2rem); min-width:0; }
+    .panel:focus { outline-offset:5px; }
+    .story { max-width:760px; margin:2rem auto; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.1em; font-size:.75rem; color:var(--accent); }
+    .crises,.tech-grid,.suggestions { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr)); gap:.75rem; margin:1rem 0; }
+    .crisis,.tech-card,.suggestion { padding:1rem; border:1px solid var(--line); border-radius:12px; text-align:left; }
+    .crisis { border-left:4px solid #ffae9e; }
+    .crisis p,.tech-card p { font-size:.9rem; }
+    .tech-card { display:block; width:100%; }
+    .tech-card strong { display:block; margin:.4rem 0; }
+    .symbol { font-size:1.8rem; }
+    .chosen { display:flex; align-items:center; gap:1rem; border-bottom:1px solid var(--line); padding-bottom:1rem; margin-bottom:1rem; flex-wrap:wrap; }
+    .chosen div { flex:1; min-width:160px; }
+    .chosen p { margin:0; }
+    .routes { margin-bottom:1rem; }
+    label { display:block; margin:1rem 0 .35rem; font-weight:600; }
+    input,textarea { width:100%; min-height:44px; background:#10222c; color:inherit; border:1px solid #627b85; border-radius:8px; padding:.7rem; }
+    textarea { min-height:120px; resize:vertical; }
+    details { margin:1rem 0; }
+    summary { cursor:pointer; padding:.5rem 0; }
+    .board-and-tray { display:grid; grid-template-columns:minmax(190px,1fr) minmax(0,3fr); gap:1rem; }
+    .tray { background:#11242c; padding:1rem; border:1px solid var(--line); border-radius:12px; }
+    .tray p { overflow-wrap:anywhere; }
+    .board { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px; align-content:center; min-height:320px; background:#10222c; border:1px solid var(--line); padding:1rem; border-radius:12px; }
+    .hex { aspect-ratio:1.08; min-width:0; padding:.4rem; border-radius:28%; font-size:.8rem; overflow-wrap:anywhere; }
+    .hex.crisis-cell { border:2px solid #ffae9e; }
+    .hex.preview { border:3px dashed #f4d989; background:#4c4431; color:#fff5d5; }
+    .hex.idea { background:#2d6155; border:2px solid var(--accent); }
+    .feedback { margin-top:1rem; padding:1rem; background:#243c45; border-radius:12px; }
+    .feedback p:last-child { margin-bottom:0; }
+    .overview .work { grid-template-columns:1fr 1.4fr; align-items:start; }
+    .overview .board-and-tray { grid-template-columns:1fr; }
+    .overview .board { min-height:260px; }
+    footer { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--line); font-size:.85rem; }
+    .status { min-height:1.5em; color:#f4d989; margin:.6rem 0; }
+    .support { max-width:800px; margin:auto; }
+    @media(max-width:760px) { .overview .work,.board-and-tray { grid-template-columns:1fr; } .guidance { align-items:stretch; flex-direction:column; } .guidance button { align-self:start; } .board { min-height:270px; padding:.5rem; } .shell { padding:.75rem; } nav .spacer { display:none; } }
+    @media(prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; transition:none !important; } }
+  </style>
+</head>
+<body>
+  <div class="fixture"><strong>Clickable interaction prototype.</strong> Quest copy comes from <a href="../../quests/spotlight-gene-seq.json">Crossing Clinic 7</a>. Ideas, balances, costs, placement and feedback below are demonstration fixtures; no providers, saved runs or real assessments are used.</div>
+  <div class="shell">
+    <header>
+      <div><h1>The fever sheet at Crossing Clinic 7</h1><span class="muted">Crossing Clinic 7 · Your job: know what the fever is before the next queue arrives.</span></div>
+      <div class="balances" aria-label="Demonstration resources"><span>2026 / 2032</span><span>Attention <b id="ap">3</b></span><span>Budget 4</span><span>Support 2</span></div>
+    </header>
+    <nav aria-label="Workshop">
+      <button data-go="board">Board</button><button data-go="idea">Add an idea</button><button data-tool="help">Ask for help</button>
+      <span class="spacer"></span><button data-tool="briefing">Briefing</button>
+      <label for="layout" class="muted" style="margin:0;align-self:center">Layout</label><select id="layout"><option value="focus">Focus</option><option value="overview">Overview</option></select>
+    </nav>
+    <div class="guidance" id="guidance"><div role="status" aria-live="polite"><strong id="job"></strong><p id="reason" class="muted"></p></div><button id="show">Show me where</button></div>
+    <main class="work" id="work">
+      <section id="briefing" class="panel story" tabindex="-1" aria-labelledby="briefing-title">
+        <p class="eyebrow">The final briefing beat</p><h2 id="briefing-title">Your job</h2>
+        <p>Nurse Amina's swabs wait in a cooler. The weekly lab truck left at dawn. Answers take days; rumors fill the gap first.</p>
+        <p>Invent a way this clinic can know what the fever is before the next queue arrives.</p>
+        <p class="muted">For Dr. Okonkwo, clinic lead.</p>
+        <button class="primary" id="start">Start inventing</button><button class="back" hidden></button>
+      </section>
+      <section id="intro" class="panel" tabindex="-1" aria-labelledby="intro-title" hidden>
+        <p class="eyebrow">These are the problems on your board</p><h2 id="intro-title">Two pressures at the clinic</h2>
+        <div class="crises"><article class="crisis"><h3>Outbreak · red</h3><p>The fever pattern is real and still invisible while the swabs ride the weekly lab truck.</p></article><article class="crisis"><h3>Fear · red</h3><p>Traders and travelers hear rumors before results. The clinic needs their trust.</p></article></div>
+        <p class="muted">The board already contains these crisis tiles. Reading them creates no new problems or costs.</p><button class="primary" id="begin">Choose a technology</button><button id="skip">Skip introduction</button>
+      </section>
+      <section id="idea" class="panel" tabindex="-1" aria-labelledby="idea-title" hidden>
+        <div id="chooser"><p class="eyebrow">Add an idea</p><h2 id="idea-title">What could help this clinic?</h2><p>For this place</p><div id="technologies" class="tech-grid"></div>
+          <details><summary>All emerging tech</summary><label for="family">Explore a family</label><select id="family"><option>Power · energy</option><option>Automator · work</option><option>Mover · transport</option><option>Portal · places</option><option>LifeForce · living systems</option><option>Link · connections</option></select><p class="muted">Bits and atoms stay connected. This fixture includes only the three Quest suggestions; the real Workshop retains the complete catalog.</p></details>
+        </div>
+        <div id="drafting" hidden>
+          <div class="chosen"><span class="symbol" id="tech-symbol" aria-hidden="true"></span><div><h2 id="tech-name"></h2><p id="tech-why" class="muted"></p></div><button id="change">Change technology</button><button data-tool="evidence">Learn</button></div>
+          <div class="row routes"><button id="write" aria-pressed="true">Write an idea · free</button><button id="ask" aria-pressed="false">Ask for ideas · 1 Attention*</button></div>
+          <div id="editor">
+            <div id="scaffold"><label for="scarce">What is scarce here?</label><input id="scarce" placeholder="Reliable answers before the queue leaves…"><label for="mechanism">How does this technology make it more abundant?</label><textarea id="mechanism" placeholder="Who does what, with what, during this shift…"></textarea></div>
+            <button id="free" class="muted">Write freely</button><div id="free-editor" hidden><label for="free-text">How your idea works</label><textarea id="free-text" placeholder="Describe your idea in your own way…"></textarea></div>
+            <p class="status" id="draft-status" role="status"></p><button id="mint" class="primary">Mint tile · 1 Attention*</button>
+            <details><summary>Other tile types</summary><p>Arguments explain an existing claim; R&amp;D explores a capability gap. These remain secondary to making your first invention. This prototype demonstrates invention tiles only.</p></details>
+          </div>
+          <div id="suggestion-route" hidden><p>Illustrated demonstration suggestions. Choose one deliberately, then review or edit it.</p><div id="suggestions" class="suggestions"></div><button id="return-write">Return to my draft</button></div>
+          <div id="minted" class="feedback" hidden><strong>Your idea tile is ready.</strong><p>Next, choose where it belongs. Opening the board places nothing.</p><button id="handoff" class="primary">Place on board</button></div>
+          <small>* Demonstration cost only. Production reads each active Quest's action guards.</small>
+        </div>
+      </section>
+      <section id="board-panel" class="panel" tabindex="-1" aria-labelledby="board-title" hidden>
+        <p class="eyebrow">Your pathway</p><h2 id="board-title">Ideas meet problems here</h2>
+        <div class="board-and-tray"><aside class="tray" aria-label="Selected idea"><strong id="tray-name">No idea tile yet</strong><p id="tray-body" class="muted">Your crisis tiles are already here. Add an idea when you are ready.</p><button data-go="idea" id="tray-add">Add an idea</button><button id="preview" hidden>Preview a legal cell</button><button id="confirm" class="primary" hidden>Confirm placement · free</button><button id="cancel" hidden>Cancel preview</button></aside><div class="board" id="board" role="group" aria-label="Board cells; choose an empty cell to preview placement"></div></div>
+        <p class="status" id="place-status" role="status"></p>
+        <div class="feedback"><strong id="feedback-title">Place an idea to begin checking.</strong><p id="feedback-text" class="muted">An empty pathway has no invention to assess yet.</p><div class="row" id="responses" hidden><button id="move">Move this tile</button><button id="edit">Edit its mechanism</button><button data-tool="evidence">Inspect timing evidence</button><button data-go="idea">Add another idea</button></div><details><summary>Bonds, Coverage and Timing</summary><p id="dimensions">The full assessment will appear after placement. A legal cell does not guarantee a useful connection.</p></details></div>
+      </section>
+      <section id="evidence" class="panel support" tabindex="-1" aria-labelledby="evidence-title" hidden><p class="eyebrow">Supporting tool</p><h2 id="evidence-title">Capability outlook</h2><p id="evidence-copy"></p><p class="muted">Evidence fixture: capability, power, trained staff and interpretation still matter. A sequencer does not by itself guarantee a diagnosis. This view uses no forecasts or live evidence service.</p><button class="back"></button></section>
+      <section id="help" class="panel support" tabindex="-1" aria-labelledby="help-title" hidden><p class="eyebrow">Supporting tool</p><h2 id="help-title">Ask for help</h2><p>What would Amina do differently during this shift if your idea worked?</p><label for="help-draft">Your question</label><textarea id="help-draft" placeholder="Keep a question here while you work…"></textarea><p class="muted">Conversation fixture; no request is sent. Your question and invention draft remain here when you close this view.</p><button class="back"></button></section>
+    </main>
+    <footer><div class="row"><button id="restart">Restart demonstration</button><span>All effects are fixtures. No real game state changes.</span></div><p id="footer-hint" class="muted">Turn actions in production retain their real costs, eligibility and confirmations. This prototype concentrates on the first idea, placement and feedback.</p></footer>
+  </div>
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+      const technologies = [
+        { id:'gene-sequencing',name:'Gene sequencing',symbol:'⌁',why:'A rugged bench sequencer can name the fever during the same shift, before Outbreak spreads past the queue.',idea:'Amina runs the swabs on a clinic bench sequencer during her shift. A trained reviewer checks the result before the clinic posts it.' },
+        { id:'iot',name:'Internet of Things',symbol:'◉',why:'Cheap sensors on the fridge and the cooler can flag a fever pattern early, so Outbreak is seen before the truck.',idea:'Cooler sensors log sample conditions and flag warm storage to Amina before she sends another batch to the lab.' },
+        { id:'networks',name:'Networks',symbol:'⌘',why:'A shared result board across the border posts turns rumor into a posted answer, easing Fear at the bench.',idea:'Clinic staff publish checked results on a shared board that neighboring border posts can read during the same shift.' }
+      ];
+      const state = { route:'briefing',previous:'idea',tech:null,started:false,introDone:false,free:false,idea:null,cell:null,preview:null,ap:3 };
+      let layout = 'focus';
+      try { layout = localStorage.getItem('ff.focused-workshop.prototype.layout') === 'overview' ? 'overview' : 'focus'; } catch {}
+      $('layout').value = layout;
+      function currentTech() { return technologies.find(t => t.id === state.tech); }
+      function text() { return state.free ? $('free-text').value.trim() : [$('scarce').value.trim(),$('mechanism').value.trim()].filter(Boolean).join(' — '); }
+      function returnLabel() { return state.previous === 'board' ? 'Back to your board' : currentTech() ? `Back to your ${currentTech().name} idea` : 'Back to choosing a technology'; }
+      function guidance() {
+        const jobs = !state.started ? ['Know the job before inventing.','Help this clinic get an answer before the next queue arrives.'] : !state.introDone ? ['Meet the problems already on the board.','Outbreak and Fear are two different pressures.'] : !state.tech ? ['Choose a technology that could help here.','Use a Quest suggestion, or explore the wider catalog.'] : !state.idea ? ['Explain how your idea works.','Write an idea, or ask for a starting point and make a deliberate choice.'] : state.cell === null ? ['Place your idea beside a crisis.','Preview a cell, then confirm. A legal location may still be strategically weak.'] : ['Read what changed, then choose your response.','You can move your tile, edit its mechanism or inspect the evidence.'];
+        $('job').textContent = jobs[0]; $('reason').textContent = jobs[1];
+      }
+      function show(route,focus = true) {
+        state.route = route; render();
+        if (focus) $(route === 'board' ? 'board-panel' : route)?.focus();
+      }
+      function render() {
+        document.body.classList.toggle('overview',layout === 'overview');
+        const normal = state.introDone && (state.route === 'idea' || state.route === 'board');
+        for (const [route,id] of [['briefing','briefing'],['intro','intro'],['idea','idea'],['board','board-panel'],['evidence','evidence'],['help','help']]) $(id).hidden = state.route !== route && !(normal && layout === 'overview' && ['idea','board'].includes(route));
+        document.querySelectorAll('[data-go]').forEach(b => b.setAttribute('aria-pressed',String(b.dataset.go === state.route)));
+        document.querySelectorAll('.back').forEach(b => { b.textContent = returnLabel(); b.hidden = b.closest('#briefing') ? !state.started : false; });
+        $('start').hidden = state.started;
+        $('chooser').hidden = Boolean(state.tech); $('drafting').hidden = !state.tech;
+        if (currentTech()) { $('tech-name').textContent=currentTech().name; $('tech-symbol').textContent=currentTech().symbol; $('tech-why').textContent=currentTech().why; $('evidence-copy').textContent=currentTech().why; }
+        $('ap').textContent=state.ap;
+        $('minted').hidden = !state.idea;
+        $('tray-name').textContent = state.idea ? `${state.cell === null ? 'Unplaced idea' : 'Placed idea'} · ${state.idea.name}` : 'No idea tile yet';
+        $('tray-body').textContent = state.idea?.text || 'Your crisis tiles are already here. Add an idea when you are ready.';
+        $('tray-add').hidden=Boolean(state.idea); $('preview').hidden=!state.idea;
+        $('confirm').hidden=state.preview===null; $('cancel').hidden=state.preview===null;
+        renderBoard(); guidance();
+      }
+      function renderBoard() {
+        const board=$('board'); const focused=board.contains(document.activeElement) ? document.activeElement.dataset.cell : null;
+        board.replaceChildren();
+        for (let i=0;i<12;i++) {
+          const b=document.createElement('button'); b.type='button'; b.className='hex'; b.dataset.cell=i;
+          const crisis=i===5?'Outbreak':i===6?'Fear':null;
+          b.textContent = crisis ? `${crisis} · red` : state.preview===i ? 'Proposed cell' : state.cell===i ? state.idea.name : `Cell ${i+1}`;
+          b.classList.toggle('crisis-cell',Boolean(crisis)); b.classList.toggle('preview',state.preview===i); b.classList.toggle('idea',state.cell===i);
+          b.setAttribute('aria-label',crisis ? `${crisis}, red crisis, occupied` : `${b.textContent}${state.cell===i?', placed idea':', choose to preview'}`);
+          b.addEventListener('click',()=>preview(i));
+          b.addEventListener('dragover',e=>{if(state.idea&&!crisis)e.preventDefault();});
+          b.addEventListener('drop',e=>{e.preventDefault();preview(i);});
+          b.addEventListener('keydown',e=>{ const delta={ArrowRight:1,ArrowLeft:-1,ArrowDown:4,ArrowUp:-4}[e.key]; if(delta!==undefined){e.preventDefault();board.querySelector(`[data-cell="${Math.max(0,Math.min(11,i+delta))}"]`)?.focus();} });
+          board.append(b);
+        }
+        if (focused !== null) board.querySelector(`[data-cell="${focused}"]`)?.focus();
+      }
+      function preview(cell) {
+        if (!state.idea) { $('place-status').textContent='Add and mint an idea before choosing a cell.'; return; }
+        if ([5,6].includes(cell)) { $('place-status').textContent='That cell already contains a crisis. Choose an empty cell; your idea is unchanged.'; return; }
+        state.preview=cell; renderBoard(); $('confirm').hidden=false; $('cancel').hidden=false;
+        $('place-status').textContent=`Cell ${cell+1} is a legal preview, not a recommendation. Confirm placement to move your idea here.`;
+      }
+      function openTool(route) { if (!['help','evidence','briefing'].includes(state.route)) state.previous=state.route==='board'?'board':'idea'; show(route); }
+      for (const t of technologies) {
+        const b=document.createElement('button');b.className='tech-card';
+        const icon=document.createElement('span');icon.className='symbol';icon.textContent=t.symbol;icon.setAttribute('aria-hidden','true');
+        const name=document.createElement('strong');name.textContent=t.name;const why=document.createElement('p');why.textContent=t.why;
+        b.append(icon,name,why);b.addEventListener('click',()=>{state.tech=t.id;show('idea');});$('technologies').append(b);
+      }
+      document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{ if(!state.started){state.started=true;state.introDone=true;} state.introDone=true;show(b.dataset.go); }));
+      document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>openTool(b.dataset.tool)));
+      document.querySelectorAll('.back').forEach(b=>b.addEventListener('click',()=>show(state.previous)));
+      $('start').onclick=()=>{state.started=true;show('intro');};
+      const begin=()=>{state.introDone=true;show('idea');};$('begin').onclick=begin;$('skip').onclick=begin;
+      $('layout').onchange=()=>{layout=$('layout').value;try{localStorage.setItem('ff.focused-workshop.prototype.layout',layout);}catch{}render();};
+      $('change').onclick=()=>{state.tech=null;show('idea');};
+      function write() { $('editor').hidden=false;$('suggestion-route').hidden=true;$('write').setAttribute('aria-pressed','true');$('ask').setAttribute('aria-pressed','false'); }
+      $('write').onclick=write;$('return-write').onclick=write;
+      $('ask').onclick=()=>{
+        if(state.ap<1){$('draft-status').textContent='No demonstration Attention left. Writing and browsing remain free; restart to retry the fixture.';return;}
+        state.ap--; $('ap').textContent=state.ap;$('editor').hidden=true;$('suggestion-route').hidden=false;$('write').setAttribute('aria-pressed','false');$('ask').setAttribute('aria-pressed','true');
+        $('suggestions').replaceChildren();const t=currentTech();const article=document.createElement('article');article.className='suggestion';const illustration=document.createElement('div');illustration.className='symbol';illustration.textContent=t.symbol+' → ✚';illustration.setAttribute('aria-hidden','true');const p=document.createElement('p');p.textContent=t.idea;const b=document.createElement('button');b.textContent='Use as a starting point';b.onclick=()=>{state.free=true;$('free-text').value=t.idea;$('scaffold').hidden=true;$('free-editor').hidden=false;$('free').textContent='Use the writing scaffold';write();$('free-text').focus();};article.append(illustration,p,b);$('suggestions').append(article);
+      };
+      $('free').onclick=()=>{state.free=!state.free;$('scaffold').hidden=state.free;$('free-editor').hidden=!state.free;$('free').textContent=state.free?'Use the writing scaffold':'Write freely';};
+      $('mint').onclick=()=>{
+        if(text().length<12){$('draft-status').textContent='Add a little more detail about how the idea works before minting.';return;}
+        if(state.ap<1){$('draft-status').textContent='Minting needs 1 demonstration Attention. Your draft is safe; free editing and browsing remain available.';return;}
+        state.ap--;state.idea={name:currentTech().name,text:text()};$('draft-status').textContent='Tile minted. The board handoff places nothing automatically.';render();$('handoff').focus();
+      };
+      $('handoff').onclick=()=>show('board');$('preview').onclick=()=>preview([1,2,4,7,8,9,10,11,0,3].find(i=>i!==state.cell));
+      $('confirm').onclick=()=>{
+        if(state.preview===null)return;state.cell=state.preview;state.preview=null;$('place-status').textContent='Placement confirmed. Select Move this tile or drag it to preview another cell.';
+        const nearOutbreak=[1,4,8,9].includes(state.cell),nearFear=[2,7,9,10].includes(state.cell);
+        $('feedback-title').textContent='Demonstration assessment · completed fixture';
+        $('feedback-text').textContent=nearOutbreak?'This idea is connected to Outbreak. The fixture assessment has not eased that crisis yet.':nearFear?'This idea is connected to Fear. The fixture assessment has not eased that crisis yet.':'This legal placement is not connected to either crisis in this fixture. Move it beside the problem it could help.';
+        $('dimensions').textContent=`Bonds: ${nearOutbreak||nearFear?'a crisis touches the idea':'no crisis connection'}. Coverage: no demonstrated easing. Timing: not evaluated by this fixture. Practice assessments are not proof that a real intervention works.`;
+        $('responses').hidden=false;render();
+      };
+      $('cancel').onclick=()=>{state.preview=null;$('place-status').textContent='Preview cancelled. Your idea has not moved.';render();};
+      $('move').onclick=()=>{$('place-status').textContent='Choose an empty cell, then confirm the proposed move.';$('board').querySelector('button').focus();};
+      $('edit').onclick=()=>{show('idea');write();(state.free?$('free-text'):$('mechanism')).focus();};
+      $('show').onclick=()=>{show(!state.started?'briefing':!state.introDone?'intro':!state.tech||!state.idea?'idea':'board');};
+      $('restart').onclick=()=>location.reload();
+      $('tray-name').draggable=true;$('tray-name').addEventListener('dragstart',e=>{if(!state.idea)e.preventDefault();else e.dataTransfer.setData('text/plain','fixture-idea');});
+      document.addEventListener('keydown',e=>{if(e.key==='Escape'&&['help','evidence','briefing'].includes(state.route)&&state.started){e.preventDefault();show(state.previous);}});
+      render();
+    })();
+  </script>
+</body>
+</html>

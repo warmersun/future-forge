@@ -47,6 +47,7 @@ import { VisionRenderer } from "./vision.js?v=usage-2";
 import { puzzleSnapshot, openPuzzleShare, puzzleHasPendingEvaluation } from "./puzzle-share.js";
 import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
+import { createWorkshopFocus } from "./workshop-focus.js?v=focused-workshop-1";
 import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
 import { claimOverlay } from "./overlay-queue.js";
 import { CoInventor, hangupVoice } from "./coinventor.js?v=usage-2";
@@ -168,8 +169,8 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=argument-1";
-import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=focused-workshop-1";
+import { createCrisisIntroduction } from "./crisis-introduction.js?v=focused-workshop-1";
 import {
   boardHolds,
   deriveBoardProse,
@@ -185,7 +186,7 @@ import {
   concernAnglesOnBoard,
   formatFactor,
   convergencesForAi,
-} from "./hex/board-state.js?v=argument-1";
+} from "./hex/board-state.js?v=focused-workshop-1";
 import {
   boardWorstPathwayTiming,
   boardPathwayReevaluating,
@@ -199,7 +200,7 @@ import {
   visionGivensFromBoard,
   visionPeopleMood,
   crisisMeterTooltipBits,
-} from "./hex/evaluate.js?v=argument-1";
+} from "./hex/evaluate.js?v=focused-workshop-1";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
@@ -333,7 +334,8 @@ import {
   paintQuestJob,
   resetQuestBriefing,
 } from "./briefing-ui.js";
-import { createGuidedTour, queryTourTarget } from "./guided-tour.js";
+import { createGuidedTour, queryTourTarget } from "./guided-tour.js?v=focused-workshop-1";
+import { createWorkshopGuidance, workshopTimeConsequences } from "./workshop-guidance.js?v=focused-workshop-1";
 import {
   createTutorial,
   queryTutorialTarget,
@@ -403,7 +405,7 @@ import {
   conceptById,
   readMutedConcepts,
   setConceptMuted,
-} from "./concept-cards.js";
+} from "./concept-cards.js?v=focused-workshop-1";
 
 /** Hotseat session bridged into solo workshop / challenge / deploy */
 const hotseatBridge = createHotseatBridge();
@@ -1839,7 +1841,10 @@ function ensureHexWorkshop() {
       ? hotseatBridge.getRequestIdentity() : null,
     /** "What could help here?" — suggested emTechs with plain reasons for a crisis hex */
     techsForCrisis: (where) => pickTechsForCrisis(state.mission, TECHS, where || {}, 3),
-    focusTechFromBoard: (id) => focusTech(id),
+    focusTechFromBoard: (id) => {
+      focusTech(id);
+      if (focusedTechId === id) workshopFocus.select("idea");
+    },
     getRules: () => liveRules(),
     getGlobal: () => state.global || null,
     getGrounding: () => state.mission?.grounding || null,
@@ -1866,6 +1871,17 @@ function ensureHexWorkshop() {
       state.selectedTechIds = ids;
     },
     canPlaceInvention: (tile) => canPlaceInventionOnStack(tile),
+    getPlacementCost: (tile) => {
+      const plan = stackPlacementPlan(tile, state.hexBoard, state.selectedTechIds);
+      if (!plan.charge) return "No additional placement cost. Moving this tile afterward is free.";
+      const cost = techCost(techById(tile.techId));
+      const parts = [];
+      if (apEnabled()) parts.push("1 AP");
+      if (budgetWillEnabled()) parts.push(`${cost.budget || 0} Budget`, `${cost.will || 0} Support`);
+      const eligible = canPlaceInventionOnStack(tile);
+      const reason = { no_ap: "Not enough AP.", no_budget: "Not enough Budget.", no_will: "Not enough Support.", "stack full": "Stack full: lift a tile first." }[eligible.error] || "";
+      return `${parts.length ? `Placement costs ${parts.join(" + ")}.` : "No resource cost."} ${reason} Moving this tile afterward is free.`;
+    },
     isSignedIn: () => isClerkSignedIn(),
     onSignedIn: (fn) => onClerkSession(fn),
     listCollectorCards: () => listCollectorCards(),
@@ -4646,11 +4662,66 @@ function hangupVoiceOnScreenChange(prevScreenId, nextScreenId) {
 /** Set while startTutorial navigates home so showScreen does not cancel the run. */
 let keepTutorialOnTitle = false;
 
+const workshopFocus = createWorkshopFocus({
+  document,
+  storage: (() => { try { return window.localStorage; } catch { return null; } })(),
+  // The plan's rollout gate keeps Overview as the default until playtesting.
+  defaultLayout: "overview",
+  onPresentation: ({ layout, surface }) => hexWorkshop?.setTrayContext?.({ all: layout === "focus" && surface === "board" }),
+  onOpen: (surface) => {
+    const tabs = { help: "vision", vision: "vision", log: "log", inspect: "aitrace" };
+    if (tabs[surface]) {
+      state.sideTab = tabs[surface];
+      $$("#screen-workshop .side-tab[data-tab]").forEach((btn) => {
+        const on = btn.dataset.tab === state.sideTab;
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", String(on));
+      });
+      applyInventSidePanes();
+      if (surface === "log") renderCaptainLog();
+      if (surface === "inspect" && state.developer) renderAiTrace();
+    }
+    if (surface === "evidence") syncCapabilityExplorer();
+    if (surface === "briefing") {
+      const panel = $("#crisis-briefing");
+      if (panel) { panel.hidden = false; panel.open = true; }
+    }
+  },
+});
+
+function syncWorkshopFocus() {
+  if (state.screen !== "workshop") return;
+  const tech = focusedTechId ? techById(focusedTechId) : null;
+  workshopFocus.sync({
+    runKey: JSON.stringify([storyRunGeneration, state.cloudRunId || "", state.mission?.id || "", state.mp?.mode || "solo", state.mp?.code || ""]),
+    seatKey: mpBridge()?.getViewId?.() || "solo",
+    initialSurface: isLearningTutorSessionActive() ? "help" : "board",
+    briefingActive: Boolean(lastBriefingPaint()?.active),
+    introductionPending: crisisIntroduction.count() > 0,
+    focusedTechId,
+    focusedTechName: tech?.name || "",
+    developer: Boolean(state.developer),
+  });
+  const title = $("#workshop-context-title");
+  if (title) title.textContent = [state.mission?.title, state.mission?.place].filter(Boolean).join(" · ");
+  const job = $("#workshop-context-job");
+  if (job) job.textContent = $("#ws-quest-job")?.textContent || "";
+  const capability = $("#workshop-tech-description");
+  if (capability) capability.textContent = tech ? whyHere(tech, state.mission) || capabilityLine(tech) : "";
+  const ideaCost = apEnabled() ? thinkingAiApCost(state, "idea-sparks", 1, { tutor: isLearningTutorSessionActive() }) : 0;
+  const ask = $("#btn-ask-ideas");
+  if (ask) ask.textContent = `Ask for ideas · ${ideaCost} AP`;
+  const refresh = $("#btn-refresh-ideas");
+  if (refresh) refresh.textContent = `Refresh ideas · ${ideaCost} AP`;
+  const mint = $("#btn-mint-custom");
+  if (mint) mint.textContent = "Mint tile · 0 AP";
+}
+
 const crisisIntroduction = createCrisisIntroduction({
   document,
   getBoard: () => state.hexBoard,
   repaint: () => hexWorkshop?.paint?.(),
-  onChange: () => { try { tutorialCtl?.refresh?.(); } catch {} },
+  onChange: () => { try { refreshCoachMarks(); tutorialCtl?.refresh?.(); } catch {} },
   reducedMotion: () => window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches || false,
 });
 
@@ -9788,9 +9859,10 @@ function renderFeasibility() {
       light.title = "Pathway coverage";
     }
   }
-  if (label) label.textContent = pending ? lastFeasibilityLightLevel : overall;
+  if (label) label.textContent = !onBoard ? "not started" : pending ? "checking…" : overall;
+  if (light && !onBoard) { light.dataset.level = "not-started"; light.title = "Place an idea to begin checking"; }
   if (summary) {
-    summary.textContent = board?.concernsSummoned
+    summary.textContent = !onBoard ? "Place an idea to begin checking" : board?.concernsSummoned
       ? `${reds} red · ${yellows} yellow · ${greens} green among crisis & concerns`
       : `${inventions.length} idea tile(s), ${onBoard} on the board · summon hard questions when ready`;
   }
@@ -10552,6 +10624,7 @@ function focusTech(techId) {
   updateLearnButton();
   syncCapabilityExplorer();
   refreshCoachMarks();
+  workshopFocus.technologyChanged();
 }
 
 async function openIdeaDeck(techId) {
@@ -13166,12 +13239,18 @@ async function apiCoInventRequest(mode, userContent, extra = {}) {
       signal,
     });
     const data = await res.json();
+    if (!res.ok) {
+      const error = new Error(String(data?.message || data?.error || `HTTP ${res.status}`));
+      error.status = res.status;
+      error.responseData = data;
+      throw error;
+    }
     recordAiTrace({
       mode,
       sent,
       received: data,
-      ok: res.ok,
-      error: res.ok ? null : String(data?.error || `HTTP ${res.status}`),
+      ok: true,
+      error: null,
       ms: elapsed(),
     });
     return data;
@@ -13182,7 +13261,7 @@ async function apiCoInventRequest(mode, userContent, extra = {}) {
     recordAiTrace({
       mode,
       sent,
-      received: null,
+      received: e?.responseData || null,
       cancelled,
       error: cancelled ? null : String(e?.message || e),
       ok: false,
@@ -21436,12 +21515,14 @@ async function dockLearnModalToButton() {
 /** Deferred Learn open while idea-sparks generate. Instant local fallback never flashes. */
 function openLearnWhileIdeas(techId) {
   cancelLearnWhileIdeasTimer();
+  if (workshopFocus.current().layout === "focus") return;
   if (!techId || !techById(techId)) return;
   learnWhileIdeasSession = { techId, autoOpened: false, dismissed: false };
   learnWhileIdeasOpenTimer = setTimeout(() => {
     learnWhileIdeasOpenTimer = null;
     const s = learnWhileIdeasSession;
     if (!s || s.dismissed || s.techId !== techId) return;
+    if (workshopFocus.current().layout === "focus") return;
     const backdrop = $("#modal-backdrop");
     if (backdrop?.classList.contains("quest-dev-modal-open")) return;
     openTechModal(techId, { lead: LEARN_WHILE_IDEAS_LEAD });
@@ -22678,8 +22759,32 @@ function tourSnapshot() {
     hex = hexWorkshop;
   }
   const beatCount = Array.isArray(brief.beats) ? brief.beats.length : 0;
+  // Read the real controls' eligibility. Thinking AP uses the same cost helper
+  // as spendContributionAp; custom writing/minting has no thinking charge.
+  const actionAvailability = {};
+  const action = (selector, cost = null) => {
+    const button = $(selector);
+    const noAp = cost != null && apEnabled() && getSpendableAp() < cost;
+    actionAvailability[selector] = {
+      available: Boolean(button && !button.disabled && !noAp),
+      reason: noAp ? `Not enough Attention: this action needs ${cost} AP. End turn does not refill Budget.` : button?.disabled ? button.title || "This action is unavailable right now." : !button ? "This control is not available in this view." : "",
+      costLabel: cost != null ? `${apEnabled() ? cost : 0} AP` : "",
+    };
+  };
+  const thinkingCost = apEnabled() ? thinkingAiApCost(state, "idea-sparks", 1, { tutor: isLearningTutorSessionActive() }) : 0;
+  action("#btn-ask-ideas", thinkingCost);
+  action("#btn-refresh-ideas", thinkingCost);
+  action("#btn-mint-custom", 0);
+  action("#btn-to-challenge");
+  action("#btn-end-turn");
+  action("#btn-lobby");
+  action("#btn-wait");
   return {
     screen: state.screen,
+    runKey: state.cloudRunId || state.runWorld,
+    seatKey: mp?.getViewId?.() || "solo",
+    actionAvailability,
+    timeConsequences: workshopTimeConsequences({ multiplayer: Boolean(mp), waitYears: mission.yearsPerTurn || GAME.yearsPerTurn || 2, pressureRise: mission.pressureRise || {} }),
     place: mission.place || "",
     spotlightTechId: spotlightId,
     spotlightName: spotlightTech?.name || "",
@@ -22741,7 +22846,7 @@ function tourSnapshot() {
       needPassDevice: Boolean(passBtn && !passBtn.hidden),
     },
     ui: {
-      techCatalogHidden: isTechCatalogHidden(),
+      techCatalogHidden: workshopFocus.current().layout === "focus" ? false : isTechCatalogHidden(),
       waitConfirmOpen: Boolean(waitBd?.classList.contains("open")),
       tilePopupOpen: Boolean(popup && !popup.hidden),
       convergenceOpen: Boolean(conv && !conv.hidden),
@@ -23021,7 +23126,11 @@ function finishTutorial() {
   renderTitleMeta();
 }
 
+let tourRevealGeneration = 0;
 async function ensureTourTargetVisible(step) {
+  const revealGeneration = ++tourRevealGeneration;
+  const context = workshopFocus.capture();
+  await workshopFocus?.revealTarget?.(step);
   if (step?.openSideTab) {
     try {
       setSideTab(step.openSideTab);
@@ -23047,7 +23156,10 @@ async function ensureTourTargetVisible(step) {
       requestAnimationFrame(() => requestAnimationFrame(r));
     });
   }
+  if (revealGeneration !== tourRevealGeneration || state.screen !== "workshop" || workshopFocus.capture().contextKey !== context.contextKey) return;
   const el = queryTourTarget(step);
+  const disclosure = el?.closest?.("details");
+  if (disclosure) disclosure.open = true;
   try {
     el?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   } catch {
@@ -23056,20 +23168,35 @@ async function ensureTourTargetVisible(step) {
 }
 
 const guidedTour = createGuidedTour({
+  onOpen: () => workshopFocus?.capture?.(),
+  onClose: (context) => {
+    if (state.screen !== "workshop") return false;
+    syncWorkshopFocus();
+    const restored = workshopFocus?.restore?.(context);
+    refreshCoachMarks();
+    return restored;
+  },
   onOpenRules: () => $("#help-backdrop")?.classList.add("open"),
   restoreFocusEl: () => $("#btn-help"),
   ensureTargetVisible: ensureTourTargetVisible,
   snapshot: () => tourSnapshot(),
   onOpenConcept: (id) => {
-    const card = conceptById(id);
+    const card = conceptById(id, tourSnapshot());
     if (!card) return;
     void guidedTour.openConcept(card, tourSnapshot(), { opener: $("#btn-help") });
   },
   onMuteConcept: (id, on) => {
     setConceptMuted(id, on);
-    flashToast(on ? "Okay — this concept stays in ? but won't pop up." : "This concept will pop up again in new Quests.");
+    flashToast("Concept preference saved. You can read this concept anytime in ?.");
   },
   isConceptMuted: (id) => readMutedConcepts().has(id),
+});
+
+const workshopGuidance = createWorkshopGuidance({
+  document,
+  snapshot: tourSnapshot,
+  reveal: ensureTourTargetVisible,
+  returnToBoard: () => workshopFocus?.select?.("board", { focus: true }),
 });
 
 const tutorialCtl = createTutorial({
@@ -23100,6 +23227,12 @@ function helpModalOpen() {
  * next Friend's-seven concept card at its first relevant moment this Quest.
  */
 function refreshCoachMarks() {
+  syncWorkshopFocus();
+  const typing = document.activeElement?.matches?.("input, textarea, [contenteditable=true]");
+  const dragging = Boolean(document.querySelector(".is-dragging, .hex-dragging"));
+  const snap = state.mission ? tourSnapshot() : { screen: state.screen };
+  const tutorialOpen = Boolean(state.tutorialRun && tutorialCtl?.isOpen?.());
+  workshopGuidance.refresh(snap, { suspended: tutorialOpen || guidedTour.isOpen() || helpModalOpen() || typing || dragging || snap.ui?.waitConfirmOpen || snap.ui?.tilePopupOpen || snap.ui?.convergenceOpen });
   if (state.tutorialRun && tutorialCtl?.isOpen?.()) {
     tutorialCtl.refresh();
     return;
@@ -23117,7 +23250,9 @@ function refreshCoachMarks() {
   }
   if (helpModalOpen()) return;
   if (!state.mission) return;
-  const snap = tourSnapshot();
+  // The persistent strip is the procedural prompt layer. Concepts remain
+  // readable on demand through ?, including their saved mute preferences.
+  if ($("#workshop-guidance")) return;
   const card = resolveConceptCard(snap, {
     seen: state.conceptSeen || [],
     muted: readMutedConcepts(),
@@ -24089,6 +24224,9 @@ async function loadPredictionsFromServer() {
 }
 
 export function init() {
+  document.addEventListener("focusout", () => requestAnimationFrame(() => {
+    if (state.screen === "workshop") refreshCoachMarks();
+  }));
   document.querySelectorAll('[data-share-puzzle]').forEach(button => {
     button.addEventListener('click', () => {
       if (!state.mission) return flashToast('Start a Quest to share a puzzle.');

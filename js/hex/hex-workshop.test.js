@@ -24,6 +24,8 @@ import { createHotseatBridge } from "../multiplayer/hotseat-bridge.js";
 import { clearCaptainLog, listCaptainLog } from "../captain-log.js?v=crisis-role-3";
 import {
   createHexWorkshop,
+  createPlacementPreview,
+  workshopFeedback,
   canMintArgument,
   mintArgumentButtonLabel,
   defaultChallengerImagePrompt,
@@ -34,6 +36,7 @@ import {
   concernAnswerGradeHtml,
 } from "./hex-workshop.js";
 import { neighbor } from "./hex-tile-grid.js";
+import { inventionComponent, pathwayContentFingerprint } from "./evaluate.js";
 import {
   cloneBoard,
   addTile,
@@ -753,4 +756,200 @@ describe("hex-workshop argument grounding", () => {
     assert.match(assess.extra.acceptedArguments[0].claim, /Night crews/);
     assert.equal(String(assess.extra.grounding).includes("Night crews"), false);
   });
+});
+
+
+describe("deliberate placement handoff", () => {
+  const setup = () => {
+    let board = seededBoard();
+    board = addTile(board, mintInventionTile({ id: "tray", techId: "ai", howText: "Watch the flood gates.", year: 2026 }));
+    const crisis = board.tiles["crisis-local"];
+    const slots = Array.from({ length: 6 }, (_, dir) => neighbor(crisis.q, crisis.r, dir));
+    let generation = 1;
+    let executions = 0;
+    let accept = true;
+    const preview = createPlacementPreview({
+      getBoard: () => board,
+      slots,
+      getGuard: () => { const own = generation; return () => own === generation; },
+      occupy: (id, q, r) => {
+        executions++;
+        if (!accept) return false;
+        const result = placeTile(board, id, q, r);
+        if (result.ok) board = result.board;
+        return result.ok;
+      },
+    });
+    return { preview, get board() { return board; }, set board(value) { board = value; },
+      get executions() { return executions; }, reject() { accept = false; }, allow() { accept = true; },
+      replaceRun() { generation++; },
+    };
+  };
+
+  it("preview, choosing another cell and cancellation never execute placement or mutate the board", () => {
+    const h = setup();
+    const before = structuredClone(h.board);
+    assert.ok(h.preview.begin("tray"));
+    const cells = h.preview.cells();
+    assert.ok(cells.length > 1);
+    assert.equal(h.preview.choose(cells[1].q, cells[1].r), true);
+    assert.equal(h.executions, 0);
+    assert.deepEqual(h.board, before);
+    h.preview.cancel();
+    assert.equal(h.preview.confirm(), false);
+    assert.equal(h.executions, 0);
+  });
+
+  it("only confirmation runs the existing placement handler once", () => {
+    const h = setup();
+    const result = h.preview.begin("tray");
+    assert.equal(h.preview.confirm(), true);
+    assert.equal(h.executions, 1);
+    assert.equal(h.board.tiles.tray.q, result.cell.q);
+    assert.equal(h.board.tiles.tray.r, result.cell.r);
+    assert.equal(h.preview.confirm(), false);
+    assert.equal(h.executions, 1);
+  });
+
+  it("rejection preserves the tray idea and permits an explicit retry", () => {
+    const h = setup();
+    h.preview.begin("tray");
+    h.reject();
+    assert.equal(h.preview.confirm(), false);
+    assert.equal(h.board.tiles.tray.q, null);
+    assert.ok(h.preview.read());
+    h.allow();
+    assert.equal(h.preview.confirm(), true);
+  });
+
+  it("a run/seat replacement invalidates the pending confirmation", () => {
+    const h = setup();
+    h.preview.begin("tray");
+    h.replaceRun();
+    assert.equal(h.preview.confirm(), false);
+    assert.equal(h.executions, 0);
+    assert.equal(h.board.tiles.tray.q, null);
+  });
+
+  it("a newly occupied cell or a moved source cannot execute a stale preview", () => {
+    const h = setup();
+    const pending = h.preview.begin("tray");
+    h.board = addTile(h.board, { ...mintInventionTile({ id: "other", techId: "ai" }), ...pending.cell });
+    assert.equal(h.preview.confirm(), false);
+    assert.equal(h.executions, 0);
+    const cell = h.preview.cells()[0];
+    h.board = placeTile(h.board, "tray", cell.q, cell.r).board;
+    assert.equal(h.preview.read(), null);
+    assert.equal(h.preview.confirm(), false);
+    assert.equal(h.executions, 0);
+  });
+});
+
+describe("factual board feedback", () => {
+  it("distinguishes empty, pending, offline, AI and legacy assessments", () => {
+    assert.equal(workshopFeedback({ tiles: {} }).text, "Place an idea to begin checking.");
+    const board = seededBoard();
+    const fp = pathwayContentFingerprint(inventionComponent(board, "a"), board);
+    assert.equal(workshopFeedback(board, "a").status, "pending");
+    board.pathwayImpacts[fp] = { inventionIds: ["a"], pending: true };
+    assert.match(workshopFeedback(board, "a").text, /pending/);
+    board.pathwayImpacts[fp] = { inventionIds: ["a"], pending: false, crisisDelta: { local: 0 }, assessmentSource: "heuristic" };
+    assert.match(workshopFeedback(board, "a").text, /Offline practice estimate: has not eased/);
+    board.pathwayImpacts[fp].assessmentSource = "ai";
+    board.pathwayImpacts[fp].crisisDelta.local = -1;
+    assert.match(workshopFeedback(board, "a").text, /AI practice assessment: pressure change −1|AI practice assessment: pressure change -1/);
+    delete board.pathwayImpacts[fp].assessmentSource;
+    assert.doesNotMatch(workshopFeedback(board, "a").text, /AI practice/);
+  });
+});
+
+
+describe("draft preservation during delayed minting", () => {
+  before(() => stubDom());
+  for (const change of ["edit", "run"]) {
+    it(`keeps current work intact after a delayed image and ${change}`, async () => {
+      stubDom();
+      const originalQuery = document.querySelector.bind(document);
+      document.querySelector = (selector) => selector === "#hex-idea-cards" ? null : originalQuery(selector);
+      let board = seededBoard();
+      const mission = { id: "same-quest", pressure: { Floods: 2 } };
+      let world = { id: "one" };
+      const image = deferred();
+      const ws = createHexWorkshop({
+        getBoard: () => board, setBoard: (next) => { board = next; },
+        getYear: () => 2026, getMission: () => mission, getRunWorld: () => world,
+        fetchIdeaImage: () => image.promise,
+      });
+      ws.focusTech("ai");
+      document.querySelector("#hex-scaffold-scarce").value = "flood warnings";
+      document.querySelector("#hex-scaffold-mech").value = "AI reads river sensors and warns the gate keeper.";
+      const mint = ws.mintCustom();
+      document.querySelector("#hex-scaffold-mech").value = "This is my next draft, started while the image loads.";
+      const before = structuredClone(board);
+      if (change === "run") world = { id: "two" };
+      image.resolve(null);
+      await mint;
+      assert.equal(document.querySelector("#hex-scaffold-mech").value,
+        "This is my next draft, started while the image loads.");
+      if (change === "run") assert.deepEqual(board, before);
+      else {
+        const custom = Object.values(board.tiles).find((tile) => tile.origin === "custom");
+        assert.ok(custom);
+        assert.match(custom.howText, /AI reads river sensors/i);
+        assert.equal(custom.q, null);
+      }
+    });
+  }
+});
+
+
+describe("assessment provenance across the transport boundary", () => {
+  before(() => stubDom());
+  function requestWith(response, traces = []) {
+    const source = readFileSync(new URL("../game.js", import.meta.url), "utf8");
+    const start = source.indexOf("async function apiCoInventRequest(");
+    const end = source.indexOf("\n/**\n * Debounced AI timing assess", start);
+    assert.ok(start >= 0 && end > start);
+    return new Function("state", "LEAN_EVAL_MODES", "leanCoInventContext", "rulesForAiContext",
+      "getClientSessionId", "recordAiTrace", "apiFetch",
+      `${source.slice(start, end)}\nreturn apiCoInventRequest;`)(
+      {}, new Set(["score-pathway"]), () => ({}), () => [], () => "test", (trace) => traces.push(trace),
+      async () => ({ ok: response.ok, status: response.status || 200, json: async () => response.data }),
+    );
+  }
+
+  it("rejects HTTP errors instead of passing error JSON to the assessment normalizer", async () => {
+    const traces = [];
+    const request = requestWith({ ok: false, status: 503, data: { error: "ai_offline" } }, traces);
+    await assert.rejects(request("score-pathway", "test"), (error) => error.status === 503);
+    assert.equal(traces.length, 1);
+    assert.equal(traces[0].ok, false);
+    assert.equal(traces[0].received.error, "ai_offline");
+  });
+
+  for (const provenance of ["ai", "local", "unmarked", "http503"]) {
+    it(`labels ${provenance} results by their actual source`, async () => {
+      stubDom();
+      let board = seededBoard();
+      const response = provenance === "http503"
+        ? { ok: false, status: 503, data: { error: "ai_offline" } }
+        : { ok: true, data: { ...(provenance !== "unmarked" ? { source: provenance } : {}),
+          crisisDelta: { local: -1 }, concerns: {} } };
+      const request = requestWith(response);
+      const mission = { id: "m", pressure: { Floods: 2 }, winMax: { Floods: 1 } };
+      const ws = createHexWorkshop({
+        getBoard: () => board, setBoard: (value) => { board = value; }, getYear: () => 2026,
+        getMission: () => mission, getWinMax: () => mission.winMax,
+        coInvent: request,
+      });
+      await ws.refreshAfterYearChange();
+      await untilCalled(() => Object.values(board.pathwayImpacts).some((impact) => !impact.pending));
+      const feedback = workshopFeedback(board, "a");
+      if (provenance === "ai") assert.match(feedback.text, /AI practice assessment/);
+      else if (provenance === "unmarked") {
+        assert.match(feedback.text, /Practice assessment/);
+        assert.doesNotMatch(feedback.text, /AI practice assessment/);
+      } else assert.match(feedback.text, /Offline practice estimate/);
+    });
+  }
 });

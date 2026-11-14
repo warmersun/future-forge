@@ -42,7 +42,7 @@ import {
   cloneBoard,
   applyLights,
   PATHWAY_TEXT_MAX,
-} from "./board-state.js?v=argument-1";
+} from "./board-state.js?v=focused-workshop-1";
 import {
   CRISIS_REASON_MAX,
   crisisRoleKeys,

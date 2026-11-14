@@ -59,6 +59,8 @@ import { localPose } from "../challenge-pose.js";
 import {
   seedCrisisTiles,
   mintInventionTile,
+  firstLegalHex,
+  placeTile,
   mintRdTile,
   mintArgumentTile,
   unplacedArgumentTiles,
@@ -94,7 +96,7 @@ import {
   concernPoseText,
   concernReplyText,
   setConcernReply,
-} from "./board-state.js?v=argument-1";
+} from "./board-state.js?v=focused-workshop-1";
 import {
   tileTimingCacheKey,
   timingLevelToPct,
@@ -143,11 +145,11 @@ import {
   setIslandHow,
   rekeyIslandHow,
   rulesWeatherKey,
-} from "./evaluate.js?v=argument-1";
+} from "./evaluate.js?v=focused-workshop-1";
 import { scopeCrisisScore } from "./crisis-delta.js?v=crisis-role-3";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
-import { createHexBoardUi, defaultSlots } from "./board-ui.js?v=argument-1";
+import { createHexBoardUi, defaultSlots } from "./board-ui.js?v=focused-workshop-1";
 import { polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
@@ -170,6 +172,85 @@ export function mintArgumentButtonLabel(apOn) {
 }
 
 /**
+ * Read-only placement preview until confirm(). The existing occupy handler is
+ * the sole executor and retains its resource, authority and docking guards.
+ */
+export function createPlacementPreview({ getBoard, slots, occupy, getGuard = () => () => true }) {
+  let pending = null;
+  const current = () => {
+    const tile = pending && pending.guard() && getBoard()?.tiles?.[pending.tileId];
+    return tile && tile.q === pending.originalQ && tile.r === pending.originalR;
+  };
+  return {
+    begin(tileId) {
+      const cell = firstLegalHex(getBoard(), tileId, slots);
+      if (!cell) return null;
+      const tile = getBoard().tiles[tileId];
+      pending = { tileId, cell, guard: getGuard(), originalQ: tile.q, originalR: tile.r };
+      return { tileId, cell: { ...cell } };
+    },
+    read() {
+      if (!current()) { pending = null; return null; }
+      return { tileId: pending.tileId, cell: { ...pending.cell } };
+    },
+    cells() {
+      if (!current()) return [];
+      return slots.filter((cell) => placeTile(getBoard(), pending.tileId, cell.q, cell.r).ok);
+    },
+    choose(q, r) {
+      if (!current() || !slots.some((cell) => cell.q === q && cell.r === r) ||
+        !placeTile(getBoard(), pending.tileId, q, r).ok) return false;
+      pending.cell = { q, r };
+      return true;
+    },
+    cancel() { pending = null; },
+    confirm() {
+      if (!current()) { pending = null; return false; }
+      const { tileId, cell } = pending;
+      // Revalidate against the latest board; rejected placement leaves the draft.
+      if (!placeTile(getBoard(), tileId, cell.q, cell.r).ok) return false;
+      if (!occupy(tileId, cell.q, cell.r)) return false;
+      pending = null;
+      return true;
+    },
+  };
+}
+
+/** A factual summary of one pathway; this does not evaluate or mutate it. */
+export function workshopFeedback(board, tileId) {
+  const inventions = Object.values(board?.tiles || {}).filter(
+    (t) => t?.kind === TILE_KIND.invention && t.q != null && t.r != null
+  );
+  if (!inventions.length) return { status: "empty", text: "Place an idea to begin checking.", tileId: null };
+  const tile = inventions.find((t) => t.id === tileId) || inventions[inventions.length - 1];
+  const crises = givensReachedFromInvention(board, tile.id)
+    .map((id) => board.tiles[id]).filter((t) => t?.kind === TILE_KIND.crisis);
+  const hasCrises = Object.values(board.tiles || {}).some((t) => t?.kind === TILE_KIND.crisis);
+  if (!hasCrises) return { status: "placed", tileId: tile.id,
+    text: `${tile.name || "Your idea"} is on the board. Inspect the pathway or add another idea.` };
+  if (!crises.length) return { status: "unconnected", tileId: tile.id,
+    text: `${tile.name || "This idea"} is not connected to a crisis yet. Move it beside the problem it could help.` };
+  const crisis = crises[0];
+  const component = inventionComponent(board, tile.id);
+  const fp = pathwayContentFingerprint(component, board);
+  const impact = board.pathwayImpacts?.[fp];
+  const connection = `${tile.name || "This idea"} is connected to ${crisis.name || "a crisis"}.`;
+  if (!impact || impact.pending || impact.concernsPending) return {
+    status: "pending", tileId: tile.id,
+    text: `${connection} ${impact ? "Practice assessment pending." : "Assessment has not started yet."} You can keep drafting while it is checked.`,
+  };
+  const role = crisis.role || "local";
+  const delta = parseCrisisDeltaField(impact.crisisDelta?.[role]).delta;
+  const label = impact.assessmentSource === "heuristic" ? "Offline practice estimate" :
+    impact.assessmentSource === "ai" ? "AI practice assessment" : "Practice assessment";
+  const effect = delta < 0 ? `pressure change ${formatSignedDelta(delta)}` :
+    delta > 0 ? `pressure change ${formatSignedDelta(delta)}` : "has not eased that crisis yet";
+  const reason = String(impact.crisisReasons?.[role] || "").trim();
+  return { status: impact.assessmentSource || "settled", tileId: tile.id,
+    text: `${connection} ${label}: ${effect}.${reason ? ` ${reason}` : ""} These are practice results.` };
+}
+
+/**
  * @param {object} api — callbacks into game.js. getRunWorld returns state.runWorld
  * (stable object until a run switch); getRunId may return a local/cloud run token.
  * getMission must return the active mission object, not a freshly cloned view.
@@ -179,6 +260,7 @@ export function createHexWorkshop(api) {
   let ui = null;
   let runGeneration = 0;
   let focusedTechId = null;
+  let showAllTray = false;
   /** @type {Map<string, { abort: AbortController, timer: ReturnType<typeof setTimeout>|null }>} */
   const pathwayJobs = new Map();
   /** @type {Map<string, ReturnType<typeof setTimeout>>} */
@@ -187,6 +269,7 @@ export function createHexWorkshop(api) {
   const timingGens = new Map();
   /** @type {Map<string, { level: string, reason: string, forKey: string }>} */
   const timingCache = new Map();
+  let createJobGeneration = 0;
   let ideasBusy = false;
   let mintBusy = false;
   let argumentBusy = false;
@@ -211,6 +294,14 @@ export function createHexWorkshop(api) {
   /** @type {ReturnType<typeof setTimeout>|null} */
   let pulseTimer = null;
   let scoreChipsWired = false;
+  let feedbackTileId = null;
+  let placementOpener = null;
+  const placement = createPlacementPreview({
+    getBoard: () => board(),
+    slots: defaultSlots(),
+    occupy: (id, q, r) => ensureUi()?.occupy(id, q, r) || false,
+    getGuard: () => runGuard(),
+  });
 
   const BUSY_LABELS = {
     ideas: "Generating ideas…",
@@ -287,7 +378,9 @@ export function createHexWorkshop(api) {
   function ideaCardsForFocus() {
     const rd = unplacedRdTiles(board());
     const args = unplacedArgumentTiles(board());
-    const waiting = unplacedInventionsForTech(board(), focusedTechId);
+    const waiting = showAllTray
+      ? Object.values(board()?.tiles || {}).filter((tile) => tile?.kind === TILE_KIND.invention && (tile.q == null || tile.r == null))
+      : unplacedInventionsForTech(board(), focusedTechId);
     const batchIds = ensureSparkBatch(focusedTechId).ids || [];
     const rank = new Map(batchIds.map((id, i) => [id, i]));
     const inventions = waiting.slice().sort((a, b) => {
@@ -352,6 +445,8 @@ export function createHexWorkshop(api) {
       colBtn.disabled = busy || !signedIn;
     }
     if (how) how.disabled = busy || (!focusedTechId && !freeWrite);
+    const placeLatest = document.querySelector("#hex-place-latest");
+    if (placeLatest) placeLatest.disabled = busy || Boolean(api.canEditBoard && !api.canEditBoard());
     if (refreshBtn) {
       const show = Boolean(focusedTechId && hasSparkBatch(focusedTechId));
       refreshBtn.hidden = !show;
@@ -1475,7 +1570,13 @@ export function createHexWorkshop(api) {
           parts.push(`<p class="hex-tile-popup-actions">${actions.join("")}</p>`);
         }
       }
+      if ((!api.canEditBoard || api.canEditBoard()) && t.q != null && t.r != null && !t.verdictPending) {
+        parts.push(`<p><button type="button" class="btn btn-ghost btn-sm" data-move-id="${escapeHtml(t.id)}">Move this tile</button></p>`);
+      }
       body.innerHTML = parts.join("");
+      body.querySelectorAll("[data-move-id]").forEach((button) => {
+        button.addEventListener("click", () => beginPlacement(button.getAttribute("data-move-id")));
+      });
       body.querySelectorAll("[data-help-tech]").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.preventDefault();
@@ -1550,6 +1651,13 @@ export function createHexWorkshop(api) {
   function seedFromMission(mission) {
     cancelSummon();
     runGeneration += 1;
+    createJobGeneration += 1;
+    ideasBusy = false;
+    mintBusy = false;
+    argumentBusy = false;
+    placement.cancel();
+    feedbackTileId = null;
+    renderPlacementPanel();
     for (const fp of [...pathwayJobs.keys()]) abortPathwayJob(fp);
     for (const timer of timingTimers.values()) clearTimeout(timer);
     timingTimers.clear();
@@ -1730,11 +1838,208 @@ export function createHexWorkshop(api) {
       .join("");
   }
 
+  function appendPlaceButton(body, tile) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-primary btn-sm hex-idea-card-place";
+    button.textContent = "Place on board";
+    button.addEventListener("pointerdown", (event) => { event.preventDefault(); event.stopPropagation(); });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      beginPlacement(tile.id);
+    });
+    body.appendChild(button);
+  }
+
+  function beginPlacement(tileId) {
+    if ((api.canEditBoard && !api.canEditBoard()) || isCreateBusy()) {
+      api.flashToast?.("This board cannot be changed right now. Your idea is saved.");
+      return false;
+    }
+    const pending = placement.begin(tileId);
+    if (!pending) {
+      api.flashToast?.("No legal open hex for this tile. Your idea is still in the tray.");
+      return false;
+    }
+    placementOpener = document.activeElement;
+    hideTilePopup();
+    document.dispatchEvent?.(new CustomEvent("ff-workshop-place", { detail: { tileId } }));
+    renderPlacementPanel();
+    document.querySelector("#hex-placement-panel")?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    document.querySelector("#hex-placement-cell")?.focus?.({ preventScroll: true });
+    return true;
+  }
+
+  function renderPlacementPanel() {
+    if (!document.createElement) return;
+    const wrap = document.querySelector("#hex-board-wrap");
+    if (!wrap?.insertBefore) return;
+    let panel = document.querySelector("#hex-placement-panel");
+    if (!panel) {
+      panel = document.createElement("section");
+      panel.id = "hex-placement-panel";
+      panel.className = "hex-placement-panel";
+      panel.setAttribute("aria-label", "Place your idea");
+      wrap.insertBefore(panel, wrap.firstChild);
+    }
+    const pending = placement.read();
+    if (!pending) {
+      panel.hidden = true;
+      ensureUi()?.setPlacementPreview?.(null);
+      return;
+    }
+    const tile = board().tiles[pending.tileId];
+    panel.hidden = false;
+    panel.innerHTML = `${tile.artUrl ? `<img class="hex-placement-art" src="${escapeHtml(tile.artUrl)}" alt="" />` : ""}
+      <div class="hex-placement-copy"><strong>${escapeHtml(tile.name || "Your idea")}</strong>
+      <p>${escapeHtml(tile.howText || "")}</p>
+      <p class="muted">Preview only. The outlined cell is legal; the assessment will check whether the idea helps. Choose a cell, then confirm.</p></div>
+      <p class="hex-placement-cost">${escapeHtml(api.getPlacementCost?.(tile) || "Adding a new emTech to your stack uses its displayed Budget and Support cost.")}</p>
+      <label for="hex-placement-cell">Board cell</label><select id="hex-placement-cell"></select>
+      <button type="button" class="btn btn-primary btn-sm" id="hex-placement-confirm">Confirm placement</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="hex-placement-cancel">Cancel placement</button>`;
+    const select = panel.querySelector("#hex-placement-cell");
+    const cells = placement.cells();
+    if (cells.length && !cells.some((cell) => cell.q === pending.cell.q && cell.r === pending.cell.r)) {
+      pending.cell = cells[0];
+      placement.choose(cells[0].q, cells[0].r);
+    }
+    panel.querySelector("#hex-placement-confirm").disabled = !cells.length;
+    if (!cells.length) {
+      const notice = document.createElement("p");
+      notice.textContent = "There is no legal open cell now. Cancel to keep your idea in the tray.";
+      panel.appendChild(notice);
+    }
+    for (const cell of cells) {
+      const option = document.createElement("option");
+      option.value = `${cell.q},${cell.r}`;
+      option.textContent = `q ${cell.q}, r ${cell.r}`;
+      option.selected = cell.q === pending.cell.q && cell.r === pending.cell.r;
+      select.appendChild(option);
+    }
+    select.addEventListener("change", () => {
+      const [q, r] = select.value.split(",").map(Number);
+      if (placement.choose(q, r)) ensureUi()?.setPlacementPreview?.({ q, r });
+    });
+    panel.querySelector("#hex-placement-confirm").addEventListener("click", () => {
+      if (!placement.confirm()) {
+        api.flashToast?.("Placement was not accepted. Check the board status; your idea is saved.");
+        renderPlacementPanel();
+        return;
+      }
+      feedbackTileId = tile.id;
+      renderPlacementPanel();
+      renderWorkshopFeedback();
+      document.querySelector(".hex-workshop-feedback-move")?.focus?.({ preventScroll: true });
+    });
+    const cancel = () => {
+      placement.cancel();
+      renderPlacementPanel();
+      if (placementOpener?.isConnected && !placementOpener.closest?.("[hidden], [inert]"))
+        placementOpener.focus?.({ preventScroll: true });
+      else {
+        const boardWrap = document.querySelector("#hex-board-wrap");
+        boardWrap?.setAttribute?.("tabindex", "-1");
+        boardWrap?.focus?.({ preventScroll: true });
+      }
+    };
+    panel.querySelector("#hex-placement-cancel").addEventListener("click", cancel);
+    panel.onkeydown = (event) => {
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); cancel(); }
+    };
+    ensureUi()?.setPlacementPreview?.(cells.length ? pending.cell : null);
+  }
+
+  function renderWorkshopFeedback() {
+    if (!document.createElement) return;
+    const dock = document.querySelector(".hex-board-dock");
+    if (!dock?.appendChild) return;
+    let host = document.querySelector("#hex-workshop-feedback");
+    if (!host) {
+      host = document.createElement("section");
+      host.id = "hex-workshop-feedback";
+      host.className = "hex-workshop-feedback";
+      host.setAttribute("aria-label", "Pathway feedback");
+      dock.appendChild(host);
+    }
+    const feedback = workshopFeedback(board(), feedbackTileId);
+    // Avoid rebuilding focused controls on a background assessment update.
+    let text = host.querySelector(".hex-workshop-feedback-text");
+    if (!text) {
+      text = document.createElement("p");
+      text.className = "hex-workshop-feedback-text";
+      text.setAttribute("role", "status");
+      host.appendChild(text);
+    }
+    if (text.textContent !== feedback.text) text.textContent = feedback.text;
+    host.dataset.status = feedback.status;
+    let move = host.querySelector(".hex-workshop-feedback-move");
+    if (feedback.tileId && (!api.canEditBoard || api.canEditBoard())) {
+      if (!move) {
+        move = document.createElement("button");
+        move.type = "button";
+        move.className = "btn btn-ghost btn-sm hex-workshop-feedback-move";
+        move.textContent = "Move this idea";
+        move.addEventListener("click", () => beginPlacement(move.dataset.tileId));
+        host.appendChild(move);
+      }
+      move.dataset.tileId = feedback.tileId;
+      move.hidden = false;
+    } else if (move) move.hidden = true;
+  }
+
+  function renderPlaceLatest(waiting) {
+    if (!document.createElement) return;
+    const head = document.querySelector(".hex-tile-create-head");
+    if (!head?.appendChild) return;
+    let button = document.querySelector("#hex-place-latest");
+    if (!button) {
+      button = document.createElement("button");
+      button.type = "button";
+      button.id = "hex-place-latest";
+      button.className = "btn btn-primary btn-sm hex-place-latest";
+      button.addEventListener("click", () => beginPlacement(button.dataset.tileId));
+      head.appendChild(button);
+    }
+    const latest = waiting[waiting.length - 1];
+    button.hidden = !latest;
+    button.disabled = isCreateBusy() || Boolean(api.canEditBoard && !api.canEditBoard());
+    if (latest) {
+      button.dataset.tileId = latest.id;
+      button.textContent = `Place on board: ${String(latest.name || "your tile").slice(0, 65)}`;
+    }
+  }
+
+  function appendDraftButton(body, tile) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-ghost btn-sm hex-idea-card-draft";
+    button.textContent = "Use as draft";
+    button.addEventListener("pointerdown", (event) => { event.preventDefault(); event.stopPropagation(); });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (isCreateBusy()) return;
+      if (api.focusTechFromBoard) api.focusTechFromBoard(tile.techId);
+      else focusTech(tile.techId);
+      setFreeWrite(true);
+      const textarea = document.querySelector("#hex-how-text");
+      if (!textarea) return;
+      textarea.value = tile.howText || "";
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      document.dispatchEvent?.(new CustomEvent("ff-workshop-edit", { detail: { tileId: tile.id, techId: tile.techId } }));
+      textarea.focus?.({ preventScroll: true });
+    });
+    body.appendChild(button);
+  }
+
   function renderIdeaCards() {
     const host = document.querySelector("#hex-idea-cards");
     if (!host) return;
     const b = board();
     const waiting = ideaCardsForFocus();
+    renderPlaceLatest(waiting);
     host.innerHTML = "";
     host.dataset.count = String(waiting.length);
     if (!waiting.length) {
@@ -1770,6 +2075,7 @@ export function createHexWorkshop(api) {
         how.textContent =
           "Dock this against an invention pathway. The factor multiplies that pathway's honesty chance — including 0.75× misses.";
         body.appendChild(how);
+        appendPlaceButton(body, t);
         card.appendChild(body);
         const toss = document.createElement("button");
         toss.type = "button";
@@ -1829,6 +2135,7 @@ export function createHexWorkshop(api) {
         how.className = "hex-idea-card-how";
         how.textContent = String(t.reason || "").trim() || "Dock this against an invention.";
         body.appendChild(how);
+        appendPlaceButton(body, t);
         card.appendChild(body);
         const toss = document.createElement("button");
         toss.type = "button";
@@ -1862,8 +2169,8 @@ export function createHexWorkshop(api) {
       card.dataset.id = t.id;
       if (t.techId) card.dataset.techId = t.techId;
       card.title = inStack
-        ? "In stack — drag onto the board"
-        : "Considering — drag onto the board to add to stack";
+        ? "In stack — Place on board or drag"
+        : "Considering — Place on board to add to stack, or drag";
 
       const visual = document.createElement("div");
       visual.className = "hex-idea-card-visual";
@@ -1931,6 +2238,8 @@ export function createHexWorkshop(api) {
         eases.textContent = `Eases: ${t.eases}`;
         body.appendChild(eases);
       }
+      appendPlaceButton(body, t);
+      appendDraftButton(body, t);
       card.appendChild(body);
 
       const toss = document.createElement("button");
@@ -1954,9 +2263,7 @@ export function createHexWorkshop(api) {
         if (e.button != null && e.button !== 0) return;
         ensureUi()?.startTrayDrag(e, t.id, { cardEl: card });
       });
-      card.addEventListener("dblclick", () => {
-        ensureUi()?.occupy(t.id, 2, 2);
-      });
+
       host.appendChild(card);
     }
     syncCreateBusyUi();
@@ -2219,6 +2526,7 @@ export function createHexWorkshop(api) {
   }
 
   function afterBoardChange(tileId, kind, extra = {}) {
+    feedbackTileId = tileId;
     const beforeBoard = extra?.beforeBoard || null;
     logBoardMove(tileId, kind, extra);
     let b = pruneStaleConvergences(board());
@@ -2238,6 +2546,7 @@ export function createHexWorkshop(api) {
     }
     syncPathwayScores();
     syncCreateBusyUi();
+    renderWorkshopFeedback();
     api.onBoardPainted?.();
   }
 
@@ -2268,6 +2577,7 @@ export function createHexWorkshop(api) {
     );
     for (const fp of abort) abortPathwayJob(fp);
     for (const fp of start) schedulePathwayScore(fp);
+    renderWorkshopFeedback();
     api.onBoardPainted?.();
   }
 
@@ -2379,6 +2689,7 @@ export function createHexWorkshop(api) {
       pending: false,
       concernsPending: false,
       concernKey: scoredConcernKey ?? "",
+      assessmentSource: opts.keepCrisisDelta ? prev.assessmentSource || null : opts.assessmentSource || null,
     };
     setBoard(next);
     const applied = applyPathwayPressure(board(), pressureOpts(mission));
@@ -2387,6 +2698,7 @@ export function createHexWorkshop(api) {
     ensureUi()?.render();
     api.onBoardPainted?.();
     api.commitBoard?.(applied.board);
+    renderWorkshopFeedback();
     const keepCrisis = Boolean(opts.keepCrisisDelta);
     const scored = formatPathwayScoreLog(score, { keepCrisisDelta: keepCrisis, crisisRoles });
     const bNow = board();
@@ -2657,6 +2969,7 @@ export function createHexWorkshop(api) {
         pathwayConcernScoreKey(board(), inventions.map((t) => board().tiles[t.id])) === concernKey;
 
       let score;
+      let assessmentSource = "heuristic";
       if (!api.coInvent) {
         score = heuristicPathwayScore(inventions, year, heurOpts);
       } else {
@@ -2698,6 +3011,9 @@ export function createHexWorkshop(api) {
             signal,
           });
           if (signal?.aborted) return;
+          // Transport success can contain the server's offline local result.
+          // Only an explicitly attributed provider assessment is called AI.
+          assessmentSource = data?.source === "ai" ? "ai" : data?.source === "local" ? "heuristic" : null;
           score = clampPathwayScore(
             blendPathwayScore(
               normalizePathwayScore(data, crisisRoles),
@@ -2739,7 +3055,7 @@ export function createHexWorkshop(api) {
         fp,
         score,
         concernKey,
-        { keepCrisisDelta, inventions }
+        { keepCrisisDelta, inventions, assessmentSource }
       );
     } finally {
       const job = pathwayJobs.get(fp);
@@ -3037,6 +3353,8 @@ export function createHexWorkshop(api) {
     const avoidTitles = prevBatch.titles.slice();
 
     let ideasOk = false;
+    const isCurrent = runGuard();
+    const ownJob = ++createJobGeneration;
     setCreateBusy("ideas", true);
     paintIdeaCardSkeletons();
     try {
@@ -3078,6 +3396,7 @@ export function createHexWorkshop(api) {
           ? rotateLocalIdeaSparks(tech, ctx, avoidTitles)
           : localIdeaSparks(tech, ctx);
       }
+      if (!isCurrent()) return;
       if (!ideas.length) {
         api.flashToast?.("Could not generate ideas — try again.");
         renderIdeaCards();
@@ -3114,6 +3433,7 @@ export function createHexWorkshop(api) {
             /* ignore */
           }
         }
+        if (!isCurrent()) return;
         const tile = mintInventionTile({
           techId,
           name: idea.title || "Idea",
@@ -3131,6 +3451,7 @@ export function createHexWorkshop(api) {
         mintedTitles.push(tile.name);
         mintedTiles.push(tile);
       }
+      if (!isCurrent()) return;
       sparkBatches.set(techId, { ids: mintedIds, titles: mintedTitles });
       setBoard(b);
       renderIdeaCards();
@@ -3150,8 +3471,10 @@ export function createHexWorkshop(api) {
       api.onBoardPainted?.();
       api.commitBoard?.(b);
     } finally {
-      api.finishLearnWhileIdeas?.({ succeeded: ideasOk });
-      setCreateBusy("ideas", false);
+      if (ownJob === createJobGeneration) {
+        if (isCurrent()) api.finishLearnWhileIdeas?.({ succeeded: ideasOk });
+        setCreateBusy("ideas", false);
+      }
     }
   }
 
@@ -3182,6 +3505,11 @@ export function createHexWorkshop(api) {
       }
       how = composeHow(fields);
     }
+    const isCurrent = runGuard();
+    const ownJob = ++createJobGeneration;
+    const submittedMode = freeWrite;
+    const submittedFreeText = String(ta?.value || "");
+    const submittedScaffold = readScaffold(techById(techId));
     setCreateBusy("mint", true);
     try {
       const year = api.getYear();
@@ -3206,6 +3534,7 @@ export function createHexWorkshop(api) {
           /* ignore */
         }
       }
+      if (!isCurrent()) return;
       const tile = mintInventionTile({
         techId,
         name,
@@ -3218,21 +3547,25 @@ export function createHexWorkshop(api) {
       });
       const b = addTile(board(), tile);
       setBoard(b);
-      if (ta) ta.value = "";
-      clearScaffold();
+      // An illustration may finish after the learner has revised the next draft.
+      if (freeWrite === submittedMode && String(ta?.value || "") === submittedFreeText &&
+        JSON.stringify(readScaffold(techById(techId))) === JSON.stringify(submittedScaffold)) {
+        if (ta) ta.value = "";
+        clearScaffold();
+      }
       renderIdeaCards();
       ensureUi()?.render();
-      api.flashToast?.("Tile minted — drag it onto the board.");
+      api.flashToast?.("Tile minted — choose Place on board, or drag it onto the board.");
       appendCaptainLog({
         kind: "action",
         title: "Minted",
         ideas: [ideaLog(tile)],
-        detail: "In the tray — drag it onto the board.",
+        detail: "In the tray — choose Place on board, or drag it onto the board.",
       });
       api.onBoardPainted?.();
       api.commitBoard?.(b);
     } finally {
-      setCreateBusy("mint", false);
+      if (ownJob === createJobGeneration) setCreateBusy("mint", false);
     }
   }
 
@@ -3988,6 +4321,12 @@ export function createHexWorkshop(api) {
 
   function paint() {
     ensureUi()?.render();
+    renderWorkshopFeedback();
+    if (!placement.read()) {
+      const preview = document.querySelector("#hex-placement-panel");
+      if (preview) preview.hidden = true;
+      ensureUi()?.setPlacementPreview?.(null);
+    }
     renderTray();
     updateCreatePanel();
     renderPathwayHowPanel();
@@ -4256,6 +4595,13 @@ export function createHexWorkshop(api) {
     seedFromMission,
     cancelSummon,
     focusTech,
+    setTrayContext({ all = false } = {}) {
+      if (showAllTray === Boolean(all)) return;
+      showAllTray = Boolean(all);
+      renderIdeaCards();
+    },
+    mintCustom,
+    askForIdeas,
     paint,
     wireDom,
     summonHardQuestions,
@@ -4327,6 +4673,8 @@ export function createHexWorkshop(api) {
     getHighlightedTile: () => highlightedPathwayTileId,
     getHighlightedTileId: () => highlightedPathwayTileId,
     getHighlightedPathwayTile: () => highlightedPathwayTileId,
+    beginPlacement,
+    cancelPlacement: () => { placement.cancel(); renderPlacementPanel(); },
     effectiveHowLength,
     /** New Quest: back to the two-blank scaffold, blanks and case cleared. */
     resetCreateMode: () => {

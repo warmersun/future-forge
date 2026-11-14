@@ -43,6 +43,7 @@ import {
   formatFactor,
   isPortableTile,
   placeTile,
+  firstLegalHex,
   liftTile,
   discardTile,
   summonConcerns,
@@ -1213,4 +1214,33 @@ test("placeTile connects mixed invention worlds when enforcement is disabled and
   assert.equal(result.board.tiles.ai.polarity, "bits");
   assert.equal(result.board.tiles.drones.polarity, "atoms");
   assert.equal(placeTile(result.board, "drones", 0, 0).ok, false);
+});
+
+
+test("firstLegalHex previews a legal cell beside the named crisis without changing state", () => {
+  let board = seedCrisisTiles({ crisisRoles: ["local"], pressure: { Floods: 2 } });
+  board = addTile(board, mintInventionTile({ id: "preview", techId: "ai", howText: "Monitor flood gates.", year: 2026 }));
+  board.tiles.preview.eases = "Floods";
+  const crisis = board.tiles["crisis-local"];
+  const adjacent = neighbor(crisis.q, crisis.r, 0);
+  const before = structuredClone(board);
+  const cell = firstLegalHex(board, "preview", [{ q: 20, r: 20 }, adjacent]);
+  assert.deepEqual(cell, adjacent);
+  assert.deepEqual(board, before);
+  assert.equal(placeTile(board, "preview", cell.q, cell.r).ok, true);
+  assert.equal(firstLegalHex(board, "missing", [adjacent]), null);
+  assert.equal(firstLegalHex(board, "preview", [{ q: crisis.q, r: crisis.r }]), null);
+});
+
+test("cloneBoard preserves known assessment provenance without treating legacy rows as AI", () => {
+  const board = createEmptyBoard();
+  board.pathwayImpacts = {
+    offline: { assessmentSource: "heuristic" },
+    ai: { assessmentSource: "ai" },
+    legacy: {},
+  };
+  const clone = cloneBoard(board);
+  assert.equal(clone.pathwayImpacts.offline.assessmentSource, "heuristic");
+  assert.equal(clone.pathwayImpacts.ai.assessmentSource, "ai");
+  assert.equal(Object.hasOwn(clone.pathwayImpacts.legacy, "assessmentSource"), false);
 });

@@ -102,6 +102,10 @@ The board’s red hexes are the problem. The tray answers “what could help her
 
 Detail: [problem-first-invent.md](problem-first-invent.md).
 
+The Workshop's **More tools → Layout** control switches between **Focus** and **Overview**, and remembers the choice on this device. Focus presents Board, Add an idea, and Ask for help as the main destinations. Briefing, Capability outlook, Local rules, Future vision, Log, and developer Inspect remain available through labeled entries. Supporting views return to the idea or board you left, keeping the live editor, conversation, and board intact. Overview retains the multi-panel arrangement and remains the rollout default while the focused experience is evaluated.
+
+The current-job strip and **?** use the same state-aware recommendation. Advice updates without moving the working surface; **Show me where** deliberately reveals its target. To place without dragging, use **Place on board**, inspect the proposed legal cell, choose another cell if needed, and **Confirm placement**. A legal cell does not guarantee that the idea addresses the crisis. The board explains whether assessment is pending, a local estimate, or an AI practice assessment; an empty pathway is labeled **not started**.
+
 ### Three perspectives
 
 Unless a Quest turns meters off, the invention is judged from three angles:

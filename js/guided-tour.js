@@ -42,7 +42,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  * }} TourStep
  */
 
-import { listConcepts } from "./concept-cards.js";
+import { listConcepts } from "./concept-cards.js?v=focused-workshop-1";
 
 const MINT_HOW_MIN = 12;
 
@@ -71,6 +71,7 @@ function snapOf(raw = {}) {
       index: Number(briefing.index) || 0,
       beatCount: Number(briefing.beatCount) || 0,
     },
+    crisisIntroductionPending: Number(raw.crisisIntroductionPending) || 0,
     unplacedInventionCount: Number(raw.unplacedInventionCount) || 0,
     placedInventionCount: Number(raw.placedInventionCount) || 0,
     howTextLength: Number(raw.howTextLength) || 0,
@@ -212,7 +213,7 @@ function coverageRedStep(s, id) {
  * @param {object} raw
  * @returns {TourStep}
  */
-export function resolveTourStep(raw) {
+function resolveStep(raw) {
   const s = snapOf(raw);
 
   // A — blocking overlays / busy
@@ -330,6 +331,10 @@ export function resolveTourStep(raw) {
     );
   }
 
+  if (s.crisisIntroductionPending > 0) {
+    return step("C3", "Meet this place’s crises", "Read each crisis card, then send it to the board. These are the problems your ideas can help.", sel("#crisis-introduction-cards"));
+  }
+
   // D — learning tutor (only before inventing)
   if (s.isLearning && s.tutorOn && noInventYet(s) && !s.focusedTechId) {
     return step(
@@ -355,7 +360,7 @@ export function resolveTourStep(raw) {
       return step(
         "E1",
         `Pick ${spotlightLabel(s)}`,
-        `${spotlightLabel(s)} is the suggested emTech for this Quest. Click it, then Ask for ideas.${extra}`,
+        `${spotlightLabel(s)} is the suggested emTech for this Quest. Choose it, then write an idea or Ask for ideas.${extra}`,
         techTarget(s.spotlightTechId)
       );
     }
@@ -363,7 +368,7 @@ export function resolveTourStep(raw) {
       return step(
         "E2",
         "Pick a suggested tech",
-        "Start with a suggested emTech for this place — then Ask for ideas. The AI will mint 3 tiles.",
+        "Choose a suggested emTech for this place, then write an idea or Ask for ideas. You can browse all emerging tech too.",
         sel("#screen-workshop .tech-card.recommended")
       );
     }
@@ -388,7 +393,7 @@ export function resolveTourStep(raw) {
     return step(
       "G4",
       "Timing is red",
-      "The idea over-claims what this tech can do this year — that's why the pathway is red. Soften how it works, or Look Ahead to wait +2 years (crisis rises).",
+      "The idea over-claims what this tech can do this year. Edit its mechanism or examine Capability outlook before deciding whether to Look Ahead.",
       target
     );
   }
@@ -398,7 +403,7 @@ export function resolveTourStep(raw) {
     return step(
       "F3",
       "Place an idea on the board",
-      "Drag a tile onto the hex board (or double-click). Dock it against a crisis hex so the pathway can turn yellow.",
+      "Use Place on board, or drag an idea beside a crisis it could help. Placement connects the idea to a problem; assessment checks whether it helps.",
       sel("#hex-idea-cards")
     );
   }
@@ -580,7 +585,7 @@ export function resolveTourStep(raw) {
       "I4",
       "Learn this emTech",
       `Open Learn for a short brief on ${techName(s)} — then come back and invent.`,
-      sel("#btn-learn-tech")
+      sel("#invent-capability-explorer")
     );
   }
   if (s.islandHowEmpty && s.placedInventionCount > 0) {
@@ -622,6 +627,38 @@ export function resolveTourStep(raw) {
     "Watch the crisis meters and the year. Place honest ideas, then hold the pathway before a meter hits 5.",
     sel("#hud-crisis-wrap")
   );
+}
+
+/** The same read-only recommendation is consumed by the strip and the ? card.
+ * Availability is supplied by the existing action guards, never by executing an action.
+ */
+export function resolveTourStep(raw = {}) {
+  const next = resolveStep(raw || {});
+  const selector = next.target?.selector || "";
+  const surface = next.id.startsWith("C") ? "briefing"
+    : /^(D2|I1|I5)$/.test(next.id) ? "help"
+    : /^(E|F[125])/.test(next.id) || next.id === "A4" ? "idea"
+    : next.id === "I4" ? "evidence"
+    : next.id === "I2" ? "rules" : "board";
+  const availability = raw?.actionAvailability?.[selector] || { available: true };
+  let body = next.body;
+  if (next.id === "A4") body += " You can still browse the board and keep your draft.";
+  if (next.id === "A5") body += " Browsing and drafting remain available.";
+  if (next.id === "A1" && raw?.timeConsequences?.wait) body = raw.timeConsequences.wait;
+  if (next.id === "G6" && raw?.timeConsequences?.endTurn) body = `You're out of AP. ${raw.timeConsequences.endTurn}`;
+  if (availability.available === false) {
+    body = `${availability.reason || "This action is unavailable right now."} You can keep drafting or return to the Board.`;
+  } else if (availability.costLabel) {
+    body += ` ${availability.costLabel}.`;
+  }
+  return {
+    ...next,
+    body,
+    taskId: next.id,
+    surface,
+    explanation: body,
+    availability: { available: true, ...availability },
+  };
 }
 
 /**
@@ -667,6 +704,17 @@ export function queryTourTarget(step, root) {
   return null;
 }
 
+/** Native hidden/inert and stylesheet hiding must both exclude a target. */
+export function tourTargetVisible(target) {
+  if (!target || target.disabled || target.closest?.("[hidden], [inert], [data-workshop-hidden]")) return false;
+  if (typeof target.getClientRects === "function" && target.getClientRects().length === 0) return false;
+  if (typeof target.getBoundingClientRect === "function") {
+    const rect = target.getBoundingClientRect();
+    if (!rect || !(rect.width > 0 && rect.height > 0)) return false;
+  }
+  return true;
+}
+
 function cssIdent(id) {
   const s = String(id || "");
   if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
@@ -685,6 +733,8 @@ const RING_PAD = 6;
 /**
  * Browser overlay. Call createGuidedTour() once; open/refresh/close after that.
  * @param {{
+ *   onOpen?: () => unknown,
+ *   onClose?: (context: unknown) => void | boolean,
  *   onOpenRules?: () => void,
  *   ensureTargetVisible?: (step: TourStep) => void | Promise<void>,
  *   restoreFocusEl?: () => HTMLElement|null,
@@ -707,6 +757,14 @@ export function createGuidedTour(opts = {}) {
   let openerEl = null;
   let bound = false;
   let gen = 0;
+  let sessionStarted = false;
+  let returnContext = null;
+
+  function beginSession() {
+    if (sessionStarted) return;
+    sessionStarted = true;
+    returnContext = opts.onOpen?.();
+  }
 
   function ensureRoot() {
     if (root && root.isConnected) return root;
@@ -807,17 +865,20 @@ export function createGuidedTour(opts = {}) {
     const refresh = Boolean(extra.refresh);
     if (!refresh && extra.opener) openerEl = extra.opener;
     const host = ensureRoot();
+    if (!refresh) beginSession();
     bindWindow();
     mode = "step";
     let next = resolveTourStep(snapshot);
     current = next;
-    try {
-      await opts.ensureTargetVisible?.(next);
-    } catch {
-      /* still show the card */
+    if (!refresh && next.availability.available) {
+      try {
+        await opts.ensureTargetVisible?.(next);
+      } catch {
+        /* still show the card */
+      }
     }
     if (token !== gen) return;
-    if (next.id === "E0" && typeof opts.snapshot === "function") {
+    if (!refresh && next.id === "E0" && typeof opts.snapshot === "function") {
       try {
         next = resolveTourStep(opts.snapshot());
         current = next;
@@ -860,6 +921,7 @@ export function createGuidedTour(opts = {}) {
     const token = ++gen;
     if (extra.opener) openerEl = extra.opener;
     const host = ensureRoot();
+    beginSession();
     bindWindow();
     mode = "concept";
     current = card;
@@ -896,8 +958,15 @@ export function createGuidedTour(opts = {}) {
     current = null;
     const restore = openerEl || opts.restoreFocusEl?.() || null;
     openerEl = null;
+    let restoreAllowed = true;
+    if (sessionStarted) {
+      sessionStarted = false;
+      const context = returnContext;
+      returnContext = null;
+      restoreAllowed = opts.onClose?.(context) !== false;
+    }
     try {
-      restore?.focus?.({ preventScroll: true });
+      if (restoreAllowed) restore?.focus?.({ preventScroll: true });
     } catch {
       /* ignore */
     }
@@ -930,7 +999,11 @@ export function createGuidedTour(opts = {}) {
     });
 
     lastTarget?.classList?.remove("tour-target");
-    const target = queryTourTarget(stepObj);
+    const candidate = queryTourTarget(stepObj);
+    const target = stepObj.availability?.available === false || !tourTargetVisible(candidate) ? null : candidate;
+    if (!target && mode === "step" && stepObj.availability?.available !== false) {
+      body.textContent = `${stepObj.body} The target is not visible here. Use Board to return to your work.`;
+    }
     lastTarget = target || null;
     target?.classList?.add("tour-target");
 
