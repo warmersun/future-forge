@@ -1077,7 +1077,7 @@ export function gridFromBoard(board, gridOpts = {}) {
 
 /**
  * Try to place (or move) a tile onto (q,r). Returns { ok, board, blockers }.
- * Invention↔invention must share face worlds; crisis/concern are curve (always dock).
+ * Invention↔invention follows GAME.enforceWorldDocking; crisis/concern always dock.
  * @param {object} board
  * @param {string} tileId
  * @param {number} q

@@ -22,7 +22,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  * Called from game.js; keeps hex logic out of the monolith where possible.
  */
 
-import { techById, CHALLENGE_ANGLES } from "../data.js";
+import { GAME, techById, CHALLENGE_ANGLES } from "../data.js";
 import {
   appendCaptainLog,
   clipWords,
@@ -1457,7 +1457,7 @@ export function createHexWorkshop(api) {
           }
         }
         parts.push(
-          `<p class="muted">${termHtml("world", "World")}: ${escapeHtml(WORLD_PLAIN[t.polarity] || t.polarity || "?")} — bits dock on the left faces, atoms on the right.</p>`
+          `<p class="muted">${termHtml("world", "World")}: ${escapeHtml(WORLD_PLAIN[t.polarity] || t.polarity || "?")} — ${GAME.enforceWorldDocking ? "bits dock on blue faces, atoms on pink faces" : "any invention can dock, regardless of border color"}.</p>`
         );
         const actions = [];
         const canEdit = !api.canEditBoard || Boolean(api.canEditBoard());

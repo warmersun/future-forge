@@ -18,6 +18,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { test } from "node:test";
+import { GAME, configureWorldDocking } from "../data.js";
 import assert from "node:assert/strict";
 import {
   BITS,
@@ -39,7 +40,10 @@ test("split hex: left bits, right atoms", () => {
   assert.equal(facePolarity("split", EDGE.SE), ATOMS);
 });
 
-test("AI (bits) docks on IoT bits face, not atoms face", () => {
+test("AI (bits) docks on IoT bits face, not atoms face when world docking is enabled", (t) => {
+  const previous = GAME.enforceWorldDocking;
+  GAME.enforceWorldDocking = true;
+  t.after(() => { GAME.enforceWorldDocking = previous; });
   // From IoT: west face is bits, east face is atoms.
   assert.equal(canDock("split", BITS, EDGE.W), true);
   assert.equal(canDock("split", BITS, EDGE.E), false);
@@ -48,7 +52,10 @@ test("AI (bits) docks on IoT bits face, not atoms face", () => {
   assert.equal(canDock(BITS, "split", EDGE.W), false);
 });
 
-test("drones (atoms) dock on IoT atoms face, not bits face", () => {
+test("drones (atoms) dock on IoT atoms face, not bits face when world docking is enabled", (t) => {
+  const previous = GAME.enforceWorldDocking;
+  GAME.enforceWorldDocking = true;
+  t.after(() => { GAME.enforceWorldDocking = previous; });
   // IoT east face is atoms: drones sit to the east, looking west.
   assert.equal(canDock("split", ATOMS, EDGE.E), true);
   assert.equal(canDock("split", ATOMS, EDGE.W), false);
@@ -56,12 +63,18 @@ test("drones (atoms) dock on IoT atoms face, not bits face", () => {
   assert.equal(canDock(ATOMS, "split", EDGE.E), false);
 });
 
-test("AI will not dock on drones", () => {
+test("AI will not dock on drones when world docking is enabled", (t) => {
+  const previous = GAME.enforceWorldDocking;
+  GAME.enforceWorldDocking = true;
+  t.after(() => { GAME.enforceWorldDocking = previous; });
   assert.equal(canDock(BITS, ATOMS, EDGE.E), false);
   assert.equal(canDock(BITS, ATOMS, EDGE.W), false);
 });
 
-test("grid occupy rejects AI on IoT atoms side", () => {
+test("grid occupy rejects AI on IoT atoms side when world docking is enabled", (t) => {
+  const previous = GAME.enforceWorldDocking;
+  GAME.enforceWorldDocking = true;
+  t.after(() => { GAME.enforceWorldDocking = previous; });
   const g = makeGrid();
   assert.equal(g.occupy(0, 0, { id: "iot", polarity: "split" }).ok, true);
   // East of IoT is atoms
@@ -127,4 +140,52 @@ test("grid occupy accepts drones on IoT atoms side", () => {
   const edges = g.bonds();
   assert.equal(edges.length, 1);
   assert.equal(edges[0].polarity, ATOMS);
+});
+
+
+test("world docking can be disabled: every invention world connects in every direction", (t) => {
+  const previous = GAME.enforceWorldDocking;
+  t.after(() => { GAME.enforceWorldDocking = previous; });
+  configureWorldDocking({ FF_ENFORCE_BITS_VS_ATOMS_WORLDS: "0" });
+  for (const a of [BITS, ATOMS, "split"]) {
+    for (const b of [BITS, ATOMS, "split"]) {
+      for (let dir = 0; dir < 6; dir++) {
+        assert.equal(canDock(a, b, dir), true, `${a} to ${b} in direction ${dir}`);
+      }
+    }
+  }
+  assert.equal(canDock(BITS, "sealed", EDGE.E), false);
+  assert.equal(canDock("sealed", ATOMS, EDGE.E), false);
+});
+
+test("unrestricted grid accepts mixed worlds and renders their bond with original polarity", (t) => {
+  const previous = GAME.enforceWorldDocking;
+  t.after(() => { GAME.enforceWorldDocking = previous; });
+  configureWorldDocking({ FF_ENFORCE_BITS_VS_ATOMS_WORLDS: "0" });
+  const g = makeGrid();
+  g.occupy(0, 0, { id: "ai", polarity: BITS });
+  assert.equal(g.occupy(1, 0, { id: "drones", polarity: ATOMS }).ok, true);
+  const [bond] = g.bonds();
+  assert.equal(bond.a.polarity, BITS);
+  assert.equal(bond.b.polarity, ATOMS);
+  assert.equal(bond.polarity, BITS);
+  assert.equal(g.occupy(0, 0, { id: "iot", polarity: "split" }).ok, false);
+});
+
+
+test("FF_ENFORCE_BITS_VS_ATOMS_WORLDS config controls docking and defaults on", (t) => {
+  const previous = GAME.enforceWorldDocking;
+  t.after(() => { GAME.enforceWorldDocking = previous; });
+  for (const value of [undefined, "", "1", "true", "on", "yes", " TRUE ", true, "invalid"]) {
+    configureWorldDocking({ FF_ENFORCE_BITS_VS_ATOMS_WORLDS: value });
+    assert.equal(canDock(BITS, ATOMS, EDGE.E), false);
+    assert.equal(canDock(BITS, "split", EDGE.E), true);
+  }
+  for (const value of ["0", "false", "off", "no", " OFF ", false]) {
+    configureWorldDocking({ FF_ENFORCE_BITS_VS_ATOMS_WORLDS: value });
+    assert.equal(canDock(BITS, ATOMS, EDGE.E), true);
+  }
+  configureWorldDocking();
+  assert.equal(GAME.enforceWorldDocking, true);
+  assert.equal(canDock(BITS, ATOMS, EDGE.E), false);
 });

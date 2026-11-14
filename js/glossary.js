@@ -47,7 +47,7 @@ export const GLOSSARY = {
   },
   world: {
     term: "World",
-    plain: "Which side a tile lives on: bits (information), atoms (physical things), or both. Tiles only dock where worlds match.",
+    plain: "Which side a tile lives on: bits (information), atoms (physical things), or both. Border colors show the world; docking rules depend on game settings.",
     analogy: "Software cannot grab a propeller; a sensor or a printer bridges the two.",
   },
   pathway: {

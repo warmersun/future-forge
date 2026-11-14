@@ -18,6 +18,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { test } from "node:test";
+import { GAME } from "../data.js";
 import assert from "node:assert/strict";
 import {
   createEmptyBoard,
@@ -227,7 +228,10 @@ test("seedCrisisTiles defaults missing description to empty string", () => {
   assert.equal(board.tiles["crisis-local"].description, "");
 });
 
-test("placeTile refuses bits against atoms", () => {
+test("placeTile refuses bits against atoms when world docking is enabled", (t) => {
+  const previous = GAME.enforceWorldDocking;
+  GAME.enforceWorldDocking = true;
+  t.after(() => { GAME.enforceWorldDocking = previous; });
   let board = createEmptyBoard();
   const ai = mintInventionTile({ id: "ai1", techId: "ai", name: "Go" });
   const drones = mintInventionTile({ id: "dr1", techId: "drones", name: "Hop" });
@@ -1192,4 +1196,21 @@ test("a collector tile is free to place and does not prepay its emTech", () => {
   assert.deepEqual(delta.newlyPaid, ["drones"]);
   assert.deepEqual(delta.freeAdds, []);
   assert.deepEqual(delta.addedIds, []);
+});
+
+
+test("placeTile connects mixed invention worlds when enforcement is disabled and preserves tile polarity", (t) => {
+  const previous = GAME.enforceWorldDocking;
+  GAME.enforceWorldDocking = false;
+  t.after(() => { GAME.enforceWorldDocking = previous; });
+  let board = createEmptyBoard();
+  board = addTile(board, mintInventionTile({ id: "ai", techId: "ai" }));
+  board = addTile(board, mintInventionTile({ id: "drones", techId: "drones" }));
+  board = placeTile(board, "ai", 0, 0).board;
+  const result = placeTile(board, "drones", 1, 0);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.blockers, []);
+  assert.equal(result.board.tiles.ai.polarity, "bits");
+  assert.equal(result.board.tiles.drones.polarity, "atoms");
+  assert.equal(placeTile(result.board, "drones", 0, 0).ok, false);
 });

@@ -26,6 +26,8 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  *   0 E, 1 NE, 2 NW, 3 W, 4 SW, 5 SE
  */
 
+import { GAME } from "../data.js";
+
 export const BITS = "bits";
 export const ATOMS = "atoms";
 export const SEALED = "sealed";
@@ -152,6 +154,12 @@ export function facesMatch(aPol, aDir, bPol, bDir) {
 }
 
 export function canDock(aPol, bPol, dirFromA) {
+  // Keep facePolarity/facesMatch independent of the rule so border colors retain
+  // their meaning. Unknown/sealed faces still cannot form a connection.
+  if (!GAME.enforceWorldDocking) {
+    const worlds = [BITS, ATOMS, "split"];
+    if (worlds.includes(aPol) && worlds.includes(bPol)) return true;
+  }
   return facesMatch(aPol, dirFromA, bPol, oppositeEdge(dirFromA));
 }
 

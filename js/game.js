@@ -23,6 +23,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 import {
   GAME,
+  configureWorldDocking,
   GLOBALS,
   THEME_SHELVES,
   START_HERE_THEME_IDS,
@@ -24058,6 +24059,7 @@ async function refreshDeveloperModeFromHealth() {
     const data = await res.json();
     state.healthShareOrigin =
       typeof data?.shareOrigin === "string" ? data.shareOrigin : "";
+    configureWorldDocking(data?.config);
     const next = Boolean(data?.developer);
     if (next === state.developer) return;
     state.developer = next;
