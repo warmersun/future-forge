@@ -104,7 +104,13 @@ function syncTabs(doc) {
   }
   const visible = items.filter((item) => {
     if (item.classList.contains("is-pane-away")) return false;
-    if (item.classList.contains("side-tab-coinventor") && !visionAway) return false;
+    if (
+      item.classList.contains("side-tab-coinventor") &&
+      !visionAway &&
+      !panel?.classList.contains("is-co-tabbed")
+    ) {
+      return false;
+    }
     const tab = item.querySelector(".side-tab");
     return tab && !tab.hidden;
   });

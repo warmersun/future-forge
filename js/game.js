@@ -168,7 +168,7 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=argument-1";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=assessment-3";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
 import {
   boardHolds,
@@ -369,6 +369,8 @@ import {
   isTechRailPeek,
   isTechDrawerMode,
   isTechDrawerOpen,
+  isCoInventorTabMode,
+  CO_TAB_MQ,
 } from "./tech-drawer.js";
 import {
   LEARN_WHILE_IDEAS_DELAY_MS,
@@ -873,6 +875,7 @@ function visionPaneAway() {
 
 function applyInventSidePanes() {
   const visionAway = visionPaneAway();
+  const coTab = isCoInventorTabMode();
   let tab =
     state.sideTab === "aitrace"
       ? "aitrace"
@@ -880,19 +883,26 @@ function applyInventSidePanes() {
         ? "log"
         : state.sideTab === "coinventor"
           ? "coinventor"
-          : "vision";
+          : state.sideTab === "assessment"
+            ? "assessment"
+            : "vision";
   if (visionAway && tab === "vision") tab = "coinventor";
-  if (!visionAway && tab === "coinventor") tab = "vision";
+  if (!visionAway && tab === "coinventor" && !coTab) tab = "vision";
+  if (tab === "assessment" && !coTab) tab = "vision";
   const panel = document.querySelector("#screen-workshop .vision-panel");
   panel?.classList.remove("is-vision-split", "is-tutor-split");
   panel?.classList.toggle("is-vision-away", visionAway);
+  panel?.classList.toggle("is-co-tabbed", Boolean(coTab) && !visionAway);
+  if (coTab) panel?.classList.remove("is-co-collapsed");
   const stack = panel?.querySelector(".vision-co-stack");
   const vision = document.querySelector("#side-vision");
   const co = document.querySelector("#side-coinventor");
   const trace = document.querySelector("#side-aitrace");
   const log = document.querySelector("#side-log");
-  // All three tabs share the upper slot; the co-inventor stays below them.
-  for (const pane of [log, trace]) {
+  const tilePane = document.querySelector("#side-assessment");
+  // Wide screens keep the co-inventor under every upper tab. Short screens
+  // give it its own tab, so only the selected pane stays in the column.
+  for (const pane of [log, trace, tilePane]) {
     if (stack && pane && pane.parentElement !== stack) {
       stack.insertBefore(pane, stack.querySelector(".vision-split-handle"));
       pane.classList.add("vision-stack-top");
@@ -900,9 +910,10 @@ function applyInventSidePanes() {
   }
   if (stack) stack.hidden = false;
   if (vision) vision.hidden = tab !== "vision";
-  if (co) co.hidden = false;
+  if (co) co.hidden = coTab ? tab !== "coinventor" : false;
   if (trace) trace.hidden = tab !== "aitrace";
   if (log) log.hidden = tab !== "log";
+  if (tilePane) tilePane.hidden = tab !== "assessment";
   document.dispatchEvent(new Event("ff-side-layout"));
 }
 
@@ -4692,7 +4703,24 @@ function showScreen(id) {
   if (id === "workshop") {
     renderWorkshop();
     ensureCoInventor();
-    setSideTab(state.sideTab || "vision");
+    let tab = state.sideTab || "vision";
+    // Pathway, Look Ahead, and the hard-question button live in Assessment
+    // on a short screen. Open that tab when play starts, after the briefing
+    // walk (which still uses Future vision).
+    const assessmentDocked = Boolean(
+      document.querySelector("#assessment-overview #pathway-panel")
+    );
+    if (
+      prevScreen !== "workshop" &&
+      tab === "vision" &&
+      assessmentDocked &&
+      isCoInventorTabMode() &&
+      !document.body.classList.contains("is-quest-briefing") &&
+      !document.body.classList.contains("tutorial-open")
+    ) {
+      tab = "assessment";
+    }
+    setSideTab(tab);
     requestAnimationFrame(() => {
       ensureVision();
       seedLearningVisionStill();
@@ -19456,13 +19484,38 @@ function renderAiTrace() {
   }
 }
 
+function bindCoInventorTabMode() {
+  if (typeof window === "undefined" || !window.matchMedia) return;
+  const mql = window.matchMedia(CO_TAB_MQ);
+  const onChange = () => {
+    if (
+      !mql.matches &&
+      (state.sideTab === "coinventor" || state.sideTab === "assessment") &&
+      !visionPaneAway()
+    ) {
+      setSideTab("vision");
+      return;
+    }
+    applyInventSidePanes();
+  };
+  if (typeof mql.addEventListener === "function") mql.addEventListener("change", onChange);
+  else mql.addListener?.(onChange);
+  onChange();
+}
+
 function setSideTab(tab) {
   const visionAway = visionPaneAway();
-  if (tab === "coinventor" && !visionAway) tab = "vision";
+  const coTab = isCoInventorTabMode();
+  if (tab === "coinventor" && !visionAway && !coTab) tab = "vision";
   if (tab === "vision" && visionAway) tab = "coinventor";
   if (tab === "aitrace" && !state.developer) tab = visionAway ? "coinventor" : "vision";
-  if (tab !== "aitrace" && tab !== "log" && tab !== "coinventor") tab = "vision";
-  if (state.sideTab === tab) return;
+  if (tab === "assessment" && !coTab) {
+    tab = visionAway ? "coinventor" : "vision";
+  }
+  if (tab !== "aitrace" && tab !== "log" && tab !== "coinventor" && tab !== "assessment") tab = "vision";
+  // Quest start writes state.sideTab before this runs. Always restamp the
+  // buttons and panes so a highlighted Assessment tab cannot sit on Future vision.
+  const same = state.sideTab === tab;
   state.sideTab = tab;
   $$(".side-tab[data-tab]").forEach((btn) => {
     const on = btn.dataset.tab === tab;
@@ -19470,6 +19523,7 @@ function setSideTab(tab) {
     btn.setAttribute("aria-selected", on ? "true" : "false");
   });
   applyInventSidePanes();
+  if (same) return;
   if (tab === "vision" || tab === "coinventor") {
     ensureCoInventor();
   }
@@ -23781,7 +23835,7 @@ function bind() {
     $("#challenge-help-input").value = "";
   });
   $("#btn-open-coinventor").addEventListener("click", () => {
-    setSideTab("vision");
+    setSideTab(isCoInventorTabMode() || visionPaneAway() ? "coinventor" : "vision");
     ensureCoInventor();
     $("#co-inventor-root")?.querySelector?.("textarea, input")?.focus?.();
   });
@@ -23801,6 +23855,7 @@ function bind() {
 
   document.addEventListener("ff-co-inventor-toggle-collapse", () => {
     const panel = document.querySelector("#screen-workshop .vision-panel");
+    if (panel?.classList.contains("is-co-tabbed")) return;
     const button = panel?.querySelector("#co-collapse-toggle");
     if (!button) return;
     const collapsed = panel.classList.toggle("is-co-collapsed");
@@ -24111,6 +24166,7 @@ export function init() {
   bindAllVisionSplits(document);
   initWorkshopDocks(document);
   initSecondScreen(document);
+  bindCoInventorTabMode();
   document.addEventListener("ff-pane-home", () => applyInventSidePanes());
   document.addEventListener("ff-select-side-tab", (ev) => {
     const tab = ev.detail?.tab;

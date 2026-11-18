@@ -128,25 +128,72 @@ describe("workshop shared upper pane", () => {
     const apply = runInNewContext(`(${source.slice(start, end)})`, {
       state,
       visionPaneAway: () => false,
+      isCoInventorTabMode: () => false,
       document: {
         querySelector: (selector) => selector.includes(".vision-panel") ? panel : panes[selector],
         dispatchEvent() {},
       },
       Event: class {},
     });
-    for (const tab of ["vision", "log", "aitrace"]) {
+    for (const tab of ["vision", "log", "aitrace", "coinventor"]) {
       state.sideTab = tab;
       apply();
       assert.equal(stack.hidden, false);
       assert.equal(panes["#side-coinventor"].hidden, false);
       assert.ok(classes.has("is-co-collapsed"));
+      assert.equal(classes.has("is-co-tabbed"), false);
+      const shown = tab === "coinventor" ? "vision" : tab;
       for (const id of ["vision", "log", "aitrace"]) {
-        assert.equal(panes[`#side-${id}`].hidden, id !== tab);
+        assert.equal(panes[`#side-${id}`].hidden, id !== shown);
       }
     }
     for (const id of ["log", "aitrace"]) {
       assert.equal(panes[`#side-${id}`].parentElement, stack);
       assert.ok(panes[`#side-${id}`].classList["vision-stack-top"]);
+    }
+  });
+
+  it("hides the co-inventor unless its own tab is selected on a short screen", () => {
+    const source = readFileSync(new URL("./game.js", import.meta.url), "utf8");
+    const start = source.indexOf("function applyInventSidePanes()");
+    const end = source.indexOf("function seedLearningVisionStill()", start);
+    const panes = Object.fromEntries(["vision", "coinventor", "log", "aitrace"].map((id) => [
+      `#side-${id}`,
+      { hidden: false, classList: { add(name) { this[name] = true; } } },
+    ]));
+    const stack = {
+      querySelector() { return null; },
+      insertBefore(pane) { pane.parentElement = this; },
+    };
+    const classes = new Set(["is-co-collapsed"]);
+    const panel = {
+      classList: {
+        remove(...names) { names.forEach((name) => classes.delete(name)); },
+        toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
+      },
+      querySelector() { return stack; },
+    };
+    const state = {};
+    const apply = runInNewContext(`(${source.slice(start, end)})`, {
+      state,
+      visionPaneAway: () => false,
+      isCoInventorTabMode: () => true,
+      document: {
+        querySelector: (selector) => selector.includes(".vision-panel") ? panel : panes[selector],
+        dispatchEvent() {},
+      },
+      Event: class {},
+    });
+    for (const tab of ["vision", "log", "aitrace", "coinventor"]) {
+      state.sideTab = tab;
+      apply();
+      assert.equal(stack.hidden, false);
+      assert.ok(classes.has("is-co-tabbed"));
+      assert.equal(classes.has("is-co-collapsed"), false);
+      assert.equal(panes["#side-coinventor"].hidden, tab !== "coinventor");
+      for (const id of ["vision", "log", "aitrace"]) {
+        assert.equal(panes[`#side-${id}`].hidden, id !== tab);
+      }
     }
   });
 });

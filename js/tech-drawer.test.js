@@ -25,6 +25,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   isTechDrawerMode,
+  isCoInventorTabMode,
   isTechDrawerOpen,
   isTechRailCollapsed,
   isTechRailPeek,
@@ -35,6 +36,10 @@ describe("tech-drawer", () => {
   it("isTechDrawerMode is false without matchMedia / wide default", () => {
     // Node: window is undefined → false
     assert.equal(isTechDrawerMode(), false);
+  });
+
+  it("isCoInventorTabMode is false without matchMedia", () => {
+    assert.equal(isCoInventorTabMode(), false);
   });
 
   it("isTechDrawerOpen reads classList", () => {

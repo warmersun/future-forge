@@ -26,6 +26,14 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 const COMPACT_MQ =
   "(max-width: 1199px), (max-width: 1399px) and (any-pointer: coarse)";
+/**
+ * Right column is too short to stack Future vision and the AI co-inventor.
+ * Compact widths match COMPACT_MQ. max-height also covers 1280×720 and short
+ * laptops that are still wide enough for the desktop grid.
+ * Workshop CSS keys off `.vision-panel.is-co-tabbed` and does not repeat this query.
+ */
+export const CO_TAB_MQ =
+  "(max-width: 1199px), (max-height: 900px), (max-width: 1399px) and (any-pointer: coarse)";
 const RAIL_COLLAPSED_KEY = "future-forge:tech-rail-collapsed";
 
 /** @type {MediaQueryList|null} */
@@ -37,6 +45,12 @@ let compactMql = null;
 export function isTechDrawerMode() {
   if (typeof window === "undefined" || !window.matchMedia) return false;
   return window.matchMedia(COMPACT_MQ).matches;
+}
+
+/** AI co-inventor is its own side tab instead of a pane under Future vision. */
+export function isCoInventorTabMode() {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia(CO_TAB_MQ).matches;
 }
 
 /**

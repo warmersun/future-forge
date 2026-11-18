@@ -40,6 +40,7 @@ import {
   isScaffoldComplete,
 } from "../invent-scaffold.js";
 import { termHtml } from "../glossary.js";
+import { CO_TAB_MQ, isCoInventorTabMode } from "../tech-drawer.js";
 /** Plain words for a tile's world (bits / atoms / both). */
 const WORLD_PLAIN = {
   bits: "bits (information)",
@@ -202,6 +203,13 @@ export function createHexWorkshop(api) {
   let inspectHideTimer = null;
   /** @type {string|null} */
   let inspectTileId = null;
+  /** Tile whose card is open in the Assessment tab. */
+  /** @type {string|null} */
+  let stuckTileId = null;
+  /** @type {{ parent: Node, next: ChildNode|null }|null} */
+  let popupHome = null;
+  /** @type {Map<Element, { parent: Node, next: ChildNode|null }>} */
+  const assessmentHomes = new Map();
   let highlightedPathwayTileId = null;
   /** @type {string|null} */
   let concernAnswerRevisingId = null;
@@ -666,11 +674,24 @@ export function createHexWorkshop(api) {
         scheduleInspectEnd();
       },
       onInspectCancel: () => {
-        hideTilePopup();
-        inspectTileId = null;
+        if (!usesTileTab()) {
+          hideTilePopup();
+          inspectTileId = null;
+        }
         hideScoreChips();
       },
       onPathwayToggle: (id, hl) => {
+        if (usesTileTab()) {
+          if (hl) {
+            inspectTileId = id;
+            stuckTileId = id;
+            showTilePopup(id, { focus: true });
+          } else {
+            inspectTileId = null;
+            stuckTileId = null;
+            hideTilePopup();
+          }
+        }
         if (isCreateBusy()) return;
         highlightedPathwayTileId = hl ? id : null;
         const t = board()?.tiles?.[id];
@@ -761,7 +782,81 @@ export function createHexWorkshop(api) {
     return popup;
   }
 
+  /** Short screens keep tile details in the Assessment tab, and only after a click. */
+  function usesTileTab() {
+    if (typeof document !== "undefined" && document.body?.classList.contains("tutorial-open")) {
+      return false;
+    }
+    if (typeof document !== "undefined" && document.body?.classList.contains("is-quest-briefing")) {
+      return false;
+    }
+    return isCoInventorTabMode();
+  }
+
+  function assessmentNodes() {
+    return ["#pathway-panel", "#invent-actions", "#challenge-ready-hint", "#invent-foot"]
+      .map((sel) => document.querySelector(sel))
+      .filter(Boolean);
+  }
+
+  function showAssessmentOverview() {
+    document.querySelector("#assessment-overview")?.removeAttribute("hidden");
+  }
+
+  function hideAssessmentOverview() {
+    document.querySelector("#assessment-overview")?.setAttribute("hidden", "");
+  }
+
+  /** Move the pathway panel and invent actions into the Assessment tab, or back. */
+  function syncAssessmentDock() {
+    const overview = document.querySelector("#assessment-overview");
+    if (!overview) return;
+    const dock = usesTileTab();
+    const nodes = assessmentNodes();
+    if (dock) {
+      let moved = false;
+      for (const el of nodes) {
+        if (!assessmentHomes.has(el) && el.parentElement) {
+          assessmentHomes.set(el, { parent: el.parentElement, next: el.nextSibling });
+        }
+        if (el.parentElement !== overview) {
+          overview.appendChild(el);
+          moved = true;
+        }
+      }
+      if (moved && !stuckTileId) {
+        const active = document.querySelector("#screen-workshop .side-tab[aria-selected='true']")?.dataset.tab;
+        const paneHidden = document.querySelector("#side-assessment")?.hidden !== false;
+        if (!active || active === "vision" || (active === "assessment" && paneHidden)) {
+          document.dispatchEvent(new CustomEvent("ff-select-side-tab", { detail: { tab: "assessment" } }));
+        }
+      }
+      return;
+    }
+    // Later siblings are restored first so each insertBefore anchor is already home.
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const el = nodes[i];
+      const home = assessmentHomes.get(el);
+      if (!home?.parent || el.parentElement === home.parent) continue;
+      const next = home.next && home.next.parentNode === home.parent ? home.next : null;
+      home.parent.insertBefore(el, next);
+    }
+    showAssessmentOverview();
+    const popup = document.querySelector("#hex-tile-popup");
+    if (popup?.classList.contains("is-docked")) {
+      popup.hidden = true;
+      undockTilePopup(popup);
+      stuckTileId = null;
+      inspectTileId = null;
+    }
+    const active = document.querySelector("#screen-workshop .side-tab[aria-selected='true']")?.dataset.tab;
+    if (active === "assessment") {
+      document.dispatchEvent(new CustomEvent("ff-select-side-tab", { detail: { tab: "vision" } }));
+    }
+  }
+
   function scheduleInspect(tileId) {
+    if (usesTileTab()) return;
     if (api.allowTileInspect && api.allowTileInspect(tileId) === false) return;
     if (inspectHideTimer) {
       clearTimeout(inspectHideTimer);
@@ -771,7 +866,8 @@ export function createHexWorkshop(api) {
     inspectTileId = tileId;
     inspectShowTimer = setTimeout(() => {
       inspectShowTimer = null;
-      if (inspectTileId === tileId) showTilePopup(tileId);
+      if (inspectTileId !== tileId) return;
+      showTilePopup(tileId, { focus: true });
     }, 450);
   }
 
@@ -780,6 +876,14 @@ export function createHexWorkshop(api) {
       typeof document !== "undefined" &&
       document.body?.classList.contains("tutorial-popup-front")
     ) {
+      return;
+    }
+    if (usesTileTab()) {
+      if (inspectShowTimer) {
+        clearTimeout(inspectShowTimer);
+        inspectShowTimer = null;
+        inspectTileId = stuckTileId;
+      }
       return;
     }
     if (inspectShowTimer) {
@@ -794,6 +898,36 @@ export function createHexWorkshop(api) {
     }, 150);
   }
 
+  function openTileTab() {
+    document.dispatchEvent(new CustomEvent("ff-select-side-tab", { detail: { tab: "assessment" } }));
+  }
+
+  function dockTilePopup(popup) {
+    const pane = document.querySelector("#side-assessment");
+    if (!pane) return;
+    if (!popupHome && popup.parentElement) {
+      popupHome = { parent: popup.parentElement, next: popup.nextSibling };
+    }
+    if (popup.parentElement !== pane) pane.appendChild(popup);
+    popup.classList.add("is-docked");
+    popup.setAttribute("role", "region");
+    popup.removeAttribute("aria-modal");
+    const card = popup.querySelector(".hex-tile-popup-card");
+    if (card) {
+      card.style.left = "";
+      card.style.top = "";
+    }
+  }
+
+  function undockTilePopup(popup) {
+    popup.classList.remove("is-docked");
+    popup.setAttribute("role", "dialog");
+    popup.setAttribute("aria-modal", "true");
+    if (popupHome?.parent && popup.parentElement !== popupHome.parent) {
+      popupHome.parent.insertBefore(popup, popupHome.next);
+    }
+  }
+
   function hideTilePopup() {
     if (inspectShowTimer) {
       clearTimeout(inspectShowTimer);
@@ -804,11 +938,14 @@ export function createHexWorkshop(api) {
       inspectHideTimer = null;
     }
     const popup = document.querySelector("#hex-tile-popup");
+    const wasDocked = Boolean(popup?.classList.contains("is-docked"));
     if (popup) {
       popup.hidden = true;
       popup.querySelector(".hex-tile-popup-card")?.classList.remove("is-concern", "is-crisis");
+      if (wasDocked) undockTilePopup(popup);
     }
     stopReadAloudFor(document.querySelector("#hex-tile-popup-body"));
+    if (wasDocked) showAssessmentOverview();
   }
 
   function findTileAnchor(tileId) {
@@ -830,7 +967,7 @@ export function createHexWorkshop(api) {
   function positionPopupNearTile(tileId) {
     const popup = document.querySelector("#hex-tile-popup");
     const card = popup?.querySelector(".hex-tile-popup-card");
-    if (!popup || !card || popup.hidden) return;
+    if (!popup || !card || popup.hidden || popup.classList.contains("is-docked")) return;
     const anchor = findTileAnchor(tileId);
     const pad = 10;
     const gap = 12;
@@ -1083,7 +1220,7 @@ export function createHexWorkshop(api) {
     }
   }
 
-  function showTilePopup(tileId) {
+  function showTilePopup(tileId, opts = {}) {
     const popup = ensurePopupWired();
     const t = board()?.tiles?.[tileId];
     if (!popup || !t) return;
@@ -1525,6 +1662,13 @@ export function createHexWorkshop(api) {
       .querySelector(".hex-tile-popup-card")
       ?.classList.toggle("is-crisis", t.kind === TILE_KIND.crisis);
     popup.hidden = false;
+    if (usesTileTab()) {
+      dockTilePopup(popup);
+      hideAssessmentOverview();
+      if (opts.focus === true) openTileTab();
+      return;
+    }
+    undockTilePopup(popup);
     requestAnimationFrame(() => {
       positionPopupNearTile(tileId);
       // Second pass after layout settles (tall art / scrolled body)
@@ -2566,7 +2710,8 @@ export function createHexWorkshop(api) {
       btn.addEventListener("click", () => {
         hideScoreChips();
         inspectTileId = id;
-        showTilePopup(id);
+        stuckTileId = id;
+        showTilePopup(id, { focus: true });
       });
     });
     if (scoreChipTimer) clearTimeout(scoreChipTimer);
@@ -4238,6 +4383,8 @@ export function createHexWorkshop(api) {
       if (e.key !== "Escape") return;
       const popup = document.querySelector("#hex-tile-popup");
       if (popup && !popup.hidden) {
+        inspectTileId = null;
+        stuckTileId = null;
         hideTilePopup();
         ensureUi()?.clearHighlight?.();
         e.preventDefault();
@@ -4250,6 +4397,17 @@ export function createHexWorkshop(api) {
     });
     watchWorkshopLeave();
     syncExpandButton();
+    syncAssessmentDock();
+    if (typeof window !== "undefined" && window.matchMedia) {
+      const mql = window.matchMedia(CO_TAB_MQ);
+      const onChange = () => syncAssessmentDock();
+      if (typeof mql.addEventListener === "function") mql.addEventListener("change", onChange);
+      else mql.addListener?.(onChange);
+    }
+    if (typeof MutationObserver !== "undefined" && document.body) {
+      const obs = new MutationObserver(() => syncAssessmentDock());
+      obs.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    }
   }
 
   return {

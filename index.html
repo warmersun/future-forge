@@ -28,7 +28,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=argument-1" />
+    <link rel="stylesheet" href="css/styles.css?v=assessment-3" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -1484,7 +1484,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               </p>
             </aside>
 
-            <div class="form-actions game-actions">
+            <div class="form-actions game-actions" id="invent-actions">
               <button
                 type="button"
                 class="btn btn-ghost btn-sm"
@@ -1502,7 +1502,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               </button>
             </div>
             <p class="challenge-ready-hint" id="challenge-ready-hint" aria-live="polite"></p>
-            <p class="foot-hint">
+            <p class="foot-hint" id="invent-foot">
               Invent on the board · summon the hard questions · hold the pathway — before the crisis wins.
             </p>
           </div>
@@ -1517,6 +1517,11 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               <button type="button" class="btn-second-screen" data-second-screen="vision" aria-pressed="false" aria-label="Show Future vision on the second screen" title="Show Future vision on the second screen">
                 <svg class="icon-send" viewBox="0 0 16 16" aria-hidden="true"><rect x="0.8" y="1.6" width="8" height="6" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3 9.2h3.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><rect x="7.2" y="6.4" width="8" height="5.6" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M9.6 14.2h3.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
                 <svg class="icon-back" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.4 3.2 3.2 8l4.2 4.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.8 8H13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <div class="side-tab-item side-tab-assessment">
+              <button type="button" class="side-tab" data-tab="assessment" role="tab" id="tab-assessment" aria-selected="false">
+                Assessment
               </button>
             </div>
             <div class="side-tab-item side-tab-coinventor">
@@ -1586,6 +1591,10 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             <div id="side-coinventor" class="vision-stack-bottom">
               <div id="co-inventor-root" class="co-inventor-root"></div>
             </div>
+          </div>
+
+          <div id="side-assessment" class="side-pane" role="tabpanel" hidden>
+            <div id="assessment-overview"></div>
           </div>
 
           <div id="side-log" class="side-pane" role="tabpanel" hidden>
@@ -2580,6 +2589,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=continue-run-1"></script>
+    <script type="module" src="js/main.js?v=assessment-3"></script>
   </body>
 </html>

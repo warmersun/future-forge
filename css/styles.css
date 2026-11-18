@@ -14326,6 +14326,101 @@ body.ff-second-pane .btn-second-screen {
   display: none !important;
 }
 
+#screen-workshop .vision-co-stack > .vision-stack-bottom[hidden] {
+  display: none !important;
+}
+
+/* Assessment is a tab only while the co-inventor is also a tab. */
+#screen-workshop .vision-panel:not(.is-co-tabbed) .side-tab-assessment {
+  display: none;
+}
+
+#side-assessment {
+  overflow: auto;
+  padding: 0.35rem 0.45rem 0.85rem;
+  gap: 0.75rem;
+}
+
+#assessment-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+#assessment-overview[hidden] {
+  display: none !important;
+}
+
+#side-assessment .pathway-panel,
+#side-assessment .game-actions,
+#side-assessment .challenge-ready-hint,
+#side-assessment .foot-hint {
+  margin: 0;
+}
+
+#side-assessment .hex-tile-popup.is-docked {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  pointer-events: auto;
+  background: transparent;
+}
+
+#side-assessment .hex-tile-popup.is-docked .hex-tile-popup-card,
+#side-assessment .hex-tile-popup.is-docked .hex-tile-popup-card.is-concern {
+  position: static;
+  left: auto;
+  top: auto;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+/* Short or compact workshop: AI co-inventor is a peer of Future vision, Log, and AI inspect. */
+#screen-workshop .vision-panel.is-co-tabbed .side-tab-coinventor {
+  display: flex;
+}
+
+#screen-workshop .vision-panel.is-co-tabbed .side-tabs {
+  flex-wrap: wrap;
+}
+
+#screen-workshop .vision-panel.is-co-tabbed .side-tab-item > .side-tab {
+  padding: 0.55rem 0.35rem;
+  font-size: 0.72rem;
+}
+
+#screen-workshop .vision-panel.is-co-tabbed .vision-split-handle,
+#screen-workshop .vision-panel.is-co-tabbed .vision-stack-bottom .co-collapse-toggle {
+  display: none !important;
+}
+
+#screen-workshop .vision-panel.is-co-tabbed .vision-stack-bottom,
+#screen-workshop .vision-panel.is-co-tabbed .vision-stack-top {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
+/* Phone stacks the vision band above the board. One tab fills that band. */
+@media (max-width: 719px) {
+  #screen-workshop .workshop-layout > .vision-panel.is-co-tabbed:not(:has(.vision-canvas-wrap.is-briefing)) {
+    height: min(58vh, 28rem);
+    max-height: min(58vh, 28rem);
+  }
+}
+
 /* Collapsing is a workshop layout control, not a detached/chat-only control. */
 .co-collapse-toggle {
   display: none;
