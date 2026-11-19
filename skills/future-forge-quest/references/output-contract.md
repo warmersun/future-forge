@@ -111,6 +111,7 @@ All of these may appear on **one** tile:
 | **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Funding credit. Source credit is `companion`, not this name |
 | **Companion** | `companion` | One podcast or post, one move, one question before play. Optional `exploration` states an assumed premise. Rules: `companion.md`. Omit the key for an ordinary quest |
 | **Briefing cards** | `briefBeats` (3–8) | Tighter captions + shipped stills (`imageUrl`) or live `imagePrompt`; omit if `briefMd` already steps well |
+| **Future Vision plates** | `visionReferences` | Character and location stills Future Vision edits from. Rules: `schema.md`. Omit the key and the first Future Vision still mints them |
 | **Local rules** | `rules` (1–3) | Named regulation / law / policy / ban already on the books. Weather, not the invent. Lobby can write more in play. Side effect: switches off default theme backlash on `automation` / `rogue-si`. |
 
 Details and templates: `learning-and-sponsor.md`, `brief-beats.md`, `economy.md`.
@@ -279,6 +280,7 @@ Only when captions should be tighter than `briefMd`, you want **shipped stills**
 | No source stage | Omit `companion` |
 | Focused meters | Omit unused `pressure` roles |
 | Default walkthrough | Omit `briefBeats` — engine derives from `briefMd` paragraphs |
+| No shipped vision plates | Omit `visionReferences` — the first Future Vision still mints them |
 | No local policy weather | Omit `rules` |
 
 ---

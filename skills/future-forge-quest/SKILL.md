@@ -60,6 +60,7 @@ Write for these surfaces, not for the JSON. Numbers are character clips in the e
 | `aiTutorContext` | — | Conversational tutor only (never fast-eval) | 50k |
 | `rules` | HUD weather + honesty gates | Fast-eval | body 280 |
 | `research`, `visionTheme`, `placement`, `tags`, `author` | — | — | stored, never shown or read |
+| `visionReferences` | — | Future Vision plates, when the quest ships them | `references/schema.md` |
 | `companion` | Stage before play, catalog From-line, workshop premise | `sourceConstraint` beside `grounding`, ≤500; claim and grants in `sourceInquiry` | see `references/companion.md` |
 
 ## Hard rules
@@ -106,7 +107,7 @@ emTech (name → tech id), theme (`globalId`), audience, year (`mission.startYea
 
 ### 5. Player-facing prose
 
-Read `references/scene-prose.md`, then write `mission.scene` and `briefMd` (`references/brief-template.md`). Say the instance and what the global problem is. Cut every line that does not serve that. Optional `briefBeats` only for tighter captions or shipped stills (`references/brief-beats.md`).
+Read `references/scene-prose.md`, then write `mission.scene` and `briefMd` (`references/brief-template.md`). Say the instance and what the global problem is. Cut every line that does not serve that. Optional `briefBeats` only for tighter captions or shipped stills (`references/brief-beats.md`). Optional `visionReferences` only when the quest ships the Future Vision character and location plates (`references/schema.md`).
 
 ### 6. Learning module (if applicable)
 

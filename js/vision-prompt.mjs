@@ -28,12 +28,60 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  * Never list anti-geographies ("no marina") — models paint named tokens.
  */
 
+import { TECHS } from "./data.js";
+
 const STAGE_TONE = {
-  present: "present-day realism",
-  prototype: "early experimental equipment appearing locally",
-  transition: "local systems scaling up",
-  transformed: "everyday future of this same place",
+  present: "cinematic superhero-comic still of this real place today",
+  prototype: "the first powered change arriving in this place",
+  transition: "the powered change spreading through this place",
+  transformed: "the new everyday of this same place, heroic and lived-in",
 };
+
+/**
+ * Superheroes for the six emTech domains. Portal's file keeps its on-disk name.
+ * `brings` is the visible power, written as what the hero causes in the frame.
+ */
+export const VISION_HEROES = {
+  power: {
+    id: "power",
+    label: "Power",
+    file: "power.png",
+    brings: "Light, power, and computing flare into real local infrastructure.",
+  },
+  automator: {
+    id: "automator",
+    label: "Automator",
+    file: "automator.png",
+    brings: "Robots and thinking machines step in to do the new work.",
+  },
+  mover: {
+    id: "mover",
+    label: "Mover",
+    file: "mover.png",
+    brings: "Routes, vehicles, and links open across the place.",
+  },
+  lifeforce: {
+    id: "lifeforce",
+    label: "LifeForce",
+    file: "lifeforce.png",
+    brings: "Living systems grow, heal, or change in the open.",
+  },
+  link: {
+    id: "link",
+    label: "Link",
+    file: "link.png",
+    brings: "Holographic layers unfold over the streets and rooms.",
+  },
+  portal: {
+    id: "portal",
+    label: "Portal",
+    file: "poertal.png",
+    brings: "A ring of light delivers sensors, parts, and new materials.",
+  },
+};
+
+const TECH_DOMAIN = new Map(TECHS.map((t) => [t.id, t.domain]));
+const TECH_NAME = new Map(TECHS.map((t) => [t.id, t.name]));
 
 /** Instruction-style patterns that must not enter Imagine prompts */
 const PROMPT_POLLUTION_RE =
@@ -125,12 +173,12 @@ const PEOPLE_MOODS = new Set(["happy", "sad", "concerned", "neutral"]);
 
 const PEOPLE_MOOD_LINE = {
   happy:
-    "If any people are already visible, their faces look relieved and glad. Do not add extra people or crowds.",
-  sad: "If any people are already visible, their faces look worn and sad. Do not add extra people or crowds.",
+    "If the local person is visible, their face looks relieved and glad. Keep that one local person. Do not add a crowd.",
+  sad: "If the local person is visible, their face looks worn and sad. Keep that one local person. Do not add a crowd.",
   concerned:
-    "If any people are already visible, their faces look uneasy and concerned. Do not add extra people or crowds.",
+    "If the local person is visible, their face looks uneasy and concerned. Keep that one local person. Do not add a crowd.",
   neutral:
-    "If any people are already visible, keep ordinary unforced faces. Do not add extra people or crowds.",
+    "If the local person is visible, keep an ordinary unforced face. Keep that one local person. Do not add a crowd.",
 };
 
 /** Faces follow the local crisis lamp; no local crisis → ordinary. */
@@ -155,17 +203,71 @@ function withFaces(body, happening) {
   const t = String(happening || "").trim();
   const faces = visionPeopleMoodLine(visionPeopleMoodOf(body));
   if (!t) return faces;
-  if (/Do not add extra people/i.test(t)) return t;
+  if (/Do not add a crowd/i.test(t)) return t;
   return clipText(`${t} ${faces}`, 1100);
+}
+
+/**
+ * Last action the client says caused this still. Unknown shapes become "open".
+ * @param {object} body
+ * @returns {{ type: string, tileId: string, techId: string|null }}
+ */
+export function visionLastActionOf(body) {
+  const raw = body?.lastAction;
+  if (!raw || typeof raw !== "object") return { type: "open", tileId: "", techId: null };
+  return {
+    type: String(raw.type || "open").slice(0, 40),
+    tileId: String(raw.tileId || "").slice(0, 80),
+    techId: raw.techId ? String(raw.techId).slice(0, 80) : null,
+  };
+}
+
+/**
+ * Superhero for this still. Only a just-placed catalog emTech invent qualifies.
+ * A non-emTech tile (no tech id) and any other action return null.
+ * @param {object} body
+ * @returns {{ id: string, label: string, file: string, brings: string, techId: string, techName: string }|null}
+ */
+export function visionHeroOf(body) {
+  const action = visionLastActionOf(body);
+  if (action.type !== "place-invent" || !action.techId) return null;
+  const domain = TECH_DOMAIN.get(action.techId);
+  const hero = domain ? VISION_HEROES[domain] : null;
+  if (!hero) return null;
+  return {
+    ...hero,
+    techId: action.techId,
+    techName: TECH_NAME.get(action.techId) || action.techId,
+  };
+}
+
+function heroArrivalLine(hero) {
+  return (
+    `${hero.label} steps into the scene and their power makes this change happen: ` +
+    `${hero.brings} ${hero.techName} appears because of that power.`
+  );
+}
+
+function applyHeroBeat(body, shot) {
+  const hero = visionHeroOf(body);
+  if (!hero) return { ...shot, hero: null };
+  let happening = String(shot.happening || "").trim();
+  if (!happening.includes(hero.label)) {
+    happening = clipText(`${heroArrivalLine(hero)} ${happening}`, 1100);
+  }
+  const subjects = Array.isArray(shot.subjects) ? [...shot.subjects] : [];
+  if (!subjects.includes(hero.label)) subjects.unshift(hero.label);
+  if (!subjects.includes(hero.techName)) subjects.splice(1, 0, hero.techName);
+  return { ...shot, hero, happening, subjects: subjects.slice(0, 8) };
 }
 
 function taggedShot(body, shot) {
   const peopleMood = visionPeopleMoodOf(body);
-  return {
+  return applyHeroBeat(body, {
     ...shot,
     peopleMood,
     happening: withFaces(body, shot.happening),
-  };
+  });
 }
 
 function givenLabel(g) {
@@ -401,7 +503,7 @@ function shotFromChallengeBeat(body, prev, worldCard) {
       reason: "Challenge posed — critic pressure in the same place",
       happening: groundInPlace(
         place,
-        `Tension in ${place}: the local invention is under public challenge from ${label}. ${pressureBits} People, signs of the local crisis, and the invention's early form are visible — not a cartoon villain, a real documentary moment of pushback.`
+        `Tension in ${place}: the local invention is under public challenge from ${label}. ${pressureBits} People, signs of the local crisis, and the invention's early form are visible — a public moment of pushback, cinematic and specific to this place.`
       ),
       subjects: names,
     };
@@ -491,7 +593,7 @@ export function decideShot(body, prev, worldCard) {
               place,
               `Local infrastructure and tools related to ${names.join(", ")} in active use.`
             )
-          : `A clear documentary view of life in ${place} at this moment.`,
+          : `A clear cinematic view of life in ${place} at this moment.`,
       subjects: names,
     });
   }
@@ -554,7 +656,7 @@ export function decideShot(body, prev, worldCard) {
     mode: "generate",
     continuity: "new-shot",
     reason: "Default generate with frozen world",
-    happening: `A clear documentary still of life in ${place}.`,
+    happening: `A clear cinematic still of life in ${place}.`,
     subjects: names,
   });
 }
@@ -599,6 +701,7 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
 
   const names = techNames(body, 8);
   const hasPrior = Boolean(prev?.dataUrl?.startsWith("data:"));
+  const hero = visionHeroOf(body);
   const paths = visionPathwaysOf(body);
   const inventPayload = paths
     ? {
@@ -633,16 +736,19 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
     {
       role: "system",
       content:
-        `You write shot briefs for a single documentary image in an inventing practice.\n` +
+        `You write shot briefs for a single cinematic superhero-comic still of a real place in an inventing practice.\n` +
+        `The frame is heroic and illustrated, saturated and specific, and it stays this place.\n` +
         `You receive a FIXED setting (place + visual description). The setting never changes.\n` +
         `Write what is VISIBLY happening in the frame, grounded in that setting.\n` +
         `If the invention involves rockets, networks, clinics, etc., describe them as they would appear ` +
         `in THIS setting's terrain and climate (use words from the setting).\n` +
         `Each pathways[] entry is one local invent (connected island) with its inventHow — there is no invention name.\n` +
-        `status "idea" means it is not touching a crisis or concern: show a person who lives this situation considering the idea (thinking, sketching) — not installed in the streets.\n` +
+        `status "idea" means it is not touching a crisis or concern: show the local person considering the idea (thinking, sketching) — not installed in the streets.\n` +
         `status "applied" means it edge-touches those crises/concerns: show the invent in use addressing them.\n` +
         `givens with applied false are still visible as the unsolved local situation.\n` +
-        `peopleMood only colors faces of people already in the scene (happy = relieved/glad; sad = worn/hardship; concerned = uneasy; neutral = ordinary). Never add people or crowds to illustrate mood.\n` +
+        `peopleMood only colors the face of the local person already in the scene (happy = relieved/glad; sad = worn/hardship; concerned = uneasy; neutral = ordinary).\n` +
+        `When hero is set, that superhero is in the frame and their power causes the change. Name the hero. Describe the power bringing hero.tech into the place.\n` +
+        `When hero is null, the frame has no costumed superhero.\n` +
         `Choose "edit" only if the same camera view can show the change by adding elements.\n` +
         `Choose "generate" if a different camera in the same setting is better.\n` +
         `Rules: positive description only; no negations; no other countries or stock tourist locations; ` +
@@ -661,6 +767,9 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
         hasPriorImage: hasPrior,
         stage: body.stage?.id || "present",
         techs: names,
+        hero: hero
+          ? { name: hero.label, tech: hero.techName, power: hero.brings }
+          : null,
         ...inventPayload,
       }),
     },
@@ -785,8 +894,7 @@ export async function resolveShot(
   }
 
   // Cache: same narrative as previous → reuse previous shot if stored
-  const impact = visionLifeNarrative(body, 400);
-  const narrKey = `${visionPathwaysKey(body)}|${impact}|${techNames(body).join(",")}`;
+  const narrKey = shotNarrativeKey(body);
   if (prev?.shotNarrativeKey === narrKey && prev?.lastShot?.happening) {
     return taggedShot(body, {
       mode: prev.lastShot.mode || heuristic.mode,
@@ -815,7 +923,7 @@ export function composeGeneratePrompt(worldCard, shot, stageId = "present") {
   const titleLine = worldCard.title ? `Mission context: ${worldCard.title}.` : "";
 
   return [
-    "Photorealistic documentary still, 16:9, single frame, no text, no logos, no watermark, no UI.",
+    "Cinematic superhero-comic still, 16:9, single frame, no text, no logos, no watermark, no UI.",
     "",
     "SETTING (this place only):",
     worldCard.visualSetting,
@@ -825,7 +933,7 @@ export function composeGeneratePrompt(worldCard, shot, stageId = "present") {
     clipText(shot.happening, 1100),
     subjects,
     "",
-    `Tone: ${tone}; ${faces} human-scale, specific local reality.`,
+    `Tone: ${tone}; ${faces} specific to this place.`,
   ]
     .filter((line) => line !== undefined && line !== null)
     .join("\n")
@@ -836,12 +944,12 @@ export function composeGeneratePrompt(worldCard, shot, stageId = "present") {
 export function composeEditPrompt(worldCard, shot) {
   const place = worldCard.place ? `Still ${worldCard.place}.` : "";
   return [
-    "Edit this image to a later moment in the same place and camera view.",
+    "Edit this image into the next cinematic moment in the same place and camera view.",
     "Keep the same terrain, sky, and landmarks.",
     place,
     `Show this change: ${clipText(shot.happening, 400)}`,
     visionPeopleMoodLine(shot.peopleMood || "neutral"),
-    "Photorealistic, no text, no logos.",
+    "Cinematic superhero-comic still, no text, no logos.",
   ]
     .filter(Boolean)
     .join(" ");
@@ -902,11 +1010,128 @@ export function visionFingerprint(body) {
     .map((g) => `${g.id || g.name || g.kind}:${g.applied ? 1 : 0}:${g.lamp || ""}`)
     .join(",");
   const mood = visionPeopleMoodOf(body);
-  return `${place}|${scene}|${stage}|${year}|${pressure}|${techIds}|${pathKey}|${life}|${givenKey}|${mood}|${beat}`;
+  const action = visionLastActionOf(body);
+  const actionKey = `${action.type}:${action.tileId}:${action.techId || ""}`;
+  return `${place}|${scene}|${stage}|${year}|${pressure}|${techIds}|${pathKey}|${life}|${givenKey}|${mood}|${beat}|${actionKey}`;
 }
 
 export function shotNarrativeKey(body) {
   const impact = visionLifeNarrative(body, 400);
   const beat = challengeBeatKey(body.challengeBeat);
-  return `${visionPathwaysKey(body)}|${impact}|${techNames(body).join(",")}|${beat}`;
+  const action = visionLastActionOf(body);
+  return `${visionPathwaysKey(body)}|${impact}|${techNames(body).join(",")}|${beat}|${action.type}:${action.techId || ""}`;
+}
+
+/**
+ * Plates minted once per quest vision session.
+ * Character is a plain-background identity plate. Location is the empty place.
+ * @param {{ place?: string, title?: string, visualSetting?: string }} worldCard
+ */
+export function composeCastPrompts(worldCard) {
+  const place = worldCard.place || "this place";
+  const setting = clipText(worldCard.visualSetting, 700);
+  const title = worldCard.title ? `Mission context: ${worldCard.title}.` : "";
+  return {
+    character: [
+      "Cinematic superhero-comic character plate, full body, plain dark background, no text, no logos.",
+      `One ordinary adult who lives in ${place}. Clothes, face, and build fit this place.`,
+      setting,
+      title,
+      "Everyday local clothes. Polished illustrated finish, like a modern superhero film still.",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    location: [
+      "Cinematic superhero-comic establishing shot, 16:9, no text, no logos.",
+      `Wide view of ${place}: terrain, sky, and settlement only.`,
+      setting,
+      title,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  };
+}
+
+/**
+ * Scene prompt that names the reference plates. Hero tag only when a hero is passed.
+ * @param {object} worldCard
+ * @param {object} shot
+ * @param {string} [stageId]
+ * @param {{ hero?: { label: string, brings: string }|null }} [refs]
+ */
+export function composeScenePrompt(worldCard, shot, stageId = "present", refs = {}) {
+  const tone = STAGE_TONE[stageId] || STAGE_TONE.present;
+  const faces = visionPeopleMoodLine(shot?.peopleMood || "neutral");
+  const hero = refs?.hero || null;
+  const titleLine = worldCard.title ? `Mission context: ${worldCard.title}.` : "";
+  const lines = [
+    "Cinematic superhero-comic still, 16:9, single frame, no text, no logos, no watermark, no UI.",
+    "",
+    "<IMAGE_0> is this place. Keep its terrain, sky, and landmarks.",
+    worldCard.visualSetting,
+    titleLine,
+    "<IMAGE_1> is the person who lives here. Keep their face and clothes.",
+  ];
+  if (hero) {
+    lines.push(
+      `<IMAGE_2> is ${hero.label}. They enter and their power causes the change. Keep their costume and face. ${hero.brings}`
+    );
+  }
+  lines.push(
+    "",
+    "WHAT IS HAPPENING IN THIS FRAME:",
+    clipText(shot?.happening, 1100),
+    "",
+    `Tone: ${tone}; ${faces} specific to this place.`
+  );
+  return lines
+    .filter((line) => line !== undefined && line !== null)
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/**
+ * Imagine request body. Reference plates use multi-image edit at 16:9.
+ * Without plates, edit uses the previous frame and generate is text-only.
+ * @param {{ prompt: string, images?: string[], edit?: boolean, prevDataUrl?: string|null, aspectRatio?: string }} opts
+ */
+export function visionImageRequest(opts) {
+  const prompt = String(opts?.prompt || "");
+  const images = Array.isArray(opts?.images) ? opts.images.filter(Boolean) : [];
+  if (images.length) {
+    return {
+      path: "/images/edits",
+      aspectRatio: "16:9",
+      payload: {
+        prompt,
+        images: images.map((url) => ({ url, type: "image_url" })),
+        response_format: "b64_json",
+        aspect_ratio: "16:9",
+      },
+    };
+  }
+  const aspectRatio = opts?.aspectRatio || "16:9";
+  if (opts?.edit && opts?.prevDataUrl) {
+    return {
+      path: "/images/edits",
+      aspectRatio,
+      payload: {
+        prompt,
+        image: { url: opts.prevDataUrl, type: "image_url" },
+        response_format: "b64_json",
+        aspect_ratio: aspectRatio,
+      },
+    };
+  }
+  return {
+    path: "/images/generations",
+    aspectRatio,
+    payload: {
+      prompt,
+      n: 1,
+      response_format: "b64_json",
+      aspect_ratio: aspectRatio,
+    },
+  };
 }

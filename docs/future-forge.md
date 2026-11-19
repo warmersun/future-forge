@@ -234,7 +234,7 @@ Optional live web and X search (`FF_AI_SEARCH=1` or `--ai-search`) applies only 
 
 ### Future vision, briefing, and Read out loud
 
-**Future vision** is an Imagine image of the place as the pathway takes hold. Stages run from today, to an early build, to scaling, to a new normal, as more technologies join the stack (`VISION_STAGES` in `js/data.js`). `POST /api/vision` generates those frames. The Quest’s scene line locks the locale.
+**Future vision** is an Imagine image of the place as the pathway takes hold. Stages run from today, to an early build, to scaling, to a new normal, as more technologies join the stack (`VISION_STAGES` in `js/data.js`). `POST /api/vision` generates those frames. The Quest’s scene line locks the locale. Optional `visionReferences` supplies the character and location plates. A plate that is missing is minted the first time Future Vision generates a still.
 
 **Briefing** walks `mission.briefMd` one paragraph per card (at most eight) before the full brief. Optional `briefBeats` tighten the captions or ship stills.
 

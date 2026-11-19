@@ -20,7 +20,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 /** Browser-safe normalization shared by catalog selection, starts, and Continue. */
 import { GAME, allTechIds, globalById, packRulesForMission } from "./data.js";
 import { CAPS, normalizeMissionPressure, parseResourceOverrides } from "./quest-tile.js";
-import { briefMdFromLivedStory, normalizeBriefBeats } from "./brief-beats.js";
+import { briefMdFromLivedStory, normalizeBriefBeats, normalizeVisionReferences } from "./brief-beats.js";
 import { parseCompanion } from "./companion.js";
 import { parseQuestRules } from "./sim/policy-rules.js";
 import { SCENE_CHAR_CAP } from "./scene-prose.js";
@@ -182,6 +182,8 @@ export function normalizeMission(raw, globalId) {
     const n = normalizeBriefBeats(raw.briefBeats);
     if (n.ok) briefBeatsSafe = n.beats;
   }
+  const visionRefsParsed = normalizeVisionReferences(raw.visionReferences);
+  const visionReferencesSafe = visionRefsParsed.ok ? visionRefsParsed.value : null;
   const suggestedSafe = suggested.length ? suggested : ["ai", "iot", "networks"];
   const suggestedWhy = sanitizeSuggestedWhy(raw.suggestedWhy, new Set(suggestedSafe));
 
@@ -235,6 +237,7 @@ export function normalizeMission(raw, globalId) {
       ? { summary: String(raw.summary).trim().slice(0, CAPS.summary) }
       : {}),
     ...(briefBeatsSafe ? { briefBeats: briefBeatsSafe } : {}),
+    ...(visionReferencesSafe ? { visionReferences: visionReferencesSafe } : {}),
     ...(() => {
       const rawRules =
         Array.isArray(raw.rules) && raw.rules.length

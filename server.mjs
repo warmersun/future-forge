@@ -42,6 +42,7 @@ import {
   visionHowNarrative,
   visionLifeNarrative,
 } from "./js/vision-prompt.mjs";
+import { ensureVisionCast, prepareSceneImage, resolveVisionReferencePlates } from "./js/server/vision-images.mjs";
 import { RoomManager } from "./js/rooms/room-manager.mjs";
 import {
   usageTrackerFromEnv,
@@ -1785,10 +1786,16 @@ function extractImageDataUrl(data) {
   return null;
 }
 
-async function runVisionImage(mode, prompt, prevDataUrl) {
+async function runVisionImage(mode, prompt, prevDataUrl, extra) {
   const t0 = Date.now();
   let data;
-  if (mode === "edit") {
+  const aspect = extra?.aspectRatio || "16:9";
+  if (extra?.request?.path && extra.request.payload) {
+    data = await xaiImageRequest(extra.request.path, {
+      model: IMAGE_MODEL,
+      ...extra.request.payload,
+    });
+  } else if (mode === "edit") {
     data = await xaiImageRequest("/images/edits", {
       model: IMAGE_MODEL,
       prompt,
@@ -1797,7 +1804,7 @@ async function runVisionImage(mode, prompt, prevDataUrl) {
         type: "image_url",
       },
       response_format: "b64_json",
-      aspect_ratio: "16:9",
+      aspect_ratio: aspect,
     });
   } else {
     data = await xaiImageRequest("/images/generations", {
@@ -1805,7 +1812,7 @@ async function runVisionImage(mode, prompt, prevDataUrl) {
       prompt,
       n: 1,
       response_format: "b64_json",
-      aspect_ratio: "16:9",
+      aspect_ratio: aspect,
     });
   }
   // Attach latency for callers that want to log without a second timer
@@ -1867,6 +1874,42 @@ function ensureWorldCard(sessionId, body, prev) {
   return fresh;
 }
 
+function storeVisionCast(sessionId, worldCard, cast) {
+  const cur = visionSessions.get(sessionId) || {};
+  visionSessions.set(sessionId, {
+    ...cur,
+    cast,
+    worldCard: cur.worldCard || worldCard,
+    updatedAt: Date.now(),
+  });
+}
+
+/**
+ * Install shipped plates, and mint any plate this request is allowed to generate.
+ * `plates` counts Imagine calls this request actually made.
+ * @param {string} sessionId
+ * @param {object} worldCard
+ * @param {object} [body]
+ * @param {{ allowGenerate?: boolean }} [opts]
+ */
+async function loadVisionCast(sessionId, worldCard, body, opts = {}) {
+  let plates = 0;
+  const supplied = await resolveVisionReferencePlates(body?.visionReferences);
+  const cast = await ensureVisionCast(
+    sessionId,
+    worldCard,
+    () => visionSessions.get(sessionId)?.cast || null,
+    (next) => storeVisionCast(sessionId, worldCard, next),
+    async (prompt, aspectRatio) => {
+      plates += 1;
+      const data = await runVisionImage("generate", prompt, null, { aspectRatio });
+      return normalizeVisionDataUrl(data);
+    },
+    { supplied, allowGenerate: opts.allowGenerate !== false }
+  );
+  return { cast, plates };
+}
+
 async function handleVision(body) {
   const sessionId = String(body.sessionId || "default").slice(0, 120);
   const clientSessionId = clientSessionFromBody(body);
@@ -1880,6 +1923,20 @@ async function handleVision(body) {
 
   // Multiplayer followers: return whatever the owner last generated for this session
   if (followOnly) {
+    if (body.castOnly) {
+      return {
+        ok: true,
+        cached: true,
+        followOnly: true,
+        castOnly: true,
+        castReady: false,
+        imageUrl: null,
+        stageId,
+        model: IMAGE_MODEL,
+        reason: "Shared vision cast stays with the owner",
+        place: prev?.worldCard?.place || null,
+      };
+    }
     recordAiImage({
       kind: "vision",
       mode: prev?.mode || "generate",
@@ -1921,6 +1978,53 @@ async function handleVision(body) {
       reason: "Waiting for shared vision",
       place: null,
     };
+  }
+
+  if (body.castOnly) {
+    const worldCard = ensureWorldCard(sessionId, body, prev);
+    try {
+      const loaded = await loadVisionCast(sessionId, worldCard, body, { allowGenerate: false });
+      if (loaded.plates > 0) {
+        recordAiImage({
+          kind: "vision",
+          mode: "generate",
+          source: "live",
+          imageCount: loaded.plates,
+          ok: true,
+          sessionId: clientSessionId,
+        });
+      }
+      return {
+        ok: true,
+        cached: true,
+        castOnly: true,
+        castReady: Boolean(loaded.cast?.character && loaded.cast?.location),
+        imageUrl: null,
+        stageId,
+        model: IMAGE_MODEL,
+        place: worldCard.place || null,
+      };
+    } catch (e) {
+      console.warn("[vision] cast failed:", e.message || e);
+      recordAiImage({
+        kind: "vision",
+        mode: "generate",
+        source: "error",
+        imageCount: 0,
+        ok: false,
+        sessionId: clientSessionId,
+      });
+      return {
+        ok: true,
+        cached: true,
+        castOnly: true,
+        castReady: false,
+        imageUrl: null,
+        stageId,
+        model: IMAGE_MODEL,
+        place: worldCard.place || null,
+      };
+    }
   }
 
   if (!force && prev?.fingerprint === fingerprint && prev.dataUrl) {
@@ -1981,10 +2085,27 @@ async function handleVision(body) {
     shot = { ...shot, mode: "generate", continuity: "new-shot", reason: "No prior frame to edit" };
   }
 
-  let prompt =
-    mode === "edit"
-      ? composeEditPrompt(worldCard, shot)
-      : composeGeneratePrompt(worldCard, shot, stageId);
+  let cast = null;
+  let castPlates = 0;
+  try {
+    const loaded = await loadVisionCast(sessionId, worldCard, body);
+    cast = loaded.cast;
+    castPlates = loaded.plates;
+  } catch (e) {
+    console.warn("[vision] cast unavailable:", e.message || e);
+    cast = null;
+  }
+
+  const prepared = prepareSceneImage({
+    worldCard,
+    shot,
+    stageId,
+    cast,
+    mode,
+    prevDataUrl: prev?.dataUrl || null,
+  });
+  let prompt = prepared.prompt;
+  const sceneRequest = prepared.request;
 
   const clean = assertCleanImagePrompt(prompt, { worldScene: worldCard.scene });
   if (!clean.ok) {
@@ -1992,14 +2113,14 @@ async function handleVision(body) {
   }
 
   let data;
-  let usedMode = mode;
-  let continuity = shot.continuity || (mode === "edit" ? "same-frame" : "new-shot");
+  let usedMode = sceneRequest.path === "/images/edits" ? "edit" : "generate";
+  let continuity = shot.continuity || (usedMode === "edit" ? "same-frame" : "new-shot");
   let reason = shot.reason || "";
 
   try {
-    data = await runVisionImage(mode, prompt, prev?.dataUrl);
+    data = await runVisionImage(usedMode, prompt, prev?.dataUrl, { request: sceneRequest });
   } catch (e) {
-    if (mode === "edit") {
+    if (prepared.usedReferences || mode === "edit") {
       console.warn("[vision] edit failed, falling back to generate:", e.message || e);
       usedMode = "generate";
       continuity = "new-shot";
@@ -2042,7 +2163,7 @@ async function handleVision(body) {
     kind: "vision",
     mode: usedMode,
     source: "live",
-    imageCount: 1,
+    imageCount: 1 + castPlates,
     usage: data?.usage || null,
     latencyMs: data?._latencyMs ?? null,
     ok: true,
@@ -2050,6 +2171,7 @@ async function handleVision(body) {
   });
 
   const imageUrl = await normalizeVisionDataUrl(data);
+  const keptCast = visionSessions.get(sessionId)?.cast || cast || null;
 
   visionSessions.set(sessionId, {
     fingerprint,
@@ -2059,6 +2181,7 @@ async function handleVision(body) {
     mode: usedMode,
     continuity,
     worldCard,
+    cast: keptCast,
     lastShot: {
       mode: usedMode,
       continuity,

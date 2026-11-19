@@ -60,6 +60,22 @@ function briefingOwnsImage(img) {
   return Boolean(img?.closest?.(".vision-canvas-wrap.is-briefing"));
 }
 
+/**
+ * Authored Future Vision plates. Empty when the quest ships neither still.
+ * @param {object|null|undefined} state
+ * @returns {{ characterUrl?: string, locationUrl?: string }|undefined}
+ */
+function visionReferencesPayload(state) {
+  const refs = state?.visionReferences;
+  if (!refs || typeof refs !== "object") return undefined;
+  const out = {};
+  const characterUrl = String(refs.characterUrl || "").trim().slice(0, 400);
+  const locationUrl = String(refs.locationUrl || "").trim().slice(0, 400);
+  if (characterUrl) out.characterUrl = characterUrl;
+  if (locationUrl) out.locationUrl = locationUrl;
+  return out.characterUrl || out.locationUrl ? out : undefined;
+}
+
 /** data:image… → blob: URL so Chrome doesn't re-decode multi‑MB base64 on every img.src set */
 export function dataUrlToBlobUrl(dataUrl) {
   const m = /^data:([^;,]+)?(;base64)?,(.*)$/i.exec(dataUrl);
@@ -201,6 +217,7 @@ export class VisionRenderer {
       `v-${Date.now()}`;
     this.lastFingerprint = "";
     this.currentUrl = "";
+    this._castKey = "";
     const clearImg = (img) => {
       if (!img || briefingOwnsImage(img)) return;
       img.removeAttribute("src");
@@ -360,6 +377,74 @@ export class VisionRenderer {
     return null;
   }
 
+  /**
+   * Install shipped character and location plates without touching the canvas.
+   * A quest with a missing plate waits for the first scene image.
+   * A failed warmup clears the key so the next workshop paint can try again.
+   * @param {object} state
+   */
+  warmupCast(state) {
+    if (!state?.challenge || state.followOnly) return;
+    const visionReferences = visionReferencesPayload(state);
+    if (!visionReferences?.characterUrl || !visionReferences?.locationUrl) return;
+    const key = `${this.sessionId}|${state.challenge.id || ""}|${state.place || ""}`;
+    if (this._castKey === key) return;
+    this._castKey = key;
+    const payload = {
+      castOnly: true,
+      sessionId: this.sessionId,
+      clientSessionId: getClientSessionId(),
+      year: state.year || null,
+      place: state.place || "",
+      pressure: state.pressure || null,
+      visionReferences,
+      challenge: {
+        id: state.challenge.id,
+        title: state.challenge.title,
+        problem: state.challenge.problem || state.challenge.scene || "",
+        scene: state.challenge.scene || state.challenge.problem || "",
+        place: state.challenge.place || state.place || "",
+        visionTheme: state.challenge.visionTheme,
+      },
+      stage: {
+        id: state.stageId || "present",
+        name: state.stage?.name || state.stageId || "Present",
+      },
+      techs: [],
+      pathways: [],
+      peopleMood: state.peopleMood || "neutral",
+    };
+    const t0 = Date.now();
+    apiFetch("/api/vision", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        const ready = Boolean(res.ok && data?.ok && data?.castReady);
+        if (!ready && this._castKey === key) this._castKey = "";
+        if (this.onTrace) {
+          try {
+            this.onTrace({
+              kind: "image",
+              mode: "vision",
+              sent: payload,
+              received: data,
+              ms: Date.now() - t0,
+              ok: Boolean(res.ok && data?.ok),
+              source: ready ? (data?.cached ? "cache" : "live") : "error",
+            });
+          } catch {
+            /* inspect must not break vision */
+          }
+        }
+      })
+      .catch(() => {
+        if (this._castKey === key) this._castKey = "";
+      });
+  }
+
   async flush() {
     clearTimeout(this.timer);
     clearTimeout(this._queueFlush);
@@ -468,6 +553,7 @@ export class VisionRenderer {
     const t0 = Date.now();
     let data = null;
     let payload = null;
+    const visionReferences = visionReferencesPayload(state);
     const emitTrace = (extra = {}) => {
       if (!this.onTrace) return;
       try {
@@ -544,6 +630,8 @@ export class VisionRenderer {
             }))
           : [],
         peopleMood: state.peopleMood || "neutral",
+        lastAction: state.lastAction || { type: "open", tileId: "", techId: null },
+        ...(visionReferences ? { visionReferences } : {}),
       };
 
       const res = await apiFetch("/api/vision", {
@@ -616,7 +704,11 @@ export class VisionRenderer {
         let modeLabel = "Generated with Imagine";
         if (data.cached || followOnly) {
           modeLabel = followOnly ? "Shared vision" : "Cached vision";
-        } else if (data.mode === "edit" || data.continuity === "same-frame") {
+        } else if (
+          (data.mode === "edit" || data.continuity === "same-frame") &&
+          data.continuity !== "new-shot" &&
+          data.continuity !== "new-scene"
+        ) {
           modeLabel = underChallenge ? "Challenge evolved in place" : "Evolved in place";
         } else if (
           data.continuity === "new-shot" ||

@@ -47,11 +47,13 @@ test("engine-served stills stay on the game origin unless the release actually s
 });
 
 test("nested beat/module fields and tutor markdown project with no source mutation", () => {
-  const source = { coverImageUrl: "./assets/chart.png", overviewMd: "[Lesson](lessons/start.html#intro)", mission: { briefBeats: [{ imageUrl: "assets/chart.png" }], aiTutorContext: "[Guide](lessons/start.html)", grounding: "[External](https://example.com/source)" } };
+  const source = { coverImageUrl: "./assets/chart.png", overviewMd: "[Lesson](lessons/start.html#intro)", mission: { briefBeats: [{ imageUrl: "assets/chart.png" }], visionReferences: { characterUrl: "assets/chart.png", locationUrl: "https://example.com/place.png" }, aiTutorContext: "[Guide](lessons/start.html)", grounding: "[External](https://example.com/source)" } };
   const before = structuredClone(source);
   const result = projectPackageDelivery(source, options);
   assert.equal(result.record.coverImageUrl, `${result.deliveryRoot}assets/chart.png`);
   assert.equal(result.record.mission.briefBeats[0].imageUrl, result.record.coverImageUrl);
+  assert.equal(result.record.mission.visionReferences.characterUrl, result.record.coverImageUrl);
+  assert.equal(result.record.mission.visionReferences.locationUrl, "https://example.com/place.png");
   assert.ok(result.record.overviewMd.includes(`${result.deliveryRoot}lessons/start.html#intro`));
   assert.ok(result.record.mission.aiTutorContext.includes(`${result.deliveryRoot}lessons/start.html`));
   assert.equal(result.record.mission.grounding, source.mission.grounding);

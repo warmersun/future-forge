@@ -28,7 +28,7 @@ import {
   TREND_CAPS,
   validateCapabilityTrend,
 } from "./capability-trend.js";
-import { isSafeBriefImageUrl, normalizeBriefBeats, briefMdShapeIssues } from "./brief-beats.js";
+import { isSafeBriefImageUrl, normalizeBriefBeats, briefMdShapeIssues, normalizeVisionReferences } from "./brief-beats.js";
 import { SUMMARY_CAP } from "./quest-summary.js";
 import { parseQuestRules } from "./sim/policy-rules.js";
 import { parseCompanion } from "./companion.js";
@@ -1068,6 +1068,18 @@ export function validateQuestTile(tile, opts = {}) {
     }
   }
 
+  const visionRefsRaw = pickTileOrMissionField(tile, missionIn, "visionReferences");
+  /** @type {{ characterUrl?: string, locationUrl?: string }|null} */
+  let visionReferences = null;
+  if (visionRefsRaw !== undefined && visionRefsRaw !== null) {
+    const refsParsed = normalizeVisionReferences(visionRefsRaw);
+    if (!refsParsed.ok) {
+      details.push(...(refsParsed.details || ["visionReferences_invalid"]));
+    } else {
+      visionReferences = refsParsed.value;
+    }
+  }
+
   /** @type {string|null} */
   let sponsorName = null;
   /** @type {string|null} */
@@ -1211,6 +1223,7 @@ export function validateQuestTile(tile, opts = {}) {
   if (briefBeats?.length) {
     mission.briefBeats = briefBeats;
   }
+  if (visionReferences) mission.visionReferences = visionReferences;
   if (titleImageUrl) mission.titleImageUrl = titleImageUrl;
   if (companion) mission.companion = companion;
   if (predictionBankId) mission.predictionBankId = predictionBankId;
@@ -1253,6 +1266,7 @@ export function validateQuestTile(tile, opts = {}) {
   if (briefBeats?.length) {
     normalizedTile.briefBeats = briefBeats;
   }
+  if (visionReferences) normalizedTile.visionReferences = visionReferences;
   if (titleImageUrl) normalizedTile.titleImageUrl = titleImageUrl;
   if (companion) normalizedTile.companion = companion;
   if (mission.predictionBankId) normalizedTile.predictionBankId = mission.predictionBankId;

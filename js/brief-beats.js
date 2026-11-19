@@ -338,6 +338,36 @@ export function isSafeBriefImageUrl(url) {
 }
 
 /**
+ * Future Vision plates shipped with the quest. Both URLs are optional.
+ * An empty or absent object means Imagine mints that plate.
+ * An unsafe URL fails closed. Unknown keys are ignored.
+ * @param {unknown} raw
+ * @returns {{ ok: true, value: { characterUrl?: string, locationUrl?: string }|null } | { ok: false, details: string[] }}
+ */
+export function normalizeVisionReferences(raw) {
+  if (raw == null) return { ok: true, value: null };
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, details: ["visionReferences_not_object"] };
+  }
+  /** @type {{ characterUrl?: string, locationUrl?: string }} */
+  const out = {};
+  for (const key of ["characterUrl", "locationUrl"]) {
+    if (raw[key] == null || raw[key] === "") continue;
+    if (typeof raw[key] !== "string") {
+      return { ok: false, details: [`visionReferences_bad_${key}`] };
+    }
+    const url = raw[key].trim();
+    if (!url) continue;
+    if (!isSafeBriefImageUrl(url)) {
+      return { ok: false, details: [`visionReferences_bad_${key}`] };
+    }
+    out[key] = url;
+  }
+  if (!out.characterUrl && !out.locationUrl) return { ok: true, value: null };
+  return { ok: true, value: out };
+}
+
+/**
  * Fallback still for a beat (no Imagine). Problem postcards live in assets/problems/.
  * @param {{ role?: string, imageUrl?: string }|null|undefined} beat
  * @param {{ globalId?: string }} [opts]

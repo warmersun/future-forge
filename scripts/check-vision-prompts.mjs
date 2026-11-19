@@ -27,7 +27,11 @@ import {
   decideShot,
   composeGeneratePrompt,
   composeEditPrompt,
+  composeCastPrompts,
+  composeScenePrompt,
   assertCleanImagePrompt,
+  visionHeroOf,
+  visionImageRequest,
 } from "../js/vision-prompt.mjs";
 
 let failed = 0;
@@ -189,6 +193,30 @@ const dirty = assertCleanImagePrompt(
   "A desert. FORBIDDEN: marina, harbor. Never show Cape Canaveral."
 );
 assert(!dirty.ok, "detector flags pollution");
+
+const heroBody = {
+  ...atacamaBody,
+  lastAction: { type: "place-invent", tileId: "inv-robots", techId: "robots" },
+};
+const hero = visionHeroOf(heroBody);
+assert(hero && hero.id === "automator", "robots placement selects Automator");
+assert(hero.file === "automator.png", "Automator file is automator.png");
+const heroShot = decideShot(heroBody, { dataUrl: "data:image/jpeg;base64,xx" }, world1);
+assert(/Automator/.test(heroShot.happening), "happening names Automator");
+assert(/[Rr]obots/.test(heroShot.happening), "happening names robots");
+const heroScene = composeScenePrompt(world1, heroShot, "prototype", { hero });
+assert(/<IMAGE_0>/.test(heroScene) && /<IMAGE_1>/.test(heroScene), "scene names place and person");
+assert(/<IMAGE_2>/.test(heroScene), "scene names the hero");
+const heroClean = assertCleanImagePrompt(heroScene, { worldScene: world1.scene });
+assert(heroClean.ok, `hero scene clean: ${heroClean.issues.join("; ") || "ok"}`);
+const heroReq = visionImageRequest({ prompt: heroScene, images: ["a", "b", "c"] });
+assert(heroReq.path === "/images/edits" && heroReq.payload.aspect_ratio === "16:9", "hero still is a 16:9 edit");
+const castPrompts = composeCastPrompts(world1);
+assert(!/documentary|photorealistic/i.test(genPrompt), "generate prompt leaves the news-photo lead");
+assert(!/documentary|photorealistic/i.test(castPrompts.character + castPrompts.location), "cast prompts stay comic");
+assert(!/Not a costumed|No people/i.test(castPrompts.character + castPrompts.location), "cast prompts stay positive");
+assert(visionHeroOf({ ...heroBody, lastAction: { type: "place-invent", techId: null } }) == null, "blank tech has no hero");
+assert(visionHeroOf({ ...heroBody, lastAction: { type: "story" } }) == null, "story edit has no hero");
 
 if (failed) {
   console.error(`\n${failed} check(s) failed`);

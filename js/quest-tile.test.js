@@ -873,6 +873,64 @@ describe("quest-tile", () => {
     assert.ok(bad.details.includes("titleImageUrl_unsafe"));
   });
 
+  it("copies safe vision plates and rejects an unsafe one", () => {
+    const plain = validateQuestTile(baseTile(), { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(plain.ok, true);
+    assert.equal(plain.mission.visionReferences, undefined);
+
+    const ok = validateQuestTile(
+      baseTile({
+        visionReferences: {
+          characterUrl: "assets/quests/companion-moonshots-304/title.jpg",
+          locationUrl: "https://example.com/place.png",
+          note: "ignored",
+        },
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(ok.ok, true);
+    assert.deepEqual(ok.mission.visionReferences, {
+      characterUrl: "assets/quests/companion-moonshots-304/title.jpg",
+      locationUrl: "https://example.com/place.png",
+    });
+    assert.deepEqual(ok.tile.visionReferences, ok.mission.visionReferences);
+
+    const underMission = validateQuestTile(
+      baseTile({
+        mission: {
+          ...baseTile().mission,
+          visionReferences: { locationUrl: "assets/quests/spotlight-gene-seq/place-1.jpg" },
+        },
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(underMission.ok, true);
+    assert.deepEqual(underMission.mission.visionReferences, {
+      locationUrl: "assets/quests/spotlight-gene-seq/place-1.jpg",
+    });
+
+    const empty = validateQuestTile(baseTile({ visionReferences: {} }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(empty.ok, true);
+    assert.equal(empty.mission.visionReferences, undefined);
+
+    const bad = validateQuestTile(
+      baseTile({ visionReferences: { characterUrl: "javascript:alert(1)" } }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(bad.ok, false);
+    assert.ok(bad.details.includes("visionReferences_bad_characterUrl"));
+
+    const traversal = validateQuestTile(
+      baseTile({ visionReferences: { locationUrl: "assets/../secret.png" } }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(traversal.ok, false);
+    assert.ok(traversal.details.includes("visionReferences_bad_locationUrl"));
+  });
+
   it("rejects invalid briefBeats (too few)", () => {
     const t = baseTile({
       briefBeats: [

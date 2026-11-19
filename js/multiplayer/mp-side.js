@@ -22,13 +22,38 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { VISION_STAGES, techById } from "../data.js";
-import { VisionRenderer } from "../vision.js";
+import { VisionRenderer } from "../vision.js?v=vision-refs-1";
+import { mediaRootsFromRemoteUrl, resolvePackageMediaUrl } from "../lesson-media.js?v=voice-18";
 import { bindVisionSplit } from "../side-split.js";
 import { CoInventor } from "../coinventor.js";
 import { visionStageIdForDeployStage } from "../sim/deploy.js";
 import { visionPathwaysFromBoard, visionGivensFromBoard, visionPeopleMood } from "../hex/evaluate.js?v=plain-1";
+import {
+  bindVisionActionKey,
+  noteVisionAction,
+  visionAction,
+} from "../vision-action.js?v=vision-hero-1";
 import { briefingOwnsRoot } from "../briefing-ui.js";
 import { spotlightAdvanceForAi } from "../tech-why.js";
+
+/**
+ * Plates the quest already ships. Package paths become absolute when the mission has a remote URL.
+ * @param {object|null|undefined} mission
+ */
+function visionReferencesFromMission(mission) {
+  const refs = mission?.visionReferences;
+  if (!refs || typeof refs !== "object") return undefined;
+  const remote = String(mission.remoteUrl || "").trim();
+  const roots = remote ? mediaRootsFromRemoteUrl(remote) : null;
+  const out = {};
+  for (const key of ["characterUrl", "locationUrl"]) {
+    const raw = String(refs[key] || "").trim();
+    if (!raw) continue;
+    const resolved = roots ? resolvePackageMediaUrl(raw, roots) : raw;
+    if (resolved) out[key] = resolved;
+  }
+  return out.characterUrl || out.locationUrl ? out : undefined;
+}
 
 /**
  * @param {string} deployStage — none | pilot_ok | scaled | pilot | scale
@@ -287,6 +312,8 @@ export class MpSidePanel {
       this.opts.visionSessionId?.(invent) ||
       null;
     if (sessionId) this.vision.setSessionId(sessionId);
+    bindVisionActionKey(sessionId || this.vision.sessionId || "local");
+    if (opts.force && !opts.followOnly) noteVisionAction({ type: "refresh" });
 
     const followOnly = Boolean(opts.followOnly) && !opts.force;
 
@@ -305,6 +332,8 @@ export class MpSidePanel {
       pathways,
       givens,
       peopleMood: invent?.hexBoard ? visionPeopleMood(invent.hexBoard) : "neutral",
+      lastAction: visionAction(),
+      visionReferences: visionReferencesFromMission(mission),
       year: inventYear,
       place: mission.place || "",
       pressure: place.pressure || {},

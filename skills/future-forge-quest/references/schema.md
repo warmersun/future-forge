@@ -31,6 +31,7 @@ Write for the surface, not the file. These are the real clips (`js/game.js`, `js
 | `resources` | **Start ·** chip; starting wallet | Economy lab | — |
 | `trends` / `spotlightTrends` | Look Ahead charts | — | 8 series |
 | `companion` | Stage before play, catalog From-line, workshop premise | `sourceConstraint` beside `grounding` (≤500); claim and grants in `sourceInquiry` | pair table in `companion.md` |
+| `visionReferences` | — | Future Vision character and location plates, when the quest ships them | — |
 
 **Stored, not shown or read:** `research` (incl. `showToPlayer`), `visionTheme`, `placement.activeFrom` / `activeTo` / `priority`, `tags`, `author`, `license`, `version`. `research` is citation metadata for humans reading the file. Capability truth the AI must respect goes in `grounding`.
 
@@ -293,6 +294,26 @@ Each beat:
 
 `briefMd` remains required. Captions must not contradict the essay.
 
+## Optional `visionReferences` (Future Vision plates)
+
+Omit when unused. These are Imagine reference plates for the local person and the place. They are not briefing cards. Put walk stills in `briefBeats`.
+
+When a URL is present and loads, Future Vision uses that plate. When a plate is absent, Future Vision mints it the first time it generates a still.
+
+| Field | Notes |
+|-------|--------|
+| `characterUrl` | Optional `https://…` or `assets/…jpg\|png\|webp`. The local person |
+| `locationUrl` | Optional. Same URL rules. The wide shot of the place |
+
+Tile top-level or under `mission`. An invalid object or unsafe URL **fails** validation. An empty object is dropped. Unknown keys are ignored. One plate may be shipped without the other.
+
+```json
+"visionReferences": {
+  "characterUrl": "assets/quests/<slug>/character.png",
+  "locationUrl": "assets/quests/<slug>/location.jpg"
+}
+```
+
 ## Optional sponsor attribution (display only)
 
 | Field | Type | Notes |
@@ -326,7 +347,7 @@ Selection chip: **Sponsored · {name}**.
 
 ## Field placement
 
-Optional fields (`resources`, `rules`, `grounding`, learning fields, sponsor fields, `briefBeats`, `titleImageUrl`) may sit at **tile top level** or under **`mission`**. Validation accepts both; runtime copies onto the mission.
+Optional fields (`resources`, `rules`, `grounding`, learning fields, sponsor fields, `briefBeats`, `visionReferences`, `titleImageUrl`) may sit at **tile top level** or under **`mission`**. Validation accepts both; runtime copies onto the mission.
 
 ## Craft lint (warnings; `--strict` fails)
 
@@ -354,6 +375,7 @@ Ship with zero warnings, or name each remaining warning and why in the hand-off.
 - Non-positive-integer `lesson` / `totalLessons`  
 - `kind: "quest-pack"` (invalid kind; a multi-lesson path is `kind: "module"` inside one `.ffquest`, not a second packaging format)
 - `briefBeats` that is not a 3–8 array of valid beat objects (omit the key instead)
+- `visionReferences` that is not an object, or a plate URL that is not `https://…` or `assets/…jpg|png|webp` (omit the key instead)
 
 ## Optional `kind: "module"` (path wrapper)
 

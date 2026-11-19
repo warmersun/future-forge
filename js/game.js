@@ -43,7 +43,13 @@ import {
   techForAi,
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
-import { VisionRenderer } from "./vision.js?v=usage-2";
+import { VisionRenderer } from "./vision.js?v=vision-refs-1";
+import {
+  bindVisionActionKey,
+  noteVisionAction,
+  resetVisionAction,
+  visionAction,
+} from "./vision-action.js?v=vision-hero-1";
 import { puzzleSnapshot, openPuzzleShare, puzzleHasPendingEvaluation } from "./puzzle-share.js";
 import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
@@ -56,7 +62,7 @@ import {
   leanCoInventContext as buildLeanCoInventContext,
   inventDraftFieldsForContext,
 } from "./lean-coinvent-context.js";
-import { bindPackageMediaUrls, mediaRootsFromRemoteUrl } from "./lesson-media.js?v=voice-18";
+import { bindPackageMediaUrls, mediaRootsFromRemoteUrl, resolvePackageMediaUrl } from "./lesson-media.js?v=voice-18";
 import {
   pushAiTrace,
   listAiTrace,
@@ -168,7 +174,7 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=plain-2";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=vision-hero-1";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
 import {
   boardHolds,
@@ -355,7 +361,7 @@ import {
   stopReadAloud,
   setReadAloudToast,
 } from "./read-aloud.js";
-import { initFriendsUi } from "./multiplayer/ui.js?v=stream-2";
+import { initFriendsUi } from "./multiplayer/ui.js?v=vision-refs-1";
 import { createHotseatBridge } from "./multiplayer/hotseat-bridge.js?v=hotseat-summon-2";
 import { createRoomBridge } from "./multiplayer/room-bridge.js?v=crisis-role-3";
 import {
@@ -761,6 +767,24 @@ function remoteMediaUrlForMission() {
     return String(state.remoteQuestsUrl);
   }
   return "";
+}
+
+/**
+ * Quest-shipped Future Vision plates, with package paths made absolute.
+ * A missing plate stays off the object so the first scene image can mint it.
+ */
+function visionReferencesForRequest() {
+  const refs = state.mission?.visionReferences;
+  if (!refs || typeof refs !== "object") return null;
+  const roots = contentMediaRoots() || {};
+  const out = {};
+  for (const key of ["characterUrl", "locationUrl"]) {
+    const raw = String(refs[key] || "").trim();
+    if (!raw) continue;
+    const resolved = resolvePackageMediaUrl(raw, roots);
+    if (resolved) out[key] = resolved;
+  }
+  return out.characterUrl || out.locationUrl ? out : null;
 }
 
 function contentMediaRoots() {
@@ -1542,7 +1566,7 @@ function flushStoryEdits(key = storyEditKey()) {
   }
   if (edit.vision) {
     edit.vision = false;
-    updateVision({ debounceMs: 200 });
+    updateVision({ debounceMs: 200, action: "story" });
   }
 }
 /** Last settled traffic-light color (red|yellow|green) for the panel circle */
@@ -1652,13 +1676,17 @@ function mpHydrateAndRender(opts = {}) {
     // Vision: solo/hotseat debounced. Rooms: only via scheduleRoomVisionRefresh
     // on real invent changes (not every hydrate — that cancelled timers forever).
     if (!roomBridge.isRoom()) {
+      const visionOpts = {
+        debounceMs: opts.visionImmediate ? 200 : 600,
+      };
+      if (state.year !== yearBefore) visionOpts.action = "year";
       if (opts.visionImmediate) {
-        updateVision({ debounceMs: 200 });
+        updateVision(visionOpts);
       } else {
         clearTimeout(mpVisionRefreshTimer);
         mpVisionRefreshTimer = setTimeout(() => {
           try {
-            updateVision({ debounceMs: 600 });
+            updateVision(visionOpts);
           } catch (e) {
             console.warn("[vision] deferred refresh", e);
           }
@@ -2021,6 +2049,7 @@ function ensureHexWorkshop() {
     onCreateIdle: () => refreshCoachMarks(),
     /** Scaffold blanks or free text changed: the next-step card may advance to Mint. */
     onHowInput: () => refreshCoachMarks(),
+    noteVisionAction: (next) => noteVisionAction(next),
     onBoardPainted: () => {
       renderSelectedChips();
       renderFeasibility();
@@ -2946,6 +2975,8 @@ function renderMpChrome() {
 function applyWrapYearPressureToHex() {
   if (!isHexInventUi()) return;
   try {
+    bindCurrentVisionActionKey();
+    noteVisionAction({ type: "year" });
     const rise = state.mission?.pressureRise || {};
     const base = state.hexBoard?.pressureBase;
     const placeP = state.pressure;
@@ -3037,7 +3068,11 @@ function enterHotseatPlay(names, mission, global) {
   state.scrutiny = null;
   state.coInventor?.reset?.(false);
   resetStoryEdits();
-  if (state.vision) state.vision.newSession();
+  if (state.vision) {
+    state.vision.newSession();
+    bindVisionActionKey(state.vision.sessionId);
+  }
+  resetVisionAction();
   state.tutorSessionActive = false;
   resetPendingSpend();
   // Drop leftover solo/prior-quest tiles so preferIncoming cannot keep them.
@@ -4726,6 +4761,11 @@ function showScreen(id) {
     requestAnimationFrame(() => {
       ensureVision();
       seedLearningVisionStill();
+      try {
+        warmupVisionCast();
+      } catch {
+        /* cast warmup is optional */
+      }
       if (roomBridge.isRoom()) scheduleRoomVisionRefresh({ immediate: true });
       else updateVision({ immediate: true });
     });
@@ -7058,6 +7098,9 @@ function catalogInspectTile(entry) {
   if (Array.isArray(m.briefBeats) && m.briefBeats.length) {
     out.briefBeats = m.briefBeats;
   }
+  if (m.visionReferences && typeof m.visionReferences === "object") {
+    out.visionReferences = m.visionReferences;
+  }
   if (m.companion && typeof m.companion === "object") out.companion = m.companion;
   return out;
 }
@@ -8871,7 +8914,11 @@ function startMission(mission, opts = {}) {
     state.mpOutcome = null;
   }
   resetDeployBayState();
-  if (state.vision) state.vision.newSession();
+  if (state.vision) {
+    state.vision.newSession();
+    bindVisionActionKey(state.vision.sessionId);
+  }
+  resetVisionAction();
   // Seed hex invent board before the first workshop paint — skip when Continue restored a board
   try {
     const hex = ensureHexWorkshop();
@@ -10431,7 +10478,7 @@ function onTechClick(id) {
     if (onStack) removeFromLearnOrder(id);
     else pushLearnOrder(id);
     renderWorkshop();
-    updateVision({ debounceMs: 300 });
+    updateVision({ debounceMs: 300, action: "focus" });
     return;
   }
 
@@ -10481,7 +10528,7 @@ function onTechClick(id) {
   renderFeasibility();
   updateLearnButton();
   updateChallengeButton();
-  updateVision();
+  updateVision({ action: "focus" });
   renderHud();
 }
 
@@ -10907,7 +10954,7 @@ function applyIdeaSpark(idea) {
   renderStoryFaceUI();
   renderFeasibility();
   updateChallengeButton();
-  updateVision();
+  updateVision({ action: "story" });
   mpSyncFromSolo?.();
   state.coInventor?.syncChipGates?.();
   const how = $("#invention-how");
@@ -11967,6 +12014,8 @@ function endTurn() {
   flashToast(`End turn · year ${state.year} · crises rose · AP refilled (${state.ap})`);
   // Solo end_turn: +1 year and crisis rise — re-assess timing
   if ((r.events || []).some((e) => e.type === "year_tick")) {
+    bindCurrentVisionActionKey();
+    noteVisionAction({ type: "year" });
     onInventYearChangedForTiming();
     try {
       const rise = state.mission?.pressureRise || {};
@@ -12474,6 +12523,8 @@ function waitTurn(opts = {}) {
   // Keep hex pressureBase in sync with years jumped, then re-apply pathway deltas
   const years = m.yearsPerTurn || GAME.yearsPerTurn || 2;
   try {
+    bindCurrentVisionActionKey();
+    noteVisionAction({ type: "year" });
     const rise = m.pressureRise || {};
     ensureHexWorkshop().afterYearPressureRise?.(rise, years, riskEv || null);
   } catch (e) {
@@ -19201,6 +19252,48 @@ function ensureVision() {
   if (chRoot) state.vision.addMirror(chRoot);
 }
 
+/** Point the shared last-action store at the vision session about to render. */
+function bindCurrentVisionActionKey() {
+  const shared = roomBridge.isRoom()
+    ? mpSharedVisionSessionId(roomBridge.getViewId())
+    : null;
+  bindVisionActionKey(shared || state.vision?.sessionId || "local");
+}
+
+/**
+ * Install shipped character and location plates while the briefing still owns the canvas.
+ * A quest that is missing either plate waits until the first Future Vision still.
+ */
+function warmupVisionCast() {
+  if (!state.mission || !state.vision) return;
+  if (roomVisionFollowOnly()) return;
+  const visionReferences = visionReferencesForRequest();
+  if (!visionReferences?.characterUrl || !visionReferences?.locationUrl) return;
+  if (roomBridge.isRoom()) {
+    const id = mpSharedVisionSessionId(roomBridge.getViewId());
+    if (id) state.vision.setSessionId(id, { clear: false });
+  }
+  bindCurrentVisionActionKey();
+  const stage = currentStage();
+  state.vision.warmupCast({
+    challenge: {
+      id: state.mission.id,
+      title: state.mission.title,
+      problem: state.mission.scene,
+      scene: state.mission.scene,
+      place: state.mission.place,
+      visionTheme: state.mission.visionTheme,
+    },
+    stageId: stage?.id || "present",
+    stage,
+    year: state.year,
+    place: state.mission.place || "",
+    pressure: state.pressure,
+    peopleMood: visionPeopleMood(state.hexBoard),
+    visionReferences,
+  });
+}
+
 /** Build challengeBeat for Imagine from current scrutiny / last response */
 function buildChallengeVisionBeat() {
   if (state.screen !== "challenge-step" && !state.challengeVisionBeat) return null;
@@ -19357,6 +19450,16 @@ function updateVision(opts = {}) {
   if (briefingOwnsRoot(primaryRoot) && !opts.force) return;
 
   const shouldRun = storyVisionGuard(opts);
+  bindCurrentVisionActionKey();
+  if (opts.action) {
+    noteVisionAction(typeof opts.action === "string" ? { type: opts.action } : opts.action);
+  } else if (opts.force) {
+    noteVisionAction({ type: "refresh" });
+  } else if (opts.context === "challenge") {
+    noteVisionAction({ type: "challenge" });
+  } else if (opts.context === "deploy") {
+    noteVisionAction({ type: "deploy" });
+  }
   state.vision.setState({
     stageId: stage.id,
     stage,
@@ -19373,6 +19476,8 @@ function updateVision(opts = {}) {
     pathways,
     givens,
     peopleMood: visionPeopleMood(state.hexBoard),
+    lastAction: visionAction(),
+    visionReferences: visionReferencesForRequest() || undefined,
     year: state.year,
     place: state.mission.place,
     pressure: state.pressure,
@@ -20146,7 +20251,7 @@ function applyCoInventorProposals(proposals) {
       renderStoryFaceUI();
       renderFeasibility();
       updateChallengeButton();
-      updateVision();
+      updateVision({ action: "story" });
       mpSyncFromSolo?.();
       state.coInventor?.syncChipGates?.();
     }

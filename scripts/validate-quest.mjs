@@ -117,6 +117,13 @@ if (m.grounding) {
 if (Array.isArray(m.briefBeats) && m.briefBeats.length) {
   console.log(`  briefBeats: authored ${m.briefBeats.length}`);
 }
+if (m.visionReferences) {
+  const plates = [
+    m.visionReferences.characterUrl ? "character" : "",
+    m.visionReferences.locationUrl ? "location" : "",
+  ].filter(Boolean);
+  console.log(`  visionReferences: ${plates.join(", ")}`);
+}
 if (m.isLearningModule) {
   const bits = ["learning module"];
   if (m.lesson != null || m.totalLessons != null) {

@@ -75,7 +75,7 @@ export function projectPackageDelivery(record, { deliveryRoot, objectRoot, membe
     if (Array.isArray(value)) return value.map(visit);
     if (!value || typeof value !== "object") return value;
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [key,
-      ["titleImageUrl", "coverImageUrl", "imageUrl"].includes(key) ? mapUrl(item)
+      ["titleImageUrl", "coverImageUrl", "imageUrl", "characterUrl", "locationUrl"].includes(key) ? mapUrl(item)
         : ["briefMd", "overviewMd", "aiTutorContext", "grounding", "bodyMd"].includes(key) ? markdown(item)
           : visit(item)]));
   };

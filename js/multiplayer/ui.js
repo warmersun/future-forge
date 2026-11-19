@@ -39,7 +39,7 @@ import {
   hotseatApplyAction,
 } from "./hotseat.js?v=crisis-role-3";
 import { paintFieldLockElements } from "./locks-ui.js";
-import { MpSidePanel } from "./mp-side.js?v=crisis-role-3";
+import { MpSidePanel } from "./mp-side.js?v=vision-refs-1";
 import { paintScenarioBrief } from "./mission-picker.js";
 import {
   paintTechFilters,

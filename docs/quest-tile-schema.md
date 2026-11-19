@@ -107,6 +107,26 @@ The UI derives a stepped briefing from `briefMd` headings and paragraphs and swa
 
 Invalid arrays fail `validate:quest`. `briefMd` stays required. Authoring guide: `skills/future-forge-quest/references/brief-beats.md`.
 
+### Optional `visionReferences` (Future Vision plates)
+
+Sibling of the briefing stills. These are the character and location plates Future Vision edits from. They are not walk cards and they do not replace `briefBeats`.
+
+Omit the key when Imagine should mint both plates. It does that the first time it generates a Future Vision still. A plate that is present and loads is used as-is. A missing or unloadable plate is minted on that same first still.
+
+| Field | Notes |
+|-------|--------|
+| `characterUrl` | Optional `https://…` or bundled `assets/…jpg\|png\|webp`. The local person |
+| `locationUrl` | Optional. Same URL rules. The wide establishing shot of the place |
+
+Tile top-level or under `mission`. An invalid object or an unsafe URL fails `validate:quest` (`visionReferences_not_object`, `visionReferences_bad_characterUrl`, `visionReferences_bad_locationUrl`). An empty object is dropped. Unknown keys are ignored.
+
+```json
+"visionReferences": {
+  "characterUrl": "assets/quests/<slug>/character.png",
+  "locationUrl": "assets/quests/<slug>/location.jpg"
+}
+```
+
 ### Optional sponsor attribution (display only)
 
 For sponsored Quests. **Text only** — no images. Does not change scoring, feasibility, win conditions, or AI prompts.

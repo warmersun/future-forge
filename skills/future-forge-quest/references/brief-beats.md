@@ -96,3 +96,4 @@ Put files next to the tile under `assets/quests/<quest-id>/<beat-id>.jpg` in the
 - Emit empty `briefBeats: []`.
 - Turn **A hint** into a capability lecture or a limits essay.
 - Put the spotlight tech, a supporting tech, or sponsor product in a caption.
+- Put the Future Vision character or location plate in a beat. Those stills are `visionReferences` (`schema.md`).

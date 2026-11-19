@@ -77,6 +77,30 @@ describe("shared browser mission normalization", () => {
     assert.equal(prepareRunWorld(normalized, { loadedBank: bank }).ok, false);
   });
 
+  it("keeps safe vision plates and drops an unsafe one", () => {
+    const kept = normalizeMission(
+      {
+        id: "quest-a",
+        visionReferences: {
+          characterUrl: "assets/quests/companion-moonshots-304/title.jpg",
+          locationUrl: "https://example.com/place.png",
+        },
+      },
+      "water"
+    );
+    assert.deepEqual(kept.visionReferences, {
+      characterUrl: "assets/quests/companion-moonshots-304/title.jpg",
+      locationUrl: "https://example.com/place.png",
+    });
+    const again = normalizeMission(kept, "water");
+    assert.deepEqual(again.visionReferences, kept.visionReferences);
+    const dropped = normalizeMission(
+      { id: "quest-a", visionReferences: { characterUrl: "javascript:alert(1)" } },
+      "water"
+    );
+    assert.equal(dropped.visionReferences, undefined);
+  });
+
   it("does not retain invalid or mismatched packaged banks", () => {
     for (const badBank of [null, { id: "wrong", predictions: [] }, { ...bank, id: "another-bank" }]) {
       const raw = mission();

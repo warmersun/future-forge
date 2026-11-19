@@ -680,6 +680,20 @@ export function createHexWorkshop(api) {
         }
       },
       onBoardChange: (b, tileId, kind, extra = {}) => {
+        const tile = b?.tiles?.[tileId];
+        if (kind === "place" && tile?.kind === TILE_KIND.invention) {
+          api.noteVisionAction?.({
+            type: "place-invent",
+            tileId: tileId || "",
+            techId: tile.techId || null,
+          });
+        } else if (kind === "lift" || kind === "discard") {
+          api.noteVisionAction?.({
+            type: kind,
+            tileId: tileId || "",
+            techId: null,
+          });
+        }
         afterBoardChange(tileId, kind, extra);
         api.commitBoard?.(b);
       },
