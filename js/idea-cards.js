@@ -31,6 +31,10 @@ export const IDEA_LIMITS = {
   eases: 60,
 };
 
+/** Gibberish, magic, or physics-breaking. Not a bare "wish". */
+const PLAIN_NONSENSE =
+  /\b(teleport(?:ation|ing|ed|s)?|magical|magic|wish the|time travel|perpetual motion|mind upload|spell|wizard|conjure)\b/i;
+
 /**
  * Which crisis meter a spark aims at. Prefers the model's `eases` when it names a
  * known meter; else the hottest meter in context (highest level above its goal).
@@ -211,6 +215,33 @@ export function rotateLocalIdeaSparks(tech, context = {}, avoidTitles = []) {
   return normalizeIdeas(
     ordered.slice(0, 3).map((use, i) => ideaFromSeed(tech, context, use, i, salt))
   );
+}
+
+/**
+ * Nonsense filter for an ordinary invention. No calendar and no frontier timing.
+ * Green is a coherent action. Yellow is too short or vague. Red is nonsense only.
+ * @param {unknown} howText
+ * @returns {{ level: "green"|"yellow"|"red", reason: string }}
+ */
+export function localPlainTiming(howText) {
+  const text = String(howText || "").trim();
+  if (PLAIN_NONSENSE.test(text)) {
+    return {
+      level: "red",
+      reason: "That is not an ordinary action someone could try.",
+    };
+  }
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length < 3 || text.length < 12) {
+    return {
+      level: "yellow",
+      reason: "Too short or too vague to tell what ordinary work this is.",
+    };
+  }
+  return {
+    level: "green",
+    reason: "A coherent ordinary action someone could try here.",
+  };
 }
 
 /**

@@ -33,7 +33,11 @@ import {
 } from "../data.js";
 import { SUMMARY_CAP } from "../quest-summary.js";
 import { briefMdFromLivedStory } from "../brief-beats.js";
-import { localIdeaSparks, rotateLocalIdeaSparks } from "../idea-cards.js";
+import {
+  localIdeaSparks,
+  rotateLocalIdeaSparks,
+  localPlainTiming,
+} from "../idea-cards.js";
 import { localScrutinyProposals } from "../scrutiny-shared.js";
 import { heuristicConverges, clampPathwayScore } from "../hex/evaluate.js";
 import { scopeCrisisScore } from "../hex/crisis-delta.js";
@@ -622,6 +626,11 @@ function resolveFocusTech(context) {
   return map.get(focusId) || null;
 }
 
+function localAssessPlain(context) {
+  const timing = localPlainTiming(context?.inventionHow);
+  return { source: "local", timing, message: timing.reason };
+}
+
 function localIdeaSparksResult(context, base) {
   const tech = resolveFocusTech(context);
   const empty = {
@@ -790,6 +799,10 @@ function localCoInvent({ mode, messages, context }) {
 
   if (mode === "idea-sparks") {
     return localIdeaSparksResult(context, base);
+  }
+
+  if (mode === "assess-plain") {
+    return localAssessPlain(context);
   }
 
   if (mode === "fill-quest-summary") {

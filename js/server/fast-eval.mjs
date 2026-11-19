@@ -272,6 +272,14 @@ ${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"convergences":[{"neighborId":"...","converges":true,"title":"≤60 chars","reason":"2-3 teaching sentences"}]}`;
 
+export const ASSESS_PLAIN_SYSTEM = `You filter nonsense only. This invention uses no emerging technology.
+There is no predictions calendar and no exponential-progress check. Do not redden because a technology is early, missing from a calendar, or not yet at scale. Do not treat "this would be better with drones" as a timing failure.
+green = a coherent ordinary action someone could try.
+yellow = too short or too vague to tell what the work is.
+red = nonsense only: gibberish, magic, or physics-breaking (teleport the harvest, wish the drought away).
+Return JSON only:
+{"timing":{"level":"green","reason":"one sentence"}}`;
+
 export const IDEA_SPARKS_SYSTEM = `You return exactly 3 application SPARKS for focusTechId in this place and year.
 Different angles. Pilot-honest.
 Sparks are capability applications, not bills, bans, or UBI as the idea.
@@ -518,6 +526,15 @@ function buildAssessFeasibilityPayload(context) {
   };
 }
 
+function buildAssessPlainPayload(context) {
+  return {
+    mode: "assess-plain",
+    year: context?.year || null,
+    place: context?.place || null,
+    inventionHow: clip(context?.inventionHow, 1200),
+  };
+}
+
 function buildIdeaSparksPayload(context) {
   const mission = missionSlice(context);
   const focusId = context?.focusTechId || null;
@@ -644,6 +661,7 @@ export function buildFastPayload(mode, context = {}) {
     return withInquiry(buildEvaluateConvergencePayload(context), context, mode);
   }
   if (mode === "idea-sparks") return buildIdeaSparksPayload(context);
+  if (mode === "assess-plain") return buildAssessPlainPayload(context);
   if (mode === "pose-challenge") return finishPosePayload(context);
   if (mode === "fill-quest-summary") return buildFillQuestSummaryPayload(context);
   return withInquiry(buildJudgePayload(mode, context), context, mode);
@@ -697,6 +715,21 @@ function sanitizeIdeas(parsed, source, context) {
   return {
     source,
     ideas: ideasOrFallback(parsed?.ideas, focus, context),
+  };
+}
+
+function sanitizePlainTiming(parsed, source) {
+  const raw = parsed?.timing && typeof parsed.timing === "object" ? parsed.timing : {};
+  const level = String(raw.level || "").toLowerCase();
+  if (level !== "green" && level !== "yellow" && level !== "red") {
+    return { source, timing: null };
+  }
+  return {
+    source,
+    timing: {
+      level,
+      reason: String(raw.reason || "").slice(0, 400),
+    },
   };
 }
 
@@ -816,6 +849,7 @@ export function sanitizeFast(mode, parsed, source = "ai", context = {}) {
     return sanitizeEvaluateConvergence(parsed, source, context);
   }
   if (mode === "idea-sparks") return sanitizeIdeas(parsed, source, context);
+  if (mode === "assess-plain") return sanitizePlainTiming(parsed, source);
   if (mode === "pose-challenge") return sanitizePose(parsed, source);
   if (mode === "judge-scrutiny-move") return sanitizeJudgeScrutiny(parsed, source);
   if (mode === "judge-challenge") return sanitizeJudgeChallenge(parsed, source);
@@ -851,6 +885,12 @@ export const FAST_EVAL_MODES = {
     userPrefix: "Three application sparks (JSON state):",
     temperature: 0.4,
     maxOutputTokens: 700,
+  },
+  "assess-plain": {
+    system: ASSESS_PLAIN_SYSTEM,
+    userPrefix: "Filter nonsense only (JSON state):",
+    temperature: 0,
+    maxOutputTokens: 300,
   },
   "pose-challenge": {
     system: POSE_CHALLENGE_SYSTEM,

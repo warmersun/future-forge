@@ -42,7 +42,7 @@ import {
   cloneBoard,
   applyLights,
   PATHWAY_TEXT_MAX,
-} from "./board-state.js?v=argument-1";
+} from "./board-state.js?v=plain-1";
 import {
   CRISIS_REASON_MAX,
   crisisRoleKeys,
@@ -316,7 +316,9 @@ export function visionPeopleMood(board) {
 }
 
 /**
- * Imagine payload: one entry per connected invent island (inventHow, no name).
+ * Imagine payload: one entry per connected invent island.
+ * howText is the stored pathway essay, or the joined tile how-texts when none is saved.
+ * A tile with no emTech is listed under its own id and name.
  * `status` is "applied" when the island edge-touches a crisis or concern.
  * @param {object|null|undefined} board
  * @param {(techId: string) => { id?: string, name?: string, summary?: string, vision?: { narrative?: string } } | null} [techById]
@@ -328,6 +330,19 @@ export function visionPathwaysFromBoard(board, techById) {
     const seen = new Set();
     const techs = [];
     for (const tile of invs) {
+      if (!tile?.techId) {
+        const id = String(tile?.id || "").slice(0, 80);
+        const name = String(tile?.name || "").slice(0, 80);
+        if ((!id && !name) || (id && seen.has(id))) continue;
+        if (id) seen.add(id);
+        techs.push({
+          id,
+          name: name || id,
+          summary: "",
+          narrative: "",
+        });
+        continue;
+      }
       const tech = lookup(tile?.techId);
       const id = String(tech?.id || tile?.techId || "").slice(0, 80);
       if (!id || seen.has(id)) continue;
@@ -344,7 +359,7 @@ export function visionPathwaysFromBoard(board, techById) {
       .map((gid) => visionGivenSlice(board?.tiles?.[gid]))
       .filter(Boolean);
     return {
-      howText: islandHowForAi(board, invs),
+      howText: resolveIslandHow(board, invs).text,
       techs,
       status: touching.length ? "applied" : "idea",
       touching,

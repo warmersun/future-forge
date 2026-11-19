@@ -82,6 +82,15 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
   const place = rest.place ?? snap.place;
   const globalId = rest.globalId ?? snap.globalId ?? null;
   const scene = String(snap.missionScene || "").slice(0, 600);
+
+  if (mode === "assess-plain") {
+    return {
+      year,
+      place,
+      inventionHow: String(rest.inventionHow ?? snap.inventionHow ?? "").slice(0, 1200),
+    };
+  }
+
   const base = {
     year,
     place,

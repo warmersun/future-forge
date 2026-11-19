@@ -156,7 +156,7 @@ function withFaces(body, happening) {
   const faces = visionPeopleMoodLine(visionPeopleMoodOf(body));
   if (!t) return faces;
   if (/Do not add extra people/i.test(t)) return t;
-  return clipText(`${t} ${faces}`, 720);
+  return clipText(`${t} ${faces}`, 1100);
 }
 
 function taggedShot(body, shot) {
@@ -262,7 +262,7 @@ export function visionGeometryHappening(body, place) {
     }
   }
   if (!parts.length) return "";
-  return clipText(parts.join(" Meanwhile "), 700);
+  return clipText(parts.join(" Meanwhile "), 900);
 }
 
 /** Everyday-life face only for legacy single-essay clients. Hex pathways skip it. */
@@ -336,8 +336,8 @@ export function techNames(body, max = 6) {
     .filter(Boolean);
 }
 
-function groundInPlace(place, text) {
-  const t = clipText(text, 420);
+function groundInPlace(place, text, max = 420) {
+  const t = clipText(text, max);
   if (!t) return "";
   if (!place) return t;
   // Avoid double-prefix if already starts with place
@@ -459,7 +459,7 @@ export function decideShot(body, prev, worldCard) {
       mode: "generate",
       continuity: hasPrior ? "new-shot" : "baseline",
       reason: "Board geometry frames the shot",
-      happening: groundInPlace(place, geo),
+      happening: groundInPlace(place, geo, 900),
       subjects: names,
     });
   }
@@ -822,7 +822,7 @@ export function composeGeneratePrompt(worldCard, shot, stageId = "present") {
     titleLine,
     "",
     "WHAT IS HAPPENING IN THIS FRAME:",
-    clipText(shot.happening, 560),
+    clipText(shot.happening, 1100),
     subjects,
     "",
     `Tone: ${tone}; ${faces} human-scale, specific local reality.`,

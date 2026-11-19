@@ -142,6 +142,27 @@ describe("co-invent local engine", () => {
     }
   });
 
+  it("filters plain timing without a calendar", () => {
+    const green = localCoInvent({
+      mode: "assess-plain",
+      messages: [],
+      context: { inventionHow: "Build a farm", year: 2026, place: "Kiln Ferry" },
+    });
+    assert.equal(green.timing.level, "green");
+    const yellow = localCoInvent({
+      mode: "assess-plain",
+      context: { inventionHow: "Farm" },
+    });
+    assert.equal(yellow.timing.level, "yellow");
+    const red = localCoInvent({
+      mode: "assess-plain",
+      context: { inventionHow: "Teleport the harvest" },
+    });
+    assert.equal(red.timing.level, "red");
+    assert.equal("worldClock" in green, false);
+    assert.equal("stack" in green, false);
+  });
+
   it("answers an empty chat from the local fallback", () => {
     const out = localCoInvent({
       mode: "chat",

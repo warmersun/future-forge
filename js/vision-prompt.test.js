@@ -80,6 +80,31 @@ describe("vision pathways signature", () => {
     assert.ok(!/Should Never Appear/.test(shot.happening));
   });
 
+  it("keeps a plain tile's how-text and name in the shot", () => {
+    const body = {
+      ...placeBody,
+      pathways: [
+        {
+          techs: [{ id: "inv-farm", name: "Community farm" }],
+          howText:
+            "Neighbors plant and share a food garden on the school lot this season.",
+          status: "idea",
+        },
+      ],
+    };
+    const world = {
+      place: body.place,
+      title: body.challenge.title,
+      scene: body.challenge.scene,
+      visualSetting: body.challenge.scene,
+    };
+    const shot = decideShot(body, null, world);
+    assert.match(shot.happening, /food garden/);
+    const prompt = composeGeneratePrompt(world, shot, "present");
+    assert.match(prompt, /food garden/);
+    assert.match(prompt, /Community farm/);
+  });
+
   it("fingerprint changes when one island inventHow changes, not when a name is set", () => {
     const a = {
       ...placeBody,

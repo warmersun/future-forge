@@ -1090,11 +1090,32 @@ describe("island inventHow", () => {
     const pair = paths.find((p) => p.techs.some((t) => t.id === "ai"));
     const iot = paths.find((p) => p.techs.some((t) => t.id === "iot"));
     assert.equal(pair.howText, "The pair radios the crest.");
-    assert.equal(iot.howText, "");
+    assert.equal(iot.howText, "Part C.");
     assert.equal(
       paths.every((p) => p.inventionName == null && p.name == null),
       true
     );
+  });
+
+  it("visionPathwaysFromBoard keeps an unsaved plain tile name and how-text", () => {
+    let board = twoAiBoard();
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "farm",
+        techId: null,
+        polarity: "atoms",
+        name: "Community farm",
+        howText: "Neighbors plant and share a food garden on the school lot this season.",
+        year: 2026,
+      })
+    );
+    board = placeOk(board, "farm", 4, 4);
+    const paths = visionPathwaysFromBoard(board, () => null);
+    const farm = paths.find((p) => p.techs.some((t) => t.id === "farm"));
+    assert.ok(farm);
+    assert.equal(farm.techs.find((t) => t.id === "farm").name, "Community farm");
+    assert.match(farm.howText, /food garden/);
   });
 
   it("visionPathwaysFromBoard marks isolated islands as idea and docked as applied", () => {

@@ -250,7 +250,12 @@ describe("ideasOrFallback", () => {
   });
 });
 
-import { easesLabel as easesLabelFn, ideasOrFallback as ideasOrFallbackFn, localIdeaSparks as localIdeaSparksFn } from "./idea-cards.js";
+import {
+  easesLabel as easesLabelFn,
+  ideasOrFallback as ideasOrFallbackFn,
+  localIdeaSparks as localIdeaSparksFn,
+  localPlainTiming,
+} from "./idea-cards.js";
 
 describe("eases — which crisis meter a spark aims at", () => {
   const context = {
@@ -283,5 +288,29 @@ describe("eases — which crisis meter a spark aims at", () => {
     assert.equal(out[1].eases, "AsthmaDays");
     assert.equal(out[2].eases, "AsthmaDays");
     for (const i of localIdeaSparksFn(tech, context)) assert.equal(i.eases, "AsthmaDays");
+  });
+});
+
+describe("localPlainTiming", () => {
+  it("greens a coherent ordinary action", () => {
+    assert.equal(localPlainTiming("Build a farm").level, "green");
+    assert.equal(
+      localPlainTiming("Neighbors plant and share a food garden this season.").level,
+      "green"
+    );
+  });
+
+  it("yellows a one-word or too-short how", () => {
+    assert.equal(localPlainTiming("Farm").level, "yellow");
+    assert.equal(localPlainTiming("fix it").level, "yellow");
+  });
+
+  it("reds nonsense and leaves an ordinary wish phrasing alone", () => {
+    assert.equal(localPlainTiming("Teleport the harvest").level, "red");
+    assert.equal(localPlainTiming("Wish the drought away").level, "red");
+    assert.equal(
+      localPlainTiming("We wish to build a farm on the school lot this season.").level,
+      "green"
+    );
   });
 });

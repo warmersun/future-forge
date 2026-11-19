@@ -45,8 +45,8 @@ import {
   neighborTiles,
   isPortableTile,
   formatFactor,
-} from "./board-state.js?v=argument-1";
-import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js?v=argument-1";
+} from "./board-state.js?v=plain-1";
+import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js?v=plain-1";
 import { layoutHexLabel } from "./hex-label.js";
 
 const BITS_INK = "#38bdf8";

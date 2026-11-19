@@ -168,7 +168,7 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=assessment-3";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=plain-2";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
 import {
   boardHolds,
@@ -185,7 +185,7 @@ import {
   concernAnglesOnBoard,
   formatFactor,
   convergencesForAi,
-} from "./hex/board-state.js?v=argument-1";
+} from "./hex/board-state.js?v=plain-1";
 import {
   boardWorstPathwayTiming,
   boardPathwayReevaluating,
@@ -199,7 +199,7 @@ import {
   visionGivensFromBoard,
   visionPeopleMood,
   crisisMeterTooltipBits,
-} from "./hex/evaluate.js?v=argument-1";
+} from "./hex/evaluate.js?v=plain-1";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
@@ -1910,7 +1910,9 @@ function ensureHexWorkshop() {
     },
     fetchIdeaImage: (opts) => {
       // Challenger art stays local during the tutorial. Minted tiles still get a picture.
-      if (state.tutorialRun && opts?.kind !== "mint") return Promise.resolve(null);
+      if (state.tutorialRun && opts?.kind !== "mint" && opts?.kind !== "plain") {
+        return Promise.resolve(null);
+      }
       return fetchIdeaImage({
         id: opts.ideaId,
         ideaId: opts.ideaId,
@@ -13009,6 +13011,7 @@ const LEAN_EVAL_MODES = new Set([
   "score-pathway",
   "assess-feasibility",
   "idea-sparks",
+  "assess-plain",
   "pose-challenge",
   "judge-scrutiny-move",
   "judge-challenge",

@@ -171,7 +171,8 @@ it("two local packages with identical bank ids keep separate worlds through the 
         assert.equal(providerPayload.includes("Keep the parcels moving"), true);
       }
       assert.equal(providerPayload.includes("FORGED"), false, providerPayload);
-      if (!["judge-contribution", "judge-scrutiny-move", "fill-quest-summary"].includes(mode))
+      // These modes intentionally leave the package premise sentence out of the model request.
+      if (!["judge-contribution", "judge-scrutiny-move", "fill-quest-summary", "assess-plain", "fact-check-argument"].includes(mode))
         assert.equal(providerPayload.includes("Power, physical handling, staffing"), true, `${mode}: ${providerPayload}`);
       }
     }

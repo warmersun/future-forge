@@ -25,6 +25,7 @@ import { clearCaptainLog, listCaptainLog } from "../captain-log.js?v=crisis-role
 import {
   createHexWorkshop,
   canMintArgument,
+  canMintPlain,
   mintArgumentButtonLabel,
   defaultChallengerImagePrompt,
   pathwayArtLabel,
@@ -37,6 +38,7 @@ import { neighbor } from "./hex-tile-grid.js";
 import {
   cloneBoard,
   addTile,
+  createEmptyBoard,
   mintInventionTile,
   mintArgumentTile,
   placeTile,
@@ -62,8 +64,12 @@ function stubDom() {
     style: {},
     dataset: {},
     setAttribute() {},
+    removeAttribute() {},
     getAttribute() {
       return null;
+    },
+    appendChild(child) {
+      return child;
     },
     querySelector() {
       return null;
@@ -71,7 +77,16 @@ function stubDom() {
     querySelectorAll() {
       return [];
     },
-    addEventListener() {},
+    addEventListener(type, fn) {
+      if (type !== "click") return;
+      this._click = this._click || [];
+      this._click.push(fn);
+    },
+    click() {
+      const jobs = (this._click || []).map((fn) => fn());
+      this._clickJobs = Promise.all(jobs);
+      return this._clickJobs;
+    },
   });
   const body = make("body");
   globalThis.document = {
@@ -89,6 +104,9 @@ function stubDom() {
       return this.querySelector("#" + id);
     },
     addEventListener() {},
+    createElement() {
+      return make();
+    },
   };
 }
 
@@ -142,6 +160,48 @@ describe("hex-workshop tile timing extra", () => {
     assert.equal(Object.hasOwn(assess.extra, "inventionImpact"), false);
     assert.match(assess.extra.inventionHow, /Part A/);
     assert.deepEqual(assess.extra.selectedTechIds, ["ai"]);
+  });
+
+  it("assess-plain sends how, place, and year for a tile with no tech", async () => {
+    let board = seededBoard();
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "farm",
+        techId: null,
+        polarity: "atoms",
+        name: "Community farm",
+        howText: "Build a farm",
+        year: 2026,
+        origin: "plain",
+      })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "farm", local.q + 1, local.r);
+    const extras = [];
+    const ws = createHexWorkshop({
+      getBoard: () => board,
+      setBoard: (b) => {
+        board = b;
+      },
+      getYear: () => 2026,
+      getPlace: () => "Kiln Ferry",
+      getGrounding: () => "FORGED grounding",
+      coInvent: async (mode, _msg, extra) => {
+        extras.push({ mode, extra });
+        return { timing: { level: "green", reason: "Ordinary work." } };
+      },
+    });
+    await ws.refreshAfterYearChange();
+    const plain = extras.find((e) => e.mode === "assess-plain");
+    assert.ok(plain);
+    assert.deepEqual(plain.extra, {
+      inventionHow: "Build a farm",
+      year: 2026,
+      place: "Kiln Ferry",
+    });
+    assert.equal(board.tiles.farm.techId, null);
+    assert.equal(board.tiles.farm.timingLevel, "green");
   });
 
   it("afterRulesChange does not retime inventions", () => {
@@ -637,9 +697,76 @@ describe("canMintArgument", () => {
     assert.equal(canMintArgument({}), false);
   });
 
+  it("mints a non-emTech invention only in free write", () => {
+    assert.equal(canMintPlain({ freeWrite: false, busy: false }), false);
+    assert.equal(canMintPlain({ freeWrite: true, busy: true }), false);
+    assert.equal(canMintPlain({ freeWrite: true, busy: false }), true);
+    assert.equal(canMintPlain({}), false);
+  });
+
   it("labels the button with a 1 AP cost when Attention is on", () => {
     assert.equal(mintArgumentButtonLabel(true), "Mint argument · 1 AP");
     assert.equal(mintArgumentButtonLabel(false), "Mint argument");
+  });
+});
+
+describe("mint non-emTech invention", () => {
+  before(() => stubDom());
+
+  it("mints one written tile in free write and does not ask for ideas", async () => {
+    let board = createEmptyBoard();
+    const calls = [];
+    const ws = createHexWorkshop({
+      getBoard: () => board,
+      setBoard: (b) => {
+        board = b;
+      },
+      getYear: () => 2026,
+      getPlace: () => "Kiln Ferry",
+      canEditBoard: () => true,
+      coInvent: async (mode) => {
+        calls.push(mode);
+        return {};
+      },
+      spendIdeaAp: () => {
+        calls.push("spend");
+        return { ok: true };
+      },
+      fetchIdeaImage: async () => null,
+    });
+    globalThis.MutationObserver = class {
+      observe() {}
+      disconnect() {}
+    };
+    ws.wireDom();
+    const plainBtn = document.querySelector("#btn-mint-plain");
+    const how = document.querySelector("#hex-how-text");
+    const modeBtn = document.querySelector("#btn-how-mode");
+    assert.equal(plainBtn.disabled, true);
+    how.value = "Neighbors plant a shared food garden on the school lot.";
+    await plainBtn.click();
+    assert.equal(Object.keys(board.tiles).length, 0);
+
+    await modeBtn.click();
+    assert.equal(plainBtn.disabled, false);
+    assert.equal(plainBtn.textContent, "Mint non-emTech invention");
+    how.value = "Too short";
+    await plainBtn.click();
+    assert.equal(Object.keys(board.tiles).length, 0);
+
+    how.value = "Neighbors plant a shared food garden on the school lot.";
+    await plainBtn.click();
+    const tiles = Object.values(board.tiles);
+    assert.equal(tiles.length, 1);
+    assert.equal(tiles[0].kind, "invention");
+    assert.equal(tiles[0].techId, null);
+    assert.equal(tiles[0].origin, "plain");
+    assert.equal(tiles[0].polarity, "curve");
+    assert.equal(tiles[0].q, null);
+    assert.match(tiles[0].howText, /food garden/);
+    assert.match(tiles[0].name, /Neighbors plant/);
+    assert.equal(how.value, "");
+    assert.deepEqual(calls, []);
   });
 });
 
@@ -673,6 +800,9 @@ describe("continue restores argument mint", () => {
     ws.focusTech("energy");
     assert.equal(btn.disabled, false);
     assert.equal(btn.textContent, "Mint argument · 1 AP");
+    const plain = document.querySelector("#btn-mint-plain");
+    assert.equal(plain.disabled, false);
+    assert.equal(plain.textContent, "Mint non-emTech invention");
     assert.equal(document.querySelector("#hex-scaffold").hidden, true);
     assert.equal(ta.hidden, false);
     assert.match(
@@ -700,6 +830,7 @@ describe("continue restores argument mint", () => {
     ws.resumeArgumentWrite();
     const btn = document.querySelector("#btn-mint-argument");
     assert.equal(btn.disabled, true);
+    assert.equal(document.querySelector("#btn-mint-plain").disabled, true);
     assert.equal(document.querySelector("#hex-scaffold").hidden, false);
     assert.equal(document.querySelector("#hex-how-text").hidden, true);
   });

@@ -51,7 +51,7 @@ export const GAME = {
   },
   /** Starting capital / political will when budgetWill is on */
   startingBudget: 5,
-  startingWill: 1,
+  startingWill: 3,
   maxBudget: 10,
   maxWill: 5,
 };

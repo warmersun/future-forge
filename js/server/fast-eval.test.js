@@ -43,7 +43,7 @@ import {
   reasoningEffortForCoInvent,
   worldClockContext,
 } from "./fast-eval.mjs";
-import { SEARCH_SYSTEM_LINE } from "./ai-search.mjs";
+import { AI_SEARCH_MODES, SEARCH_SYSTEM_LINE, searchToolsForMode } from "./ai-search.mjs";
 import { setWorldForesightBank, validatePredictionsBank } from "../sim/world-foresight.js";
 import { buildSourceInquiry } from "../companion-context.js";
 import { formatTimingLog } from "../captain-log.js";
@@ -104,6 +104,7 @@ describe("FAST_EVAL_MODES", () => {
       "assess-feasibility",
       "evaluate-convergence",
       "idea-sparks",
+      "assess-plain",
       "pose-challenge",
       "judge-scrutiny-move",
       "judge-challenge",
@@ -436,6 +437,41 @@ describe("buildFastPayload", () => {
     assert.equal(p.focusTech.id, "ai");
     assert.equal(p.refresh, true);
     assert.deepEqual(p.avoidTitles, ["Old Spark"]);
+  });
+
+  it("assess-plain is how, place, and year only", () => {
+    const p = buildFastPayload("assess-plain", {
+      year: 2026,
+      place: "Kiln Ferry",
+      inventionHow: "Build a farm",
+      inventionName: "SecretName",
+      selectedTechIds: ["ai"],
+      availableTechs: [{ id: "ai", name: "AI" }],
+      grounding: "FORGED grounding",
+      worldClock: [{ year: 2030 }],
+      stack: [{ id: "ai" }],
+      priorTiming: { level: "red", reason: "too early" },
+    });
+    assert.deepEqual(Object.keys(p).sort(), ["inventionHow", "mode", "place", "year"]);
+    assert.equal(p.inventionHow, "Build a farm");
+    const json = JSON.stringify(p);
+    assert.equal(json.includes("worldClock"), false);
+    assert.equal(json.includes("stack"), false);
+    assert.equal(json.includes("SecretName"), false);
+    assert.equal(json.includes("priorTiming"), false);
+    const kept = sanitizeFast(
+      "assess-plain",
+      { timing: { level: "green", reason: "Ordinary work." } },
+      "ai",
+      { sourceInquiry: { premise: "assumed" } }
+    );
+    assert.equal(kept.timing.level, "green");
+    assert.equal(kept.timing.reason, "Ordinary work.");
+    const blank = sanitizeFast("assess-plain", {}, "ai");
+    assert.equal(blank.timing, null);
+    assert.equal(AI_SEARCH_MODES.has("assess-plain"), false);
+    assert.equal(searchToolsForMode("assess-plain", true), null);
+    assert.equal(FAST_EVAL_MODES["assess-plain"].system.includes(WORLD_CLOCK_TIMING_LINE), false);
   });
 
   it("evaluate-convergence payload includes names and tech names", () => {

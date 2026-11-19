@@ -238,6 +238,21 @@ describe("leanCoInventContext idea-sparks sees the problem", () => {
   });
 });
 
+describe("leanCoInventContext ordinary inventions", () => {
+  it("assess-plain is only year, place, and how", () => {
+    const ctx = leanCoInventContext(
+      "assess-plain",
+      { inventionHow: "Build a farm", grounding: "FORGED", selectedTechIds: ["ai"] },
+      leftoverSnap
+    );
+    assert.deepEqual(ctx, {
+      year: 2025,
+      place: "Old Place",
+      inventionHow: "Build a farm",
+    });
+  });
+});
+
 describe("leanCoInventContext arguments", () => {
   it("fact-check sends the claim and assessments", () => {
     const ctx = leanCoInventContext(

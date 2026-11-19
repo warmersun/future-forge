@@ -57,6 +57,8 @@ import {
   techIdsFromBoard,
   creditedTechIdsFromBoard,
   unplacedInventionsForTech,
+  unplacedPlainInventions,
+  convergenceEligible,
   techIdsWithUnplacedInventions,
   deriveBoardProse,
   addTile,
@@ -242,6 +244,44 @@ test("placeTile refuses bits against atoms when world docking is enabled", (t) =
   board = r.board;
   r = placeTile(board, "dr1", 1, 0);
   assert.equal(r.ok, false);
+});
+
+test("a plain invention docks on bits, atoms, and split when world docking is enabled", (t) => {
+  const previous = GAME.enforceWorldDocking;
+  GAME.enforceWorldDocking = true;
+  t.after(() => { GAME.enforceWorldDocking = previous; });
+  const plain = () =>
+    mintInventionTile({
+      id: "farm",
+      techId: null,
+      polarity: "curve",
+      origin: "plain",
+      name: "Community farm",
+    });
+  function beside(techId) {
+    let board = createEmptyBoard();
+    board = addTile(board, mintInventionTile({ id: "neighbor", techId, name: techId }));
+    board = addTile(board, plain());
+    board = placeTile(board, "neighbor", 0, 0).board;
+    return placeTile(board, "farm", 1, 0);
+  }
+  assert.equal(beside("ai").ok, true);
+  assert.equal(beside("drones").ok, true);
+  assert.equal(beside("iot").ok, true);
+  let board = createEmptyBoard();
+  board = addTile(board, plain());
+  board = addTile(
+    board,
+    mintInventionTile({
+      id: "roster",
+      techId: null,
+      polarity: "curve",
+      origin: "plain",
+      name: "Shift roster",
+    })
+  );
+  board = placeTile(board, "farm", 0, 0).board;
+  assert.equal(placeTile(board, "roster", 1, 0).ok, true);
 });
 
 test("placeTile allows split converter between bits and atoms", () => {
@@ -1196,6 +1236,42 @@ test("a collector tile is free to place and does not prepay its emTech", () => {
   assert.deepEqual(delta.newlyPaid, ["drones"]);
   assert.deepEqual(delta.freeAdds, []);
   assert.deepEqual(delta.addedIds, []);
+});
+
+test("a plain invention has no tech, keeps polarity, and takes no stack slot", () => {
+  const board = createEmptyBoard();
+  const farm = mintInventionTile({
+    id: "farm",
+    techId: null,
+    polarity: "atoms",
+    name: "Community farm",
+    howText: "Neighbors plant a shared garden.",
+    origin: "plain",
+  });
+  assert.equal(farm.techId, null);
+  assert.equal(farm.polarity, "atoms");
+  assert.equal(farm.origin, "plain");
+  assert.deepEqual(stackPlacementPlan(farm, board, ["ai"]), {
+    charge: false,
+    newSlot: false,
+  });
+  const withFarm = addTile(board, farm);
+  assert.deepEqual(
+    unplacedPlainInventions(withFarm).map((t) => t.id),
+    ["farm"]
+  );
+  assert.deepEqual(unplacedInventionsForTech(withFarm, null), []);
+});
+
+test("convergence does not start when either side has no tech", () => {
+  const farm = mintInventionTile({ id: "farm", techId: null, polarity: "atoms" });
+  const solar = mintInventionTile({ id: "solar", techId: "energy", polarity: "atoms" });
+  const ai = mintInventionTile({ id: "ai1", techId: "ai" });
+  assert.equal(convergenceEligible(farm, solar), false);
+  assert.equal(convergenceEligible(solar, farm), false);
+  assert.equal(convergenceEligible(null, solar), false);
+  assert.equal(convergenceEligible(solar, ai), true);
+  assert.equal(convergenceEligible(solar, solar), false);
 });
 
 

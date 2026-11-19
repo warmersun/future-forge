@@ -55,6 +55,7 @@ import {
   ideasOrFallback,
   localIdeaSparks,
   rotateLocalIdeaSparks,
+  localPlainTiming,
 } from "../idea-cards.js";
 import { localPose } from "../challenge-pose.js";
 import {
@@ -85,6 +86,8 @@ import {
   placedTechEconomy,
   isCollectorTile,
   unplacedInventionsForTech,
+  unplacedPlainInventions,
+  convergenceEligible,
   cloneBoard,
   boardCrisisRoles,
   TILE_KIND,
@@ -95,7 +98,7 @@ import {
   concernPoseText,
   concernReplyText,
   setConcernReply,
-} from "./board-state.js?v=argument-1";
+} from "./board-state.js?v=plain-1";
 import {
   tileTimingCacheKey,
   timingLevelToPct,
@@ -144,12 +147,12 @@ import {
   setIslandHow,
   rekeyIslandHow,
   rulesWeatherKey,
-} from "./evaluate.js?v=argument-1";
+} from "./evaluate.js?v=plain-1";
 import { scopeCrisisScore } from "./crisis-delta.js?v=crisis-role-3";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
-import { createHexBoardUi, defaultSlots } from "./board-ui.js?v=argument-1";
-import { polarityForTech } from "./polarity.js";
+import { createHexBoardUi, defaultSlots } from "./board-ui.js?v=plain-1";
+import { CURVE, polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
 import { semanticDigest } from "../semantic-digest.js";
@@ -163,6 +166,16 @@ import { attachReadAloud, stopReadAloudFor } from "../read-aloud.js";
  */
 export function canMintArgument(opts = {}) {
   return Boolean(opts.freeWrite) && Boolean(opts.hasPathway) && !opts.busy;
+}
+
+/**
+ * Mint non-emTech invention is on only in free write, while the invent panel
+ * is idle. A pathway and an emTech focus are not required. The click uses the
+ * player's sentence and does not ask the model for ideas.
+ * @param {{ freeWrite?: boolean, busy?: boolean }} [opts]
+ */
+export function canMintPlain(opts = {}) {
+  return Boolean(opts.freeWrite) && !opts.busy;
 }
 
 /** Every argument mint costs 1 AP when Attention is on. Not the season thinking tax. */
@@ -295,6 +308,9 @@ export function createHexWorkshop(api) {
   function ideaCardsForFocus() {
     const rd = unplacedRdTiles(board());
     const args = unplacedArgumentTiles(board());
+    const plain = unplacedPlainInventions(board())
+      .slice()
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)));
     const waiting = unplacedInventionsForTech(board(), focusedTechId);
     const batchIds = ensureSparkBatch(focusedTechId).ids || [];
     const rank = new Map(batchIds.map((id, i) => [id, i]));
@@ -304,7 +320,7 @@ export function createHexWorkshop(api) {
       if (ai !== bi) return ai - bi;
       return String(a.id).localeCompare(String(b.id));
     });
-    return [...rd, ...args, ...inventions];
+    return [...rd, ...args, ...plain, ...inventions];
   }
 
   function syncCreateBusyUi(preferKind) {
@@ -330,6 +346,7 @@ export function createHexWorkshop(api) {
       }
     }
     const askBtn = document.querySelector("#btn-ask-ideas");
+    const plainBtn = document.querySelector("#btn-mint-plain");
     const refreshBtn = document.querySelector("#btn-refresh-ideas");
     const mintBtn = document.querySelector("#btn-mint-custom");
     const rdBtn = document.querySelector("#btn-mint-rd");
@@ -339,6 +356,11 @@ export function createHexWorkshop(api) {
     if (askBtn) {
       askBtn.hidden = traySparks;
       askBtn.disabled = busy || !focusedTechId || traySparks;
+    }
+    if (plainBtn) {
+      plainBtn.hidden = false;
+      plainBtn.disabled = !canMintPlain({ freeWrite, busy });
+      plainBtn.textContent = "Mint non-emTech invention";
     }
     if (mintBtn) mintBtn.disabled = busy || !focusedTechId;
     if (argBtn) {
@@ -1231,7 +1253,9 @@ export function createHexWorkshop(api) {
     if (title) {
       if (t.kind === TILE_KIND.invention) {
         const tech = t.techId ? techById(t.techId) : null;
-        title.textContent = tech?.name || t.techId || "emTech idea";
+        title.textContent = t.techId
+          ? tech?.name || t.techId || "emTech idea"
+          : t.name || "Idea";
       } else if (t.kind === TILE_KIND.concern) {
         const lamp =
           t.lamp === "green" || t.lamp === "yellow" || t.lamp === "red"
@@ -1293,7 +1317,9 @@ export function createHexWorkshop(api) {
         const tech = t.techId ? techById(t.techId) : null;
         const onField = t.q != null && t.r != null;
         const pending = t.timingPending ? " · re-checking timing…" : "";
-        meta.textContent = `Invention · ${tech?.name || t.techId || "idea"} · ${t.polarity || ""} · year ${t.year || "?"}${onField ? "" : " · in tray"}${pending}`;
+        const techLabel = t.techId ? tech?.name || t.techId : "Not emTech";
+        const worldLabel = t.polarity === CURVE ? "any" : t.polarity || "";
+        meta.textContent = `Invention · ${techLabel} · ${worldLabel} · year ${t.year || "?"}${onField ? "" : " · in tray"}${pending}`;
       }
     }
     if (body) {
@@ -1593,8 +1619,14 @@ export function createHexWorkshop(api) {
             parts.push(`<p class="muted">${escapeHtml(t.timingReason)}</p>`);
           }
         }
+        const dockNote =
+          t.polarity === CURVE
+            ? "this invention docks on any invent tile, blue or pink"
+            : GAME.enforceWorldDocking
+              ? "bits dock on blue faces, atoms on pink faces"
+              : "any invention can dock, regardless of border color";
         parts.push(
-          `<p class="muted">${termHtml("world", "World")}: ${escapeHtml(WORLD_PLAIN[t.polarity] || t.polarity || "?")} — ${GAME.enforceWorldDocking ? "bits dock on blue faces, atoms on pink faces" : "any invention can dock, regardless of border color"}.</p>`
+          `<p class="muted">${termHtml("world", "World")}: ${escapeHtml(WORLD_PLAIN[t.polarity] || t.polarity || "?")} — ${escapeHtml(dockNote)}.</p>`
         );
         const actions = [];
         const canEdit = !api.canEditBoard || Boolean(api.canEditBoard());
@@ -1797,7 +1829,7 @@ export function createHexWorkshop(api) {
     if (els.ta && freeWrite) {
       els.ta.placeholder = tech
         ? "How it works, or the case against an assessment…"
-        : "The case against an assessment — then Mint argument.";
+        : "An ordinary invention, or the case against an assessment…";
     }
     paintScaffoldPreview();
   }
@@ -1844,13 +1876,14 @@ export function createHexWorkshop(api) {
         const place = api.getPlace?.() || "this place";
         const world = WORLD_PLAIN[pol] || pol;
         hint.textContent = freeWrite
-          ? `Write the case against an assessment, or how it works. World: ${world}.`
+          ? `Write the case against an assessment, how it works, or an ordinary invention. World: ${world}.`
           : `Start from what is scarce in ${place}. Ask for ideas, or fill the two blanks. World: ${world}.`;
       } else if (freeWrite) {
-        hint.textContent = "Write the case against an assessment, then Mint argument.";
+        hint.textContent =
+          "Write an ordinary invention, then Mint non-emTech invention. Or write the case against an assessment, then Mint argument.";
       } else {
         hint.textContent =
-          "Pick a technology, or once a pathway is on the board, Write freely and mint an argument against an assessment.";
+          "Pick an emTech to Ask for ideas. Write freely to mint an ordinary invention, or an argument once a pathway is on the board.";
       }
     }
     syncScaffold(tech);
@@ -2005,9 +2038,11 @@ export function createHexWorkshop(api) {
       card.dataset.tileId = t.id;
       card.dataset.id = t.id;
       if (t.techId) card.dataset.techId = t.techId;
-      card.title = inStack
-        ? "In stack — drag onto the board"
-        : "Considering — drag onto the board to add to stack";
+      card.title = !t.techId
+        ? "Not emTech — drag onto the board"
+        : inStack
+          ? "In stack — drag onto the board"
+          : "Considering — drag onto the board to add to stack";
 
       const visual = document.createElement("div");
       visual.className = "hex-idea-card-visual";
@@ -2042,7 +2077,7 @@ export function createHexWorkshop(api) {
       meta.className = "hex-idea-card-meta";
       const techName = document.createElement("span");
       techName.className = "hex-idea-card-tech";
-      techName.textContent = tech?.name || t.techId || "emTech";
+      techName.textContent = t.techId ? tech?.name || t.techId : "Not emTech";
       meta.appendChild(techName);
       const sep = document.createElement("span");
       sep.className = "hex-idea-card-meta-sep";
@@ -2939,6 +2974,10 @@ export function createHexWorkshop(api) {
   }
 
   function localTileTiming(tile, year) {
+    if (!tile?.techId) {
+      const plain = localPlainTiming(tile?.howText);
+      return { ...plain, basis: "ordinary", assumedPredictionIds: [] };
+    }
     const provisional = provisionalScenarioTiming(api.getScenarioPremise?.() || null);
     if (provisional) return provisional;
     const tech = tile.techId ? techById(tile.techId) : null;
@@ -3102,16 +3141,27 @@ export function createHexWorkshop(api) {
       commitTileTiming(tile, tileId, local.level, local.reason, key, local);
       return;
     }
+    const plain = !tile.techId;
     try {
-      const data = await api.coInvent("assess-feasibility", "[Assess tile timing]", {
-        inventionHow: tile.howText || "",
-        selectedTechIds: tile.techId ? [tile.techId] : [],
-        year,
-        place: api.getPlace?.() || "",
-        grounding: api.getGrounding?.() || null,
-        ...(cases.length ? { acceptedArguments: cases } : {}),
-        ...(prior ? { priorTiming: prior } : {}),
-      });
+      const data = await api.coInvent(
+        plain ? "assess-plain" : "assess-feasibility",
+        plain ? "[Filter nonsense]" : "[Assess tile timing]",
+        plain
+          ? {
+              inventionHow: tile.howText || "",
+              year,
+              place: api.getPlace?.() || "",
+            }
+          : {
+              inventionHow: tile.howText || "",
+              selectedTechIds: tile.techId ? [tile.techId] : [],
+              year,
+              place: api.getPlace?.() || "",
+              grounding: api.getGrounding?.() || null,
+              ...(cases.length ? { acceptedArguments: cases } : {}),
+              ...(prior ? { priorTiming: prior } : {}),
+            }
+      );
       if (!timingStillCurrent(tileId, gen, key, isCurrent)) return;
       const rawLevel = data.timing?.level || data.timingLevel;
       const reason = data.timing?.reason || data.timingNote || data.message || "";
@@ -3297,6 +3347,72 @@ export function createHexWorkshop(api) {
     } finally {
       api.finishLearnWhileIdeas?.({ succeeded: ideasOk });
       setCreateBusy("ideas", false);
+    }
+  }
+
+  async function mintPlain() {
+    if (!canMintPlain({ freeWrite, busy: isCreateBusy() })) return;
+    if (api.canEditBoard && !api.canEditBoard()) {
+      api.flashToast?.("You can't add ideas on this board right now.");
+      return;
+    }
+    const ta = document.querySelector("#hex-how-text");
+    const how = String(ta?.value || "").trim();
+    if (how.length < 12) {
+      api.flashToast?.("Write a bit more about how it works.");
+      return;
+    }
+    setCreateBusy("mint", true);
+    try {
+      const year = api.getYear();
+      const place = api.getPlace?.() || "";
+      const sentence = how.split(/[.!?]/)[0].trim();
+      const name = clipWords(sentence, 40) || "My idea";
+      const ideaId = `plain-${Date.now()}`;
+      const artId = ideaImageId({ techId: "plain", ideaId, place, year });
+      let artUrl = null;
+      if (api.fetchIdeaImage) {
+        try {
+          artUrl = await api.fetchIdeaImage({
+            techId: "plain",
+            ideaId,
+            artId,
+            place,
+            year,
+            imagePrompt: how.slice(0, 400),
+            kind: "plain",
+          });
+        } catch {
+          /* ignore */
+        }
+      }
+      const tile = mintInventionTile({
+        techId: null,
+        polarity: CURVE,
+        name,
+        howText: how,
+        year,
+        artUrl,
+        artId,
+        imagePrompt: how.slice(0, 400),
+        origin: "plain",
+      });
+      const b = addTile(board(), tile);
+      setBoard(b);
+      if (ta) ta.value = "";
+      renderIdeaCards();
+      ensureUi()?.render();
+      api.flashToast?.("Tile minted — drag it onto the board.");
+      appendCaptainLog({
+        kind: "action",
+        title: "Minted",
+        ideas: [ideaLog(tile)],
+        detail: "In the tray — drag it onto the board.",
+      });
+      api.onBoardPainted?.();
+      api.commitBoard?.(b);
+    } finally {
+      setCreateBusy("mint", false);
     }
   }
 
@@ -3696,6 +3812,7 @@ export function createHexWorkshop(api) {
       const current = board()?.tiles?.[tileId];
       const other = board()?.tiles?.[n.id] || n;
       if (!current || !other) continue;
+      if (!convergenceEligible(current, other)) continue;
       const key = convergencePairKey(tileId, other.id);
       const prior = board()?.convergences?.[key];
       if (prior && !prior.stale) continue;
@@ -4345,6 +4462,9 @@ export function createHexWorkshop(api) {
   function wireDom() {
     document.querySelector("#btn-ask-ideas")?.addEventListener("click", () => {
       askForIdeas({ refresh: false }).catch((e) => console.warn(e));
+    });
+    document.querySelector("#btn-mint-plain")?.addEventListener("click", () => {
+      return mintPlain().catch((e) => console.warn(e));
     });
     document.querySelector("#btn-refresh-ideas")?.addEventListener("click", () => {
       askForIdeas({ refresh: true }).catch((e) => console.warn(e));

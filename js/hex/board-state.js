@@ -1361,6 +1361,30 @@ export function unplacedInventionsForTech(board, techId) {
 }
 
 /**
+ * Unplaced inventions with no emTech (ordinary work).
+ * @param {object} board
+ * @returns {object[]}
+ */
+export function unplacedPlainInventions(board) {
+  return Object.values(board?.tiles || {}).filter(
+    (t) => t.kind === TILE_KIND.invention && !t.techId && isUnplaced(t)
+  );
+}
+
+/**
+ * Convergence is an emTech demand loop. Both tiles must name a technology.
+ * @param {object|null|undefined} a
+ * @param {object|null|undefined} b
+ */
+export function convergenceEligible(a, b) {
+  if (!a || !b) return false;
+  if (a.kind !== TILE_KIND.invention || b.kind !== TILE_KIND.invention) return false;
+  if (!a.techId || !b.techId) return false;
+  if (String(a.id) === String(b.id)) return false;
+  return true;
+}
+
+/**
  * Tech ids with at least one unplaced invention (tray / idea cards).
  * Insertion order; sparks and custom mints both count.
  * @param {object} board

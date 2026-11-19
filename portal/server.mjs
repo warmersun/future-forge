@@ -2131,11 +2131,17 @@ async function handleIdeaImage(body) {
             "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
             rawPrompt || "A specific person in a specific place under concrete tension.",
           ].join(" ")
-      : [
-          "Photoreal 4:3 documentary still of a local emerging-tech application.",
-          "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
-          rawPrompt || "People using a practical tool in a specific neighborhood.",
-        ].join(" ");
+      : kind === "plain"
+        ? [
+            "Photoreal 4:3 documentary still of ordinary local work: people, land, tools, markets, or a paper schedule.",
+            "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+            rawPrompt || "Neighbors doing practical work together in a specific place.",
+          ].join(" ")
+        : [
+            "Photoreal 4:3 documentary still of a local emerging-tech application.",
+            "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+            rawPrompt || "People using a practical tool in a specific neighborhood.",
+          ].join(" ");
 
   try {
     const data = await runVisionImage("generate", prompt, null);

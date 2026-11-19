@@ -1285,6 +1285,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                   ></textarea>
                   <div class="hex-mint-actions">
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-custom">Mint tile</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-plain" disabled>Mint non-emTech invention</button>
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-argument" disabled>Mint argument</button>
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-rd">Mint R&D</button>
                   </div>
@@ -2442,7 +2443,8 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             <h4 class="help-block-title">Inventing</h4>
             <ul class="help-list">
               <li>Pick an <strong>emTech</strong>, then <strong>Ask for ideas</strong> (AI mints 3 tiles) or write <strong>How it works</strong> and mint your own.</li>
-              <li>Drag a tile onto the hex board. Matching worlds (bits / atoms) can dock. Crisis hexes always dock — slide them next to your island.</li>
+              <li><strong>Write freely</strong>, then <strong>Mint non-emTech invention</strong> — ordinary work such as a farm, in your own words, with no technology. Feasibility only filters nonsense.</li>
+              <li>Drag a tile onto the hex board. Matching worlds (bits / atoms) can dock. A non-emTech invention docks on either. Crisis hexes always dock — slide them next to your island.</li>
               <li>The stack is techs with a <em>placed</em> tile. Looking at the board is the thinking.</li>
             </ul>
           </section>
@@ -2589,6 +2591,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=assessment-3"></script>
+    <script type="module" src="js/main.js?v=plain-2"></script>
   </body>
 </html>
