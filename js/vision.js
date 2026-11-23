@@ -60,6 +60,10 @@ function briefingOwnsImage(img) {
   return Boolean(img?.closest?.(".vision-canvas-wrap.is-briefing"));
 }
 
+function briefingOwnsRootEl(root) {
+  return Boolean(root?.classList?.contains?.("is-briefing"));
+}
+
 /** data:image… → blob: URL so Chrome doesn't re-decode multi‑MB base64 on every img.src set */
 export function dataUrlToBlobUrl(dataUrl) {
   const m = /^data:([^;,]+)?(;base64)?,(.*)$/i.exec(dataUrl);
@@ -102,6 +106,8 @@ export class VisionRenderer {
     /** Raw response key so we don't re-process the same frame */
     this._rawKey = "";
     this._blobUrl = "";
+    this._lastStatus = "";
+    this._loadingMessage = "";
     /** Optional extra roots to keep in sync (e.g. invent + challenge panels) */
     this.mirrorRoots = [];
     /** Developer inspect: sent/received Imagine payload */
@@ -147,8 +153,21 @@ export class VisionRenderer {
       this.img.getAttribute("src") !== this.currentUrl &&
       !briefingOwnsImage(this.img)
     ) {
+      this.img.classList?.remove?.("is-briefing-fade");
       this.img.hidden = false;
       this.img.src = this.currentUrl;
+      const ph = root.querySelector?.(".vision-placeholder");
+      if (ph) ph.hidden = true;
+    }
+    if (!briefingOwnsRootEl(root)) {
+      if (this.busy) {
+        this.setLoading(true, this._loadingMessage || "Imagining the present…");
+      } else {
+        this.setLoading(false);
+        if (this.status && this._lastStatus) {
+          this.status.textContent = this._lastStatus;
+        }
+      }
     }
   }
 
@@ -195,12 +214,19 @@ export class VisionRenderer {
 
   /** Reset session (new mission) so present-day regenerates cleanly */
   newSession(sessionId) {
+    clearTimeout(this.timer);
+    clearTimeout(this._queueFlush);
+    this.timer = null;
+    this._queueFlush = null;
+    this.pending = null;
+    this.queue = null;
     this.sessionId =
       (sessionId && String(sessionId).slice(0, 120)) ||
       crypto.randomUUID?.() ||
       `v-${Date.now()}`;
     this.lastFingerprint = "";
     this.currentUrl = "";
+    this._rawKey = "";
     const clearImg = (img) => {
       if (!img || briefingOwnsImage(img)) return;
       img.removeAttribute("src");
@@ -422,6 +448,9 @@ export class VisionRenderer {
       ? `${fingerprint}|rev:${state.visionRev ?? ""}`
       : fingerprint;
     if (!state.force && localKey === this.lastFingerprint && this.currentUrl) {
+      if (this.root && !briefingOwnsRootEl(this.root)) {
+        this.attach(this.root);
+      }
       try {
         state.onSettled?.();
       } catch {
@@ -465,6 +494,7 @@ export class VisionRenderer {
       );
     }
 
+    const reqSession = this.sessionId;
     const t0 = Date.now();
     let data = null;
     let payload = null;
@@ -551,7 +581,9 @@ export class VisionRenderer {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (this.sessionId !== reqSession) return;
       data = await res.json();
+      if (this.sessionId !== reqSession) return;
       if (!res.ok || !data.ok) {
         throw new Error(visionFailureText(data, res.status));
       }
@@ -662,15 +694,16 @@ export class VisionRenderer {
   }
 
   setLoading(on, message) {
+    this._loadingMessage = on ? message || this._loadingMessage : "";
     const hasImage = Boolean(
       this.currentUrl ||
         (this.img && !this.img.hidden && this.img.getAttribute("src"))
     );
     const applyRoot = (root) => {
-      if (!root) return;
-      root.classList.toggle("is-imagining", Boolean(on));
+      if (!root || briefingOwnsRootEl(root)) return;
+      root.classList?.toggle?.("is-imagining", Boolean(on));
       // Stronger empty-state chip only when there is nothing to look at yet
-      root.classList.toggle("is-imagining-empty", Boolean(on) && !hasImage);
+      root.classList?.toggle?.("is-imagining-empty", Boolean(on) && !hasImage);
       const overlay = root.querySelector?.(".vision-loading");
       if (overlay) {
         overlay.hidden = !on;
@@ -681,7 +714,7 @@ export class VisionRenderer {
     applyRoot(this.root);
     for (const r of this.mirrorRoots) applyRoot(r);
     // Keep this.overlay in sync (primary root)
-    if (this.overlay) {
+    if (this.overlay && !briefingOwnsRootEl(this.root)) {
       this.overlay.hidden = !on;
       const text = this.overlay.querySelector(".vision-loading-text");
       if (text && message) text.textContent = message;
@@ -690,6 +723,9 @@ export class VisionRenderer {
   }
 
   setStatus(msg) {
-    if (this.status) this.status.textContent = msg;
+    this._lastStatus = String(msg ?? "");
+    if (this.status && !briefingOwnsRootEl(this.root)) {
+      this.status.textContent = this._lastStatus;
+    }
   }
 }

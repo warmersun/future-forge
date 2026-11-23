@@ -794,21 +794,24 @@ export function boardBondsLevel(board) {
   const uncoveredList = givens.filter((g) => !covered.has(g.id));
   const uncovered = uncoveredList.length;
   if (uncovered) {
+    const connected = givens.length - uncovered;
     return {
       level: "red",
       uncovered,
       uncoveredIds: uncoveredList.map((g) => g.id),
       note:
-        uncovered === 1
-          ? "1 hex is not touching any invent island"
-          : `${uncovered} hexes are not touching any invent island`,
+        connected === 0
+          ? `0 of ${givens.length} crises connected — place an idea next to a crisis hex`
+          : uncovered === 1
+            ? "1 hex still not connected to an idea"
+            : `${uncovered} of ${givens.length} hexes still not connected to an idea`,
     };
   }
   return {
     level: "green",
     uncovered: 0,
     uncoveredIds: [],
-    note: "Every crisis and concern hex touches an invent island",
+    note: "Every crisis and concern hex is connected to your pathway",
   };
 }
 
@@ -838,7 +841,10 @@ export function hexPathwayPanel(board) {
     reds === 0 && givens.length
       ? {
           level: greens === givens.length ? "green" : "yellow",
-          note: "No red lights",
+          note:
+            greens === givens.length
+              ? "All lights green"
+              : "No red lights — some still yellow",
         }
       : {
           level: "red",

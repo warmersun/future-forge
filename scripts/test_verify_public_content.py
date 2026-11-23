@@ -1,5 +1,14 @@
+import importlib.util
 import unittest
+from pathlib import Path
+
 from verify_public_content import matches_public_content
+
+_spec = importlib.util.spec_from_file_location(
+    'quest_package', Path(__file__).with_name('quest-package.py')
+)
+_package = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_package)
 
 
 class PublicContentTests(unittest.TestCase):
@@ -41,6 +50,30 @@ class PublicContentTests(unittest.TestCase):
         self.assertFalse(matches_public_content(source, bare, is_html=False))
         doubled = self._viewer(escaped) + b'<pre class="md-raw" id="raw">' + escaped + b'</pre>'
         self.assertFalse(matches_public_content(source, doubled, is_html=False))
+
+    def test_published_lesson_root_plus_social_tags_match(self):
+        """Pack stores lessons/ paths. Publish rewrites them to the public root."""
+        rel = 'lessons/how-far-along/01-the-guess.html'
+        raw = (
+            b'<html><head><title>T</title>\n'
+            b'<link rel="canonical" href="lessons/how-far-along/01-the-guess.html">\n'
+            b'</head><body>text</body></html>'
+        )
+        tree = {rel: raw}
+        projected = dict(tree)
+        _package.bind_roots(
+            projected,
+            'https://warmersun.com/lessons/',
+            'https://warmersun.com/quests/spotlights/assets/',
+        )
+        published = projected[rel]
+        self.assertIn(b'href="https://warmersun.com/lessons/how-far-along/01-the-guess.html"', published)
+        rendered = published.replace(
+            b'</head>',
+            b'<meta property="og:title" content="Warmer Sun Lessons" />\n</head>',
+        )
+        self.assertTrue(matches_public_content(published, rendered, is_html=True))
+        self.assertFalse(matches_public_content(raw, rendered, is_html=True))
 
 
 if __name__ == '__main__':

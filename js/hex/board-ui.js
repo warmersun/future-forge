@@ -743,6 +743,9 @@ export function createHexBoardUi(opts) {
         }
         dragMoved = true;
       }
+      if (dragMoved && isPortableTile(tile)) {
+        setDiscardArmed(true);
+      }
       if (
         dragMoved &&
         !fromTray &&
@@ -873,14 +876,20 @@ export function createHexBoardUi(opts) {
 
   function pointerOverDiscard(clientX, clientY) {
     const el = discardWell();
-    if (!el) return false;
+    if (!el || !el.classList.contains("is-armed")) return false;
     const rect = el.getBoundingClientRect();
     return (
+      rect.width > 0 &&
+      rect.height > 0 &&
       clientX >= rect.left &&
       clientX <= rect.right &&
       clientY >= rect.top &&
       clientY <= rect.bottom
     );
+  }
+
+  function setDiscardArmed(on) {
+    discardWell()?.classList.toggle("is-armed", Boolean(on));
   }
 
   function setDiscardHot(on) {
@@ -924,6 +933,7 @@ export function createHexBoardUi(opts) {
   let dragGhostEl = null;
 
   function destroyDragGhost() {
+    setDiscardArmed(false);
     setDiscardHot(false);
     setIdeasHot(false);
     setIdeasDropArmed(false);

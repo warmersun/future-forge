@@ -26,6 +26,7 @@ const POPUP_NAME = "ff-second-pane";
 
 const PANES = {
   vision: { sel: "#side-vision", title: "Future vision" },
+  assessment: { sel: "#side-assessment", title: "Assessment" },
   log: { sel: "#side-log", title: "Log" },
   aitrace: { sel: "#side-aitrace", title: "AI inspect" },
   coinventor: { sel: "#side-coinventor", title: "AI co-inventor" },
@@ -43,7 +44,10 @@ export function initSecondScreen(doc = document) {
   syncExtended(doc, win);
   win.screen?.addEventListener?.("change", () => syncExtended(doc, win));
   doc.addEventListener("click", (ev) => onScreenClick(ev, doc, win));
-  doc.addEventListener("ff-side-layout", () => syncTabs(doc));
+  doc.addEventListener("ff-side-layout", () => {
+    syncTabs(doc);
+    hostPaneIcons(doc);
+  });
   syncButtons(doc);
 }
 
@@ -96,18 +100,24 @@ function syncButtons(doc) {
 function syncTabs(doc) {
   const panel = doc.querySelector("#screen-workshop .vision-panel");
   const visionAway = awayId === "vision";
+  const coTabbed = Boolean(panel?.classList.contains("is-co-tabbed"));
   panel?.classList.toggle("is-vision-away", visionAway);
   const items = [...doc.querySelectorAll("#screen-workshop .side-tab-item")];
   for (const item of items) {
-    const id = item.querySelector("[data-second-screen]")?.getAttribute("data-second-screen");
+    const id =
+      item.querySelector(".side-tab")?.dataset?.tab ||
+      item.querySelector("[data-second-screen]")?.getAttribute("data-second-screen");
     item.classList.toggle("is-pane-away", Boolean(id) && id === awayId);
   }
   const visible = items.filter((item) => {
     if (item.classList.contains("is-pane-away")) return false;
+    if (item.classList.contains("side-tab-assessment") && !coTabbed) {
+      return false;
+    }
     if (
       item.classList.contains("side-tab-coinventor") &&
       !visionAway &&
-      !panel?.classList.contains("is-co-tabbed")
+      !coTabbed
     ) {
       return false;
     }
@@ -118,7 +128,9 @@ function syncTabs(doc) {
   const active = doc.querySelector("#screen-workshop .side-tab[aria-selected='true']")?.dataset.tab;
   const visibleIds = visible.map((item) => item.querySelector(".side-tab")?.dataset.tab).filter(Boolean);
   if (active && visibleIds.length && !visibleIds.includes(active)) {
-    doc.dispatchEvent(new CustomEvent("ff-select-side-tab", { detail: { tab: visibleIds[0] } }));
+    const next =
+      visionAway && visibleIds.includes("coinventor") ? "coinventor" : visibleIds[0];
+    doc.dispatchEvent(new CustomEvent("ff-select-side-tab", { detail: { tab: next } }));
   }
 }
 
@@ -139,7 +151,7 @@ function iconButton(doc, id) {
 /** Keep the send / bring-back icon beside the panel title, never in a corner. */
 function hostPaneIcons(doc) {
   const single = doc.querySelector("#screen-workshop .vision-panel")?.classList.contains("is-single-tab");
-  for (const id of ["vision", "log", "aitrace"]) {
+  for (const id of ["vision", "assessment", "log", "aitrace"]) {
     const btn = iconButton(doc, id);
     const pane = paneEl(doc, id);
     const titleLine = pane?.querySelector(".pane-title-line");
@@ -187,6 +199,13 @@ export function bringCoInventorHome(doc = document) {
   closePopup();
 }
 
+/** Put Assessment back on the workshop before tall screens undock it below the board. */
+export function bringAssessmentHome(doc = document) {
+  if (awayId !== "assessment") return;
+  restore(doc);
+  closePopup();
+}
+
 function paneUrl(win) {
   return new URL("second-pane.html", win.location.href).href;
 }
@@ -204,18 +223,38 @@ function waitForPaneDoc(pop) {
   // window.open returns while the popup is still about:blank (readyState
   // complete). That is not a failure; the real page load comes next.
   return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      clearTimeout(timer);
+      clearInterval(poll);
+      try {
+        pop.removeEventListener("load", onLoad);
+      } catch {
+        /* ignore */
+      }
+    };
+    const onLoad = () => {
+      if (!isPaneDoc(pop)) return;
+      cleanup();
+      resolve();
+    };
     const timer = setTimeout(() => {
-      pop.removeEventListener("load", onLoad);
+      cleanup();
       if (isPaneDoc(pop)) resolve();
       else reject(new Error("second pane did not load"));
     }, 5000);
-    const onLoad = () => {
-      if (!isPaneDoc(pop)) return;
-      clearTimeout(timer);
-      pop.removeEventListener("load", onLoad);
-      resolve();
-    };
-    pop.addEventListener("load", onLoad);
+    const poll = setInterval(() => {
+      if (pop.closed) {
+        cleanup();
+        reject(new Error("second pane closed"));
+        return;
+      }
+      if (isPaneDoc(pop)) onLoad();
+    }, 50);
+    try {
+      pop.addEventListener("load", onLoad);
+    } catch {
+      /* ignore */
+    }
     if (isPaneDoc(pop)) onLoad();
   });
 }

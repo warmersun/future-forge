@@ -30,7 +30,7 @@ import { attachReadAloud, pruneDetachedReadAloud, stopReadAloudFor } from "./rea
 import { escapeHtml, renderMarkdownSafe } from "./md-lite.js";
 import { apiFetch } from "./auth.js";
 import { getClientSessionId } from "./client-session.js";
-import { dataUrlToBlobUrl } from "./vision.js";
+import { dataUrlToBlobUrl } from "./vision.js?v=calm-stage-1";
 import {
   briefBeatArtId,
   briefBeatAuthoredUrl,
@@ -176,13 +176,19 @@ export function resetQuestBriefing(opts = {}) {
       root.querySelectorAll(".quest-briefing-overlay").forEach((el) => el.remove());
       removeReplayChip(root);
     });
-    document.querySelectorAll(".quest-briefing-overlay").forEach((el) => el.remove());
-    document.querySelectorAll(".quest-briefing-replay").forEach((el) => el.remove());
-    document.querySelectorAll(".vision-canvas-wrap.is-briefing").forEach((el) => {
-      el.classList.remove("is-briefing");
-      delete el.dataset.briefingKey;
-      records.delete(el);
-    });
+    const docs = [document];
+    const secondDoc = typeof window !== "undefined" ? window.__ffSecondDoc : null;
+    if (secondDoc && secondDoc !== document) docs.push(secondDoc);
+    for (const d of docs) {
+      d.querySelectorAll(".quest-briefing-overlay").forEach((el) => el.remove());
+      d.querySelectorAll(".quest-briefing-replay").forEach((el) => el.remove());
+      d.querySelectorAll(".vision-canvas-wrap.is-briefing").forEach((el) => {
+        el.classList.remove("is-briefing");
+        delete el.dataset.briefingKey;
+        records.delete(el);
+      });
+      d.body?.classList?.remove?.(FULLSCREEN_CLASS);
+    }
     document
       .querySelectorAll(".challenge-banner.is-briefing-walk, .challenge-banner.is-briefing-recap")
       .forEach((el) => {
@@ -361,20 +367,29 @@ function snapshot(rec) {
 
 function unmountOverlay(root) {
   if (!root) return;
+  removeReplayChip(root);
   root.querySelectorAll(".quest-briefing-overlay").forEach((el) => el.remove());
   root.classList.remove("is-briefing");
   delete root.dataset.briefingKey;
   records.delete(root);
-  removeReplayChip(root);
   const banner =
     root.closest?.(".workshop-layout")?.querySelector?.(".challenge-banner") || null;
   banner?.classList?.remove?.("is-briefing-walk", "is-briefing-recap");
-  setQuestBriefingFullscreen(false);
+  setQuestBriefingFullscreen(false, root);
 }
 
 /** Walk owns the viewport. Off, unmount, and reset give the workshop back. */
-function setQuestBriefingFullscreen(on) {
+function setQuestBriefingFullscreen(on, root = null) {
   if (typeof document === "undefined") return;
+  const owner = root?.ownerDocument;
+  const inSecondPane = Boolean(
+    owner && owner !== document && owner.body?.classList?.contains?.("ff-second-pane")
+  );
+  if (inSecondPane) {
+    document.body?.classList?.remove?.(FULLSCREEN_CLASS);
+    owner.body?.classList?.toggle?.(FULLSCREEN_CLASS, Boolean(on));
+    return;
+  }
   document.body?.classList?.toggle?.(FULLSCREEN_CLASS, Boolean(on));
 }
 
@@ -421,9 +436,14 @@ function bindKeys() {
 
 function activeWalkRecord() {
   if (typeof document === "undefined") return null;
-  for (const el of document.querySelectorAll(".vision-canvas-wrap.is-briefing")) {
-    const rec = records.get(el);
-    if (rec?.mode === "walk" && el.offsetParent !== null) return rec;
+  const docs = [document];
+  const secondDoc = typeof window !== "undefined" ? window.__ffSecondDoc : null;
+  if (secondDoc && secondDoc !== document) docs.push(secondDoc);
+  for (const d of docs) {
+    for (const el of d.querySelectorAll(".vision-canvas-wrap.is-briefing")) {
+      const rec = records.get(el);
+      if (rec?.mode === "walk" && el.offsetParent !== null) return rec;
+    }
   }
   return null;
 }
@@ -510,7 +530,7 @@ function paintDom(rec) {
   const root = rec.visionRoot;
   const paintKey = `${rec.fingerprint}|${rec.mode}|${rec.index}`;
   syncBannerMode(rec);
-  setQuestBriefingFullscreen(rec.mode === "walk");
+  setQuestBriefingFullscreen(rec.mode === "walk", root);
 
   if (rec.mode === "off") {
     root.querySelectorAll(".quest-briefing-overlay").forEach((el) => el.remove());
@@ -663,19 +683,36 @@ function renderRecap(rec) {
     </div>`;
 }
 
-function ensureReplayChip(rec) {
-  const bar = rec.visionRoot.closest(".side-pane")?.querySelector(".vision-stage-bar");
+function visionStageBarFor(root) {
+  return (
+    root?.closest?.(".vision-stack-top, .side-pane")?.querySelector?.(".vision-stage-bar") ||
+    root?.closest?.(".vision-panel")?.querySelector?.(".vision-stage-bar") ||
+    null
+  );
+}
+
+function briefingSummaryBarFor(rec) {
+  return (
+    rec?.sceneEl?.closest?.("#crisis-briefing")?.querySelector?.(".crisis-briefing-header") ||
+    null
+  );
+}
+
+function attachReplayButton(bar, rec, extraClass = "") {
   if (!bar) return;
   let btn = bar.querySelector(".quest-briefing-replay");
   if (!btn) {
     btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "btn btn-ghost btn-sm quest-briefing-replay";
+    btn.className = `btn btn-ghost btn-sm quest-briefing-replay${extraClass ? ` ${extraClass}` : ""}`;
     btn.setAttribute("data-brief", "replay");
-    btn.textContent = "Replay briefing";
-    bar.appendChild(btn);
+    btn.textContent = extraClass ? "Replay" : "Replay briefing";
+    const toggle = bar.querySelector(".crisis-briefing-toggle");
+    if (toggle && bar.insertBefore) bar.insertBefore(btn, toggle);
+    else bar.appendChild(btn);
     btn.addEventListener("click", (ev) => {
       ev.preventDefault();
+      ev.stopPropagation();
       const live = records.get(rec.visionRoot);
       if (live) onBriefAction(live, "replay", null);
     });
@@ -683,9 +720,19 @@ function ensureReplayChip(rec) {
   btn.hidden = false;
 }
 
+function ensureReplayChip(rec) {
+  attachReplayButton(visionStageBarFor(rec.visionRoot), rec);
+  attachReplayButton(briefingSummaryBarFor(rec), rec, "quest-briefing-replay-inline");
+}
+
 function removeReplayChip(root) {
-  const bar = root?.closest?.(".side-pane")?.querySelector(".vision-stage-bar");
-  bar?.querySelectorAll(".quest-briefing-replay").forEach((el) => el.remove());
+  visionStageBarFor(root)
+    ?.querySelectorAll?.(".quest-briefing-replay")
+    ?.forEach?.((el) => el.remove());
+  const rec = records.get(root);
+  briefingSummaryBarFor(rec)
+    ?.querySelectorAll?.(".quest-briefing-replay")
+    ?.forEach?.((el) => el.remove());
 }
 
 function renderWalk(rec) {

@@ -2476,15 +2476,30 @@ button.btn[hidden] {
 /* Look Ahead — foresight CTA (opens Wait overlay; confirm still Wait +2 years).
    Violet (accent-2): not RYG traffic meaning, not primary blue. */
 .btn-look-ahead {
+  background: var(--bg-3);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: none;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, filter 0.2s;
+}
+
+.btn-look-ahead:hover:not(:disabled) {
+  border-color: rgba(196, 181, 253, 0.55);
+  color: #f5f3ff;
+  background: rgba(91, 33, 182, 0.28);
+}
+
+.btn-look-ahead.is-look-ahead-recommended {
   background: linear-gradient(160deg, #5b21b6 0%, #7c3aed 55%, #6d28d9 100%);
   border: 1px solid rgba(196, 181, 253, 0.45);
   color: #f5f3ff;
-  font-weight: 600;
   letter-spacing: 0.02em;
   box-shadow: 0 6px 20px rgba(109, 40, 217, 0.35);
 }
 
-.btn-look-ahead:hover:not(:disabled) {
+.btn-look-ahead.is-look-ahead-recommended:hover:not(:disabled) {
   border-color: rgba(221, 214, 254, 0.7);
   color: #ffffff;
   filter: brightness(1.08);
@@ -11209,10 +11224,11 @@ body.is-quest-briefing .workshop-layout > .vision-panel:has(.vision-canvas-wrap.
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 0.4rem 0.65rem;
-  font-size: 0.68rem;
-  color: var(--text-mute);
-  background: linear-gradient(transparent, rgba(7, 11, 20, 0.85));
+  padding: 0.6rem 0.75rem 0.45rem;
+  font-size: 0.7rem;
+  color: rgba(241, 245, 249, 0.92);
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.9);
+  background: linear-gradient(transparent, rgba(7, 11, 20, 0.78) 38%, rgba(7, 11, 20, 0.94));
   z-index: 1;
 }
 
@@ -14238,13 +14254,16 @@ body.ff-second-pane .btn-second-screen {
   display: none !important;
 }
 
+.vision-panel.is-vision-away .vision-stack-top,
 .vision-panel.is-vision-away .vision-stack-bottom {
   flex: 1 1 auto;
   max-height: none;
   min-height: 0;
 }
 
-.vision-panel.is-vision-away .co-title-line .btn-second-screen {
+.vision-panel.is-vision-away .co-collapse-toggle,
+.vision-panel.is-vision-away .co-title-line .btn-second-screen,
+.vision-panel.is-co-tabbed .co-title-line .btn-second-screen {
   display: none !important;
 }
 
@@ -14440,6 +14459,7 @@ body.ff-second-pane {
 }
 
 body.ff-second-pane > #side-vision,
+body.ff-second-pane > #side-assessment,
 body.ff-second-pane > #side-log,
 body.ff-second-pane > #side-aitrace,
 body.ff-second-pane > #side-coinventor {
@@ -14447,6 +14467,11 @@ body.ff-second-pane > #side-coinventor {
   min-height: 0;
   height: 100%;
   max-height: none;
+}
+
+body.ff-second-pane > #side-vision:has(.vision-canvas-wrap.is-briefing) .vision-stage-bar,
+body.ff-second-pane > #side-vision:has(.vision-canvas-wrap.is-briefing) .pane-title-line {
+  display: none !important;
 }
 
 .hex-tile-create-head-row {
@@ -14913,7 +14938,8 @@ body.ff-second-pane > #side-coinventor {
 .crisis-briefing > summary::-webkit-details-marker { display: none; }
 .crisis-briefing > summary:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
 .crisis-briefing-toggle { display: inline-flex; align-items: center; justify-content: center; padding: .15rem; line-height: 1; }
-.crisis-briefing:not([open]) .co-collapse-chevron { transform: rotate(180deg); }
+.crisis-briefing:not([open]) .co-collapse-chevron { transform: none; }
+.crisis-briefing[open] .co-collapse-chevron { transform: rotate(180deg); }
 .crisis-introduction-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; margin: .7rem 0; }
 .crisis-introduction-cards > p { grid-column: 1 / -1; margin: 0; }
 .crisis-introduction-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; min-width: 0; text-align: left; width: 100%; padding: 0; border: 1px solid rgba(56, 189, 248, .4); border-radius: var(--radius-sm, 8px); background: var(--bg-elevated, rgba(15, 23, 42, .85)); color: var(--text, #e8eef9); overflow: hidden; cursor: pointer; transition: border-color .2s, transform .2s var(--ease, ease), box-shadow .2s; }
@@ -15108,3 +15134,366 @@ body.ff-second-pane > #side-coinventor {
 .puzzle-share-preview img { display: block; width: 100%; height: auto; }
 .puzzle-share-preview img[hidden] { display: none; }
 .puzzle-share-dialog :focus-visible { outline: 2px solid #6ee7cb; outline-offset: 4px; }
+
+/* ---- Calm post-briefing staging & workshop ergonomics ---- */
+
+/* Stage 0 ("crises"): quiet 2-column stage with Board + Crises + Future Vision only. */
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] #hud-resources,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] #hud-crisis-wrap,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] #solo-tech-library,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .tech-dock-handle,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .tech-dock-edge,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .hex-emtech-bar,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] #invent-capability-explorer,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] #hex-tile-create,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .invent-form-hex > #pathway-panel,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .invent-form-hex > #invent-actions,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .invent-form-hex > #challenge-ready-hint,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .invent-form-hex > #invent-foot,
+body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] #policy-weather {
+  display: none !important;
+}
+
+@media (min-width: 1200px) {
+  body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .workshop-layout {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 3fr);
+    grid-template-areas: "invent vision";
+  }
+  body:not(.tutorial-open):not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .workshop-layout.is-tech-collapsed > .invent-center {
+    padding-left: 0;
+  }
+}
+
+/* Stage 1 ("invent"): board + tech rail + slim Invent strip lead; Assessment waits for first tile. */
+body:not(.tutorial-open) #screen-workshop[data-workshop-stage="invent"] .invent-form-hex > #pathway-panel,
+body:not(.tutorial-open) #screen-workshop[data-workshop-stage="invent"] .invent-form-hex > #invent-actions,
+body:not(.tutorial-open) #screen-workshop[data-workshop-stage="invent"] .invent-form-hex > #challenge-ready-hint,
+body:not(.tutorial-open) #screen-workshop[data-workshop-stage="invent"] .invent-form-hex > #invent-foot {
+  display: none;
+}
+
+body:not(.tutorial-open) #screen-workshop[data-workshop-stage="crises"] #tab-assessment,
+body:not(.tutorial-open) #screen-workshop[data-workshop-stage="invent"] #tab-assessment {
+  opacity: 0.62;
+}
+
+/* Live pathway status dot on the short-screen Assessment tab (Stage 2+) */
+.side-tab-status-dot {
+  display: inline-block;
+  width: 0.48rem;
+  height: 0.48rem;
+  margin-left: 0.32rem;
+  border-radius: 999px;
+  vertical-align: middle;
+  background: #94a3b8;
+  box-shadow: 0 0 8px currentColor;
+}
+.side-tab-status-dot[hidden] {
+  display: none !important;
+}
+.side-tab-status-dot[data-level="red"] {
+  background: #f87171;
+  color: rgba(248, 113, 113, 0.7);
+}
+.side-tab-status-dot[data-level="yellow"] {
+  background: #facc15;
+  color: rgba(250, 204, 21, 0.65);
+}
+.side-tab-status-dot[data-level="green"] {
+  background: #4ade80;
+  color: rgba(74, 222, 128, 0.65);
+}
+.side-tab-status-dot[data-level="pending"] {
+  background: #38bdf8;
+  color: rgba(56, 189, 248, 0.7);
+  animation: ffTabDotPulse 1.2s ease-in-out infinite;
+}
+@keyframes ffTabDotPulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* Compact 2-line mission header */
+#screen-workshop .challenge-banner {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.35rem;
+}
+.challenge-banner-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+}
+.challenge-banner-title-group {
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+.challenge-banner-title-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
+}
+.challenge-banner-title-line h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.25;
+}
+.challenge-banner-title-line .mission-place {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-mute);
+}
+#screen-workshop .challenge-banner .quest-job-line {
+  margin: 0.32rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.38;
+}
+.challenge-banner-meta-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.25rem;
+}
+.challenge-banner-meta-line .stakeholder {
+  margin: 0;
+  font-size: 0.76rem;
+}
+.challenge-banner-meta-line .ws-sponsor {
+  margin: 0;
+  padding: 0.16rem 0.5rem;
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.45rem;
+  font-size: 0.74rem;
+}
+.challenge-banner-meta-line .ws-sponsor[hidden] {
+  display: none;
+}
+.challenge-banner-meta-line .ws-sponsor-label,
+.challenge-banner-meta-line .ws-sponsor-banner {
+  margin: 0;
+  font-size: 0.74rem;
+}
+#screen-workshop .challenge-banner .ws-spotlight-chip {
+  margin: 0.1rem 0 0;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+}
+
+/* Slim collapsed Quest briefing bar + inline Replay button */
+#screen-workshop .crisis-briefing {
+  margin: 0.4rem 0 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, 0.45);
+}
+#screen-workshop .crisis-briefing > summary {
+  padding: 0.32rem 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+#screen-workshop .crisis-briefing > summary .co-title {
+  font-size: 0.78rem;
+  margin-right: auto;
+}
+#screen-workshop .crisis-briefing[open] > #ws-mission-scene {
+  padding: 0 0.65rem 0.55rem;
+}
+.quest-briefing-replay-inline {
+  padding: 0.12rem 0.45rem;
+  font-size: 0.72rem;
+  min-height: 0;
+}
+
+/* Compact board-top crisis introduction strip (fits above the visible Hex Board) */
+.hex-board-dock > .crisis-introduction-cards {
+  margin: 0 0 0.65rem;
+  gap: 0.55rem;
+}
+.crisis-introduction-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+@media (max-width: 719px) {
+  .crisis-introduction-head {
+    position: sticky;
+    left: 0;
+    justify-content: flex-start;
+    gap: 0.65rem;
+  }
+}
+.crisis-introduction-prompt {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.crisis-introduction-all {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.76rem;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #bae6fd;
+}
+.crisis-introduction-all:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.65);
+}
+.crisis-introduction-visual {
+  aspect-ratio: auto;
+  height: 3.1rem;
+  padding: 0.35rem 0;
+}
+.crisis-introduction-hex {
+  width: 2rem;
+}
+.crisis-introduction-card {
+  gap: 0.28rem;
+}
+.crisis-introduction-card > :not(.crisis-introduction-visual) {
+  margin-left: 0.7rem;
+  margin-right: 0.7rem;
+}
+.crisis-introduction-card > .crisis-introduction-role {
+  margin-top: 0.25rem;
+}
+.crisis-introduction-card > .hex-idea-card-how {
+  font-size: 0.75rem;
+  line-height: 1.32;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.crisis-introduction-card > .crisis-introduction-lamp {
+  margin-bottom: 0.65rem;
+  font-size: 0.74rem;
+}
+
+/* Slim 1-line Invent strip above the Hex Board until a tech is picked or "Write your own" clicked */
+#hex-tile-create.is-compact {
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 0.6rem;
+}
+#hex-tile-create.is-compact .hex-tile-create-head {
+  margin-bottom: 0;
+}
+#hex-tile-create.is-compact .hex-tile-create-body,
+#hex-tile-create.is-compact #selected-techs {
+  display: none;
+}
+.hex-tile-create-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.hex-open-compose {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.76rem;
+  border: 1px solid var(--border);
+}
+
+/* Secondary Mint types tucked behind "More tile types" */
+.hex-more-mints {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.hex-more-mints > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.76rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid transparent;
+}
+.hex-more-mints > summary::-webkit-details-marker {
+  display: none;
+}
+.hex-more-mints > summary::after {
+  content: " ▾";
+  opacity: 0.75;
+}
+.hex-more-mints[open] > summary::after {
+  content: " ▴";
+}
+.hex-more-mints-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: 0.2rem;
+}
+
+/* Discard dropzone appears only while actively dragging a tile */
+.hex-discard:not(.is-armed) {
+  display: none;
+}
+
+/* Compact Capability outlook bar aligned with .invent-form */
+#invent-capability-explorer {
+  margin: 0.45rem 1.2rem 0;
+  padding: 0.6rem 0.85rem;
+}
+#screen-workshop .invent-form-hex {
+  padding-top: 0.6rem;
+}
+
+/* Emerging tech rail: category pills live inside All emerging tech; concise For this place cards */
+.tech-group-all-filters {
+  margin: 0.4rem 0 0.2rem;
+}
+.tech-group-place .tech-card .tech-can,
+.tech-group-place .tech-card .tech-why {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tech-group-place .tech-card:hover .tech-can,
+.tech-group-place .tech-card:hover .tech-why,
+.tech-group-place .tech-card.is-focused .tech-can,
+.tech-group-place .tech-card.is-focused .tech-why {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+/* Co-Inventor: secondary prompt disclosure */
+.co-actions-more {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+.co-actions-more > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.co-actions-more > summary::-webkit-details-marker {
+  display: none;
+}
+.co-actions-more > summary::after {
+  content: " ▾";
+  opacity: 0.7;
+}
+.co-actions-more[open] > summary::after {
+  content: " ▴";
+}
+.co-actions-more-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  width: 100%;
+  margin-top: 0.25rem;
+}
