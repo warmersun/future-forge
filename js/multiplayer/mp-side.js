@@ -22,12 +22,12 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { VISION_STAGES, techById } from "../data.js";
-import { VisionRenderer } from "../vision.js";
+import { VisionRenderer } from "../vision.js?v=calm-stage-1";
 import { bindVisionSplit } from "../side-split.js";
-import { CoInventor } from "../coinventor.js";
+import { CoInventor } from "../coinventor.js?v=calm-stage-1";
 import { visionStageIdForDeployStage } from "../sim/deploy.js";
-import { visionPathwaysFromBoard, visionGivensFromBoard, visionPeopleMood } from "../hex/evaluate.js?v=plain-1";
-import { briefingOwnsRoot } from "../briefing-ui.js";
+import { visionPathwaysFromBoard, visionGivensFromBoard, visionPeopleMood } from "../hex/evaluate.js?v=calm-stage-1";
+import { briefingOwnsRoot } from "../briefing-ui.js?v=calm-stage-2";
 import { spotlightAdvanceForAi } from "../tech-why.js";
 
 /**

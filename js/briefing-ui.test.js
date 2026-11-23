@@ -171,11 +171,22 @@ describe("briefing-ui paint", () => {
         }
         el.parentNode = null;
       },
+      attrs: {},
+      setAttribute(k, v) {
+        el.attrs[k] = String(v);
+      },
+      getAttribute(k) {
+        return k in el.attrs ? el.attrs[k] : null;
+      },
       closest(sel) {
-        const want = String(sel || "").replace(/^\./, "").split(/[\s.#\[]/)[0];
+        const wants = String(sel || "")
+          .split(",")
+          .map((part) => part.trim().replace(/^[.#]/, "").split(/[\s.#\[]/)[0])
+          .filter(Boolean);
         let n = el;
         while (n) {
-          if (n.classList?.contains(want) || String(n.className || "").split(/\s+/).includes(want)) {
+          const classes = String(n.className || "").split(/\s+/);
+          if (wants.some((w) => n.classList?.contains(w) || classes.includes(w) || n.id === w)) {
             return n;
           }
           n = n.parentNode;
@@ -343,5 +354,30 @@ describe("briefing-ui paint", () => {
     const dismissed = paintQuestBriefing(fresh, mission, { sceneEl, storage: store });
     assert.equal(dismissed.mode, "off");
     assert.equal(body.classList.contains("is-quest-briefing"), false);
+  });
+
+  it("mounts the Replay briefing button in .vision-stack-top stage bar", () => {
+    installDom();
+    const store = memStore();
+    setBriefingDismissed("q-replay-bar", true, store);
+    const stackTop = fakeEl("vision-stack-top");
+    const stageBar = fakeEl("vision-stage-bar");
+    const root = fakeEl("vision-canvas-wrap");
+    stackTop.appendChild(stageBar);
+    stackTop.appendChild(root);
+    paintQuestBriefing(
+      root,
+      {
+        id: "q-replay-bar",
+        place: "Crossing Clinic 7",
+        briefMd: "## The place\n\nClinic.\n\n## Your job\n\nInvent it.",
+        briefBeats: beats,
+      },
+      { storage: store }
+    );
+    const btn = stageBar.querySelector(".quest-briefing-replay");
+    assert.ok(btn);
+    assert.equal(btn.textContent, "Replay briefing");
+    assert.equal(btn.hidden, false);
   });
 });

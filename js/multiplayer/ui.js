@@ -49,7 +49,7 @@ import {
 import { describeMarketEffects } from "../sim/market-news.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { attachReadAloud, formatHeadingForSpeech } from "../read-aloud.js";
-import { paintQuestBriefing, paintQuestJob } from "../briefing-ui.js";
+import { paintQuestBriefing, paintQuestJob } from "../briefing-ui.js?v=calm-stage-2";
 import {
   initTechDrawers,
   updateTechDrawerCount,

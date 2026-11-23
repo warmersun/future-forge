@@ -173,3 +173,22 @@ test('suspend releases chart and observers while update or resume restores run-l
   explorer.destroy(); assert.equal(host.hidden,true); assert.equal(destroys,mounts); assert.equal(disconnects,observes); assert.equal(unfonts,fonts);
   explorer.update(snap); explorer.resume(); assert.equal(host.hidden,true);
 });
+
+test('defaultCollapsed starts as a 1-line bar and resets collapsed on a new viewIdentity', () => {
+  const {host} = setup(); let mounts = 0;
+  const explorer = createCapabilityExplorer(host, {
+    defaultCollapsed: true,
+    mountChart() { mounts++; return {}; },
+    destroyChart() {},
+  });
+  explorer.update(snapshot);
+  assert.equal(host.hidden, false);
+  assert.equal(mounts, 0);
+  assert.ok(find(host, 'Expand'));
+  click(host, find(host, 'Expand'));
+  assert.equal(mounts, 1);
+  assert.ok(find(host, 'Collapse'));
+  explorer.update({ ...snapshot, viewIdentity: 'next-quest' });
+  assert.ok(find(host, 'Expand'));
+  explorer.destroy();
+});

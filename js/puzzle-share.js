@@ -1,6 +1,6 @@
-import { listInventionPathways, visionPathwaysFromBoard, reasonsForCrisisTile, pathwayContentFingerprint, pathwayScoreLabel, resolveIslandHow, hexPathwayPanel, boardPathwayReevaluating } from './hex/evaluate.js?v=plain-1';
+import { listInventionPathways, visionPathwaysFromBoard, reasonsForCrisisTile, pathwayContentFingerprint, pathwayScoreLabel, resolveIslandHow, hexPathwayPanel, boardPathwayReevaluating } from './hex/evaluate.js?v=calm-stage-1';
 import { hexToPixel } from './hex/hex-tile-grid.js';
-import { createHexBoardUi, HEX_BOARD_VIEW } from './hex/board-ui.js?v=plain-1';
+import { createHexBoardUi, HEX_BOARD_VIEW } from './hex/board-ui.js?v=calm-stage-1';
 import { plainTextFromMarkdown } from './md-lite.js';
 import { crisisMeterLevel } from './sim/collapse.js';
 

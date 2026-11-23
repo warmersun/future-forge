@@ -147,11 +147,11 @@ import {
   setIslandHow,
   rekeyIslandHow,
   rulesWeatherKey,
-} from "./evaluate.js?v=plain-1";
+} from "./evaluate.js?v=calm-stage-1";
 import { scopeCrisisScore } from "./crisis-delta.js?v=crisis-role-3";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
-import { createHexBoardUi, defaultSlots } from "./board-ui.js?v=plain-1";
+import { createHexBoardUi, defaultSlots } from "./board-ui.js?v=calm-stage-1";
 import { CURVE, polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
@@ -207,6 +207,8 @@ export function createHexWorkshop(api) {
   let summonBusy = false;
   /** How-it-works mode: false = two-blank scaffold (default), true = free textarea. Per Quest. */
   let freeWrite = false;
+  /** Expanded Invent composer (true once a tech is focused or user clicks "Write your own"). */
+  let composeOpen = false;
   let summonJob = null;
   /** @type {Map<string, { ids: string[], titles: string[] }>} */
   const sparkBatches = new Map();
@@ -786,8 +788,12 @@ export function createHexWorkshop(api) {
     }
   }
 
+  function queryDom(sel) {
+    return api.$?.(sel) || document.querySelector(sel);
+  }
+
   function ensurePopupWired() {
-    const popup = document.querySelector("#hex-tile-popup");
+    const popup = queryDom("#hex-tile-popup");
     if (!popup || popup.dataset.wired === "1") return popup;
     popup.dataset.wired = "1";
     popup.classList.add("is-inspect");
@@ -817,21 +823,21 @@ export function createHexWorkshop(api) {
 
   function assessmentNodes() {
     return ["#pathway-panel", "#invent-actions", "#challenge-ready-hint", "#invent-foot"]
-      .map((sel) => document.querySelector(sel))
+      .map((sel) => queryDom(sel))
       .filter(Boolean);
   }
 
   function showAssessmentOverview() {
-    document.querySelector("#assessment-overview")?.removeAttribute("hidden");
+    queryDom("#assessment-overview")?.removeAttribute("hidden");
   }
 
   function hideAssessmentOverview() {
-    document.querySelector("#assessment-overview")?.setAttribute("hidden", "");
+    queryDom("#assessment-overview")?.setAttribute("hidden", "");
   }
 
   /** Move the pathway panel and invent actions into the Assessment tab, or back. */
   function syncAssessmentDock() {
-    const overview = document.querySelector("#assessment-overview");
+    const overview = queryDom("#assessment-overview");
     if (!overview) return;
     const dock = usesTileTab();
     const nodes = assessmentNodes();
@@ -849,7 +855,8 @@ export function createHexWorkshop(api) {
       if (moved && !stuckTileId) {
         const active = document.querySelector("#screen-workshop .side-tab[aria-selected='true']")?.dataset.tab;
         const paneHidden = document.querySelector("#side-assessment")?.hidden !== false;
-        if (!active || active === "vision" || (active === "assessment" && paneHidden)) {
+        // Never yank the player away from Future vision; only repair an already-selected Assessment tab.
+        if (active === "assessment" && paneHidden) {
           document.dispatchEvent(new CustomEvent("ff-select-side-tab", { detail: { tab: "assessment" } }));
         }
       }
@@ -864,7 +871,7 @@ export function createHexWorkshop(api) {
       home.parent.insertBefore(el, next);
     }
     showAssessmentOverview();
-    const popup = document.querySelector("#hex-tile-popup");
+    const popup = queryDom("#hex-tile-popup");
     if (popup?.classList.contains("is-docked")) {
       popup.hidden = true;
       undockTilePopup(popup);
@@ -921,11 +928,12 @@ export function createHexWorkshop(api) {
   }
 
   function openTileTab() {
+    if (!document.querySelector("#side-assessment")) return;
     document.dispatchEvent(new CustomEvent("ff-select-side-tab", { detail: { tab: "assessment" } }));
   }
 
   function dockTilePopup(popup) {
-    const pane = document.querySelector("#side-assessment");
+    const pane = queryDom("#side-assessment");
     if (!pane) return;
     if (!popupHome && popup.parentElement) {
       popupHome = { parent: popup.parentElement, next: popup.nextSibling };
@@ -959,14 +967,14 @@ export function createHexWorkshop(api) {
       clearTimeout(inspectHideTimer);
       inspectHideTimer = null;
     }
-    const popup = document.querySelector("#hex-tile-popup");
+    const popup = queryDom("#hex-tile-popup");
     const wasDocked = Boolean(popup?.classList.contains("is-docked"));
     if (popup) {
       popup.hidden = true;
       popup.querySelector(".hex-tile-popup-card")?.classList.remove("is-concern", "is-crisis");
       if (wasDocked) undockTilePopup(popup);
     }
-    stopReadAloudFor(document.querySelector("#hex-tile-popup-body"));
+    stopReadAloudFor(queryDom("#hex-tile-popup-body"));
     if (wasDocked) showAssessmentOverview();
   }
 
@@ -987,7 +995,7 @@ export function createHexWorkshop(api) {
    * Prefer right → left → below → above; keep ≥12px gap from the anchor box.
    */
   function positionPopupNearTile(tileId) {
-    const popup = document.querySelector("#hex-tile-popup");
+    const popup = queryDom("#hex-tile-popup");
     const card = popup?.querySelector(".hex-tile-popup-card");
     if (!popup || !card || popup.hidden || popup.classList.contains("is-docked")) return;
     const anchor = findTileAnchor(tileId);
@@ -1246,10 +1254,10 @@ export function createHexWorkshop(api) {
     const popup = ensurePopupWired();
     const t = board()?.tiles?.[tileId];
     if (!popup || !t) return;
-    const title = document.querySelector("#hex-tile-popup-title");
-    const meta = document.querySelector("#hex-tile-popup-meta");
-    const body = document.querySelector("#hex-tile-popup-body");
-    const art = document.querySelector("#hex-tile-popup-art");
+    const title = queryDom("#hex-tile-popup-title");
+    const meta = queryDom("#hex-tile-popup-meta");
+    const body = queryDom("#hex-tile-popup-body");
+    const art = queryDom("#hex-tile-popup-art");
     if (title) {
       if (t.kind === TILE_KIND.invention) {
         const tech = t.techId ? techById(t.techId) : null;
@@ -1732,6 +1740,15 @@ export function createHexWorkshop(api) {
     timingGens.clear();
     timingCache.clear();
     sparkBatches.clear();
+    composeOpen = false;
+    const moreMints = document.querySelector("#hex-more-mints");
+    if (moreMints) moreMints.open = false;
+    const boardStatus =
+      api.$?.("#hex-board-status") || document.querySelector("#hex-board-status");
+    if (boardStatus) {
+      boardStatus.textContent = "Place ideas on the board. Looking at the board is the thinking.";
+      boardStatus.classList?.remove?.("is-error");
+    }
     const b = seedCrisisTiles(mission || {});
     const applied = applyPathwayPressure(b, pressureOpts(mission || {}));
     setBoard(applied.board);
@@ -1752,6 +1769,7 @@ export function createHexWorkshop(api) {
       return;
     }
     focusedTechId = techId || null;
+    if (focusedTechId) composeOpen = true;
     updateCreatePanel();
     renderIdeaCards();
   }
@@ -1888,6 +1906,23 @@ export function createHexWorkshop(api) {
     }
     syncScaffold(tech);
     if (body) body.hidden = false;
+    const hasTray = Object.values(board()?.tiles || {}).some(
+      (t) =>
+        t &&
+        (t.kind === TILE_KIND.invention || t.kind === TILE_KIND.rd || t.kind === TILE_KIND.argument) &&
+        (t.q == null || t.r == null)
+    );
+    const tutorialOpen =
+      typeof document !== "undefined" &&
+      Boolean(document.body?.classList?.contains?.("tutorial-open"));
+    const compact =
+      !tech && !composeOpen && !freeWrite && !hasTray && !isCreateBusy() && !tutorialOpen;
+    panel.classList?.toggle?.("is-compact", compact);
+    const openBtn = document.querySelector("#btn-open-compose");
+    if (openBtn) openBtn.hidden = !compact;
+    if (compact && hint) {
+      hint.textContent = "Pick an emTech on the left to invent — or write your own idea.";
+    }
     syncCreateBusyUi();
   }
 
@@ -4460,6 +4495,19 @@ export function createHexWorkshop(api) {
   }
 
   function wireDom() {
+    document.querySelector("#btn-open-compose")?.addEventListener("click", () => {
+      composeOpen = true;
+      if (!focusedTechId) {
+        const more = document.querySelector("#hex-more-mints");
+        if (more) more.open = true;
+        setFreeWrite(true);
+      }
+      updateCreatePanel();
+      const target = freeWrite
+        ? document.querySelector("#hex-how-text")
+        : document.querySelector("#hex-scaffold-scarce");
+      target?.focus?.();
+    });
     document.querySelector("#btn-ask-ideas")?.addEventListener("click", () => {
       askForIdeas({ refresh: false }).catch((e) => console.warn(e));
     });
@@ -4501,7 +4549,7 @@ export function createHexWorkshop(api) {
     });
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
-      const popup = document.querySelector("#hex-tile-popup");
+      const popup = queryDom("#hex-tile-popup");
       if (popup && !popup.hidden) {
         inspectTileId = null;
         stuckTileId = null;
@@ -4609,11 +4657,14 @@ export function createHexWorkshop(api) {
     /** New Quest: back to the two-blank scaffold, blanks and case cleared. */
     resetCreateMode: () => {
       freeWrite = false;
+      composeOpen = false;
       clearScaffold();
       const ta = document.querySelector("#hex-how-text");
       if (ta) ta.value = "";
+      const more = document.querySelector("#hex-more-mints");
+      if (more) more.open = false;
       syncScaffold(focusedTechId ? techById(focusedTechId) : null);
-      syncCreateBusyUi();
+      updateCreatePanel();
     },
     /**
      * Continue calls resetCreateMode before the saved board is assigned, which
@@ -4621,7 +4672,13 @@ export function createHexWorkshop(api) {
      * is usable. A tray tile is not a pathway.
      */
     resumeArgumentWrite: () => {
-      if (listInventionPathways(board()).length > 0) setFreeWrite(true);
+      if (listInventionPathways(board()).length > 0) {
+        composeOpen = true;
+        const more = document.querySelector("#hex-more-mints");
+        if (more) more.open = true;
+        setFreeWrite(true);
+        updateCreatePanel();
+      }
     },
     /** Show the two blanks. Does not clear text already in them. */
     useScaffold: () => {

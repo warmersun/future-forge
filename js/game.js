@@ -43,13 +43,17 @@ import {
   techForAi,
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
-import { VisionRenderer } from "./vision.js?v=usage-2";
+import { VisionRenderer } from "./vision.js?v=calm-stage-1";
 import { puzzleSnapshot, openPuzzleShare, puzzleHasPendingEvaluation } from "./puzzle-share.js";
 import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
-import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
+import {
+  bringAssessmentHome,
+  bringCoInventorHome,
+  initSecondScreen,
+} from "./second-screen.js?v=calm-stage-2";
 import { claimOverlay } from "./overlay-queue.js";
-import { CoInventor, hangupVoice } from "./coinventor.js?v=usage-2";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=calm-stage-1";
 import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-19";
 import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=stream-1";
 import {
@@ -168,8 +172,8 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=plain-2";
-import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=calm-stage-2";
+import { createCrisisIntroduction } from "./crisis-introduction.js?v=calm-stage-1";
 import {
   boardHolds,
   deriveBoardProse,
@@ -199,7 +203,7 @@ import {
   visionGivensFromBoard,
   visionPeopleMood,
   crisisMeterTooltipBits,
-} from "./hex/evaluate.js?v=plain-1";
+} from "./hex/evaluate.js?v=calm-stage-1";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
@@ -316,7 +320,7 @@ import {
   CATALOG_ACCESS_CHIPS,
 } from "./quest-catalog.js";
 import { mergeTrendsForStack } from "./capability-trend.js";
-import { createCapabilityExplorer } from "./capability-explorer.js?v=outlook-1";
+import { createCapabilityExplorer } from "./capability-explorer.js?v=calm-stage-1";
 import {
   mountTrendChart,
   destroyTrendChart,
@@ -332,7 +336,13 @@ import {
   paintQuestBriefing,
   paintQuestJob,
   resetQuestBriefing,
-} from "./briefing-ui.js";
+} from "./briefing-ui.js?v=calm-stage-2";
+import {
+  WORKSHOP_STAGES,
+  assessmentTabBadgeLevel,
+  resolveWorkshopStage,
+  shouldHighlightLookAhead,
+} from "./workshop-stage.js?v=calm-stage-1";
 import { createGuidedTour, queryTourTarget } from "./guided-tour.js";
 import {
   createTutorial,
@@ -873,9 +883,20 @@ function visionPaneAway() {
   return !document.querySelector("#side-vision");
 }
 
+function assessmentPaneAway() {
+  return Boolean(
+    !document.querySelector("#side-assessment") &&
+      document.querySelector("#tab-assessment")
+  );
+}
+
 function applyInventSidePanes() {
   const visionAway = visionPaneAway();
   const coTab = isCoInventorTabMode();
+  const tilePane = document.querySelector("#side-assessment");
+  const assessmentAway = Boolean(
+    coTab && !tilePane && document.querySelector("#tab-assessment")
+  );
   let tab =
     state.sideTab === "aitrace"
       ? "aitrace"
@@ -888,20 +909,32 @@ function applyInventSidePanes() {
             : "vision";
   if (visionAway && tab === "vision") tab = "coinventor";
   if (!visionAway && tab === "coinventor" && !coTab) tab = "vision";
-  if (tab === "assessment" && !coTab) tab = "vision";
+  if (tab === "assessment" && (!coTab || assessmentAway)) {
+    tab = visionAway ? "coinventor" : "vision";
+  }
   const panel = document.querySelector("#screen-workshop .vision-panel");
   panel?.classList.remove("is-vision-split", "is-tutor-split");
   panel?.classList.toggle("is-vision-away", visionAway);
-  panel?.classList.toggle("is-co-tabbed", Boolean(coTab) && !visionAway);
-  if (coTab) panel?.classList.remove("is-co-collapsed");
+  panel?.classList.toggle("is-co-tabbed", Boolean(coTab));
+  if (coTab || visionAway) {
+    panel?.classList.remove("is-co-collapsed");
+  } else if (panel && state.coInventorCollapsed != null) {
+    panel.classList.toggle("is-co-collapsed", Boolean(state.coInventorCollapsed));
+    const button = panel.querySelector("#co-collapse-toggle");
+    if (button) {
+      button.setAttribute("aria-expanded", String(!state.coInventorCollapsed));
+      const label = `${state.coInventorCollapsed ? "Expand" : "Collapse"} AI co-inventor`;
+      button.setAttribute("aria-label", label);
+      button.title = label;
+    }
+  }
   const stack = panel?.querySelector(".vision-co-stack");
   const vision = document.querySelector("#side-vision");
   const co = document.querySelector("#side-coinventor");
   const trace = document.querySelector("#side-aitrace");
   const log = document.querySelector("#side-log");
-  const tilePane = document.querySelector("#side-assessment");
   // Wide screens keep the co-inventor under every upper tab. Short screens
-  // give it its own tab, so only the selected pane stays in the column.
+  // (or when Future vision is on a second display) give it its own tab.
   for (const pane of [log, trace, tilePane]) {
     if (stack && pane && pane.parentElement !== stack) {
       stack.insertBefore(pane, stack.querySelector(".vision-split-handle"));
@@ -910,7 +943,7 @@ function applyInventSidePanes() {
   }
   if (stack) stack.hidden = false;
   if (vision) vision.hidden = tab !== "vision";
-  if (co) co.hidden = coTab ? tab !== "coinventor" : false;
+  if (co) co.hidden = coTab || visionAway ? tab !== "coinventor" : false;
   if (trace) trace.hidden = tab !== "aitrace";
   if (log) log.hidden = tab !== "log";
   if (tilePane) tilePane.hidden = tab !== "assessment";
@@ -1754,6 +1787,7 @@ function syncCapabilityExplorer() {
     disposeCapabilityExplorer();
     capabilityExplorerHost = host;
     capabilityExplorer = createCapabilityExplorer(host, {
+      defaultCollapsed: true,
       mountTrendChart,
       destroyTrendChart,
       retry: () => refreshHostedTrends({ force: true, silent: true }),
@@ -2022,12 +2056,13 @@ function ensureHexWorkshop() {
     /** Scaffold blanks or free text changed: the next-step card may advance to Mint. */
     onHowInput: () => refreshCoachMarks(),
     onBoardPainted: () => {
+      syncWorkshopStage();
       renderSelectedChips();
       renderFeasibility();
       updateChallengeButton();
       renderHud();
       updateLearnButton?.();
-      updateVision({ debounceMs: 800 });
+      if (!seedingMissionBoard) updateVision({ debounceMs: 800 });
       refreshCoachMarks();
       state.coInventor?.noteVoiceContext?.();
     },
@@ -4658,12 +4693,102 @@ function hangupVoiceOnScreenChange(prevScreenId, nextScreenId) {
 
 /** Set while startTutorial navigates home so showScreen does not cancel the run. */
 let keepTutorialOnTitle = false;
+/** True while startMission seeds the initial board before paintQuestBriefing owns #vision-root. */
+let seedingMissionBoard = false;
+/** Previous progressive-disclosure workshop stage for one-shot stage transition cues. */
+let prevWorkshopStage = "";
+
+function resetWorkshopScroll() {
+  const center = $("#screen-workshop .invent-center");
+  if (center) center.scrollTop = 0;
+}
+
+function setCoInventorCollapsed(collapsed) {
+  state.coInventorCollapsed = Boolean(collapsed);
+  const panel = document.querySelector("#screen-workshop .vision-panel");
+  if (
+    !panel ||
+    panel.classList.contains("is-co-tabbed") ||
+    panel.classList.contains("is-vision-away")
+  ) {
+    return;
+  }
+  panel.classList.toggle("is-co-collapsed", state.coInventorCollapsed);
+  const button = panel.querySelector("#co-collapse-toggle");
+  if (button) {
+    button.setAttribute("aria-expanded", String(!state.coInventorCollapsed));
+    const label = `${state.coInventorCollapsed ? "Expand" : "Collapse"} AI co-inventor`;
+    button.setAttribute("aria-label", label);
+    button.title = label;
+  }
+  document.dispatchEvent(new Event("ff-side-layout"));
+}
+
+function currentWorkshopStage() {
+  const tutorialOpen = Boolean(
+    state.tutorialRun || document.body?.classList?.contains?.("tutorial-open")
+  );
+  return resolveWorkshopStage({
+    crisisPending: crisisIntroduction.count(),
+    board: state.hexBoard,
+    tutorialOpen,
+    restored: Boolean(state.restoredRun),
+  });
+}
+
+function focusPostBriefingTarget() {
+  const firstCrisis = crisisIntroduction.firstCardButton?.();
+  if (firstCrisis) {
+    firstCrisis.focus?.({ preventScroll: true });
+    return;
+  }
+  const techBtn = $("#tech-list .tech-card-main");
+  if (techBtn && techBtn.offsetParent !== null) {
+    techBtn.focus?.({ preventScroll: true });
+    return;
+  }
+  const title = $("#ws-mission-title");
+  if (title) {
+    if (!title.hasAttribute("tabindex")) title.setAttribute("tabindex", "-1");
+    title.focus?.({ preventScroll: true });
+  }
+}
+
+function syncWorkshopStage() {
+  const screen = $("#screen-workshop");
+  const stage = currentWorkshopStage();
+  const prev = prevWorkshopStage;
+  prevWorkshopStage = stage;
+  if (screen) screen.dataset.workshopStage = stage;
+  if (typeof document !== "undefined" && document.body) {
+    document.body.dataset.workshopStage = stage;
+  }
+  if (prev === WORKSHOP_STAGES.crises && stage !== WORKSHOP_STAGES.crises) {
+    if (isLearningTutorSessionActive()) {
+      if (isCoInventorTabMode()) setSideTab("coinventor");
+      else setCoInventorCollapsed(false);
+    }
+    const active = document.activeElement;
+    if (!active || active === document.body) {
+      const target =
+        $("#tech-list .tech-card-main") ||
+        $("#btn-open-compose") ||
+        $("#ws-mission-title");
+      target?.focus?.({ preventScroll: true });
+    }
+  }
+  return stage;
+}
 
 const crisisIntroduction = createCrisisIntroduction({
   document,
   getBoard: () => state.hexBoard,
   repaint: () => hexWorkshop?.paint?.(),
-  onChange: () => { try { tutorialCtl?.refresh?.(); } catch {} },
+  onChange: () => {
+    syncWorkshopStage();
+    renderFeasibility();
+    try { tutorialCtl?.refresh?.(); } catch {}
+  },
   reducedMotion: () => window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches || false,
 });
 
@@ -4703,30 +4828,25 @@ function showScreen(id) {
   if (id === "global") renderGlobals();
   if (id === "mission") renderMissions();
   if (id === "workshop") {
+    if (prevScreen !== "workshop") resetWorkshopScroll();
     renderWorkshop();
     ensureCoInventor();
-    let tab = state.sideTab || "vision";
-    // Pathway, Look Ahead, and the hard-question button live in Assessment
-    // on a short screen. Open that tab when play starts, after the briefing
-    // walk (which still uses Future vision).
-    const assessmentDocked = Boolean(
-      document.querySelector("#assessment-overview #pathway-panel")
-    );
-    if (
-      prevScreen !== "workshop" &&
-      tab === "vision" &&
-      assessmentDocked &&
-      isCoInventorTabMode() &&
-      !document.body.classList.contains("is-quest-briefing") &&
-      !document.body.classList.contains("tutorial-open")
-    ) {
-      tab = "assessment";
-    }
+    const stage = syncWorkshopStage();
+    // Future vision leads out of the briefing on every screen size. Never auto-switch
+    // away from Future vision onto Assessment on short screens.
+    const tab = state.sideTab || "vision";
     setSideTab(tab);
+    if (prevScreen !== "workshop") {
+      const openTutorNow =
+        isLearningTutorSessionActive() && stage !== WORKSHOP_STAGES.crises;
+      setCoInventorCollapsed(!openTutorNow);
+    }
     requestAnimationFrame(() => {
       ensureVision();
-      seedLearningVisionStill();
+      const inBriefing = document.body.classList.contains("is-quest-briefing");
+      if (!inBriefing) seedLearningVisionStill();
       if (roomBridge.isRoom()) scheduleRoomVisionRefresh({ immediate: true });
+      else if (inBriefing) updateVision({ debounceMs: 160, prewarm: true });
       else updateVision({ immediate: true });
     });
   }
@@ -8749,6 +8869,10 @@ function startMission(mission, opts = {}) {
   }
   resetCapabilityExplorerRun();
   crisisIntroduction.reset();
+  prevWorkshopStage = "";
+  state.restoredRun = Boolean(opts.restore);
+  state.domainFilter = "all";
+  state.trayShowAll = false;
   state.runWorld = pinned.world;
   state.pinnedPredictionsBank = null;
   delete merged.pinnedPredictionsBank;
@@ -8901,7 +9025,12 @@ function startMission(mission, opts = {}) {
         hex.paint();
       }
     } else {
-      hex.seedFromMission(state.mission);
+      seedingMissionBoard = true;
+      try {
+        hex.seedFromMission(state.mission);
+      } finally {
+        seedingMissionBoard = false;
+      }
       if (state.tutorialRun && state.hexBoard) {
         state.hexBoard.concernRoster = ["stakeholder"];
         state.hexBoard.concernTargetCount = 1;
@@ -8911,6 +9040,7 @@ function startMission(mission, opts = {}) {
     console.warn("[hex board seed]", e);
   }
   crisisIntroduction.prepare(state.hexBoard, !opts.restore);
+  resetWorkshopScroll();
   showScreen("workshop");
   setSideTab(state.sideTab || "vision");
   const savedChats = restored.chats;
@@ -9152,20 +9282,30 @@ function renderWorkshop() {
           return;
         }
         if (snap?.mode !== "off") return;
+        resetWorkshopScroll();
         crisisIntroduction.show();
+        syncWorkshopStage();
+        renderFeasibility();
         ensureCoInventor();
         try {
-          updateVision({ debounceMs: 80, force: true });
+          // Restore the silently pre-warmed Today scene (or evolved vision after Replay)
+          // without forcing a duplicate live generation.
+          state.vision?.attach?.(visionRoot);
+          updateVision({ debounceMs: 80 });
         } catch {
           /* ignore */
         }
+        focusPostBriefingTarget();
         refreshCoachMarks();
       },
     });
-    if (!briefing.active) crisisIntroduction.show();
-    else {
+    if (!briefing.active) {
+      crisisIntroduction.show();
+      syncWorkshopStage();
+    } else {
       const panel = $("#crisis-briefing");
       if (panel) panel.hidden = true;
+      syncWorkshopStage();
     }
   } else if (sceneEl) {
     sceneEl.hidden = false;
@@ -9804,6 +9944,30 @@ function renderFeasibility() {
   const dims = $("#feasibility-dims");
   const foot = $("#feasibility-foot");
   const pending = boardPathwayReevaluating(board);
+  const stage = currentWorkshopStage();
+  const displayLevel = pending ? lastFeasibilityLightLevel : overall;
+  const tabDot = $("#tab-assessment-dot");
+  if (tabDot) {
+    const badge = assessmentTabBadgeLevel({ stage, level: displayLevel, pending });
+    if (badge) {
+      tabDot.hidden = false;
+      tabDot.dataset.level = badge;
+    } else {
+      tabDot.hidden = true;
+      delete tabDot.dataset.level;
+    }
+  }
+  const waitBtn = $("#btn-wait");
+  if (waitBtn) {
+    waitBtn.classList.toggle(
+      "is-look-ahead-recommended",
+      shouldHighlightLookAhead({
+        stage,
+        timingLevel: panel.timingLevel,
+        onBoardCount: onBoard,
+      })
+    );
+  }
   if (light) {
     if (pending) {
       light.dataset.level = lastFeasibilityLightLevel;
@@ -9862,7 +10026,7 @@ function renderFeasibility() {
     if (board?.concernsSummoned) {
       if (timingBlock) {
         foot.textContent =
-          "Combined chance is too low this year — revise claims, split the cluster, or Wait.";
+          "Combined chance is too low this year — revise claims, split the cluster, or Look Ahead.";
       } else if (pathwayHoldsReady()) {
         foot.textContent = "All lights yellow or green — declare the pathway holds.";
       } else {
@@ -9871,7 +10035,7 @@ function renderFeasibility() {
       }
     } else if (timingBlock && onBoard > 0) {
       foot.textContent =
-        "Combined chance is too low this year — revise claims, split the cluster, or Wait.";
+        "Combined chance is too low this year — revise claims, split the cluster, or Look Ahead.";
     } else {
       foot.textContent =
         "Place ideas, then Answer the hard questions to summon the challengers.";
@@ -10217,15 +10381,25 @@ function renderTechList() {
         </div>`;
   };
 
+  const filterRow = $("#filter-row");
+  const filterHint = $("#filter-domain-hint");
+  const railBody = $("#solo-tech-library .tech-library-body");
+  if (railBody && filterRow && filterRow.parentElement !== railBody) {
+    railBody.insertBefore(filterRow, el);
+  }
+  if (railBody && filterHint && filterHint.parentElement !== railBody) {
+    railBody.insertBefore(filterHint, el);
+  }
+
   if (!grouped) {
     el.innerHTML = [...place, ...rest].map((t) => cardHtml(t, false)).join("");
   } else {
     const filtered = state.domainFilter !== "all";
-    const openAll = state.trayShowAll || place.length === 0;
+    const openAll = state.trayShowAll || filtered || place.length === 0;
     const shelf = place.length
       ? `<section class="tech-group tech-group-place" aria-label="For this place">
           <h3 class="tech-group-title">For this place</h3>
-          <p class="tech-group-sub muted">Suggested for this Quest — each line says why.</p>
+          <p class="tech-group-sub muted">Suggested for this Quest — click to focus.</p>
           ${place.map((t) => cardHtml(t, true)).join("")}
         </section>`
       : filtered
@@ -10237,10 +10411,14 @@ function renderTechList() {
     el.innerHTML = `${shelf}
       <details class="tech-group tech-group-all" id="tech-group-all"${openAll ? " open" : ""}>
         <summary class="tech-group-title tech-group-summary">All emerging tech <span class="tech-group-count">(${catalogCount})</span></summary>
+        <div class="tech-group-all-filters"></div>
         <p class="tech-group-sub muted">Every family is always pickable. Open Learn on any card to see what it can do now.</p>
         ${restHtml}
       </details>`;
     const details = el.querySelector("#tech-group-all");
+    const filterSlot = el.querySelector(".tech-group-all-filters");
+    if (filterSlot && filterRow) filterSlot.appendChild(filterRow);
+    if (filterSlot && filterHint) filterSlot.appendChild(filterHint);
     details?.addEventListener("toggle", () => {
       state.trayShowAll = Boolean(details.open);
     });
@@ -11075,7 +11253,7 @@ function challengeBlockReason() {
   const panel = hexPathwayPanel(state.hexBoard);
   if (panel.overall !== "red") return "";
   if (panel.bonds.level === "red") {
-    return `${panel.bonds.note}. Dock an invent island against every crisis hex before the hard questions.`;
+    return `${panel.bonds.note}. Connect an idea to every crisis hex before the hard questions.`;
   }
   if (panel.coverage.level === "red") return panel.coverage.note;
   return "Pathway is red.";
@@ -19276,7 +19454,7 @@ function updateVision(opts = {}) {
 
   ensureVision();
   if (!state.vision) return;
-  seedLearningVisionStill();
+  if (!briefingOwnsRoot($("#vision-root"))) seedLearningVisionStill();
 
   const pathways = visionPathwaysFromBoard(state.hexBoard, techById);
   const givens = visionGivensFromBoard(state.hexBoard, pathways);
@@ -19354,7 +19532,7 @@ function updateVision(opts = {}) {
       : state.screen === "deploy"
         ? $("#deploy-vision-root")
         : $("#vision-root");
-  if (briefingOwnsRoot(primaryRoot) && !opts.force) return;
+  if (briefingOwnsRoot(primaryRoot) && !opts.force && !opts.prewarm) return;
 
   const shouldRun = storyVisionGuard(opts);
   state.vision.setState({
@@ -19491,12 +19669,17 @@ function bindCoInventorTabMode() {
   if (typeof window === "undefined" || !window.matchMedia) return;
   const mql = window.matchMedia(CO_TAB_MQ);
   const onChange = () => {
+    if (!mql.matches) bringAssessmentHome(document);
     if (
       !mql.matches &&
       (state.sideTab === "coinventor" || state.sideTab === "assessment") &&
       !visionPaneAway()
     ) {
       setSideTab("vision");
+      return;
+    }
+    if (!mql.matches && state.sideTab === "assessment" && visionPaneAway()) {
+      setSideTab("coinventor");
       return;
     }
     applyInventSidePanes();
@@ -19509,10 +19692,11 @@ function bindCoInventorTabMode() {
 function setSideTab(tab) {
   const visionAway = visionPaneAway();
   const coTab = isCoInventorTabMode();
+  const assessmentAway = assessmentPaneAway();
   if (tab === "coinventor" && !visionAway && !coTab) tab = "vision";
   if (tab === "vision" && visionAway) tab = "coinventor";
   if (tab === "aitrace" && !state.developer) tab = visionAway ? "coinventor" : "vision";
-  if (tab === "assessment" && !coTab) {
+  if (tab === "assessment" && (!coTab || assessmentAway)) {
     tab = visionAway ? "coinventor" : "vision";
   }
   if (tab !== "aitrace" && tab !== "log" && tab !== "coinventor" && tab !== "assessment") tab = "vision";
@@ -19743,20 +19927,9 @@ function maybeSeedCoInventorWelcome() {
   if (!mission) return;
   const place = mission.place || "this place";
   const year = mission.startYear || GAME.startYear;
-  const sceneRaw = String(mission.scene || "").trim();
-  const scene =
-    sceneRaw.length > 160 ? `${sceneRaw.slice(0, 159).trim()}…` : sceneRaw;
-  const ypt = mission.yearsPerTurn || GAME.yearsPerTurn;
   const welcome = tutor
-    ? `**${place}**, ${year}. ${scene}\n\n` +
-      `I'm your **AI tutor** — one idea at a time (**free AP**). Look at this place in **Future vision**. What's one thing you already notice?\n\n` +
-      `Pick techs and place idea tiles when you're ready. **End tutoring** anytime to invent on your own.`
-    : `**${place}**, ${year}. ${sceneRaw}\n\n` +
-      `I'm your co-inventor. Pick emTechs and place invention tiles on the **hex board** — categories are never locked by year. ` +
-      `Traffic lights on crisis and concern tiles show whether your pathway is honest.\n\n` +
-      `Use **Art of the possible** for milestones, current capabilities, and use cases. ` +
-      `**Wait** advances the world (+${ypt} years) and raises crisis — not to unlock cards.\n\n` +
-      `What's the first constraint you care about — cost, trust, speed, or who's left out?`;
+    ? `**${place}**, ${year} — I'm your **AI tutor** (**free AP**). Look at this place in **Future vision**: what's one thing you notice first?`
+    : `Ready when you are at **${place}** (${year}) — pick an emTech on the left, or ask what could help here. Use **Look Ahead** whenever an idea needs the curve to catch up.`;
   state.coInventor.pushAssistant(
     {
       message: welcome,
@@ -23034,6 +23207,7 @@ function startTutorial() {
   state.tutorialGraduated = false;
   keepTutorialOnTitle = true;
   state.tutorialRun = true;
+  syncWorkshopStage();
   if (state.screen !== "title") showScreen("title");
   keepTutorialOnTitle = false;
   tutorialCtl?.start?.();
@@ -23045,6 +23219,7 @@ function quitTutorial() {
   if (!ok) return;
   state.tutorialRun = false;
   state.tutorialGraduated = false;
+  syncWorkshopStage();
   try {
     tutorialCtl?.close?.();
   } catch {
@@ -23070,6 +23245,7 @@ function finishTutorial() {
     /* private mode */
   }
   state.tutorialRun = false;
+  syncWorkshopStage();
   try {
     tutorialCtl?.close?.();
   } catch {
@@ -23858,10 +24034,16 @@ function bind() {
 
   document.addEventListener("ff-co-inventor-toggle-collapse", () => {
     const panel = document.querySelector("#screen-workshop .vision-panel");
-    if (panel?.classList.contains("is-co-tabbed")) return;
+    if (
+      panel?.classList.contains("is-co-tabbed") ||
+      panel?.classList.contains("is-vision-away")
+    ) {
+      return;
+    }
     const button = panel?.querySelector("#co-collapse-toggle");
     if (!button) return;
     const collapsed = panel.classList.toggle("is-co-collapsed");
+    state.coInventorCollapsed = collapsed;
     button.setAttribute("aria-expanded", String(!collapsed));
     const label = `${collapsed ? "Expand" : "Collapse"} AI co-inventor`;
     button.setAttribute("aria-label", label);

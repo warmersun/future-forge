@@ -196,6 +196,93 @@ describe("workshop shared upper pane", () => {
       }
     }
   });
+
+  it("uncollapses co-inventor and switches cleanly to Log when Future vision is on a second screen (tall)", () => {
+    const source = readFileSync(new URL("./game.js", import.meta.url), "utf8");
+    const start = source.indexOf("function applyInventSidePanes()");
+    const end = source.indexOf("function seedLearningVisionStill()", start);
+    const panes = Object.fromEntries(["coinventor", "log", "aitrace"].map((id) => [
+      `#side-${id}`,
+      { hidden: false, classList: { add(name) { this[name] = true; } } },
+    ]));
+    const stack = {
+      querySelector() { return null; },
+      insertBefore(pane) { pane.parentElement = this; },
+    };
+    const classes = new Set(["is-co-collapsed"]);
+    const panel = {
+      classList: {
+        remove(...names) { names.forEach((name) => classes.delete(name)); },
+        toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
+      },
+      querySelector() { return stack; },
+    };
+    const state = { coInventorCollapsed: true, sideTab: "vision" };
+    const apply = runInNewContext(`(${source.slice(start, end)})`, {
+      state,
+      visionPaneAway: () => true,
+      isCoInventorTabMode: () => false,
+      document: {
+        querySelector: (selector) => selector.includes(".vision-panel") ? panel : panes[selector],
+        dispatchEvent() {},
+      },
+      Event: class {},
+    });
+    apply();
+    assert.ok(classes.has("is-vision-away"));
+    assert.equal(classes.has("is-co-collapsed"), false);
+    assert.equal(panes["#side-coinventor"].hidden, false);
+    assert.equal(panes["#side-log"].hidden, true);
+
+    state.sideTab = "log";
+    apply();
+    assert.equal(classes.has("is-co-collapsed"), false);
+    assert.equal(panes["#side-coinventor"].hidden, true);
+    assert.equal(panes["#side-log"].hidden, false);
+  });
+
+  it("keeps Assessment tabbed when Future vision moves to a second screen on a short viewport", () => {
+    const source = readFileSync(new URL("./game.js", import.meta.url), "utf8");
+    const start = source.indexOf("function applyInventSidePanes()");
+    const end = source.indexOf("function seedLearningVisionStill()", start);
+    const panes = Object.fromEntries(["assessment", "coinventor", "log", "aitrace"].map((id) => [
+      `#side-${id}`,
+      { hidden: false, classList: { add(name) { this[name] = true; } } },
+    ]));
+    const stack = {
+      querySelector() { return null; },
+      insertBefore(pane) { pane.parentElement = this; },
+    };
+    const classes = new Set(["is-co-collapsed"]);
+    const panel = {
+      classList: {
+        remove(...names) { names.forEach((name) => classes.delete(name)); },
+        toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
+      },
+      querySelector() { return stack; },
+    };
+    const state = { coInventorCollapsed: true, sideTab: "assessment" };
+    const apply = runInNewContext(`(${source.slice(start, end)})`, {
+      state,
+      visionPaneAway: () => true,
+      isCoInventorTabMode: () => true,
+      document: {
+        querySelector: (selector) => {
+          if (selector.includes(".vision-panel")) return panel;
+          if (selector === "#tab-assessment") return {};
+          return panes[selector];
+        },
+        dispatchEvent() {},
+      },
+      Event: class {},
+    });
+    apply();
+    assert.ok(classes.has("is-vision-away"));
+    assert.ok(classes.has("is-co-tabbed"));
+    assert.equal(classes.has("is-co-collapsed"), false);
+    assert.equal(panes["#side-assessment"].hidden, false);
+    assert.equal(panes["#side-coinventor"].hidden, true);
+  });
 });
 
 describe("bindVisionSplit shared ratio", () => {

@@ -27,9 +27,10 @@ export function createCapabilityExplorer(host, dependencies = {}) {
   const mount = dependencies.mountChart || dependencies.mountTrendChart || mountTrendChart;
   const dispose = dependencies.destroyChart || dependencies.destroyTrendChart || destroyTrendChart;
   const retry = dependencies.retry || dependencies.onRetry || dependencies.retryCatalog;
+  const defaultCollapsed = Boolean(dependencies.defaultCollapsed);
   const uid = `capability-description-${++nextId}`;
   let snapshot, model, identity, fingerprint, chart = null, destroyed = false, suspended = false;
-  let collapsed = false, showAll = false, showMoreTrends = false, selectedYear = null, selectedRow = null;
+  let collapsed = defaultCollapsed, showAll = false, showMoreTrends = false, selectedYear = null, selectedRow = null;
   let selections = new Map(), expanded = new Set(), openRows = new Set(), resizeObserver, description, expandButton, rail, evidenceList, chartLayout;
   let activeGeneration = 0;
   const el = (tag, text, cls) => { const node = doc.createElement(tag); if (text != null) node.textContent = String(text); if (cls) node.className = cls; return node; };
@@ -209,7 +210,7 @@ export function createCapabilityExplorer(host, dependencies = {}) {
     if (destroyed || !next) return;
     const wasSuspended = suspended;
     if (wasSuspended) resumeObservers();
-    if (identity !== next.viewIdentity) { identity = next.viewIdentity; selections = new Map(); expanded = new Set(); openRows = new Set(); collapsed = false; showAll = false; showMoreTrends = false; selectedYear = selectedRow = null; fingerprint = null; }
+    if (identity !== next.viewIdentity) { identity = next.viewIdentity; selections = new Map(); expanded = new Set(); openRows = new Set(); collapsed = defaultCollapsed; showAll = false; showMoreTrends = false; selectedYear = selectedRow = null; fingerprint = null; }
     const oldScope = model?.scope.key;
     snapshot = next;
     const preliminary = buildCapabilityExplorerModel(snapshot);

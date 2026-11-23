@@ -104,19 +104,26 @@ const QUICK_ACTIONS = [
     hint: "What already works with these emTechs here, this year — and what is still a stretch",
   },
   { mode: "explain-techs", label: "Teach me", hint: "Plain-words primer on the emTechs on your board" },
-  { mode: "push-further", label: "Timing check", hint: "Is this idea honest for this year, or should you Wait?" },
   { mode: "spark", label: "Spark ideas", hint: "Frame the Quest and ask one good question" },
+  {
+    mode: "push-further",
+    label: "Timing check",
+    hint: "Is this idea honest for this year, or should you Look Ahead?",
+    advanced: true,
+  },
   {
     mode: "sit",
     label: "SIT invent",
     hint: "Systematic Inventive Thinking: remix a minted idea by adding, removing, splitting, or multiplying a part",
+    advanced: true,
   },
   {
     mode: "scamper",
     label: "SCAMPER invent",
     hint: "Remix a minted idea: Substitute · Combine · Adapt · Modify · Put to other uses · Eliminate · Reverse",
+    advanced: true,
   },
-  { mode: "draft-name", label: "Name it", hint: "Invention name" },
+  { mode: "draft-name", label: "Name it", hint: "Invention name", advanced: true },
 ];
 
 /** Match invent howOk threshold — enough substance for SIT / SCAMPER to remake. */
@@ -404,13 +411,18 @@ export class CoInventor {
       const chips = QUICK_ACTIONS.filter(
         (a) => !(this.surface === "hex" && a.mode === "draft-name")
       );
-      actions.innerHTML = chips
-        .map(
-          (a) =>
-            `<button type="button" class="co-chip" data-mode="${a.mode}" title="${a.hint}">${a.label}</button>`
-        )
-        .join("");
-      actions.querySelectorAll(".co-chip").forEach((btn) => {
+      const primaryChips = chips.filter((a) => !a.advanced);
+      const moreChips = chips.filter((a) => a.advanced);
+      const chipBtn = (a) =>
+        `<button type="button" class="co-chip" data-mode="${a.mode}" title="${a.hint}">${a.label}</button>`;
+      actions.innerHTML =
+        primaryChips.map(chipBtn).join("") +
+        (moreChips.length
+          ? `<details class="co-actions-more"><summary class="co-chip co-chip-more">More prompts</summary><div class="co-actions-more-list">${moreChips
+              .map(chipBtn)
+              .join("")}</div></details>`
+          : "");
+      actions.querySelectorAll(".co-chip[data-mode]").forEach((btn) => {
         btn.addEventListener("click", () => this.runMode(btn.dataset.mode));
       });
     } else if (actions) {
@@ -959,7 +971,7 @@ export class CoInventor {
           (p) => String(p.howText || "").trim().length >= HOW_IT_WORKS_MIN
         )
       : String(ctx.inventionHow || "").trim().length >= HOW_IT_WORKS_MIN;
-    this.root.querySelectorAll(".co-chip").forEach((chip) => {
+    this.root.querySelectorAll(".co-chip[data-mode]").forEach((chip) => {
       const mode = chip.dataset.mode;
       const action = QUICK_ACTIONS.find((a) => a.mode === mode);
       if (tutorLock) {

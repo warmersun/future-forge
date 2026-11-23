@@ -166,4 +166,45 @@ describe("VisionRenderer vs cartoon briefing", () => {
     v.attach(root);
     assert.equal(img.getAttribute("src"), "assets/problems/chem-bio.jpg");
   });
+
+  it("stays silent on status/loading during briefing and restores frame + status on exit", () => {
+    const img = mockImg();
+    let isBriefing = true;
+    img.closest = (sel) =>
+      isBriefing && sel === ".vision-canvas-wrap.is-briefing" ? { className: "is-briefing" } : null;
+    img.src = "assets/problems/chem-bio.jpg";
+    img.hidden = false;
+    const status = { textContent: "" };
+    const overlay = { hidden: true, querySelector: () => ({ textContent: "" }) };
+    const classes = new Set(["is-briefing"]);
+    const root = {
+      classList: {
+        contains: (c) => classes.has(c),
+        toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)),
+      },
+      querySelector(sel) {
+        if (sel === ".vision-image") return img;
+        if (sel === ".vision-status") return status;
+        if (sel === ".vision-loading") return overlay;
+        return null;
+      },
+    };
+    const v = new VisionRenderer(root);
+    v.setLoading(true, "Imagining the present…");
+    assert.equal(classes.has("is-imagining"), false);
+    assert.equal(overlay.hidden, true);
+    assert.equal(status.textContent, "");
+
+    v.applyImageUrl("blob:prewarmed-today");
+    v.setLoading(false);
+    v.setStatus("Generated with Imagine · Clinic · Today");
+    assert.equal(img.getAttribute("src"), "assets/problems/chem-bio.jpg");
+    assert.equal(status.textContent, "");
+
+    isBriefing = false;
+    classes.delete("is-briefing");
+    v.attach(root);
+    assert.equal(img.getAttribute("src"), "blob:prewarmed-today");
+    assert.equal(status.textContent, "Generated with Imagine · Clinic · Today");
+  });
 });

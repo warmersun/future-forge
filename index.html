@@ -28,7 +28,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=assessment-3" />
+    <link rel="stylesheet" href="css/styles.css?v=calm-stage-2" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -1075,9 +1075,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
         <div class="brand">
           <span class="mp-active-player" id="mp-active-player" hidden aria-live="polite"></span>
         </div>
-        <div class="progress-pills invent-steps" aria-label="Quest steps">
-          <span class="pill active" data-step="invent">Invent</span>
-        </div>
         <div class="hud-clock" id="hud-clock" title="Quest calendar">
           <button type="button" class="hud-year hud-year-btn" id="hud-year" title="Year foresight">2026</button>
           <span class="hud-turn" id="hud-turn">Turn 0</span>
@@ -1192,26 +1189,33 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             </button>
           </div>
           <div class="challenge-banner">
-            <div class="label" id="ws-global-label">Global theme</div>
-            <h2 id="ws-mission-title">—</h2>
-            <p id="ws-mission-place" class="mission-place"></p>
+            <div class="challenge-banner-head">
+              <div class="challenge-banner-title-group">
+                <div class="label" id="ws-global-label">Global theme</div>
+                <div class="challenge-banner-title-line">
+                  <h2 id="ws-mission-title">—</h2>
+                  <p id="ws-mission-place" class="mission-place"></p>
+                </div>
+              </div>
+              <p id="ws-spotlight-chip" class="ws-spotlight-chip" hidden style="display:none"></p>
+            </div>
             <p id="ws-mission-summary" class="mission-summary" hidden></p>
             <p id="ws-quest-job" class="quest-job-line" hidden></p>
-            <p id="ws-stakeholder" class="stakeholder"></p>
-            <div id="ws-lesson-progress" class="lesson-progress-slot" hidden style="display:none"></div>
-            <div id="ws-sponsor" class="ws-sponsor" hidden>
-              <p id="ws-sponsor-label" class="ws-sponsor-label"></p>
-              <p id="ws-sponsor-banner" class="ws-sponsor-banner muted" hidden></p>
+            <div class="challenge-banner-meta-line">
+              <p id="ws-stakeholder" class="stakeholder"></p>
+              <div id="ws-sponsor" class="ws-sponsor" hidden>
+                <p id="ws-sponsor-label" class="ws-sponsor-label"></p>
+                <p id="ws-sponsor-banner" class="ws-sponsor-banner muted" hidden></p>
+              </div>
             </div>
+            <div id="ws-lesson-progress" class="lesson-progress-slot" hidden style="display:none"></div>
             <div id="ws-companion" class="ws-companion" hidden></div>
-            <p id="ws-spotlight-chip" class="ws-spotlight-chip" hidden style="display:none"></p>
-            <details id="crisis-briefing" class="crisis-briefing" hidden open>
+            <details id="crisis-briefing" class="crisis-briefing" hidden>
               <summary class="co-header crisis-briefing-header">
                 <span class="co-title">Quest briefing</span>
                 <span class="btn btn-ghost btn-sm crisis-briefing-toggle" aria-hidden="true"><svg class="co-collapse-chevron" viewBox="0 0 16 16" width="14" height="14"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
               </summary>
               <div id="ws-mission-scene" class="ws-mission-scene"></div>
-              <div id="crisis-introduction-cards" class="crisis-introduction-cards" hidden></div>
             </details>
             <p id="ws-spotlight-encourage" class="ws-spotlight-encourage muted" hidden></p>
             <div id="wait-report" class="wait-report" hidden></div>
@@ -1239,7 +1243,10 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               <div class="hex-tile-create-head">
                 <div class="hex-tile-create-head-row">
                   <h3 class="hex-tile-create-title" id="hex-tile-create-title">Invent</h3>
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-collector-cards" hidden>Collection</button>
+                  <div class="hex-tile-create-head-actions">
+                    <button type="button" class="btn btn-ghost btn-sm hex-open-compose" id="btn-open-compose" hidden>Write your own</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-collector-cards" hidden>Collection</button>
+                  </div>
                 </div>
                 <p class="muted hex-tile-create-hint" id="hex-tile-create-hint">Pick an emTech to invent.</p>
               </div>
@@ -1285,9 +1292,14 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                   ></textarea>
                   <div class="hex-mint-actions">
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-custom">Mint tile</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-plain" disabled>Mint non-emTech invention</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-argument" disabled>Mint argument</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-rd">Mint R&D</button>
+                    <details class="hex-more-mints" id="hex-more-mints">
+                      <summary class="btn btn-ghost btn-sm hex-more-mints-toggle">More tile types</summary>
+                      <div class="hex-more-mints-row">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-plain" disabled>Mint non-emTech invention</button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-argument" disabled>Mint argument</button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-rd">Mint R&D</button>
+                      </div>
+                    </details>
                   </div>
                 </div>
                 <div
@@ -1336,6 +1348,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             </dialog>
 
             <div class="hex-board-dock">
+              <div id="crisis-introduction-cards" class="crisis-introduction-cards" hidden></div>
               <div class="hex-board-wrap" id="hex-board-wrap">
               <div class="hex-board-toolbar">
                 <p class="hex-board-status" id="hex-board-status" aria-live="polite">Place ideas on the board. Looking at the board is the thinking.</p>
@@ -1522,7 +1535,11 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             </div>
             <div class="side-tab-item side-tab-assessment">
               <button type="button" class="side-tab" data-tab="assessment" role="tab" id="tab-assessment" aria-selected="false">
-                Assessment
+                Assessment <span class="side-tab-status-dot" id="tab-assessment-dot" hidden aria-hidden="true"></span>
+              </button>
+              <button type="button" class="btn-second-screen" data-second-screen="assessment" aria-pressed="false" aria-label="Show Assessment on the second screen" title="Show Assessment on the second screen">
+                <svg class="icon-send" viewBox="0 0 16 16" aria-hidden="true"><rect x="0.8" y="1.6" width="8" height="6" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3 9.2h3.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><rect x="7.2" y="6.4" width="8" height="5.6" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M9.6 14.2h3.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                <svg class="icon-back" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.4 3.2 3.2 8l4.2 4.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.8 8H13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
               </button>
             </div>
             <div class="side-tab-item side-tab-coinventor">
@@ -1595,6 +1612,9 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           </div>
 
           <div id="side-assessment" class="side-pane" role="tabpanel" hidden>
+            <div class="pane-title-line" hidden>
+              <span class="pane-title">Assessment</span>
+            </div>
             <div id="assessment-overview"></div>
           </div>
 
@@ -2591,6 +2611,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=plain-2"></script>
+    <script type="module" src="js/main.js?v=calm-stage-2"></script>
   </body>
 </html>

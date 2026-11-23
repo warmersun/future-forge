@@ -297,28 +297,36 @@ else
   "$WARMERSUN_DIR/scripts/gated-deploy-package.sh" "${ARGS[@]}"
 fi
 if [[ "$VERSION" == 1 ]]; then
-  # Check exact lesson bytes, not merely the lesson hub or a successful HTTP code.
-  python3 - "$WORK/meta.json" "$PKG" "$ROOT" <<'PYVERIFY'
-import json, sys, urllib.request, zipfile
+  # The publisher unpacks with these roots before upload, rewriting lessons/ and
+  # assets/ paths inside HTML. Compare that projection, not the raw package paths.
+  python3 - "$WORK/meta.json" "$PKG" "$ROOT" \
+    "https://warmersun.com/lessons/" \
+    "https://warmersun.com/quests/${SOURCE:-spotlights}/assets/" <<'PYVERIFY'
+import importlib.util, json, sys, urllib.request
 from pathlib import Path
 from urllib.parse import quote
-sys.path.insert(0, str(Path(sys.argv[3]) / 'scripts'))
+root = Path(sys.argv[3])
+sys.path.insert(0, str(root / 'scripts'))
 from verify_public_content import matches_public_content
+spec = importlib.util.spec_from_file_location('quest_package', root / 'scripts/quest-package.py')
+package = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(package)
 manifest = json.load(open(sys.argv[1], encoding='utf-8'))['manifest']
 paths = sorted(p for p in manifest.get('files', {}) if p.startswith('lessons/'))
-with zipfile.ZipFile(sys.argv[2]) as archive:
-    for path in paths:
-        url = 'https://warmersun.com/' + quote(path, safe='/')
-        try:
-            request = urllib.request.Request(url, headers={'Cache-Control': 'no-cache', 'Pragma': 'no-cache', 'User-Agent': 'FutureForge-Quest-Deploy/1.0'})
-            with urllib.request.urlopen(request, timeout=30) as response:
-                actual = response.read()
-            expected = archive.read(path)
-            if not matches_public_content(expected, actual, is_html=path.endswith('.html')):
-                raise ValueError('published bytes do not match the package')
-        except Exception as exc:
-            raise SystemExit(f'Lesson verification failed: {url}: {exc}. Deployment may be partial.')
-        print(f'Verified {url}')
+projected = dict(package.read_tree_from_zip(Path(sys.argv[2])))
+package.bind_roots(projected, sys.argv[4], sys.argv[5])
+for path in paths:
+    url = 'https://warmersun.com/' + quote(path, safe='/')
+    try:
+        request = urllib.request.Request(url, headers={'Cache-Control': 'no-cache', 'Pragma': 'no-cache', 'User-Agent': 'FutureForge-Quest-Deploy/1.0'})
+        with urllib.request.urlopen(request, timeout=30) as response:
+            actual = response.read()
+        expected = projected[path]
+        if not matches_public_content(expected, actual, is_html=path.endswith('.html')):
+            raise ValueError('published bytes do not match the package')
+    except Exception as exc:
+        raise SystemExit(f'Lesson verification failed: {url}: {exc}. Deployment may be partial.')
+    print(f'Verified {url}')
 print(f'Verified {len(paths)} lesson file(s).')
 PYVERIFY
   echo 'Neon upload returned success; exact object/catalog readback was not performed.'
