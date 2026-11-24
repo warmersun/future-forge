@@ -1,0 +1,31 @@
+{
+  "source": "SpaceX official Flight 15 recap, https://www.spacex.com/launches/starship-flight-15/: Starship lifted off from Starbase, Texas on Friday 13 Nov 2026; Super Heavy boostback burn ended early due to low fuel mass, root cause under investigation; booster guidance, navigation and control triggered an automated abort during coast and diverted offshore; landing burn executed with engines cutting off while hovering over the Gulf; upon landing-burn shutdown the Super Heavy flight termination system was triggered. Starship reached orbit, deployed 26 Starlink V3 satellites (contact made with every satellite), then a long coast of more than 20 hours; it relit a single Raptor sea-level engine for a deorbit burn, flew a final swoosh over the Gulf, lit three Raptors for a landing flip and slow descent, and Mechazilla's arms caught it about 22.5 hours after liftoff — the first tower catch of a Starship upper stage. Timeline catch at 22:32:34. UPI, Pedro Oliveira Jr., 14 Nov 2026, https://www.upi.com/Top_News/US/2026/11/14/spacex-starship-upper-stage/1201794703333/: 171-foot spacecraft; more than 22 hours in orbit, completing 14 trips around Earth; first recovery of an upper stage after an orbital flight; mission intended to recover and reuse both stages, fell short when the booster was diverted and (UPI wording) exploded in the Gulf; spokesman Dan Huot said guidance automatically canceled the catch after detecting the booster was not in the place it was supposed to be; Musk weekly/twice-weekly launches and Mars are stated goals, not results, and are omitted from player-facing prose. The Verge, Terrence O'Brien, 14 Nov 2026, https://www.theverge.com/science/1033930/spacex-chopstick-starship-catch: first chopstick/Mechazilla catch of Starship itself; boosters had been caught on earlier flights; catch around 4:20 PM ET 14 Nov; company still determining why the booster aborted and detonated over the Gulf. AP News, 14 Nov 2026, https://apnews.com/article/spacex-elon-musk-starship-rocket-df394c1b5a0f85e11194f9ff7db9ee6b: mid-air catch by giant mechanical arms where the journey began (AP says 22 hours earlier; primary SpaceX page says 22.5 hours — card follows SpaceX); first-ever capture of a Starship flying back from space; booster exploded shortly after Friday's liftoff, so the flight fell short of a double catch; stainless-steel spacecraft. Player-facing claims follow the SpaceX primary page, with 171 ft and 14 orbits from UPI. Not stored or shown.",
+  "id": "78eaec93-acbc-4cc6-9ae9-bff01841f39a",
+  "techId": "space",
+  "title": "A spaceship caught by the tower it launched from",
+  "description": "A tall steel spaceship flies itself back from orbit to the same tower it launched from. After a long coast around Earth, it fires one engine to leave orbit, then lights three engines to flip upright and slow down. Two giant mechanical arms on the tower close around it and catch it in mid-air, so it does not land in the ocean or need a recovery fleet.",
+  "capability": "A spaceship can come back from orbit and be caught by the tower it launched from, ready to be checked and flown again, with no ocean landing and no recovery fleet. This was shown once, for the ship that reached orbit; the first rocket that lifted it was not recovered.",
+  "useCases": [
+    "Bringing a spaceship straight back to its launch site after delivering satellites, so it can be checked on the pad instead of being fished out of the ocean.",
+    "The company's goal: catching both the ship and the first rocket that lifts it, so a whole launch system can be flown again. Shown so far for the ship only, not that first rocket."
+  ],
+  "body": "Until now, a first-stage rocket was the only part of a launch that had been caught by a tower. An orbital ship either burned up, splashed into the ocean, or landed somewhere else. This flight showed the ship itself can come back from orbit and be caught at the same tower it left.\n\nThe flight lasted about twenty-two and a half hours from liftoff. The ship reached orbit, released twenty-six internet satellites, then coasted for more than twenty hours, about fourteen times around Earth. It fired one engine to leave orbit, flew a last curve over the water, lit three engines to flip upright and slow down, and the tower arms caught it. The ship is about 171 feet tall.\n\nThis was not full reuse. The booster rocket that lifted the ship cut its return burn early because it was short on fuel, and the reason is still being investigated. Its guidance called off the tower catch and steered it out over the water. It fired engines for a landing burn, then a safety system ended the flight and the booster was lost.",
+  "links": [
+    {
+      "label": "Flight recap of the first tower catch from orbit",
+      "url": "https://www.spacex.com/launches/starship-flight-15/"
+    },
+    {
+      "label": "News report on the 171-foot ship caught after fourteen orbits",
+      "url": "https://www.upi.com/Top_News/US/2026/11/14/spacex-starship-upper-stage/1201794703333/"
+    },
+    {
+      "label": "News report on the first catch of an orbital ship by tower arms",
+      "url": "https://www.theverge.com/science/1033930/spacex-chopstick-starship-catch"
+    },
+    {
+      "label": "News report on the mid-air catch and the lost booster",
+      "url": "https://apnews.com/article/spacex-elon-musk-starship-rocket-df394c1b5a0f85e11194f9ff7db9ee6b"
+    }
+  ]
+}
