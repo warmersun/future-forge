@@ -40,22 +40,36 @@ export function collectorMilestonesForTech(cards, techId, opts = {}) {
     .filter((card) => card && String(card.techId || "") === id)
     .map((card) => {
       const cardId = String(card.id || "").slice(0, 80);
-      const lines = Array.isArray(card.useCases) ? card.useCases : [];
-      const useCases = lines.slice(0, 3).map((line, i) => {
-        const blurb = String(line || "").trim().slice(0, 280);
-        return {
-          id: `uc-${id}-collector-${cardId || i}-${i + 1}`,
-          title: titleFrom(blurb),
-          blurb,
-          world,
-          origin: "collector",
-        };
-      });
+      const lines = Array.isArray(card.useCases)
+        ? card.useCases.map((line) => String(line || "").trim()).filter(Boolean)
+        : [];
+      const fallbackBlurb = String(card.description || card.capability || card.title || "")
+        .trim()
+        .slice(0, 280);
+      const useCases = lines.length
+        ? lines.slice(0, 3).map((blurb, i) => ({
+            id: `uc-${id}-collector-${cardId || i}-${i + 1}`,
+            title: titleFrom(blurb),
+            blurb: blurb.slice(0, 280),
+            world,
+            origin: "collector",
+          }))
+        : fallbackBlurb
+          ? [
+              {
+                id: `uc-${id}-collector-${cardId || 0}-1`,
+                title: String(card.title || titleFrom(fallbackBlurb)).trim().slice(0, 72) || "Collected use",
+                blurb: fallbackBlurb,
+                world,
+                origin: "collector",
+              },
+            ]
+          : [];
       return {
         id: `ms-${id}-collector-${cardId || "card"}`,
         year: Number(card.year) > 1990 ? Number(card.year) : 2026,
         label: String(card.title || "Collected capability").slice(0, 120),
-        detail: String(card.capability || "").slice(0, 280),
+        detail: String(card.capability || card.description || "").slice(0, 280),
         status: "reached",
         origin: "collector",
         collectorCardId: cardId,

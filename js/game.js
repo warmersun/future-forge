@@ -4125,7 +4125,11 @@ let cloudImportDone = false;
 let cloudDbEnabled = null;
 
 async function listCollectorCards() {
-  const res = await apiFetch("/api/me/cards");
+  const init =
+    typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+      ? { signal: AbortSignal.timeout(12000) }
+      : {};
+  const res = await apiFetch("/api/me/cards", init);
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.ok) {
     throw new Error(data.error || "cards_failed");

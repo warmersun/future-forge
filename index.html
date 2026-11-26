@@ -1405,17 +1405,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               </div>
               <div class="hex-idea-tray" id="hex-idea-tray" hidden aria-hidden="true"></div>
             </section>
-            <dialog id="collector-cards" class="collector-dialog" aria-labelledby="collector-cards-title">
-              <div class="collector-dialog-head">
-                <h3 id="collector-cards-title">Collection</h3>
-                <form method="dialog">
-                  <button type="submit" class="btn btn-ghost btn-sm" value="cancel">Close</button>
-                </form>
-              </div>
-              <div id="collector-cards-filters" class="collector-filters" hidden></div>
-              <p id="collector-cards-empty" class="muted collector-empty" hidden></p>
-              <div id="collector-cards-list" class="collector-list"></div>
-            </dialog>
 
             <div class="hex-board-dock">
               <div class="hex-board-wrap" id="hex-board-wrap">
@@ -2688,6 +2677,19 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
         </form>
       </div>
     </div>
+
+    <!-- Collector cards picker — kept at top-level body so display:none stage containers can never trap showModal() -->
+    <dialog id="collector-cards" class="collector-dialog" aria-labelledby="collector-cards-title">
+      <div class="collector-dialog-head">
+        <h3 id="collector-cards-title">Collection</h3>
+        <form method="dialog">
+          <button type="submit" class="btn btn-ghost btn-sm" value="cancel">Close</button>
+        </form>
+      </div>
+      <div id="collector-cards-filters" class="collector-filters" hidden></div>
+      <p id="collector-cards-empty" class="muted collector-empty" hidden></p>
+      <div id="collector-cards-list" class="collector-list"></div>
+    </dialog>
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>

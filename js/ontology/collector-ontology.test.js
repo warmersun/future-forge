@@ -66,4 +66,24 @@ describe("collector ontology", () => {
     assert.equal(collectorInventionIsFree(board, "card-drone", "ing-1"), true);
     assert.equal(collectorInventionIsFree(board, "card-drone", "ing-2"), false);
   });
+
+  it("synthesizes a collected use case from publicCardDto description when useCases is absent", () => {
+    const cards = [
+      {
+        id: "card-api-1",
+        techId: "solar",
+        techName: "Solar Power",
+        title: "Agrivoltaic shade panels",
+        description: "Semi-transparent rooftop panels generate electricity while shielding crops.",
+        imageUrl: "https://cloud.warmersun.com/card/card-api-1/image",
+      },
+    ];
+    const rows = collectorMilestonesForTech(cards, "solar", { world: "atoms" });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].label, "Agrivoltaic shade panels");
+    assert.match(rows[0].detail, /Semi-transparent rooftop panels/);
+    assert.equal(rows[0].useCases.length, 1);
+    assert.equal(rows[0].useCases[0].title, "Agrivoltaic shade panels");
+    assert.equal(rows[0].useCases[0].origin, "collector");
+  });
 });

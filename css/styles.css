@@ -16451,43 +16451,76 @@ body.ontology-board .ontology-custom-tech select {
   min-width: 0;
 }
 
-/* World badges */
+/* World metadata indicators (flat SVG + quiet text, never a pill/button) */
 body.ontology-board .ontology-world {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.28rem;
   white-space: nowrap;
   flex-shrink: 0;
-  padding: 0.08rem 0.42rem;
-  border-radius: 999px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  color: var(--text-dim, #94a3b8);
+  cursor: default;
+  user-select: none;
 }
 
-body.ontology-board .ontology-world.is-bits {
-  background: rgba(56, 189, 248, 0.15);
-  color: #7dd3fc;
-  border: 1px solid rgba(56, 189, 248, 0.32);
+body.ontology-board .ontology-world-label {
+  color: var(--text-dim, #94a3b8);
 }
 
-body.ontology-board .ontology-world.is-atoms {
-  background: rgba(251, 191, 36, 0.14);
-  color: #fcd34d;
-  border: 1px solid rgba(251, 191, 36, 0.32);
+body.ontology-board .ontology-world-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
-body.ontology-board .ontology-world.is-split {
-  background: rgba(167, 139, 250, 0.16);
-  color: #c4b5fd;
-  border: 1px solid rgba(167, 139, 250, 0.35);
+body.ontology-board .ontology-world-svg {
+  display: block;
+  flex-shrink: 0;
 }
 
-body.ontology-board .ontology-world.is-plain {
-  background: rgba(52, 211, 153, 0.14);
-  color: #6ee7b7;
-  border: 1px solid rgba(52, 211, 153, 0.32);
+body.ontology-board .ontology-world-svg.is-bits {
+  color: #38bdf8;
+}
+
+body.ontology-board .ontology-world-svg.is-atoms {
+  color: #f59e0b;
+}
+
+body.ontology-board .ontology-world-svg.is-plain {
+  color: #34d399;
+}
+
+body.ontology-board .ontology-world-bridge-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+body.ontology-board .ontology-world-link-svg {
+  display: block;
+  flex-shrink: 0;
+  color: #94a3b8;
+  opacity: 0.85;
+}
+
+body.ontology-board .ontology-chip .ontology-world-svg {
+  width: 12px;
+  height: 12px;
+}
+
+body.ontology-board .ontology-chip .ontology-world-link-svg {
+  width: 9px;
+  height: 8px;
 }
 
 /* Lane 1: Tech & Milestones */

@@ -32,11 +32,52 @@ export function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
+const WORLD_META = {
+  bits: {
+    label: "Bits",
+    title: "Bits — digital, software, or information technology",
+  },
+  atoms: {
+    label: "Atoms",
+    title: "Atoms — physical matter, energy, or hardware technology",
+  },
+  split: {
+    label: "Bridge",
+    title: "Bridge — spans both Bits and Atoms (connects digital and physical worlds)",
+  },
+  plain: {
+    label: "Human",
+    title: "Human — people, policy, or local operational step (bridges any world)",
+  },
+};
+
+const WORLD_SVG_BITS = `<svg class="ontology-world-svg is-bits" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1.3"/><rect x="6.75" y="6.75" width="2.5" height="2.5" rx="0.4" fill="currentColor" stroke="none"/><path d="M6.5 2v2.5M9.5 2v2.5M6.5 11.5V14M9.5 11.5V14M2 6.5h2.5M2 9.5h2.5M11.5 6.5H14M11.5 9.5H14"/></svg>`;
+
+const WORLD_SVG_ATOMS = `<svg class="ontology-world-svg is-atoms" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="8" cy="8" r="1.45" fill="currentColor" stroke="none"/><ellipse cx="8" cy="8" rx="6.2" ry="2.5"/><ellipse cx="8" cy="8" rx="6.2" ry="2.5" transform="rotate(60 8 8)"/><ellipse cx="8" cy="8" rx="6.2" ry="2.5" transform="rotate(120 8 8)"/></svg>`;
+
+const WORLD_SVG_LINK = `<svg class="ontology-world-link-svg" viewBox="0 0 12 10" width="10" height="9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 5h9M3.5 2.8 1.5 5l2 2.2M8.5 2.8 10.5 5l-2 2.2"/></svg>`;
+
+const WORLD_SVG_PLAIN = `<svg class="ontology-world-svg is-plain" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="5.2" r="2.4"/><path d="M3.2 13.8c.4-2.5 2.2-4 4.8-4s4.4 1.5 4.8 4"/></svg>`;
+
+function normalizeWorld(world) {
+  if (world === "atoms" || world === "split" || world === "plain") return world;
+  return "bits";
+}
+
+function worldIconSvg(world) {
+  const key = normalizeWorld(world);
+  if (key === "atoms") return WORLD_SVG_ATOMS;
+  if (key === "split") {
+    return `<span class="ontology-world-bridge-pair" aria-hidden="true">${WORLD_SVG_BITS}${WORLD_SVG_LINK}${WORLD_SVG_ATOMS}</span>`;
+  }
+  if (key === "plain") return WORLD_SVG_PLAIN;
+  return WORLD_SVG_BITS;
+}
+
 export function worldBadge(world) {
-  if (world === "atoms") return `<span class="ontology-world is-atoms">🩷 Atoms</span>`;
-  if (world === "split") return `<span class="ontology-world is-split">🔵🩷 Bridge</span>`;
-  if (world === "plain") return `<span class="ontology-world is-plain">⚪ Human</span>`;
-  return `<span class="ontology-world is-bits">🔵 Bits</span>`;
+  const key = normalizeWorld(world);
+  const meta = WORLD_META[key];
+  return `<span class="ontology-world is-${key}" title="${escapeHtml(meta.title)}">${worldIconSvg(key)}<span class="ontology-world-label">${meta.label}</span></span>`;
 }
 
 function lampDot(level, pending = false) {
@@ -1175,10 +1216,9 @@ function renderPathwayCard(pw, crises, wires, opts) {
 }
 
 function worldDot(world) {
-  if (world === "atoms") return "🩷";
-  if (world === "split") return "🔵🩷";
-  if (world === "plain") return "⚪";
-  return "🔵";
+  const key = normalizeWorld(world);
+  const meta = WORLD_META[key];
+  return `<span class="ontology-world-icon is-${key}" title="${escapeHtml(meta.title)}" aria-label="${escapeHtml(meta.label)}">${worldIconSvg(key)}</span>`;
 }
 
 function renderCrisisCard(crisis, wires, highlight = null) {

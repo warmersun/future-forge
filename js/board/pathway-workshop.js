@@ -192,6 +192,7 @@ export function createPathwayWorkshop(api) {
   let resizeObs = null;
   let wireRaf = 0;
   let collectionCards = null;
+  let collectionLoad = null;
   let collectorFilterTech = "all";
 
   function board() {
@@ -1894,18 +1895,60 @@ export function createPathwayWorkshop(api) {
     }
     const dlg = typeof document !== "undefined" ? document.querySelector("#collector-cards") : null;
     if (!dlg) return;
+    if (
+      typeof document !== "undefined" &&
+      document.body &&
+      dlg.parentElement &&
+      dlg.parentElement !== document.body &&
+      typeof document.body.appendChild === "function"
+    ) {
+      document.body.appendChild(dlg);
+    }
+    if (dlg.dataset && !dlg.dataset.backdropClose && typeof dlg.addEventListener === "function") {
+      dlg.dataset.backdropClose = "1";
+      dlg.addEventListener("click", (ev) => {
+        if (ev.target === dlg && typeof dlg.close === "function") dlg.close();
+      });
+    }
     if (typeof dlg.showModal === "function" && !dlg.open) dlg.showModal();
-    try {
-      collectionCards = collectionCards || (await api.listCollectorCards?.()) || [];
-    } catch {
-      collectionCards = [];
+    const list = document.querySelector("#collector-cards-list");
+    const filters = document.querySelector("#collector-cards-filters");
+    const empty = document.querySelector("#collector-cards-empty");
+    if (!collectionCards) {
+      if (filters) filters.hidden = true;
+      if (empty) empty.hidden = true;
+      if (list && !collectionLoad) list.textContent = "Loading…";
+      if (!collectionLoad) {
+        collectionLoad = Promise.resolve()
+          .then(() => api.listCollectorCards?.() || [])
+          .finally(() => {
+            collectionLoad = null;
+          });
+      }
+      try {
+        const fetched = await collectionLoad;
+        if (!api.isSignedIn?.()) {
+          if (typeof dlg.close === "function") dlg.close();
+          collectionCards = null;
+          return;
+        }
+        collectionCards = Array.isArray(fetched) ? fetched : [];
+      } catch {
+        collectionCards = null;
+        if (list) list.textContent = "";
+        if (empty) {
+          empty.hidden = false;
+          empty.textContent = "Could not load your collection.";
+        }
+        return;
+      }
     }
     const renderPickerContent = () => {
       paintCollectorPicker({
         list: document.querySelector("#collector-cards-list"),
         filters: document.querySelector("#collector-cards-filters"),
         empty: document.querySelector("#collector-cards-empty"),
-        cards: collectionCards,
+        cards: collectionCards || [],
         techId: collectorFilterTech,
         onFilter: (nextTech) => {
           collectorFilterTech = nextTech || "all";
@@ -1936,8 +1979,12 @@ export function createPathwayWorkshop(api) {
     );
     next = dealMilestoneOn(next, card.techId, milestone);
     focusedTechId = card.techId;
+    traceSelection = { type: "tech", id: card.techId };
     trackFor(card.techId);
     commit(next, { bill: false });
+    api.flashToast?.(
+      `Added collector card: ${card.title || card.techName || techById(card.techId)?.name || card.techId}`
+    );
   }
 
   function jumpYear(years) {
@@ -2216,13 +2263,16 @@ export function createPathwayWorkshop(api) {
       scrollLaneIntoView(btn.getAttribute("data-lane"));
       return;
     } else if (action === "tool-lobby") {
+      btn.closest?.("details.ontology-tools")?.removeAttribute?.("open");
       const lobby = api.$?.("#btn-lobby") || document.querySelector("#btn-lobby");
       lobby?.click?.();
       return;
     } else if (action === "tool-rd") {
+      btn.closest?.("details.ontology-tools")?.removeAttribute?.("open");
       rollRdOnPathway().catch((e) => console.warn(e));
       return;
     } else if (action === "tool-argument") {
+      btn.closest?.("details.ontology-tools")?.removeAttribute?.("open");
       if (!Object.keys(board()?.pathways || {}).length) {
         api.flashToast?.("Create a Pathway in Lane 3 first.");
         return;
@@ -2231,9 +2281,11 @@ export function createPathwayWorkshop(api) {
     } else if (action === "close-argument") {
       argumentModalOpen = false;
     } else if (action === "tool-collection") {
+      btn.closest?.("details.ontology-tools")?.removeAttribute?.("open");
       showCollection().catch((e) => console.warn(e));
       return;
     } else if (action === "tool-share") {
+      btn.closest?.("details.ontology-tools")?.removeAttribute?.("open");
       document.querySelector("[data-share-puzzle]")?.click();
       return;
     } else {
@@ -2320,10 +2372,15 @@ export function createPathwayWorkshop(api) {
       document.addEventListener("keydown", (event) => {
         if (event.key !== "Escape" || !traceSelection) return;
         if (pickerOpen || openChallengerId || argumentModalOpen) return;
+        if (document.querySelector("#collector-cards")?.open) return;
         traceSelection = null;
         paint();
       });
     }
+    api.onSignedIn?.(() => {
+      collectionCards = null;
+      collectionLoad = null;
+    });
     root.addEventListener("dragstart", (event) => {
       const card = event.target?.closest?.("[data-usecase-id], [data-pathway-id]");
       if (!card) return;
@@ -2507,6 +2564,7 @@ export function createPathwayWorkshop(api) {
         }
       }
     },
+    showCollection,
     adoptCollector,
   };
 }

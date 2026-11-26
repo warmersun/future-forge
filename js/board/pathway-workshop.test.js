@@ -21,7 +21,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createPathwayWorkshop } from "./pathway-workshop.js";
 import { resolveTechTrack } from "../ontology/index.js";
-import { renderOntologyBoard, resolveChainHighlight, formatChainSentence } from "./board-render.js";
+import { renderOntologyBoard, resolveChainHighlight, formatChainSentence, worldBadge } from "./board-render.js";
 
 function harness(opts = {}) {
   let board = null;
@@ -471,5 +471,135 @@ describe("pathway workshop", () => {
     assert.equal(fetched[0].artId, "cached-art-1");
     assert.equal(board.pathways[pwId].ingredients[0].artUrl, "https://example.test/cached-art.jpg");
     assert.doesNotMatch(root.innerHTML, /use case linked into your next invention/);
+  });
+
+  it("showCollection lifts dialog out of hidden containers, recovers from fetch errors, and adopts picked cards", async () => {
+    const prevDoc = globalThis.document;
+    const makeEl = (tag) => {
+      const listeners = {};
+      return {
+        tagName: tag,
+        hidden: false,
+        open: false,
+        dataset: {},
+        children: [],
+        textContent: "",
+        classList: { toggle() {} },
+        parentElement: null,
+        appendChild(c) {
+          c.parentElement = this;
+          this.children.push(c);
+          return c;
+        },
+        replaceChildren() {
+          this.children = [];
+        },
+        addEventListener(ev, fn) {
+          (listeners[ev] ||= []).push(fn);
+        },
+        click() {
+          for (const fn of listeners.click || []) fn({ target: this });
+        },
+        showModal() {
+          this.open = true;
+        },
+        close() {
+          this.open = false;
+        },
+      };
+    };
+    const body = makeEl("body");
+    const hiddenParent = makeEl("div");
+    const dlg = makeEl("dialog");
+    hiddenParent.appendChild(dlg);
+    const list = makeEl("div");
+    const filters = makeEl("div");
+    const empty = makeEl("p");
+    globalThis.document = {
+      body,
+      addEventListener: () => {},
+      createElement: (tag) => makeEl(tag),
+      querySelector: (sel) => {
+        if (sel === "#collector-cards") return dlg;
+        if (sel === "#collector-cards-list") return list;
+        if (sel === "#collector-cards-filters") return filters;
+        if (sel === "#collector-cards-empty") return empty;
+        return null;
+      },
+    };
+    try {
+      let board = null;
+      let calls = 0;
+      const toasts = [];
+      const root = { innerHTML: "", querySelector: () => null, querySelectorAll: () => [], addEventListener: () => {} };
+      const ws = createPathwayWorkshop({
+        $: () => root,
+        getBoard: () => board,
+        setBoard: (b) => { board = b; },
+        getYear: () => 2026,
+        getMission: () => ({ place: "Saltpier", pressure: { Spoilage: 3 } }),
+        getPlace: () => "Saltpier",
+        getRules: () => [],
+        isSignedIn: () => true,
+        flashToast: (msg) => toasts.push(msg),
+        listCollectorCards: async () => {
+          calls += 1;
+          if (calls === 1) throw new Error("network_blip");
+          return [
+            {
+              id: "card-real-1",
+              techId: "solar",
+              techName: "Solar Power",
+              title: "Nighttime radiative cooling film",
+              description: "Passive roof film cools produce stalls without grid power.",
+            },
+          ];
+        },
+      });
+      ws.seedFromMission({ place: "Saltpier", pressure: { Spoilage: 3 } });
+
+      // First open fails -> dialog still moved to body, shows error message, does not poison cache.
+      await ws.showCollection();
+      assert.equal(dlg.parentElement, body);
+      assert.equal(dlg.open, true);
+      assert.equal(empty.hidden, false);
+      assert.match(empty.textContent, /Could not load/);
+      dlg.close();
+
+      // Second open retries -> renders card button, picking it closes dialog & deals Lane 1+2.
+      await ws.showCollection();
+      assert.equal(calls, 2);
+      assert.equal(list.children.length, 1);
+      list.children[0].click();
+      assert.equal(dlg.open, false);
+      assert.ok(board.techTracks.solar);
+      assert.ok(Object.values(board.useCases).some((uc) => uc.origin === "collector"));
+      assert.ok(toasts.some((t) => /Nighttime radiative cooling film/.test(t)));
+    } finally {
+      globalThis.document = prevDoc;
+    }
+  });
+
+  it("worldBadge renders crisp inline SVGs for Bits, Atoms, Bridge, and Human without dot/heart emoji", () => {
+    const bits = worldBadge("bits");
+    const atoms = worldBadge("atoms");
+    const bridge = worldBadge("split");
+    const human = worldBadge("plain");
+    for (const html of [bits, atoms, bridge, human]) {
+      assert.doesNotMatch(html, /[🔵🩷⚪]/);
+      assert.match(html, /<svg /);
+      assert.match(html, /title="/);
+    }
+    assert.match(bits, /ontology-world-svg is-bits/);
+    assert.match(bits, />Bits<\/span>/);
+    assert.match(atoms, /ontology-world-svg is-atoms/);
+    assert.match(atoms, />Atoms<\/span>/);
+    assert.match(bridge, /ontology-world-bridge-pair/);
+    assert.match(bridge, /ontology-world-svg is-bits/);
+    assert.match(bridge, /ontology-world-link-svg/);
+    assert.match(bridge, /ontology-world-svg is-atoms/);
+    assert.match(bridge, />Bridge<\/span>/);
+    assert.match(human, /ontology-world-svg is-plain/);
+    assert.match(human, />Human<\/span>/);
   });
 });
