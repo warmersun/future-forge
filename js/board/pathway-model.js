@@ -27,6 +27,7 @@ import { TECHS } from "../data.js";
 import { semanticDigest } from "../semantic-digest.js";
 import { neighbor } from "../hex/hex-tile-grid.js";
 import { collectorInventionIsFree } from "../ontology/collector-ontology.js";
+import { crisisMeterLevel } from "../sim/collapse.js";
 
 export const PATHWAY_BOARD_SCHEMA = "future-forge.pathway-board/v2";
 export const CONVERGENCE_FACTOR = 1.25;
@@ -388,20 +389,8 @@ export function removePathway(board, pathwayId) {
   const next = clone(board);
   if (!next.pathways?.[pathwayId]) return next;
   delete next.pathways[pathwayId];
-  const affectedCrises = new Set();
   for (const [wireId, wire] of Object.entries(next.wires || {})) {
-    if (wire.pathwayId === pathwayId) {
-      if (wire.crisisId) affectedCrises.add(wire.crisisId);
-      delete next.wires[wireId];
-    }
-  }
-  for (const crisisId of affectedCrises) {
-    const remaining = Object.values(next.wires || {}).some((w) => w.crisisId === crisisId);
-    if (!remaining && next.crises?.[crisisId]) {
-      next.crises[crisisId].delta = null;
-      next.crises[crisisId].reason = "";
-      next.crises[crisisId].lamp = next.crises[crisisId].initialLamp || "red";
-    }
+    if (wire.pathwayId === pathwayId) delete next.wires[wireId];
   }
   for (const [chId, ch] of Object.entries(next.challengers || {})) {
     if (ch.pathwayId === pathwayId) delete next.challengers[chId];
@@ -409,7 +398,7 @@ export function removePathway(board, pathwayId) {
   for (const [argId, arg] of Object.entries(next.arguments || {})) {
     if (arg.pathwayId === pathwayId) delete next.arguments[argId];
   }
-  return bump(next);
+  return refreshCrisisLamps(bump(next)).board;
 }
 
 /**
@@ -724,14 +713,7 @@ export function unplugWire(board, wireId) {
   for (const [id, ch] of Object.entries(next.challengers)) {
     if (ch.wireId === wireId) delete next.challengers[id];
   }
-  const deletedCrisisId = wire.crisisId;
-  const remainingForCrisis = Object.values(next.wires).filter((w) => w.crisisId === deletedCrisisId);
-  if (!remainingForCrisis.length && next.crises[deletedCrisisId]) {
-    next.crises[deletedCrisisId].delta = null;
-    next.crises[deletedCrisisId].reason = "";
-    next.crises[deletedCrisisId].lamp = next.crises[deletedCrisisId].initialLamp || "red";
-  }
-  return bump(next);
+  return refreshCrisisLamps(bump(next)).board;
 }
 
 export function seedCrises(board, crises) {
@@ -878,17 +860,100 @@ export function applyChallengerLamps(board, lampsByAngle = {}) {
   return bump(next);
 }
 
+function clampMeter(n) {
+  return Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
+}
+
+function meterBandToLamp(band) {
+  if (band === "cool") return "green";
+  if (band === "warm") return "yellow";
+  return "red";
+}
+
+function wiresOnCrisis(board, crisisId) {
+  return Object.values(board?.wires || {}).filter(
+    (wire) => wire && wire.crisisId === crisisId && board.pathways?.[wire.pathwayId]
+  );
+}
+
+function primaryDeltaReason(rows) {
+  const settled = (rows || []).filter((row) => String(row?.reason || "").trim());
+  if (!settled.length) return "";
+  settled.sort(
+    (a, b) => Math.abs(Number(b.delta) || 0) - Math.abs(Number(a.delta) || 0)
+  );
+  return String(settled[0].reason || "").slice(0, 280);
+}
+
+/**
+ * Lamp each crisis from ambient pressure plus every wired pathway's settled delta.
+ * A crisis with no live wire is red. Pending scores contribute 0.
+ * @param {object} board
+ * @param {Record<string, number>} [winMax]
+ * @returns {{ board: object, displayPressure: Record<string, number> }}
+ */
+export function refreshCrisisLamps(board, winMax = {}) {
+  const next = clone(board);
+  const displayPressure = {};
+  for (const [key, value] of Object.entries(next.pressureBase || {})) {
+    displayPressure[key] = clampMeter(value);
+  }
+  for (const crisis of Object.values(next.crises || {})) {
+    const key = crisis.meterKey || crisis.name || crisis.role;
+    const role = crisis.role || "local";
+    const wires = wiresOnCrisis(next, crisis.id);
+    if (!wires.length) {
+      crisis.delta = null;
+      crisis.reason = "";
+      crisis.lamp = "red";
+      continue;
+    }
+    let sum = 0;
+    const reasons = [];
+    const seenPathway = new Set();
+    for (const wire of wires) {
+      if (seenPathway.has(wire.pathwayId)) continue;
+      seenPathway.add(wire.pathwayId);
+      const pathway = next.pathways[wire.pathwayId];
+      const fp = pathwayContentFingerprint(pathway, next);
+      const impact = next.pathwayImpacts?.[fp];
+      if (!impact || impact.pending) continue;
+      const delta = Number(impact.crisisDelta?.[role]);
+      const n = Number.isFinite(delta) ? delta : 0;
+      sum += n;
+      const reason = impact.crisisReasons?.[role];
+      if (reason) reasons.push({ delta: n, reason });
+    }
+    const base = Number(next.pressureBase?.[key] ?? 0);
+    const level = clampMeter(base + sum);
+    if (key) displayPressure[key] = level;
+    crisis.delta = sum;
+    crisis.reason = primaryDeltaReason(reasons);
+    crisis.lamp = meterBandToLamp(crisisMeterLevel(level, winMax?.[key]));
+  }
+  return { board: next, displayPressure };
+}
+
 export function boardHolds(board, questYear) {
   if (!isPathwayBoard(board)) return false;
   if (!board.concernsSummoned) return false;
   const crises = Object.values(board.crises || {});
   if (!crises.length) return false;
-  if (!crises.every((c) => c.lamp === "yellow" || c.lamp === "green")) return false;
-  const wired = new Set(Object.values(board.wires || {}).map((w) => w.pathwayId));
-  if (!wired.size) return false;
-  for (const pathway of Object.values(board.pathways || {})) {
-    if (!wired.has(pathway.id)) continue;
-    const timing = effectiveTiming(pathway, board.useCases, questYear);
+  const wiredPathwayIds = new Set();
+  for (const crisis of crises) {
+    const wires = wiresOnCrisis(board, crisis.id);
+    if (!wires.length) return false;
+    if (crisis.lamp !== "yellow" && crisis.lamp !== "green") return false;
+    for (const wire of wires) {
+      wiredPathwayIds.add(wire.pathwayId);
+      const pathway = board.pathways[wire.pathwayId];
+      const fp = pathwayContentFingerprint(pathway, board);
+      const impact = board.pathwayImpacts?.[fp];
+      if (!impact || impact.pending) return false;
+    }
+  }
+  for (const pathwayId of wiredPathwayIds) {
+    const timing = effectiveTiming(board.pathways[pathwayId], board.useCases, questYear);
     if (timing.timingLevel === "red" || timing.early || timing.pending) return false;
   }
   const challengers = Object.values(board.challengers || {});
@@ -898,20 +963,30 @@ export function boardHolds(board, questYear) {
   );
 }
 
-export function applyScoreToCrisis(board, crisisId, score) {
+export function applyScoreToCrisis(board, crisisId, score, winMax = {}) {
   const next = clone(board);
-  const crisis = next.crises[crisisId];
+  const crisis = next.crises?.[crisisId];
   if (!crisis) return next;
-  const role = crisis.role;
-  const delta = Number(score?.crisisDelta?.[role] ?? score?.delta ?? 0);
+  const role = crisis.role || "local";
+  const raw = Number(score?.crisisDelta?.[role] ?? score?.delta ?? 0);
+  const delta = Number.isFinite(raw) ? raw : 0;
   const reason = String(score?.crisisReasons?.[role] || score?.reason || "").slice(0, 280);
-  crisis.delta = delta;
-  crisis.reason = reason;
-  crisis.lamp = delta <= -1 ? "green" : delta === 0 ? "yellow" : "red";
-  if (score?.lamp === "red" || score?.lamp === "yellow" || score?.lamp === "green") {
-    crisis.lamp = score.lamp;
+  const seen = new Set();
+  for (const wire of wiresOnCrisis(next, crisisId)) {
+    if (seen.has(wire.pathwayId)) continue;
+    seen.add(wire.pathwayId);
+    const pathway = next.pathways[wire.pathwayId];
+    const fp = pathwayContentFingerprint(pathway, next);
+    const prev = next.pathwayImpacts?.[fp] || {};
+    next.pathwayImpacts[fp] = {
+      ...prev,
+      pathwayId: pathway.id,
+      pending: false,
+      crisisDelta: { ...(prev.crisisDelta || {}), [role]: delta },
+      crisisReasons: { ...(prev.crisisReasons || {}), [role]: reason },
+    };
   }
-  return bump(next);
+  return refreshCrisisLamps(bump(next), winMax).board;
 }
 
 /**

@@ -694,9 +694,7 @@ export function renderOntologyBoard(view) {
         ${
           view?.unused?.count > 0
             ? `<button type="button" class="ontology-mini-btn is-prune" data-action="prune-unused" title="${escapeHtml(view.unused.tooltip || "Remove unconnected items")}">🧹 Clear unused <span class="ontology-prune-count">${view.unused.count}</span></button>`
-            : view?.canUndoPrune
-              ? `<button type="button" class="ontology-mini-btn is-undo" data-action="undo-prune" title="Restore the unconnected items you just cleared">↩ Undo clear</button>`
-              : ""
+            : ""
         }
         <details class="ontology-tools">
           <summary class="ontology-mini-btn">Research &amp; Policy</summary>

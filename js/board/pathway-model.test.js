@@ -34,6 +34,8 @@ import {
   resolveChallengerLamp,
   applyChallengerLamps,
   applyScoreToCrisis,
+  refreshCrisisLamps,
+  pathwayContentFingerprint,
   boardHolds,
   effectiveTiming,
   forecastWireState,
@@ -204,8 +206,17 @@ describe("pathway board", () => {
       answerQuality: "hit",
       lamp: "green",
     });
-    assert.equal(boardHolds(answered, 2026), true);
-    const early = dealMilestone(answered, "drones", forecast);
+    answered.pressureBase = { "Clean Water": 3 };
+    assert.equal(boardHolds(answered, 2026), false);
+    const scored = applyScoreToCrisis(
+      answered,
+      "crisis-local",
+      { delta: -2, reason: "Cuts silt." },
+      { "Clean Water": 1 }
+    );
+    assert.equal(scored.crises["crisis-local"].lamp, "green");
+    assert.equal(boardHolds(scored, 2026), true);
+    const early = dealMilestone(scored, "drones", forecast);
     const late = createPathway(early, { useCaseIds: ["uc-fleet"], timingLevel: "green", world: "atoms" });
     const lateWire = plugWire(late.board, late.pathwayId, "crisis-local");
     const timing = effectiveTiming(lateWire.board.pathways[late.pathwayId], lateWire.board.useCases, 2026);
@@ -356,5 +367,69 @@ describe("pathway board", () => {
     assert.deepEqual(Object.keys(pruned.board.techTracks), ["drones"]);
     assert.equal(Object.keys(pruned.board.wires).length, 1);
     assert.equal(findUnusedItems(pruned.board).count, 0);
+  });
+
+  it("sums wired deltas against pressure and leaves an unwired crisis red", () => {
+    let board = seedCrises(createPathwayBoard(), [
+      { id: "crisis-local", role: "local", name: "Clean Water", meterKey: "Clean Water", lamp: "yellow" },
+      { id: "crisis-global", role: "global", name: "Aquifer", meterKey: "Aquifer", lamp: "yellow" },
+    ]);
+    board.pressureBase = { "Clean Water": 4, Aquifer: 4 };
+    const winMax = { "Clean Water": 1, Aquifer: 1 };
+    const eased = createPathway(board, {
+      title: "Silt net",
+      howText: "A net catches the silt before the well.",
+      timingLevel: "green",
+      timingPct: 85,
+      world: "atoms",
+    });
+    const worse = createPathway(eased.board, {
+      title: "Extra pumps",
+      howText: "More pumps pull the aquifer down.",
+      timingLevel: "green",
+      timingPct: 85,
+      world: "atoms",
+    });
+    const first = plugWire(worse.board, eased.pathwayId, "crisis-local");
+    const both = plugWire(first.board, worse.pathwayId, "crisis-local");
+    const next = both.board;
+    const easeFp = pathwayContentFingerprint(next.pathways[eased.pathwayId], next);
+    const worseFp = pathwayContentFingerprint(next.pathways[worse.pathwayId], next);
+    next.pathwayImpacts[easeFp] = {
+      pathwayId: eased.pathwayId,
+      pending: false,
+      crisisDelta: { local: -2 },
+      crisisReasons: { local: "Catches silt." },
+    };
+    next.pathwayImpacts[worseFp] = {
+      pathwayId: worse.pathwayId,
+      pending: false,
+      crisisDelta: { local: 1 },
+      crisisReasons: { local: "Draws the aquifer." },
+    };
+    const lit = refreshCrisisLamps(next, winMax).board;
+    assert.equal(lit.crises["crisis-local"].delta, -1);
+    assert.equal(lit.crises["crisis-local"].lamp, "yellow");
+    assert.equal(lit.crises["crisis-global"].lamp, "red");
+    assert.equal(lit.crises["crisis-global"].delta, null);
+    assert.equal(boardHolds(lit, 2026), false);
+
+    const modest = createPathway(board, {
+      title: "One filter",
+      howText: "One cloth filter on the inlet.",
+      timingLevel: "green",
+      timingPct: 85,
+      world: "atoms",
+    });
+    modest.board.pressureBase = { "Clean Water": 5, Aquifer: 5 };
+    const modestWire = plugWire(modest.board, modest.pathwayId, "crisis-local");
+    const modestLit = applyScoreToCrisis(
+      modestWire.board,
+      "crisis-local",
+      { delta: -1, reason: "A little less silt." },
+      winMax
+    );
+    assert.equal(modestLit.crises["crisis-local"].lamp, "red");
+    assert.equal(modestLit.crises["crisis-global"].lamp, "red");
   });
 });

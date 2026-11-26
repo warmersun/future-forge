@@ -39,6 +39,7 @@ import { localPose } from "../challenge-pose.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { appendCaptainLog } from "../captain-log.js?v=crisis-role-3";
 import { techCost } from "../sim/economy.js";
+import { applyPressureRiseYears } from "../sim/pressure.js";
 import {
   seedCrisisTiles,
   placedTechEconomy,
@@ -96,7 +97,7 @@ import {
   pathwayContentFingerprint,
   composePathwayHow,
   needsBridgeWarning,
-  applyScoreToCrisis,
+  refreshCrisisLamps,
   isUseCaseEarly,
 } from "./pathway-model.js";
 
@@ -196,7 +197,7 @@ export function createPathwayWorkshop(api) {
   let collectionCards = null;
   let collectionLoad = null;
   let collectorFilterTech = "all";
-  let lastPruneUndo = null;
+  const scoreFollowup = new WeakMap();
 
   function countUnusedSparks() {
     let total = 0;
@@ -204,20 +205,6 @@ export function createPathwayWorkshop(api) {
       total += (batch?.ideas || []).length;
     }
     return total;
-  }
-
-  function snapshotSparks() {
-    const out = new Map();
-    for (const [k, v] of sparkBatches.entries()) {
-      out.set(k, {
-        ...v,
-        ideas: [...(v?.ideas || [])],
-        ids: [...(v?.ids || [])],
-        titles: [...(v?.titles || [])],
-        seenTitles: [...(v?.seenTitles || [])],
-      });
-    }
-    return out;
   }
 
   function formatUnusedParts({ techCount, useCaseCount, pathwayCount, sparkCount }) {
@@ -443,7 +430,6 @@ export function createPathwayWorkshop(api) {
       rules: current?.rules || [],
       sparks,
       unused,
-      canUndoPrune: Boolean(lastPruneUndo),
       createBusy,
       summoning: summoningState,
       pickerOpen,
@@ -591,9 +577,17 @@ export function createPathwayWorkshop(api) {
     });
   }
 
+  function missionWinMax() {
+    const fromApi = api.getWinMax?.();
+    if (fromApi && Object.keys(fromApi).length) return fromApi;
+    return api.getMission?.()?.winMax || {};
+  }
+
   function commit(next, opts = {}) {
     if (!isPathwayBoard(next)) return false;
-    if (!opts.keepPruneUndo) lastPruneUndo = null;
+    const follow = scoreFollowup.get(next);
+    const refreshed = refreshCrisisLamps(next, missionWinMax());
+    next = refreshed.board;
     next.questYear = year();
     const prev = board();
     const prevEcon = placedTechEconomy(prev);
@@ -610,8 +604,15 @@ export function createPathwayWorkshop(api) {
         return false;
       }
     }
+    const display = refreshed.displayPressure || {};
+    if (Object.keys(display).length) api.setPressure?.(display);
     syncDerivedProse(projected);
     api.commitBoard?.(projected);
+    for (const crisisDelta of follow?.ease || []) {
+      if (crisisDelta && Object.keys(crisisDelta).length) {
+        api.grantPathwayEase?.({ crisisDelta });
+      }
+    }
     if (!opts.silent) api.onBoardPainted?.();
     paint();
     return true;
@@ -661,7 +662,6 @@ export function createPathwayWorkshop(api) {
     customUseOpen = false;
     writeOpen = false;
     draftHow = "";
-    lastPruneUndo = null;
 
     let next = migrateToPathwayBoard(seedCrisisTiles(mission));
     next = setPinnedRules(next, api.getRules?.() || mission?.rules || []);
@@ -719,7 +719,6 @@ export function createPathwayWorkshop(api) {
     customUseOpen = false;
     writeOpen = false;
     draftHow = "";
-    lastPruneUndo = null;
 
     const current = isPathwayBoard(incomingBoard) ? incomingBoard : board();
     const trackIds = Object.keys(current?.techTracks || {});
@@ -879,15 +878,13 @@ export function createPathwayWorkshop(api) {
 
     const latest = board();
     if (!isPathwayBoard(latest) || !latest.pathways?.[pathwayId]) return;
-    let updated = setIngredientTiming(latest, pathwayId, ingredientId, {
+    const updated = setIngredientTiming(latest, pathwayId, ingredientId, {
       ...result,
       timingPending: false,
     });
     const isWired = Object.values(updated.wires || {}).some((w) => w.pathwayId === pathwayId);
-    if (isWired) {
-      updated = await scoreWired(updated);
-    }
-    commit(updated, { bill: false });
+    if (!commit(updated, { bill: false })) return;
+    if (isWired) commit(await scoreWired(board()), { bill: false });
   }
 
   async function askForIdeas(opts = {}) {
@@ -1333,61 +1330,61 @@ export function createPathwayWorkshop(api) {
   }
 
   /**
-   * Score each unique plugged Pathway once per content fingerprint,
-   * fanning out crisisDelta and updating Challenger roadblocks on its wires.
+   * Score plugged pathways, then apply those scores onto the live board.
+   * Edits made during the round trip stay; a removed wire is not paid.
    */
   async function scoreWired(current, opts = {}) {
-    let next = structuredClone(current);
+    if (!isPathwayBoard(current)) return current;
+    const liveAtStart = board();
+    const startRev = isPathwayBoard(liveAtStart) ? liveAtStart.rev : null;
+    const snap = structuredClone(current);
     const y = year();
     const forceIds = opts.forcePathwayIds || new Set();
     const wiresByPathway = new Map();
-    for (const wire of Object.values(next.wires || {})) {
+    for (const wire of Object.values(snap.wires || {})) {
       if (!wiresByPathway.has(wire.pathwayId)) wiresByPathway.set(wire.pathwayId, []);
       wiresByPathway.get(wire.pathwayId).push(wire);
     }
 
     const mission = api.getMission?.() || null;
-    const rules = api.getRules?.() || next.rules || [];
+    const rules = api.getRules?.() || snap.rules || [];
     const globalObj = api.getGlobal?.() || null;
     const globalId = mission?.globalId || globalObj?.id || null;
+    const results = [];
 
     for (const [pathwayId, pwWires] of wiresByPathway.entries()) {
-      const pathway = next.pathways?.[pathwayId];
+      const pathway = snap.pathways?.[pathwayId];
       if (!pathway) continue;
-      const timing = effectiveTiming(pathway, next.useCases, y);
-      const fp = pathwayContentFingerprint(pathway, next);
+      const timing = effectiveTiming(pathway, snap.useCases, y);
+      const fp = pathwayContentFingerprint(pathway, snap);
       const targetCrises = pwWires
-        .map((w) => next.crises?.[w.crisisId])
+        .map((w) => snap.crises?.[w.crisisId])
         .filter(Boolean);
       if (!targetCrises.length) continue;
       const roles = [...new Set(targetCrises.map((c) => c.role || "local"))];
+      const inventionIds = pathway.ingredients.map((ing) => ing.id);
 
       if (timing.early) {
         const reason = timing.timingReason;
-        for (const crisis of targetCrises) {
-          const r = crisis.role || "local";
-          next = applyScoreToCrisis(next, crisis.id, {
-            lamp: "red",
-            delta: 0,
-            reason,
-            crisisDelta: { [r]: 0 },
-            crisisReasons: { [r]: reason },
-          });
-        }
-        next.pathwayImpacts[fp] = {
+        results.push({
+          kind: "early",
           pathwayId,
-          inventionIds: pathway.ingredients.map((ing) => ing.id),
-          crisisDelta: Object.fromEntries(roles.map((r) => [r, 0])),
-          crisisReasons: Object.fromEntries(roles.map((r) => [r, reason])),
-          concerns: {},
-          earlyBlocked: true,
-          pending: false,
-        };
+          fingerprint: fp,
+          impact: {
+            pathwayId,
+            inventionIds,
+            crisisDelta: Object.fromEntries(roles.map((r) => [r, 0])),
+            crisisReasons: Object.fromEntries(roles.map((r) => [r, reason])),
+            concerns: {},
+            earlyBlocked: true,
+            pending: false,
+          },
+        });
         continue;
       }
 
-      const cached = next.pathwayImpacts?.[fp];
-      const pwChallengers = Object.values(next.challengers || {}).filter(
+      const cached = snap.pathwayImpacts?.[fp];
+      const pwChallengers = Object.values(snap.challengers || {}).filter(
         (ch) => ch.pathwayId === pathwayId
       );
       const needsConcernScore = pwChallengers.some(
@@ -1401,123 +1398,165 @@ export function createPathwayWorkshop(api) {
         !needsConcernScore &&
         roles.every((r) => cached.crisisDelta && r in cached.crisisDelta);
 
-      let score = cached;
-      if (!allRolesCached) {
-        const howCombined = composePathwayHow(pathway);
-        const inventions = pathway.ingredients.map((ing) => ({
-          id: ing.id,
-          kind: "invention",
-          techId: ing.techId,
-          howText: ing.howText || howCombined,
-          year: y,
-          timingLevel:
-            timing.timingLevel === "red" ? "red" : ing.timingLevel || "green",
-          feasibilityPct: timing.timingPct ?? ing.timingPct ?? 82,
-          polarity: ing.world === "plain" ? "curve" : ing.world,
-        }));
-        const heurOpts = { mission, rules, crisisRoles: roles };
-        const heur = heuristicPathwayScore(inventions, y, heurOpts);
-
-        if (api.coInvent) {
-          scoringPathwayIds.add(pathwayId);
-          paint();
-          try {
-            const concernsPayload = pwChallengers.map((ch) => ({
-              angle: ch.angle,
-              challengeSpeech: ch.speech || "",
-              challengeQuestion: ch.question || "",
-              playerAnswer: ch.playerAnswer || "",
-              inventChanged: Boolean(
-                ch.posedAgainstFingerprint && fp !== ch.posedAgainstFingerprint
-              ),
-              posedHowText: ch.posedHowText || "",
-            }));
-            const acceptedArgs = acceptedArgumentsForPathway(next, pathway);
-            const ai = await api.coInvent("score-pathway", howCombined, {
-              pathway: {
-                fingerprint: fp,
-                howText: howCombined,
-                inventions: inventions.map((n) => ({
-                  techId: n.techId,
-                  year: n.year,
-                  howText: n.howText,
-                  feasibilityPct: n.feasibilityPct,
-                  timingLevel: n.timingLevel || null,
-                })),
-              },
-              year: y,
-              place: api.getPlace?.() || "",
-              missionTitle: api.getMissionTitle?.() || "",
-              globalId,
-              rules,
-              scene: String(mission?.scene || "").slice(0, 600),
-              grounding: api.getGrounding?.() || null,
-              pressureBase: next.pressureBase || {},
-              winMax: mission?.winMax || {},
-              crisisRoles: targetCrises.map((c) => ({
-                role: c.role || "local",
-                name: c.name,
-                meterKey: c.meterKey || c.name,
-                description: String(c.description || "").slice(0, 400),
-              })),
-              ...(concernsPayload.length ? { concerns: concernsPayload } : {}),
-              ...(acceptedArgs.length ? { acceptedArguments: acceptedArgs } : {}),
-            });
-            if (ai && (ai.crisisDelta || ai.concerns)) {
-              score = clampPathwayScore(
-                blendPathwayScore(
-                  normalizePathwayScore(ai, roles),
-                  heur,
-                  roles
-                ),
-                inventions,
-                heurOpts
-              );
-              if (ai.concerns && !score.concerns) score.concerns = ai.concerns;
-            } else {
-              score = heur;
-            }
-          } catch {
-            score = heur;
-          } finally {
-            scoringPathwayIds.delete(pathwayId);
-          }
-        } else {
-          score = heur;
-        }
-
-        next.pathwayImpacts[fp] = {
+      if (allRolesCached) {
+        results.push({
+          kind: "cached",
           pathwayId,
-          inventionIds: pathway.ingredients.map((ing) => ing.id),
+          fingerprint: fp,
+          score: cached,
+          impact: cached,
+        });
+        continue;
+      }
+
+      const howCombined = composePathwayHow(pathway);
+      const inventions = pathway.ingredients.map((ing) => ({
+        id: ing.id,
+        kind: "invention",
+        techId: ing.techId,
+        howText: ing.howText || howCombined,
+        year: y,
+        timingLevel:
+          timing.timingLevel === "red" ? "red" : ing.timingLevel || "green",
+        feasibilityPct: timing.timingPct ?? ing.timingPct ?? 82,
+        polarity: ing.world === "plain" ? "curve" : ing.world,
+      }));
+      const heurOpts = { mission, rules, crisisRoles: roles };
+      const heur = heuristicPathwayScore(inventions, y, heurOpts);
+      let score = heur;
+
+      if (api.coInvent) {
+        scoringPathwayIds.add(pathwayId);
+        paint();
+        try {
+          const concernsPayload = pwChallengers.map((ch) => ({
+            angle: ch.angle,
+            challengeSpeech: ch.speech || "",
+            challengeQuestion: ch.question || "",
+            playerAnswer: ch.playerAnswer || "",
+            inventChanged: Boolean(
+              ch.posedAgainstFingerprint && fp !== ch.posedAgainstFingerprint
+            ),
+            posedHowText: ch.posedHowText || "",
+          }));
+          const acceptedArgs = acceptedArgumentsForPathway(snap, pathway);
+          const ai = await api.coInvent("score-pathway", howCombined, {
+            pathway: {
+              fingerprint: fp,
+              howText: howCombined,
+              inventions: inventions.map((n) => ({
+                techId: n.techId,
+                year: n.year,
+                howText: n.howText,
+                feasibilityPct: n.feasibilityPct,
+                timingLevel: n.timingLevel || null,
+              })),
+            },
+            year: y,
+            place: api.getPlace?.() || "",
+            missionTitle: api.getMissionTitle?.() || "",
+            globalId,
+            rules,
+            scene: String(mission?.scene || "").slice(0, 600),
+            grounding: api.getGrounding?.() || null,
+            pressureBase: snap.pressureBase || {},
+            winMax: mission?.winMax || missionWinMax(),
+            crisisRoles: targetCrises.map((c) => ({
+              role: c.role || "local",
+              name: c.name,
+              meterKey: c.meterKey || c.name,
+              description: String(c.description || "").slice(0, 400),
+            })),
+            ...(concernsPayload.length ? { concerns: concernsPayload } : {}),
+            ...(acceptedArgs.length ? { acceptedArguments: acceptedArgs } : {}),
+          });
+          if (ai && (ai.crisisDelta || ai.concerns)) {
+            score = clampPathwayScore(
+              blendPathwayScore(
+                normalizePathwayScore(ai, roles),
+                heur,
+                roles
+              ),
+              inventions,
+              heurOpts
+            );
+            if (ai.concerns && !score.concerns) score.concerns = ai.concerns;
+          }
+        } catch {
+          score = heur;
+        } finally {
+          scoringPathwayIds.delete(pathwayId);
+        }
+      }
+
+      results.push({
+        kind: "fresh",
+        pathwayId,
+        fingerprint: fp,
+        score,
+        impact: {
+          pathwayId,
+          inventionIds,
           crisisDelta: score.crisisDelta || {},
           crisisReasons: score.crisisReasons || {},
           concerns: score.concerns || {},
           pending: false,
-        };
-        api.grantPathwayEase?.({ crisisDelta: score.crisisDelta });
-      }
+        },
+      });
+    }
 
-      for (const crisis of targetCrises) {
-        const r = crisis.role || "local";
-        next = applyScoreToCrisis(next, crisis.id, {
-          delta: score.crisisDelta?.[r],
-          reason: score.crisisReasons?.[r],
-        });
+    const liveNow = board();
+    const landing =
+      isPathwayBoard(liveNow) && liveNow.rev !== startRev
+        ? structuredClone(liveNow)
+        : structuredClone(current);
+    const ease = [];
+    let applied = false;
+    for (const result of results) {
+      const pathway = landing.pathways?.[result.pathwayId];
+      if (!pathway) continue;
+      if (pathwayContentFingerprint(pathway, landing) !== result.fingerprint) continue;
+      const stillWired = Object.values(landing.wires || {}).some(
+        (wire) => wire.pathwayId === result.pathwayId
+      );
+      if (!stillWired) continue;
+      const prev = landing.pathwayImpacts?.[result.fingerprint];
+      const keepLive =
+        result.kind === "cached" && prev && !prev.pending && !prev.earlyBlocked;
+      if (!keepLive) {
+        landing.pathwayImpacts[result.fingerprint] = result.impact;
+        if (result.kind !== "cached") applied = true;
       }
-
-      for (const ch of pwChallengers) {
-        const cRow = score.concerns?.[ch.angle];
-        const concernLamp = typeof cRow === "string" ? cRow : cRow?.level;
-        const liveCh = next.challengers[ch.id];
-        if (liveCh) {
-          liveCh.lamp = resolveChallengerLamp(liveCh, pathway, concernLamp, next);
-          if (cRow?.reason && !liveCh.playerAnswer) {
-            liveCh.answerFeedback = String(cRow.reason).slice(0, 400);
+      if (result.kind === "fresh") {
+        const wasUnsettled = !prev || prev.pending || prev.earlyBlocked;
+        if (wasUnsettled) {
+          const connected = new Set();
+          for (const wire of Object.values(landing.wires || {})) {
+            if (wire.pathwayId !== result.pathwayId) continue;
+            connected.add(landing.crises?.[wire.crisisId]?.role || "local");
           }
+          const crisisDelta = {};
+          for (const role of connected) {
+            const n = Number(result.score?.crisisDelta?.[role]);
+            if (Number.isFinite(n) && n < 0) crisisDelta[role] = n;
+          }
+          if (Object.keys(crisisDelta).length) ease.push(crisisDelta);
+        }
+      }
+      if (result.kind === "early") continue;
+      for (const ch of Object.values(landing.challengers || {})) {
+        if (ch.pathwayId !== result.pathwayId) continue;
+        const cRow = result.score?.concerns?.[ch.angle] || result.impact?.concerns?.[ch.angle];
+        const concernLamp = typeof cRow === "string" ? cRow : cRow?.level;
+        ch.lamp = resolveChallengerLamp(ch, pathway, concernLamp, landing);
+        if (cRow?.reason && !ch.playerAnswer) {
+          ch.answerFeedback = String(cRow.reason).slice(0, 400);
         }
       }
     }
-    return next;
+    if (applied) landing.rev = (Number(landing.rev) || 0) + 1;
+    if (ease.length) scoreFollowup.set(landing, { ease });
+    return landing;
   }
 
   async function plug(pathwayId, crisisId) {
@@ -1535,9 +1574,7 @@ export function createPathwayWorkshop(api) {
       traceSelection = null;
     }
     const next = unplugWire(board(), wireId);
-    const hasWires = Object.keys(next.wires || {}).length > 0;
-    const rescored = hasWires ? await scoreWired(next) : next;
-    return commit(rescored, { bill: false });
+    return commit(next, { bill: false });
   }
 
   async function summonNextChallenger() {
@@ -1838,10 +1875,12 @@ export function createPathwayWorkshop(api) {
     const live = board() || current;
     const next = setPathwayHow(live, pathwayId, text);
     const isWired = Object.values(next.wires || {}).some((w) => w.pathwayId === pathwayId);
-    const scored = isWired
-      ? await scoreWired(next, { forcePathwayIds: new Set([pathwayId]) })
-      : next;
-    commit(scored, { bill: false });
+    if (!commit(next, { bill: false })) return;
+    if (isWired) {
+      commit(await scoreWired(board(), { forcePathwayIds: new Set([pathwayId]) }), {
+        bill: false,
+      });
+    }
   }
 
   async function rollRdOnPathway() {
@@ -1865,10 +1904,12 @@ export function createPathwayWorkshop(api) {
       detail: `Applied to ${next.pathways[pathwayId]?.ingredients?.[0]?.title || "pathway"}.`,
     });
     const isWired = Object.values(next.wires || {}).some((w) => w.pathwayId === pathwayId);
-    const scored = isWired
-      ? await scoreWired(next, { forcePathwayIds: new Set([pathwayId]) })
-      : next;
-    commit(scored, { bill: false });
+    if (!commit(next, { bill: false })) return;
+    if (isWired) {
+      commit(await scoreWired(board(), { forcePathwayIds: new Set([pathwayId]) }), {
+        bill: false,
+      });
+    }
   }
 
   async function submitArgumentForm(form) {
@@ -1931,15 +1972,17 @@ export function createPathwayWorkshop(api) {
           ? `⚖️ Argument accepted: ${reason || "attached to pathway."}`
           : `⚖️ Argument rejected: ${reason || "claim not verified."}`
       );
+      if (!commit(settled, { bill: false })) return;
       if (verdict === "accept") {
-        const isWired = Object.values(settled.wires || {}).some(
+        const isWired = Object.values(board()?.wires || {}).some(
           (w) => w.pathwayId === pathwayId
         );
         if (isWired) {
-          settled = await scoreWired(settled, { forcePathwayIds: new Set([pathwayId]) });
+          commit(await scoreWired(board(), { forcePathwayIds: new Set([pathwayId]) }), {
+            bill: false,
+          });
         }
       }
-      commit(settled, { bill: false });
     } catch {
       commit(removeArgument(board(), argId), { bill: false });
       api.flashToast?.("Fact-check failed — argument removed.");
@@ -2047,36 +2090,10 @@ export function createPathwayWorkshop(api) {
     );
   }
 
-  function pruneUnused() {
-    const current = board();
-    if (!isPathwayBoard(current)) return false;
-    const activeFocus = focusedTechId || Object.keys(current.techTracks || {})[0] || null;
-    const summary = unusedSummaryFor(current, activeFocus);
-    if (summary.count === 0) {
-      api.flashToast?.("Everything on the board is already connected.");
-      return false;
-    }
-    const undoSnap = {
-      board: structuredClone(current),
-      sparks: snapshotSparks(),
-      focusedTechId,
-      focusedPathwayId,
-      selectedUseCaseIds: [...selectedUseCaseIds],
-    };
-
-    for (const batch of sparkBatches.values()) {
-      if (batch) {
-        batch.ideas = [];
-        batch.ids = [];
-        batch.titles = [];
-      }
-    }
-
-    const { board: pruned, removed } = pruneUnusedItems(current, { focusedTechId: activeFocus });
+  function dropClearedSelection(pruned, removed) {
     const removedTechSet = new Set(removed.techIds);
     const removedUcSet = new Set(removed.useCaseIds);
     const removedPwSet = new Set(removed.pathwayIds);
-
     selectedUseCaseIds = selectedUseCaseIds.filter((id) => !removedUcSet.has(id));
     if (focusedPathwayId && removedPwSet.has(focusedPathwayId)) focusedPathwayId = null;
     if (editingPathwayId && removedPwSet.has(editingPathwayId)) {
@@ -2087,43 +2104,43 @@ export function createPathwayWorkshop(api) {
     if (focusedTechId && removedTechSet.has(focusedTechId)) {
       focusedTechId = Object.keys(pruned.techTracks || {})[0] || null;
     }
-    if (traceSelection) {
-      if (
-        (traceSelection.type === "tech" && removedTechSet.has(traceSelection.id)) ||
-        (traceSelection.type === "usecase" && removedUcSet.has(traceSelection.id)) ||
-        (traceSelection.type === "pathway" && removedPwSet.has(traceSelection.id))
-      ) {
-        traceSelection = null;
-      }
-    }
-
-    lastPruneUndo = undoSnap;
-    if (removed.count > 0) {
-      const ok = commit(pruned, { bill: removed.pathwayIds.length > 0, keepPruneUndo: true });
-      if (!ok) {
-        lastPruneUndo = null;
-        return false;
-      }
-    } else {
-      paint();
-    }
-    api.flashToast?.(`Cleared ${summary.parts}.`);
-    return true;
+    if (!traceSelection) return;
+    const drop =
+      (traceSelection.type === "tech" && removedTechSet.has(traceSelection.id)) ||
+      (traceSelection.type === "usecase" && removedUcSet.has(traceSelection.id)) ||
+      (traceSelection.type === "pathway" && removedPwSet.has(traceSelection.id));
+    if (drop) traceSelection = null;
   }
 
-  function undoPrune() {
-    if (!lastPruneUndo) return false;
-    const snap = lastPruneUndo;
-    lastPruneUndo = null;
-    sparkBatches.clear();
-    for (const [k, v] of snap.sparks.entries()) sparkBatches.set(k, v);
-    focusedTechId = snap.focusedTechId;
-    focusedPathwayId = snap.focusedPathwayId;
-    selectedUseCaseIds = [...snap.selectedUseCaseIds];
-    for (const tid of Object.keys(snap.board?.techTracks || {})) trackFor(tid);
-    const ok = commit(snap.board, { bill: true });
-    if (ok) api.flashToast?.("Restored cleared items.");
-    return ok;
+  function wipeSparkBatches() {
+    for (const batch of sparkBatches.values()) {
+      if (!batch) continue;
+      batch.ideas = [];
+      batch.ids = [];
+      batch.titles = [];
+    }
+  }
+
+  function pruneUnused() {
+    const current = board();
+    if (!isPathwayBoard(current)) return false;
+    const activeFocus = focusedTechId || Object.keys(current.techTracks || {})[0] || null;
+    const summary = unusedSummaryFor(current, activeFocus);
+    if (summary.count === 0) {
+      api.flashToast?.("Everything on the board is already connected.");
+      return false;
+    }
+    const { board: pruned, removed } = pruneUnusedItems(current, { focusedTechId: activeFocus });
+    if (removed.count > 0) {
+      const ok = commit(pruned, { bill: removed.pathwayIds.length > 0, silent: true });
+      if (!ok) return false;
+    }
+    wipeSparkBatches();
+    dropClearedSelection(pruned, removed);
+    api.flashToast?.(`Cleared ${summary.parts}.`);
+    paint();
+    if (removed.count > 0) api.onBoardPainted?.();
+    return true;
   }
 
   function jumpYear(years) {
@@ -2337,10 +2354,7 @@ export function createPathwayWorkshop(api) {
       if (traceSelection?.type === "pathway" && traceSelection.id === pwId) {
         traceSelection = null;
       }
-      const next = removePathway(board(), pwId);
-      scoreWired(next)
-        .then((scored) => commit(scored, { bill: true }))
-        .catch(() => commit(next, { bill: true }));
+      commit(removePathway(board(), pwId), { bill: true });
       return;
     } else if (action === "edit-pathway-how") {
       const pwId = btn.getAttribute("data-pathway-id");
@@ -2425,9 +2439,6 @@ export function createPathwayWorkshop(api) {
       return;
     } else if (action === "prune-unused") {
       pruneUnused();
-      return;
-    } else if (action === "undo-prune") {
-      undoPrune();
       return;
     } else if (action === "tool-share") {
       btn.closest?.("details.ontology-tools")?.removeAttribute?.("open");
@@ -2584,6 +2595,21 @@ export function createPathwayWorkshop(api) {
     });
   }
 
+  function afterYearPressureRise(rise, years = 1, frontierRisk = null) {
+    const current = board();
+    if (!isPathwayBoard(current)) return;
+    const next = structuredClone(current);
+    if (!next.pressureBase || !Object.keys(next.pressureBase).length) {
+      next.pressureBase = { ...(api.getPressure?.() || {}) };
+    }
+    next.pressureBase = applyPressureRiseYears(next.pressureBase, rise || {}, years);
+    if (frontierRisk?.meter && next.pressureBase[frontierRisk.meter] != null) {
+      const n = Math.round(Number(next.pressureBase[frontierRisk.meter]) || 0) + 1;
+      next.pressureBase[frontierRisk.meter] = Math.max(0, Math.min(5, n));
+    }
+    commit(next, { bill: false });
+  }
+
   wireDom();
 
   return {
@@ -2634,8 +2660,8 @@ export function createPathwayWorkshop(api) {
           }
         }
       }
-      const scored = await scoreWired(current);
-      commit(scored, { bill: false });
+      if (!commit(current, { bill: false })) return;
+      commit(await scoreWired(board()), { bill: false });
       for (const [pwId, ingId] of readyAssess) {
         await assessIngredientFeasibility(pwId, ingId);
       }
@@ -2644,12 +2670,14 @@ export function createPathwayWorkshop(api) {
       const current = board();
       if (!isPathwayBoard(current)) return;
       const next = setPinnedRules(current, api.getRules?.() || []);
-      scoreWired(next)
+      if (!commit(next, { bill: false })) return;
+      scoreWired(board())
         .then((scored) => commit(scored, { bill: false }))
-        .catch(() => commit(next, { bill: false }));
+        .catch((e) => console.warn(e));
     },
-    afterYearPressureRise: () => paint(),
-    afterWaitPressureRise: () => paint(),
+    afterYearPressureRise,
+    afterWaitPressureRise: (rise, frontierRisk = null) =>
+      afterYearPressureRise(rise, 2, frontierRisk),
     boardHolds: () => boardHoldsNow(board()),
     getFocusedTechId: () => focusedTechId,
     revealTile: () => paint(),
@@ -2712,6 +2740,5 @@ export function createPathwayWorkshop(api) {
     showCollection,
     adoptCollector,
     pruneUnused,
-    undoPrune,
   };
 }

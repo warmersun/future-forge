@@ -603,7 +603,7 @@ describe("pathway workshop", () => {
     assert.match(human, />Human<\/span>/);
   });
 
-  it("pruneUnused clears unconnected techs, use cases, unplugged pathways, and sparks with 1-step undo", async () => {
+  it("pruneUnused clears unconnected techs, use cases, unplugged pathways, and sparks", async () => {
     const h = harness();
     h.ws.seedFromMission({ place: "Paddy Step Wells", pressure: { "Clean Water": 3 }, spotlight: { techId: "drones" } });
     const drones = resolveTechTrack("drones");
@@ -633,15 +633,151 @@ describe("pathway workshop", () => {
     assert.deepEqual(Object.keys(h.board.techTracks), ["solar"]);
     assert.equal(h.ws.hasSparkBatch("solar"), false);
     assert.doesNotMatch(h.root.innerHTML, /data-action="prune-unused"/);
-    assert.match(h.root.innerHTML, /data-action="undo-prune"/);
-    assert.match(h.root.innerHTML, /Undo clear/);
+    assert.doesNotMatch(h.root.innerHTML, /Undo clear/);
+  });
 
-    // 1-step Undo restores everything cleanly.
-    assert.equal(h.ws.undoPrune(), true);
+  it("pruneUnused keeps sparks and the board when the clear is rejected", async () => {
+    let rejectClear = false;
+    const h = harness({
+      api: {
+        reconcileStackFromBoard: () =>
+          rejectClear ? { ok: false, techId: "solar", error: "short" } : { ok: true },
+      },
+    });
+    h.ws.seedFromMission({
+      place: "Paddy Step Wells",
+      pressure: { "Clean Water": 3 },
+      spotlight: { techId: "drones" },
+    });
+    const drones = resolveTechTrack("drones");
+    const solar = resolveTechTrack("solar");
+    const dronesMs = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    const solarMs = solar.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    h.ws.dealMilestone("drones", dronesMs.id);
+    h.ws.focusTech("solar");
+    h.ws.dealMilestone("solar", solarMs.id);
+    await h.ws.askForIdeas();
+    h.ws.placeSpark("spark-1");
+    const wiredPwId = Object.keys(h.board.pathways)[0];
+    await h.ws.plug(wiredPwId, Object.keys(h.board.crises)[0]);
+    h.ws.placeSpark("spark-2");
+    assert.equal(Object.keys(h.board.pathways).length, 2);
+    rejectClear = true;
+    assert.equal(h.ws.pruneUnused(), false);
     assert.equal(Object.keys(h.board.pathways).length, 2);
     assert.ok(h.board.techTracks.drones);
-    assert.ok(h.board.techTracks.solar);
     assert.equal(h.ws.hasSparkBatch("solar"), true);
-    assert.match(h.root.innerHTML, /data-action="prune-unused"/);
+  });
+
+  it("does not pay or drop edits made while score-pathway is in flight", async () => {
+    let release = null;
+    const ease = [];
+    const h = harness({
+      api: {
+        coInvent: async (mode) => {
+          if (mode === "idea-sparks") {
+            return {
+              ideas: [{
+                id: "spark-1",
+                title: "Runoff Mapper",
+                howText: "A pilot maps every sluice from the air and marks the one dumping silt into the well this week.",
+              }],
+            };
+          }
+          if (mode !== "score-pathway") return {};
+          return new Promise((resolve) => {
+            release = () =>
+              resolve({
+                crisisDelta: { local: -1 },
+                crisisReasons: { local: "Less silt reaches the well." },
+              });
+          });
+        },
+        grantPathwayEase: (opts) => ease.push(opts),
+        getMission: () => ({
+          place: "Paddy Step Wells",
+          pressure: { "Clean Water": 4 },
+          winMax: { "Clean Water": 1 },
+          spotlight: { techId: "drones" },
+        }),
+      },
+    });
+    h.ws.seedFromMission({
+      place: "Paddy Step Wells",
+      pressure: { "Clean Water": 4 },
+      winMax: { "Clean Water": 1 },
+      spotlight: { techId: "drones" },
+    });
+    const drones = resolveTechTrack("drones");
+    const solar = resolveTechTrack("solar");
+    const dronesMs = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    h.ws.dealMilestone("drones", dronesMs.id);
+    h.ws.focusTech("drones");
+    await h.ws.askForIdeas();
+    h.ws.placeSpark("spark-1");
+    const pathwayId = Object.keys(h.board.pathways)[0];
+    const crisisId = Object.keys(h.board.crises)[0];
+
+    const pending = h.ws.plug(pathwayId, crisisId);
+    assert.equal(typeof release, "function");
+    const solarMs = solar.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    h.ws.focusTech("solar");
+    assert.equal(h.ws.dealMilestone("solar", solarMs.id), true);
+    assert.ok(h.board.techTracks.solar);
+    release();
+    assert.equal(await pending, true);
+    assert.ok(h.board.techTracks.solar);
+    assert.ok(h.board.wires && Object.keys(h.board.wires).length === 1);
+    assert.equal(ease.length, 1);
+    assert.ok(Number(ease[0].crisisDelta?.local) < 0);
+  });
+
+  it("does not pay pathway ease for a wire removed while score-pathway is in flight", async () => {
+    let release = null;
+    const ease = [];
+    const h = harness({
+      api: {
+        coInvent: async (mode) => {
+          if (mode === "idea-sparks") {
+            return {
+              ideas: [{
+                id: "spark-1",
+                title: "Runoff Mapper",
+                howText: "A pilot maps every sluice from the air and marks the one dumping silt into the well this week.",
+              }],
+            };
+          }
+          if (mode !== "score-pathway") return {};
+          return new Promise((resolve) => {
+            release = () =>
+              resolve({
+                crisisDelta: { local: -1 },
+                crisisReasons: { local: "Less silt reaches the well." },
+              });
+          });
+        },
+        grantPathwayEase: (opts) => ease.push(opts),
+      },
+    });
+    h.ws.seedFromMission({
+      place: "Paddy Step Wells",
+      pressure: { "Clean Water": 4 },
+      spotlight: { techId: "drones" },
+    });
+    const drones = resolveTechTrack("drones");
+    const dronesMs = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    h.ws.dealMilestone("drones", dronesMs.id);
+    h.ws.focusTech("drones");
+    await h.ws.askForIdeas();
+    h.ws.placeSpark("spark-1");
+    const pathwayId = Object.keys(h.board.pathways)[0];
+    const pending = h.ws.plug(pathwayId, Object.keys(h.board.crises)[0]);
+    assert.equal(typeof release, "function");
+    const wireId = Object.keys(h.board.wires)[0];
+    assert.equal(await h.ws.unplug(wireId), true);
+    release();
+    await pending;
+    assert.equal(ease.length, 0);
+    assert.equal(Object.keys(h.board.wires).length, 0);
   });
 });

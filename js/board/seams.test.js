@@ -86,6 +86,9 @@ describe("pathway board seams", () => {
     answered.challengers[summoned.id].lamp = resolveChallengerLamp(answered.challengers[summoned.id], answered.pathways[made.pathwayId], "yellow");
     answered.crises["crisis-local"].lamp = "green";
     answered.questYear = 2026;
+    for (const impact of Object.values(answered.pathwayImpacts || {})) {
+      impact.pending = false;
+    }
     assert.equal(boardHolds(answered), true);
 
     const older = { ...answered, rev: 1 };
