@@ -645,7 +645,7 @@ export function renderOntologyBoard(view) {
         <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="problem">4 · Problem <span>${crises.length}</span></button>
       </div>
       <div class="ontology-calendar" role="group" aria-label="Quest timeline">
-        <button type="button" class="ontology-year-badge" data-action="open-year-dialog" title="Inspect world foresight for ${year}">📅 QUEST YEAR: ${year}</button>
+        <button type="button" class="ontology-year-badge" data-action="open-year-dialog" title="Inspect world foresight for ${year}">📅 <span class="ontology-year-prefix">QUEST YEAR: </span>${year}</button>
         <button type="button" class="ontology-time-btn" data-action="year-plus" data-years="1" title="End turn: advance +1 year and refill AP">+1 yr</button>
         <button type="button" class="ontology-time-btn is-jump" data-action="year-plus" data-years="2" title="Look Ahead: inspect capability curves and jump +2 years">+2 yrs</button>
       </div>
@@ -663,6 +663,7 @@ export function renderOntologyBoard(view) {
       </div>
     </div>
     ${summonBanner}
+    <div class="ontology-lanes-scroll" data-lanes-scroll>
     <div class="ontology-lanes-stage${highlight ? " has-chain-highlight" : ""}" data-lanes-stage>
       <svg class="ontology-wires" viewBox="0 0 1000 800" aria-hidden="true">${renderFallbackWires(wires, pathways, crises, highlight, "base")}</svg>
       <svg class="ontology-wires is-active-layer" viewBox="0 0 1000 800" aria-hidden="true">${renderFallbackWires(wires, pathways, crises, highlight, "active")}</svg>
@@ -696,6 +697,7 @@ export function renderOntologyBoard(view) {
           <div class="ontology-lane-body">${problemLane}</div>
         </section>
       </div>
+    </div>
     </div>
     ${renderTraceBar(highlight, view)}
     ${picker}

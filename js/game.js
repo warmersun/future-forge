@@ -339,6 +339,8 @@ import {
   paintQuestJob,
   resetQuestBriefing,
   setBriefingDismissed,
+  hasQuestBriefing,
+  replayQuestBriefing,
 } from "./briefing-ui.js?v=calm-stage-2";
 import {
   WORKSHOP_STAGES,
@@ -383,6 +385,8 @@ import {
   isTechDrawerMode,
   isTechDrawerOpen,
   isCoInventorTabMode,
+  isVisionStackMode,
+  revealVisionPanel,
   CO_TAB_MQ,
 } from "./tech-drawer.js";
 import {
@@ -1898,6 +1902,7 @@ function ensureHexWorkshop() {
       if (techId) openTechModal(String(techId));
     },
     toggleVoice: () => {
+      revealVisionPanel(workshopLayoutFor(null));
       if (isCoInventorTabMode()) setSideTab("coinventor");
       else setCoInventorCollapsed(false);
       document.querySelector("#co-voice")?.click();
@@ -1977,6 +1982,7 @@ function ensureHexWorkshop() {
       return fetchIdeaImage({
         id: opts.ideaId,
         ideaId: opts.ideaId,
+        artId: opts.artId,
         techId: opts.techId,
         imagePrompt: opts.imagePrompt,
         title: opts.ideaId,
@@ -4327,8 +4333,69 @@ function cloudRunStatePayload() {
 }
 
 
+const PATHWAY_MIRROR_PREFIX = "ff.pathwayContinue.v1:";
+
+function saveLocalPathwayBoardMirror(questId, runId, board) {
+  if (!questId || !isPathwayBoard(board) || typeof localStorage === "undefined") return;
+  try {
+    const payload = {
+      questId: String(questId),
+      runId: runId ? String(runId) : null,
+      rev: Number(board.rev) || 0,
+      savedAt: Date.now(),
+      board: boardForWire(board),
+    };
+    localStorage.setItem(`${PATHWAY_MIRROR_PREFIX}${questId}`, JSON.stringify(payload));
+  } catch {
+    /* private mode or storage quota */
+  }
+}
+
+function clearLocalPathwayBoardMirror(questId) {
+  if (!questId || typeof localStorage === "undefined") return;
+  try {
+    localStorage.removeItem(`${PATHWAY_MIRROR_PREFIX}${questId}`);
+  } catch {
+    /* private mode */
+  }
+}
+
+function readLocalPathwayBoardMirror(questId, runId, cloudBoard) {
+  if (!questId || typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(`${PATHWAY_MIRROR_PREFIX}${questId}`);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (!saved || saved.questId !== String(questId) || !isPathwayBoard(saved.board)) return null;
+    const sameRun = Boolean(runId && saved.runId && String(saved.runId) === String(runId));
+    if (isPathwayBoard(cloudBoard)) {
+      if (sameRun && (Number(saved.board.rev) || 0) > (Number(cloudBoard.rev) || 0)) {
+        return saved.board;
+      }
+      return null;
+    }
+    if (sameRun) return saved.board;
+    if (!runId || !saved.runId) {
+      const cloudInvs = Object.values(cloudBoard?.tiles || {})
+        .filter((t) => t?.kind === "invention")
+        .map((t) => t.id);
+      const localTileIds = new Set(Object.keys(saved.board.tiles || {}));
+      if (!cloudInvs.length || cloudInvs.every((id) => localTileIds.has(id))) {
+        return saved.board;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function scheduleCloudRunState() {
-  if (!isClerkSignedIn() || !state.mission?.id) return;
+  if (!state.mission?.id) return;
+  if (isPathwayBoard(state.hexBoard) && !state.tutorialRun) {
+    saveLocalPathwayBoardMirror(state.mission.id, state.cloudRunId, state.hexBoard);
+  }
+  if (!isClerkSignedIn()) return;
   const mission = state.mission;
   clearTimeout(cloudRunStateTimer);
   cloudRunStateTimer = setTimeout(() => {
@@ -9051,18 +9118,20 @@ function startMission(mission, opts = {}) {
     const hex = ensureHexWorkshop();
     if (restored.skipSeed && restored.hexBoard) {
       let incoming = restored.hexBoard;
-      if (typeof document !== "undefined" && document.querySelector("#ontology-board")) {
+      const isOntologyUi =
+        typeof document !== "undefined" && Boolean(document.querySelector("#ontology-board"));
+      if (isOntologyUi) {
+        const mirrored = readLocalPathwayBoardMirror(
+          state.mission?.id,
+          state.cloudRunId,
+          incoming
+        );
+        if (mirrored) incoming = mirrored;
         incoming = projectToTiles(migrateToPathwayBoard(incoming));
         if (incoming && typeof incoming === "object") incoming.questYear = state.year;
       }
       state.hexBoard = incoming;
-      hex.paint();
-      hex.syncPathwayScores?.();
-      if (restored.year != null) hex.refreshAfterYearChange?.();
-      hex.importSparkBatches?.(restored.play?.sparkBatches);
-      // resetCreateMode ran before this board existed and put the two blanks back.
-      hex.resumeArgumentWrite?.();
-      const trayTiles = Object.values(restored.hexBoard.tiles || {});
+      const trayTiles = Object.values(incoming.tiles || {});
       const sparkTech = trayTiles.find(
         (t) =>
           t &&
@@ -9073,13 +9142,27 @@ function startMission(mission, opts = {}) {
       )?.techId;
       const focus =
         focusedTechId || restored.play?.focusedTechId || sparkTech || null;
-      if (focus) {
-        focusedTechId = focus;
-        hex.focusTech(focus);
+      if (focus) focusedTechId = focus;
+      if (hex.restoreFromBoard) {
+        hex.restoreFromBoard(incoming, { focusedTechId: focus });
+        hex.importSparkBatches?.(restored.play?.sparkBatches);
+        hex.syncPathwayScores?.();
+        if (restored.year != null) hex.refreshAfterYearChange?.();
       } else {
         hex.paint();
+        hex.syncPathwayScores?.();
+        if (restored.year != null) hex.refreshAfterYearChange?.();
+        hex.importSparkBatches?.(restored.play?.sparkBatches);
+        // resetCreateMode ran before this board existed and put the two blanks back.
+        hex.resumeArgumentWrite?.();
+        if (focus) {
+          hex.focusTech(focus);
+        } else {
+          hex.paint();
+        }
       }
     } else {
+      clearLocalPathwayBoardMirror(state.mission?.id);
       seedingMissionBoard = true;
       try {
         hex.seedFromMission(state.mission);
@@ -9327,6 +9410,23 @@ function renderWorkshop() {
   paintWorkshopCompanion(m);
   const sceneEl = $("#ws-mission-scene");
   const visionRoot = $("#vision-root");
+  const syncBannerBriefingActions = () => {
+    const fullBriefBtn = $("#btn-ws-full-briefing");
+    const replayBriefBtn = $("#btn-ws-replay-briefing");
+    const hasWalk = visionRoot ? hasQuestBriefing(visionRoot) : false;
+    if (fullBriefBtn) {
+      const panel = $("#crisis-briefing");
+      const open = Boolean(panel && !panel.hidden && panel.open);
+      fullBriefBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      fullBriefBtn.classList.toggle("is-on", open);
+      fullBriefBtn.hidden = !Boolean(
+        m.scene || m.problem || m.briefMd || hasWalk || sceneEl?.textContent?.trim()
+      );
+    }
+    if (replayBriefBtn) {
+      replayBriefBtn.hidden = !hasWalk;
+    }
+  };
   if (visionRoot) {
     const briefing = paintQuestBriefing(visionRoot, m, {
       sceneEl,
@@ -9336,6 +9436,7 @@ function renderWorkshop() {
         if (snap?.mode === "walk") {
           const panel = $("#crisis-briefing");
           if (panel) panel.hidden = true;
+          syncBannerBriefingActions();
           refreshCoachMarks();
           return;
         }
@@ -9343,6 +9444,7 @@ function renderWorkshop() {
         resetWorkshopScroll();
         crisisIntroduction.show();
         syncWorkshopStage();
+        syncBannerBriefingActions();
         renderFeasibility();
         ensureCoInventor();
         try {
@@ -9350,6 +9452,11 @@ function renderWorkshop() {
           // without forcing a duplicate live generation.
           state.vision?.attach?.(visionRoot);
           updateVision({ debounceMs: 80 });
+        } catch {
+          /* ignore */
+        }
+        try {
+          window.dispatchEvent(new Event("resize"));
         } catch {
           /* ignore */
         }
@@ -9365,10 +9472,12 @@ function renderWorkshop() {
       if (panel) panel.hidden = true;
       syncWorkshopStage();
     }
+    syncBannerBriefingActions();
   } else if (sceneEl) {
     sceneEl.hidden = false;
     sceneEl.textContent = m.scene || m.problem || "";
     attachReadAloud(sceneEl);
+    syncBannerBriefingActions();
   }
   $("#ws-stakeholder").textContent = m.stakeholder ? `Stakeholder: ${m.stakeholder}` : "";
   const spotChip = $("#ws-spotlight-chip");
@@ -19438,6 +19547,8 @@ function ensureVision() {
   state.vision.onTrace = (info) => recordAiTrace(info);
   const chRoot = $("#challenge-vision-root");
   if (chRoot) state.vision.addMirror(chRoot);
+  const miniRoot = $("#ws-vision-mini");
+  if (miniRoot) state.vision.addMirror(miniRoot);
 }
 
 /** Build challengeBeat for Imagine from current scrutiny / last response */
@@ -19536,6 +19647,8 @@ function updateVision(opts = {}) {
   const inventName = $("#vision-stage-name");
   const inventBlurb = $("#vision-stage-blurb");
   if (inventName) inventName.textContent = `${stage.name} · ${state.year}`;
+  const miniStage = $("#ws-vision-mini-stage");
+  if (miniStage) miniStage.textContent = `${stage.name} · ${state.year}`;
   if (inventBlurb) {
     const who =
       roomBridge.isRoom() && roomBridge.viewingOther?.()
@@ -19563,6 +19676,7 @@ function updateVision(opts = {}) {
     state.vision.attach($("#vision-root"));
     state.vision.addMirror($("#challenge-vision-root"));
     state.vision.addMirror($("#deploy-vision-root"));
+    state.vision.addMirror($("#ws-vision-mini"));
   }
 
   const challengeBeat = onChallenge ? buildChallengeVisionBeat() : null;
@@ -23137,6 +23251,7 @@ function tuckSoloTechRail() {
 async function ensureTutorialTargetsVisible(step) {
   if (step?.openSideTab) {
     try {
+      revealVisionPanel(workshopLayoutFor(null));
       setSideTab(step.openSideTab);
     } catch {
       /* ignore */
@@ -23345,6 +23460,7 @@ function finishTutorial() {
 async function ensureTourTargetVisible(step) {
   if (step?.openSideTab) {
     try {
+      revealVisionPanel(workshopLayoutFor(null));
       setSideTab(step.openSideTab);
     } catch {
       /* ignore */
@@ -24434,6 +24550,49 @@ export function init() {
   bind();
   syncDeveloperAiTraceTab();
   initTechDrawers();
+  $("#ws-vision-mini")?.addEventListener("click", () => {
+    const layout = workshopLayoutFor(null);
+    if (isVisionStackMode()) {
+      layout?.querySelector(".vision-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      revealVisionPanel(layout);
+    }
+    setSideTab("vision");
+  });
+
+  const syncFullBriefingBtn = () => {
+    const panel = $("#crisis-briefing");
+    const btn = $("#btn-ws-full-briefing");
+    if (!btn) return;
+    const isOpen = Boolean(panel && !panel.hidden && panel.open);
+    btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    btn.classList.toggle("is-on", isOpen);
+  };
+  $("#crisis-briefing")?.addEventListener("toggle", syncFullBriefingBtn);
+  $("#btn-ws-full-briefing")?.addEventListener("click", () => {
+    const panel = $("#crisis-briefing");
+    if (!panel) return;
+    const willOpen = panel.hidden || !panel.open;
+    if (willOpen) {
+      panel.hidden = false;
+      panel.open = true;
+      const fullStory = panel.querySelector(".quest-brief-full");
+      if (fullStory && "open" in fullStory) fullStory.open = true;
+    } else {
+      panel.open = false;
+    }
+    syncFullBriefingBtn();
+  });
+  $("#btn-ws-replay-briefing")?.addEventListener("click", () => {
+    const panel = $("#crisis-briefing");
+    if (panel) panel.open = false;
+    syncFullBriefingBtn();
+    setSideTab("vision");
+    const visionRoot = $("#vision-root");
+    if (!replayQuestBriefing(visionRoot)) {
+      document.querySelector(".quest-briefing-replay")?.click();
+    }
+  });
   try {
     ensureHexWorkshop().wireDom();
   } catch (e) {

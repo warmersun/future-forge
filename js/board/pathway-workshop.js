@@ -437,12 +437,30 @@ export function createPathwayWorkshop(api) {
     });
   }
 
+  function scrollLaneIntoView(laneKey) {
+    const root = rootEl();
+    const laneEl = root?.querySelector?.(`#ontology-lane-${laneKey}`);
+    if (!laneEl) return;
+    const scroller = root.querySelector?.("[data-lanes-scroll]");
+    if (scroller && scroller.scrollWidth > scroller.clientWidth + 4) {
+      const targetLeft = Math.max(0, laneEl.offsetLeft - 8);
+      scroller.scrollTo?.({ left: targetLeft, behavior: "smooth" });
+      return;
+    }
+    const lanes = root.querySelector?.(".ontology-lanes");
+    if (lanes && lanes.scrollWidth > lanes.clientWidth + 4) {
+      const targetLeft = Math.max(0, laneEl.offsetLeft - 8);
+      lanes.scrollTo?.({ left: targetLeft, behavior: "smooth" });
+    }
+  }
+
   function paint() {
     const root = rootEl();
     if (!root) return;
     wireDom();
     const current = board();
     const prevScrollTop = root.scrollTop || 0;
+    const prevStageScrollLeft = root.querySelector?.("[data-lanes-scroll]")?.scrollLeft || 0;
     const prevLaneScrollLeft = root.querySelector?.(".ontology-lanes")?.scrollLeft || 0;
 
     const view = isPathwayBoard(current) ? viewOf(current) : viewOf(null);
@@ -453,6 +471,8 @@ export function createPathwayWorkshop(api) {
     root.innerHTML = renderOntologyBoard(view);
 
     if (prevScrollTop) root.scrollTop = prevScrollTop;
+    const scrollerEl = root.querySelector?.("[data-lanes-scroll]");
+    if (scrollerEl && prevStageScrollLeft) scrollerEl.scrollLeft = prevStageScrollLeft;
     const lanesEl = root.querySelector?.(".ontology-lanes");
     if (lanesEl && prevLaneScrollLeft) lanesEl.scrollLeft = prevLaneScrollLeft;
     if (lanesEl?.addEventListener) {
@@ -616,6 +636,74 @@ export function createPathwayWorkshop(api) {
     commit(next, { silent: true });
   }
 
+  function restoreFromBoard(incomingBoard, opts = {}) {
+    tracks.clear();
+    sparkBatches.clear();
+    expandedDescTechs.clear();
+    selectedTrendByTech.clear();
+    chartOverride.clear();
+    scoringPathwayIds.clear();
+    polishingPathwayIds.clear();
+    summoningState = null;
+    draftingRoadblockId = null;
+    traceSelection = null;
+    lastHighlight = null;
+    selectedUseCaseIds = [];
+    focusedPathwayId = null;
+    editingPathwayId = null;
+    editHowBuffer = "";
+    openChallengerId = null;
+    roadblockDraft = "";
+    argumentModalOpen = false;
+    pickerOpen = false;
+    customUseOpen = false;
+    writeOpen = false;
+    draftHow = "";
+
+    const current = isPathwayBoard(incomingBoard) ? incomingBoard : board();
+    const trackIds = Object.keys(current?.techTracks || {});
+    for (const tid of trackIds) {
+      trackFor(tid);
+    }
+    const wanted = opts.focusedTechId ? String(opts.focusedTechId) : null;
+    if (wanted && current?.techTracks?.[wanted]) {
+      focusedTechId = wanted;
+    } else if (trackIds.length) {
+      focusedTechId = trackIds[0];
+    } else {
+      focusedTechId = wanted || null;
+    }
+    paint();
+
+    if (api.fetchIdeaImage && isPathwayBoard(current)) {
+      const y = year();
+      const place = api.getPlace?.() || "";
+      for (const pw of Object.values(current.pathways || {})) {
+        for (const ing of pw.ingredients || []) {
+          if (!ing || ing.artUrl) continue;
+          if (!ing.artId && !ing.imagePrompt && !ing.howText && !ing.title) continue;
+          const artId =
+            ing.artId ||
+            ideaImageId({
+              techId: ing.techId || "plain",
+              ideaId: ing.id,
+              place,
+              year: y,
+            });
+          fetchArtForIngredient(pw.id, ing.id, {
+            techId: ing.techId || "plain",
+            ideaId: ing.id,
+            artId,
+            place,
+            year: y,
+            imagePrompt: ing.imagePrompt || ing.howText?.slice(0, 400) || ing.title,
+            kind: ing.techId ? undefined : "plain",
+          });
+        }
+      }
+    }
+  }
+
   function focusTech(id) {
     const techId = String(id || "");
     if (!techId) return;
@@ -657,14 +745,17 @@ export function createPathwayWorkshop(api) {
       const url = await api.fetchIdeaImage(opts);
       const live = board();
       if (!isPathwayBoard(live) || !live.pathways?.[pathwayId]) return;
-      commit(setIngredientArt(live, pathwayId, ingredientId, url || null, false), {
-        bill: false,
-        silent: true,
-      });
+      commit(
+        setIngredientArt(live, pathwayId, ingredientId, url || null, false, opts?.artId),
+        {
+          bill: false,
+          silent: true,
+        }
+      );
     } catch {
       const live = board();
       if (isPathwayBoard(live) && live.pathways?.[pathwayId]) {
-        commit(setIngredientArt(live, pathwayId, ingredientId, null, false), {
+        commit(setIngredientArt(live, pathwayId, ingredientId, null, false, opts?.artId), {
           bill: false,
           silent: true,
         });
@@ -801,6 +892,7 @@ export function createPathwayWorkshop(api) {
           ideas.map(async (idea) => {
             try {
               const artId = ideaImageId({ techId: activeTech, ideaId: idea.id, place, year: y });
+              idea.artId = artId;
               const artUrl = await api.fetchIdeaImage({
                 techId: activeTech,
                 ideaId: idea.id,
@@ -887,6 +979,9 @@ export function createPathwayWorkshop(api) {
       return false;
     }
     const y = year();
+    const place = api.getPlace?.() || "";
+    const artId = idea.artId || ideaImageId({ techId: activeTech, ideaId: idea.id, place, year: y });
+    const imagePrompt = idea.imagePrompt || idea.title;
     const needArt = Boolean(api.fetchIdeaImage && !idea.artUrl);
     const created = createPathway(current, {
       techId: activeTech,
@@ -896,6 +991,8 @@ export function createPathwayWorkshop(api) {
       world: first?.world || techById(activeTech)?.polarity || "bits",
       collectorCardId: cardId,
       artUrl: idea.artUrl || null,
+      artId,
+      imagePrompt,
       artPending: needArt,
       timingLevel: "green",
       timingPct: 84,
@@ -927,15 +1024,13 @@ export function createPathwayWorkshop(api) {
       return false;
     }
     if (ok && needArt) {
-      const place = api.getPlace?.() || "";
-      const artId = ideaImageId({ techId: activeTech, ideaId: idea.id, place, year: y });
       fetchArtForIngredient(created.pathwayId, created.ingredientId, {
         techId: activeTech,
         ideaId: idea.id,
         artId,
         place,
         year: y,
-        imagePrompt: idea.imagePrompt || idea.title,
+        imagePrompt,
       });
     }
     return ok;
@@ -983,6 +1078,7 @@ export function createPathwayWorkshop(api) {
       useCaseIds: ids,
       world: firstUc?.world || techById(techId)?.polarity || "bits",
       collectorCardId: cardId,
+      imagePrompt: text.slice(0, 400),
       artPending: needArt,
       timingLevel: "yellow",
       timingPct: 72,
@@ -1034,6 +1130,7 @@ export function createPathwayWorkshop(api) {
       title: provided ? provided.split(/[.!?]/)[0].trim().slice(0, 56) : "Human workflow step",
       howText: how,
       world: "plain",
+      imagePrompt: provided ? provided.slice(0, 400) : "",
       artPending: needArt,
       timingLevel: provided ? "yellow" : "green",
       timingPct: provided ? 75 : 88,
@@ -2017,10 +2114,9 @@ export function createPathwayWorkshop(api) {
         selectedUseCaseIds = [...selectedUseCaseIds, id];
       }
       traceSelection = { type: "usecase", id };
-      rootEl()?.querySelector?.("#ontology-lane-pathway")?.scrollIntoView?.({
-        inline: "start",
-        block: "nearest",
-      });
+      paint();
+      scrollLaneIntoView("pathway");
+      return;
     } else if (action === "toggle-write") {
       writeOpen = !writeOpen;
     } else if (action === "toggle-voice") {
@@ -2117,11 +2213,7 @@ export function createPathwayWorkshop(api) {
       jumpYear(btn.getAttribute("data-years"));
       return;
     } else if (action === "jump-lane") {
-      rootEl()?.querySelector?.(`#ontology-lane-${btn.getAttribute("data-lane")}`)?.scrollIntoView?.({
-        inline: "start",
-        block: "nearest",
-        behavior: "smooth",
-      });
+      scrollLaneIntoView(btn.getAttribute("data-lane"));
       return;
     } else if (action === "tool-lobby") {
       const lobby = api.$?.("#btn-lobby") || document.querySelector("#btn-lobby");
@@ -2294,6 +2386,7 @@ export function createPathwayWorkshop(api) {
 
   return {
     seedFromMission,
+    restoreFromBoard,
     cancelSummon: () => {
       summonBusy = false;
     },

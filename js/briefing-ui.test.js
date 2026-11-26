@@ -22,9 +22,11 @@ import assert from "node:assert/strict";
 import {
   briefingOwnsRoot,
   briefingStorageKey,
+  hasQuestBriefing,
   isBriefingDismissed,
   lastBriefingPaint,
   paintQuestBriefing,
+  replayQuestBriefing,
   resetQuestBriefing,
   sceneCopyFromMission,
   setBriefingDismissed,
@@ -379,5 +381,43 @@ describe("briefing-ui paint", () => {
     assert.ok(btn);
     assert.equal(btn.textContent, "Replay briefing");
     assert.equal(btn.hidden, false);
+  });
+
+  it("exposes hasQuestBriefing and replayQuestBriefing for banner controls", () => {
+    installDom();
+    const body = fakeEl();
+    document.body = body;
+    const store = memStore();
+    setBriefingDismissed("q-replay-api", true, store);
+    const root = fakeEl("vision-canvas-wrap");
+    const sceneEl = fakeEl("ws-mission-scene");
+
+    assert.equal(hasQuestBriefing(root), false);
+    assert.equal(replayQuestBriefing(root), false);
+
+    let lastMode = null;
+    paintQuestBriefing(
+      root,
+      {
+        id: "q-replay-api",
+        place: "Crossing Clinic 7",
+        briefMd: "## The place\n\nClinic.\n\n## Your job\n\nInvent it.",
+        briefBeats: beats,
+      },
+      {
+        sceneEl,
+        storage: store,
+        onChange: (snap) => {
+          lastMode = snap?.mode;
+        },
+      }
+    );
+    assert.equal(hasQuestBriefing(root), true);
+    assert.equal(body.classList.contains("is-quest-briefing"), false);
+
+    assert.equal(replayQuestBriefing(root), true);
+    assert.equal(lastMode, "walk");
+    assert.equal(body.classList.contains("is-quest-briefing"), true);
+    assert.equal(briefingOwnsRoot(root), true);
   });
 });

@@ -144,7 +144,7 @@ describe("pathway workshop", () => {
     });
     assert.match(html, /data-wire-state="early"/);
     assert.match(html, /Too early \(~2030\)/);
-    assert.match(html, /QUEST YEAR: 2026/);
+    assert.match(html, /QUEST YEAR:\s*<\/span>2026/);
     assert.match(html, /data-action="tool-share"/);
     assert.match(html, /Share puzzle/);
   });
@@ -425,5 +425,51 @@ describe("pathway workshop", () => {
       capView
     );
     assert.match(emptyCrisisSentence.text, /^Power Outages has no pathways plugged in yet/);
+  });
+
+  it("restoreFromBoard clears stale UI state, keeps use cases/wires, and re-fetches stripped artId", async () => {
+    const fetched = [];
+    let board = null;
+    let year = 2026;
+    const root = { innerHTML: "", querySelector: () => null, querySelectorAll: () => [], addEventListener: () => {} };
+    const ws = createPathwayWorkshop({
+      $: () => root,
+      getBoard: () => board,
+      setBoard: (b) => { board = b; },
+      getYear: () => year,
+      getMission: () => ({ place: "Steamholt", pressure: { "Truck Feedstock": 3 } }),
+      getPlace: () => "Steamholt",
+      getRules: () => [],
+      fetchIdeaImage: async (opts) => {
+        fetched.push(opts);
+        return "https://example.test/cached-art.jpg";
+      },
+    });
+    ws.seedFromMission({ place: "Steamholt", pressure: { "Truck Feedstock": 3 }, spotlight: { techId: "drones" } });
+    const drones = resolveTechTrack("drones");
+    const reached = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    ws.dealMilestone("drones", reached.id);
+    await ws.askForIdeas();
+    ws.placeSpark("spark-1");
+    const pwId = Object.keys(board.pathways)[0];
+    const crisisId = Object.keys(board.crises)[0];
+    await ws.plug(pwId, crisisId);
+
+    // Simulate wire round-trip stripping inline artUrl while keeping artId + use cases + wires.
+    const saved = structuredClone(board);
+    saved.pathways[pwId].ingredients[0].artUrl = null;
+    saved.pathways[pwId].ingredients[0].artId = "cached-art-1";
+    fetched.length = 0;
+
+    board = saved;
+    ws.restoreFromBoard(saved, { focusedTechId: "drones" });
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(Object.keys(board.useCases).length >= 1, true);
+    assert.equal(Object.keys(board.wires).length, 1);
+    assert.equal(fetched.length, 1);
+    assert.equal(fetched[0].artId, "cached-art-1");
+    assert.equal(board.pathways[pwId].ingredients[0].artUrl, "https://example.test/cached-art.jpg");
+    assert.doesNotMatch(root.innerHTML, /use case linked into your next invention/);
   });
 });

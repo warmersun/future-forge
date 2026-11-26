@@ -956,3 +956,17 @@ function applyCartoonFrame(rec, index, url) {
   pre.src = src;
   if (pre.complete) swap();
 }
+
+/** True when a painted briefing walk can be replayed for `visionRoot`. */
+export function hasQuestBriefing(visionRoot) {
+  const rec = visionRoot ? records.get(visionRoot) : null;
+  return Boolean(rec && Array.isArray(rec.beats) && rec.beats.length > 0);
+}
+
+/** Replay the beat-by-beat visual briefing walk for `visionRoot`. */
+export function replayQuestBriefing(visionRoot) {
+  const rec = visionRoot ? records.get(visionRoot) : null;
+  if (!rec || !Array.isArray(rec.beats) || !rec.beats.length) return false;
+  onBriefAction(rec, "replay", null);
+  return true;
+}

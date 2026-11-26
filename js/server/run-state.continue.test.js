@@ -35,6 +35,16 @@ import {
 } from "../hex/board-state.js";
 import { snapshotForWire } from "../cloud/continue.js";
 import {
+  createPathwayBoard,
+  addTechTrack,
+  dealMilestone,
+  addCustomUseCase,
+  createPathway,
+  plugWire,
+  projectToTiles,
+  isPathwayBoard,
+} from "../board/pathway-model.js";
+import {
   parseRunStateBody,
   applyContinueSnapshot,
   RUN_STATE_MAX_BYTES,
@@ -192,5 +202,75 @@ describe("Continue hex + ideas tray round-trip", () => {
     const restoredTray = unplacedInventionsForTech(restored.hexBoard, "iot");
     assert.ok(restoredTray.some((t) => t.origin === "sparks"));
     assert.ok(restoredTray.some((t) => t.origin === "custom"));
+  });
+
+  it("snapshotForWire + parseRunStateBody preserves pathway-board/v2 use cases, wires, and artId", () => {
+    let b = createPathwayBoard();
+    b.crises["crisis-local"] = {
+      id: "crisis-local",
+      role: "local",
+      name: "Truck Feedstock",
+      meterKey: "Truck Feedstock",
+      description: "Long-haul carbonate.",
+      lamp: "yellow",
+      initialLamp: "yellow",
+    };
+    b = addTechTrack(b, "geothermal");
+    b = dealMilestone(b, "geothermal", {
+      id: "ms-geo-2026",
+      year: 2026,
+      status: "reached",
+      label: "DLE pilots",
+      useCases: [{ id: "uc-1", title: "Recover lithium from brine", blurb: "DLE loop", world: "atoms" }],
+    });
+    const custom = addCustomUseCase(b, {
+      techId: "geothermal",
+      title: "this is a custom use case",
+      blurb: "this is a custom use case",
+      world: "atoms",
+      milestoneYear: 2026,
+    });
+    b = custom.board;
+    const made = createPathway(b, {
+      techId: "geothermal",
+      title: "Shared power and brine watch",
+      howText: "Live chemistry and pressure tags.",
+      useCaseIds: [custom.id],
+      world: "atoms",
+      artUrl: "data:image/jpeg;base64," + "A".repeat(4000),
+      artId: "art-geo-watch",
+      imagePrompt: "Geothermal control room",
+    });
+    b = made.board;
+    const plugged = plugWire(b, made.pathwayId, "crisis-local");
+    b = projectToTiles(plugged.board);
+
+    const wire = snapshotForWire({
+      questId: "steamholt",
+      year: 2026,
+      tutor: false,
+      runId: "run-geo-1",
+      board: b,
+      play: { focusedTechId: "geothermal" },
+    });
+    assert.ok(!JSON.stringify(wire).includes("data:image"), "inline pathway art stripped");
+
+    const parsed = parseRunStateBody({
+      questId: "steamholt",
+      year: 2026,
+      runId: "run-geo-1",
+      board: b,
+      play: wire.play,
+    });
+    assert.equal(parsed.ok, true, parsed.error);
+    const out = parsed.state.board;
+    assert.equal(isPathwayBoard(out), true);
+    assert.equal(Object.keys(out.useCases).length, 2, "dealt + custom use cases preserved");
+    assert.ok(Object.values(out.useCases).some((u) => u.origin === "custom" && u.title === "this is a custom use case"));
+    assert.equal(Object.keys(out.wires).length, 1, "plugged crisis wire preserved");
+    const ing = out.pathways[made.pathwayId].ingredients[0];
+    assert.equal(ing.artUrl, null, "inline data URL nulled out");
+    assert.equal(ing.artId, "art-geo-watch", "artId kept for cache restore");
+    assert.equal(ing.imagePrompt, "Geothermal control room");
   });
 });

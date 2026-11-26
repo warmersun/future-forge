@@ -30,6 +30,10 @@ import {
   isTechRailCollapsed,
   isTechRailPeek,
   readTechRailCollapsedPref,
+  isVisionStackMode,
+  isVisionRailCollapsed,
+  isVisionRailPeek,
+  readVisionRailCollapsedPref,
 } from "./tech-drawer.js";
 
 describe("tech-drawer", () => {
@@ -112,6 +116,37 @@ describe("tech-drawer", () => {
       assert.equal(readTechRailCollapsedPref(), true);
       globalThis.localStorage.removeItem("future-forge:tech-rail-collapsed");
       assert.equal(readTechRailCollapsedPref(), false);
+    } finally {
+      if (prev === undefined) delete globalThis.localStorage;
+      else globalThis.localStorage = prev;
+    }
+  });
+
+  it("vision dock helpers read classes and persist future-forge:vision-rail-collapsed", () => {
+    assert.equal(isVisionStackMode(), false);
+    const set = new Set();
+    const layout = { classList: { contains: (c) => set.has(c) } };
+    assert.equal(isVisionRailCollapsed(null), false);
+    assert.equal(isVisionRailCollapsed(layout), false);
+    assert.equal(isVisionRailPeek(layout), false);
+    set.add("is-vision-collapsed");
+    assert.equal(isVisionRailCollapsed(layout), true);
+    set.add("is-vision-peek");
+    assert.equal(isVisionRailPeek(layout), true);
+
+    const store = new Map();
+    const prev = globalThis.localStorage;
+    globalThis.localStorage = {
+      getItem: (k) => (store.has(k) ? store.get(k) : null),
+      setItem: (k, v) => store.set(k, String(v)),
+      removeItem: (k) => store.delete(k),
+    };
+    try {
+      assert.equal(readVisionRailCollapsedPref(), false);
+      globalThis.localStorage.setItem("future-forge:vision-rail-collapsed", "1");
+      assert.equal(readVisionRailCollapsedPref(), true);
+      globalThis.localStorage.removeItem("future-forge:vision-rail-collapsed");
+      assert.equal(readVisionRailCollapsedPref(), false);
     } finally {
       if (prev === undefined) delete globalThis.localStorage;
       else globalThis.localStorage = prev;

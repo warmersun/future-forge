@@ -15506,7 +15506,7 @@ body:not(.tutorial-open) #screen-workshop[data-workshop-stage="invent"] #tab-ass
 body.ontology-board:not(.is-quest-briefing) .workshop-layout,
 body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-tech-collapsed,
 body.ontology-board:not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .workshop-layout {
-  grid-template-columns: minmax(0, 72fr) minmax(250px, 28fr);
+  grid-template-columns: minmax(0, 74fr) minmax(240px, 26fr);
   grid-template-areas: "invent vision";
 }
 
@@ -15520,11 +15520,401 @@ body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-tech-collapsed >
   overflow: hidden;
 }
 
-/* Compact challenge header + market bulletin + bottom CTA bar so the 4-lane board gets full height */
+/* Right-hand slide-out dock for Future vision / AI co-inventor / Log / AI inspect */
+body.is-quest-briefing .vision-rail-pin,
+body.is-quest-briefing .vision-dock-handle,
+body.is-quest-briefing .vision-dock-edge {
+  display: none !important;
+}
+
+.vision-rail-pin {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  margin-left: auto;
+  color: var(--muted, #94a3b8);
+  border-left: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 0;
+}
+
+.vision-rail-pin:hover,
+.vision-rail-pin:focus-visible {
+  color: var(--accent, #38bdf8);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.vision-rail-pin-chevron {
+  display: block;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg); /* points right = slide out to right */
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.workshop-layout.is-vision-collapsed .vision-rail-pin-chevron {
+  transform: rotate(135deg); /* points left = pin back into layout */
+}
+
+.vision-dock-edge,
+.vision-dock-handle {
+  display: none;
+}
+
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed,
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-tech-collapsed.is-vision-collapsed,
+body.ontology-board:not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .workshop-layout.is-vision-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "invent";
+  overflow-x: clip;
+}
+
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed > .invent-center {
+  padding-right: 1.55rem;
+  border-right: none;
+}
+
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed > .vision-panel {
+  position: absolute;
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: auto;
+  width: min(25rem, 38vw);
+  max-width: 25rem;
+  height: auto;
+  max-height: 100%;
+  z-index: 50;
+  border-left: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.97);
+  box-shadow: none;
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease,
+    box-shadow 0.28s ease;
+}
+
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed.is-vision-peek > .vision-panel {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+  box-shadow: -14px 0 42px rgba(0, 0, 0, 0.55);
+  z-index: 60;
+}
+
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed > .vision-dock-edge {
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 14px;
+  z-index: 51;
+  cursor: pointer;
+}
+
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed.is-vision-peek > .vision-dock-edge {
+  pointer-events: none;
+}
+
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed > .vision-dock-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: 62;
+  transform: translate(0, -50%);
+  min-width: 2rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.4rem;
+  margin: 0;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-right: none;
+  border-radius: 999px 0 0 999px;
+  background: rgba(12, 18, 32, 0.92);
+  color: var(--accent, #38bdf8);
+  box-shadow: -4px 0 18px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition:
+    right 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed > .vision-dock-handle:hover,
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed > .vision-dock-handle:focus-visible {
+  background: rgba(18, 28, 48, 0.98);
+  border-color: rgba(56, 189, 248, 0.58);
+  outline: none;
+}
+
+body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed.is-vision-peek > .vision-dock-handle {
+  right: min(25rem, 38vw);
+}
+
+.vision-dock-handle-chevron {
+  display: block;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(135deg); /* points left = slide in from right */
+}
+
+.vision-dock-handle-pin {
+  display: none;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid currentColor;
+  border-radius: 0.15rem 0.15rem 0.35rem 0.35rem;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.vision-dock-handle-pin::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.28rem;
+  width: 2px;
+  height: 0.28rem;
+  background: currentColor;
+  transform: translateX(-50%);
+}
+
+.workshop-layout.is-vision-collapsed.is-vision-peek .vision-dock-handle-chevron {
+  display: none;
+}
+
+.workshop-layout.is-vision-collapsed.is-vision-peek .vision-dock-handle-pin {
+  display: block;
+}
+
+.vision-dock-edge[hidden],
+.vision-dock-handle[hidden] {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed > .vision-panel,
+  body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed > .vision-dock-handle,
+  .vision-rail-pin-chevron {
+    transition: none;
+  }
+}
+
+/* Compact challenge header + inline spotlight + top-right Future Vision preview */
 body.ontology-board .invent-center > .challenge-banner {
   padding: 0.38rem 0.65rem;
   margin: 0;
   flex-shrink: 0;
+}
+
+body.ontology-board .challenge-banner-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+body.ontology-board .challenge-banner-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+body.ontology-board .challenge-banner-kicker-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.12rem;
+}
+
+body.ontology-board .challenge-banner-kicker-row > .label {
+  margin: 0;
+}
+
+body.ontology-board #screen-workshop .challenge-banner .ws-spotlight-chip,
+body.ontology-board .ws-spotlight-chip {
+  display: none !important;
+}
+
+body.ontology-board .challenge-banner-foot-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  margin-top: 0.24rem;
+}
+
+body.ontology-board .challenge-banner-foot-row #ws-lesson-progress {
+  margin: 0;
+}
+
+body.ontology-board .challenge-banner-foot-row .lesson-progress {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.45rem;
+  margin: 0;
+  max-width: none;
+}
+
+body.ontology-board .challenge-banner-foot-row .lesson-progress-title {
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+body.ontology-board .challenge-banner-foot-row .lesson-progress-bar {
+  width: auto;
+  max-width: none;
+  gap: 4px;
+}
+
+body.ontology-board .challenge-banner-foot-row .lesson-progress-seg {
+  flex: 0 0 auto;
+  width: 0.95rem;
+  min-width: 0.85rem;
+  height: 0.44rem;
+}
+
+body.ontology-board .ws-briefing-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+}
+
+body.ontology-board .ws-brief-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.26rem;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.14s ease, color 0.14s ease, background 0.14s ease;
+}
+
+body.ontology-board .ws-brief-btn:hover {
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #e0f2fe;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+body.ontology-board .ws-brief-btn.is-on {
+  border-color: var(--accent);
+  color: #ffffff;
+  background: rgba(56, 189, 248, 0.2);
+}
+
+body.ontology-board .invent-center > .challenge-banner #crisis-briefing[open] {
+  margin-top: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  background: rgba(11, 18, 34, 0.94);
+  max-height: min(44vh, 320px);
+  overflow-y: auto;
+}
+
+body.ontology-board .invent-center > .challenge-banner #crisis-briefing .quest-briefing-replay-inline {
+  display: none !important;
+}
+
+body.ontology-board .ws-vision-mini {
+  position: relative;
+  flex: 0 0 auto;
+  width: 172px;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  margin: 0;
+  border-radius: 9px;
+  overflow: hidden;
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  background: radial-gradient(circle at 35% 30%, rgba(56, 189, 248, 0.16), rgba(10, 16, 30, 0.94));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.38);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+body.ontology-board .workshop-layout.is-vision-collapsed .ws-vision-mini {
+  display: inline-flex;
+}
+
+body.ontology-board .ws-vision-mini:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.48), 0 0 12px rgba(56, 189, 248, 0.28);
+}
+
+body.ontology-board .ws-vision-mini .vision-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+body.ontology-board .ws-vision-mini .vision-image[hidden] {
+  display: none;
+}
+
+body.ontology-board .ws-vision-mini .vision-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 11, 20, 0.56);
+  backdrop-filter: blur(2px);
+}
+
+body.ontology-board .ws-vision-mini .vision-loading[hidden] {
+  display: none;
+}
+
+body.ontology-board .ws-vision-mini-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding: 0.22rem 0.42rem 0.18rem;
+  background: linear-gradient(180deg, transparent, rgba(5, 9, 18, 0.88) 55%);
+  color: #e2e8f0;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 body.ontology-board .invent-center > .challenge-banner #ws-mission-title {
@@ -15560,28 +15950,46 @@ body.ontology-board .invent-center > .challenge-banner .market-news-banner img {
   border-radius: 6px;
 }
 
+body.ontology-board #screen-workshop .invent-center > .invent-form-hex,
 body.ontology-board .invent-center > .invent-form-hex {
   flex-shrink: 0;
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.6rem;
+  gap: 0.45rem 0.75rem;
   margin: 0;
-  padding: 0.25rem 0.45rem 0.2rem;
+  padding: 0.34rem 0.6rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 body.ontology-board .invent-center > .invent-form-hex > #invent-actions {
   margin: 0;
+  margin-left: auto;
   padding: 0;
   order: 2;
-  margin-left: auto;
+  flex-shrink: 0;
+}
+
+body.ontology-board .invent-center > .invent-form-hex > #invent-actions #btn-to-challenge {
+  padding: 0.44rem 0.95rem;
+  font-size: 0.84rem;
+  line-height: 1.2;
 }
 
 body.ontology-board .invent-center > .invent-form-hex > #challenge-ready-hint {
   margin: 0;
   font-size: 0.78rem;
+  line-height: 1.3;
   order: 1;
+  flex: 1 1 14rem;
+  min-width: 0;
+  text-align: left;
+}
+
+body.ontology-board:not(.tutorial-open) #screen-workshop[data-workshop-stage="invent"] .invent-center > .invent-form-hex {
+  display: none;
 }
 
 /* Retire legacy hex/rail/pathway-panel/duplicate-rules chrome while keeping hidden hooks in DOM */
@@ -15595,6 +16003,7 @@ body.ontology-board #pathway-panel,
 body.ontology-board .side-tab-assessment,
 body.ontology-board #invent-capability-explorer,
 body.ontology-board #invent-foot,
+body.ontology-board .hex-board-dock,
 body.ontology-board .hex-board,
 body.ontology-board .hex-board-wrap,
 body.ontology-board #hex-board,
@@ -15620,12 +16029,14 @@ body.ontology-board #screen-workshop .topbar-game #hud-year {
 body.ontology-board #ontology-board {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: clip;
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.5rem;
   padding: 0.25rem 0.3rem 1rem;
 }
 
@@ -15634,12 +16045,12 @@ body.ontology-board .ontology-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.42rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
   position: sticky;
   top: 0;
   z-index: 12;
-  padding: 0.34rem 0.55rem;
+  padding: 0.28rem 0.48rem;
   border-radius: var(--radius-sm);
   background: rgba(12, 18, 32, 0.94);
   backdrop-filter: blur(10px);
@@ -15650,21 +16061,22 @@ body.ontology-board .ontology-topbar {
 body.ontology-board .ontology-circuit {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.22rem;
   flex-wrap: wrap;
 }
 
 body.ontology-board .ontology-step-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.28rem;
+  gap: 0.24rem;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-dim);
   border-radius: 999px;
-  padding: 0.18rem 0.5rem;
-  font-size: 0.73rem;
+  padding: 0.14rem 0.42rem;
+  font-size: 0.7rem;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
 }
@@ -15818,10 +16230,23 @@ body.ontology-board .ontology-tools-menu button:hover {
   border-color: rgba(56, 189, 248, 0.28);
 }
 
-/* 4-Lane Stage + SVG Wire Layer + Floating Challenger Tokens */
+/* 4-Lane Stage + Horizontal Scroller + SVG Wire Layer + Floating Challenger Tokens */
+body.ontology-board .ontology-lanes-scroll {
+  flex: 1 0 auto;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.32) transparent;
+  padding-bottom: 0.25rem;
+}
+
 body.ontology-board .ontology-lanes-stage {
   position: relative;
-  flex: 1 0 auto;
+  width: 100%;
+  min-width: 940px;
   min-height: 440px;
 }
 
@@ -15829,7 +16254,7 @@ body.ontology-board .ontology-lanes {
   position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.05rem;
+  gap: 1rem;
   align-items: start;
 }
 
@@ -16562,7 +16987,16 @@ body.ontology-board .ontology-selected-hint {
 body.ontology-board .ontology-composer-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.32rem;
+}
+
+body.ontology-board #btn-ask-ideas {
+  border-radius: 10px;
+  line-height: 1.25;
+  white-space: normal;
+  text-align: center;
+  padding: 0.36rem 0.65rem;
 }
 
 body.ontology-board .ontology-write-box {
@@ -17201,6 +17635,17 @@ body.ontology-board .ontology-crisis {
   gap: 0.35rem;
 }
 
+body.ontology-board .ontology-crisis > .ontology-card-head {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.24rem 0.36rem;
+}
+
+body.ontology-board .ontology-crisis > .ontology-card-head > div {
+  flex: 1 1 6.5rem;
+  min-width: 0;
+}
+
 body.ontology-board .ontology-crisis.is-red {
   border-color: rgba(239, 68, 68, 0.45);
 }
@@ -17226,6 +17671,8 @@ body.ontology-board .ontology-meter-tag {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 body.ontology-board .ontology-crisis-desc {
@@ -17933,33 +18380,139 @@ body.ontology-board #screen-workshop[data-workshop-stage="crises"] .ontology-wir
   visibility: hidden;
 }
 
-/* Responsive: horizontal swipeable lanes on narrow screens */
+/* Responsive: compact topbar on laptops, clean vertical stack on tablets, snap lanes on phones */
+@media (max-width: 1320px) {
+  body.ontology-board .ontology-year-prefix {
+    display: none;
+  }
+
+  body.ontology-board .ontology-tools > summary {
+    padding: 0.2rem 0.54rem;
+    font-size: 0.72rem;
+  }
+
+  body.ontology-board .ontology-year-badge {
+    font-size: 0.72rem;
+    padding: 0.14rem 0.36rem;
+  }
+
+  body.ontology-board .ontology-time-btn {
+    font-size: 0.69rem;
+    padding: 0.14rem 0.42rem;
+  }
+}
+
+@media (max-height: 760px) {
+  body.ontology-board .invent-center > .challenge-banner {
+    padding: 0.26rem 0.55rem;
+  }
+
+  body.ontology-board .invent-center > .challenge-banner #ws-mission-title {
+    font-size: 0.94rem;
+  }
+
+  body.ontology-board .invent-center > .challenge-banner #ws-quest-job {
+    font-size: 0.75rem;
+    line-height: 1.26;
+  }
+
+  body.ontology-board .invent-center > .challenge-banner .challenge-banner-meta-line {
+    font-size: 0.69rem;
+  }
+}
+
 @media (max-width: 1024px) {
+  body.ontology-board:not(.is-quest-briefing) #screen-workshop,
+  body.ontology-board:not(.is-quest-briefing) #screen-workshop.active,
+  body.ontology-board:not(.is-quest-briefing) #screen-hotseat.active,
+  body.ontology-board:not(.is-quest-briefing) #screen-room-play.active {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
   body.ontology-board:not(.is-quest-briefing) .workshop-layout,
   body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-tech-collapsed,
+  body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed,
+  body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-tech-collapsed.is-vision-collapsed,
   body.ontology-board:not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .workshop-layout {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
     grid-template-areas: "invent" "vision";
     height: auto;
+    max-height: none;
     min-height: 0;
+    overflow: visible;
   }
 
   body.ontology-board:not(.is-quest-briefing) .workshop-layout > .invent-center,
-  body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-tech-collapsed > .invent-center {
+  body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-tech-collapsed > .invent-center,
+  body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed > .invent-center {
     overflow: visible;
     height: auto;
+    padding-right: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  body.ontology-board:not(.is-quest-briefing) .workshop-layout > .vision-panel,
+  body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed > .vision-panel,
+  body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed.is-vision-peek > .vision-panel {
+    position: static;
+    grid-column: auto;
+    grid-row: auto;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    transform: none;
+    box-shadow: none;
+    border-left: none;
+  }
+
+  body.ontology-board .vision-rail-pin,
+  body.ontology-board .vision-dock-handle,
+  body.ontology-board .vision-dock-edge {
+    display: none !important;
+  }
+
+  body.ontology-board .ws-vision-mini {
+    display: inline-flex;
+    width: 148px;
+  }
+
+  body.ontology-board:not(.is-quest-briefing) .workshop-layout > .vision-panel .vision-canvas-wrap {
+    max-height: min(52vh, 420px);
   }
 
   body.ontology-board #ontology-board {
-    overflow: visible;
-    min-height: 440px;
+    overflow-y: visible;
+    overflow-x: clip;
+    min-height: 0;
+  }
+
+  body.ontology-board .ontology-lanes-stage {
+    min-height: 360px;
   }
 }
 
 @media (max-width: 767px) {
+  body.ontology-board .ws-vision-mini {
+    width: 112px;
+  }
+
   body.ontology-board .ontology-tools-menu {
     left: 0;
     right: auto;
+  }
+
+  body.ontology-board .ontology-lanes-scroll {
+    overflow-x: visible;
+  }
+
+  body.ontology-board .ontology-lanes-stage {
+    min-width: 0;
   }
 
   body.ontology-board .ontology-lanes {
@@ -17971,7 +18524,7 @@ body.ontology-board #screen-workshop[data-workshop-stage="crises"] .ontology-wir
   }
 
   body.ontology-board .ontology-lanes > .ontology-lane {
-    flex: 0 0 92%;
+    flex: 0 0 88%;
     scroll-snap-align: start;
     scroll-snap-stop: always;
   }

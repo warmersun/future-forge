@@ -324,7 +324,8 @@ export function removeUseCase(board, useCaseId) {
 
 export function addCustomUseCase(board, partial = {}) {
   const next = partial.techId ? addTechTrack(board, partial.techId) : clone(board);
-  const id = nextId(next, "uc");
+  let id = nextId(next, "uc-custom");
+  while (next.useCases?.[id]) id = nextId(next, "uc-custom");
   next.useCases[id] = {
     id,
     techId: String(partial.techId || ""),
@@ -352,6 +353,8 @@ function ingredientFrom(next, partial, useCases) {
     howText: String(partial.howText || first?.blurb || "").slice(0, 4000),
     world: worldOf(partial.world || first?.world, partial.techId ? "bits" : "plain"),
     artUrl: partial.artUrl || null,
+    artId: partial.artId ? String(partial.artId).slice(0, 140) : null,
+    imagePrompt: partial.imagePrompt ? String(partial.imagePrompt).slice(0, 400) : "",
     artPending: Boolean(partial.artPending),
     timingPct: partial.timingPct ?? null,
     timingLevel: partial.timingLevel || null,
@@ -567,11 +570,19 @@ export function setIngredientTiming(board, pathwayId, ingredientId, patch = {}) 
   return bump(next);
 }
 
-export function setIngredientArt(board, pathwayId, ingredientId, artUrl, artPending = false) {
+export function setIngredientArt(
+  board,
+  pathwayId,
+  ingredientId,
+  artUrl,
+  artPending = false,
+  artId = undefined
+) {
   const next = clone(board);
   const ing = next.pathways[pathwayId]?.ingredients?.find((row) => row.id === ingredientId);
   if (!ing) return next;
   if (artUrl !== undefined) ing.artUrl = artUrl;
+  if (artId !== undefined) ing.artId = artId ? String(artId).slice(0, 140) : null;
   ing.artPending = Boolean(artPending);
   return bump(next);
 }
@@ -889,6 +900,8 @@ export function migrateToPathwayBoard(legacy) {
         howText: String(tile.howText || "").slice(0, 4000),
         world: worldOf(tile.polarity === "curve" ? "plain" : tile.polarity, tile.techId ? "bits" : "plain"),
         artUrl: tile.artUrl || null,
+        artId: tile.artId || null,
+        imagePrompt: String(tile.imagePrompt || "").slice(0, 400),
         artPending: false,
         timingPct: tile.feasibilityPct ?? tile.timingPct ?? null,
         timingLevel: tile.timingLevel || null,
@@ -996,6 +1009,7 @@ export function projectToTiles(board) {
         name: ing.title,
         howText: ing.howText,
         artUrl: ing.artUrl || null,
+        artId: ing.artId || null,
         timingLevel: ingEarly ? "red" : ing.timingLevel,
         timingReason: ingEarly ? pwTiming.timingReason : ing.timingReason,
         feasibilityPct: ingEarly ? 20 : ing.timingPct,

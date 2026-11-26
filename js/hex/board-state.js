@@ -1553,6 +1553,13 @@ export function boardForWire(board) {
   for (const t of Object.values(next.tiles || {})) {
     if (t && isInlineArtUrl(t.artUrl)) t.artUrl = null;
   }
+  if (next.pathways && typeof next.pathways === "object") {
+    for (const pw of Object.values(next.pathways)) {
+      for (const ing of pw?.ingredients || []) {
+        if (ing && isInlineArtUrl(ing.artUrl)) ing.artUrl = null;
+      }
+    }
+  }
   return next;
 }
 
