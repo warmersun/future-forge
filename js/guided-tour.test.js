@@ -114,7 +114,7 @@ describe("resolveTourStep", () => {
   it("E0 selector is scoped to the workshop screen", () => {
     const step = resolveTourStep(base({ ui: { techCatalogHidden: true } }));
     assert.equal(step.id, "E0");
-    assert.equal(step.target.selector, "#screen-workshop [data-tech-dock-handle]");
+    assert.equal(step.target.selector, "#screen-workshop #btn-add-tech");
   });
 
   it("C1 points at briefing Next, C2 at Start inventing on last beat", () => {
@@ -150,7 +150,7 @@ describe("resolveTourStep", () => {
       })
     );
     assert.equal(step.id, "E2");
-    assert.equal(step.target.selector, "#screen-workshop .tech-card.recommended");
+    assert.equal(step.target.selector, "#ontology-tech-picker .tech-card.recommended");
   });
 
   it("E0 opens the catalog when it is tucked", () => {
@@ -289,7 +289,7 @@ describe("resolveTourStep", () => {
       })
     );
     assert.equal(step.id, "F3");
-    assert.equal(step.target.selector, "#hex-idea-cards");
+    assert.equal(step.target.selector, "#ontology-sparks");
   });
 
   it("F5 refresh after a spark batch was discarded", () => {

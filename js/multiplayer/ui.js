@@ -623,11 +623,11 @@ export function initFriendsUi(api) {
     if (invent) {
       $("#mp-hud-ap").textContent = `AP ${invent.ap}/${invent.apMax}`;
       $("#mp-hud-budget").textContent = `Budget ${invent.budget}$`;
-      $("#mp-hud-will").textContent = `Will ${invent.will}`;
+      $("#mp-hud-will").textContent = `Goodwill ${invent.will}`;
     } else if (snap?.sim) {
       $("#mp-hud-ap").textContent = `AP ${snap.sim.ap}/${snap.sim.apMax}`;
       $("#mp-hud-budget").textContent = `Budget ${snap.sim.budget}$`;
-      $("#mp-hud-will").textContent = `Will ${snap.sim.will}`;
+      $("#mp-hud-will").textContent = `Goodwill ${snap.sim.will}`;
     }
 
     const badge = $("#mp-active-badge");
@@ -1794,7 +1794,7 @@ export function initFriendsUi(api) {
     if (invent) {
       $("#hs-hud-ap").textContent = `AP ${invent.ap}/${invent.apMax}`;
       $("#hs-hud-budget").textContent = `Budget ${invent.budget}$`;
-      $("#hs-hud-will").textContent = `Will ${invent.will}`;
+      $("#hs-hud-will").textContent = `Goodwill ${invent.will}`;
     }
 
     const m = place.mission;

@@ -34,6 +34,7 @@ import {
 import { polarityForTech, SPLIT } from "./polarity.js";
 import { GAME, clampChallengerCount } from "../data.js";
 import { crisisRoleKeys, crisisDeltaValues, crisisDeltaReasons } from "./crisis-delta.js?v=crisis-role-3";
+import { isPathwayBoard, boardHolds as pathwayBoardHolds } from "../board/pathway-model.js";
 
 export const TILE_KIND = {
   invention: "invention",
@@ -170,7 +171,7 @@ export function cloneBoard(board) {
   const base = board.pressureBase;
   const impacts = board.pathwayImpacts || {};
   const roles = boardCrisisRoles(board);
-  return {
+  const next = {
     tiles: Object.fromEntries(
       Object.entries(board.tiles || {}).map(([id, t]) => [id, cloneTile(t)])
     ),
@@ -227,6 +228,28 @@ export function cloneBoard(board) {
     rulesWeatherKey: String(board.rulesWeatherKey ?? ""),
     sourceInquiryKey: String(board.sourceInquiryKey ?? ""),
   };
+  if (isPathwayBoard(board)) copyPathwayOverlay(next, board);
+  return next;
+}
+
+/** Keep the 4-lane document when a hex clone would otherwise drop it. */
+function copyPathwayOverlay(next, board) {
+  next.schema = board.schema;
+  next.techTracks = structuredClone(board.techTracks || {});
+  next.useCases = structuredClone(board.useCases || {});
+  next.pathways = structuredClone(board.pathways || {});
+  next.wires = structuredClone(board.wires || {});
+  next.crises = structuredClone(board.crises || {});
+  next.challengers = structuredClone(board.challengers || {});
+  next.arguments = structuredClone(board.arguments || {});
+  next.concernsRoster = Array.isArray(board.concernsRoster)
+    ? board.concernsRoster.map(String)
+    : [];
+  next.seq = Number(board.seq) || 1;
+  next.rev = Number(board.rev) || 0;
+  next.paidEaseRoles = structuredClone(board.paidEaseRoles || {});
+  next.rules = structuredClone(board.rules || []);
+  if (board.questYear != null) next.questYear = board.questYear;
 }
 
 /**
@@ -1457,6 +1480,7 @@ export function deriveBoardProse(board) {
  * @param {object} board
  */
 export function boardHolds(board) {
+  if (isPathwayBoard(board)) return pathwayBoardHolds(board, board.questYear ?? 2026);
   if (!board?.concernsSummoned) return false;
   const givens = Object.values(board.tiles || {}).filter(
     (t) => t.kind === TILE_KIND.crisis || t.kind === TILE_KIND.concern
@@ -1574,6 +1598,11 @@ export function preferIncomingHexBoard(local, incoming, opts = {}) {
   if (opts.forceIncoming) return true;
   if (!local || typeof local !== "object") return true;
   if (opts.keepLocal) return false;
+  if (isPathwayBoard(local) && isPathwayBoard(incoming)) {
+    const inRev = Number(incoming.rev) || 0;
+    const locRev = Number(local.rev) || 0;
+    if (inRev !== locRev) return inRev > locRev;
+  }
   const localTiles = local.tiles || {};
   const incomingTiles = incoming.tiles || {};
   const localIds = Object.keys(localTiles);

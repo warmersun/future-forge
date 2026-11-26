@@ -106,6 +106,7 @@ All of these may appear on **one** tile:
 |---------|--------|-------------|
 | **Easier/harder start** | `resources`: `apMax`, `startingBudget`, `startingWill` (integers ≥ 0) | Only if the **first** island cannot pay the tech. A scored pathway that eases a crisis pays +1 Budget per newly eased role — that funds act two. See `economy.md`. Lint: `resources_budget_high` at ≥ 7. |
 | **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — chain: emTech → product category → capabilities → trends/predictions → milestone → use cases → applications (+ honest limits). See `grounding-template.md`. **This is where tech hints live.** First 3000 chars reach fast-eval. |
+| **Structured lanes** | `ontology` (array) | Optional. Same chain as objects the board can show with zero model calls. Omit it and grounding still parses. Do not emit `[]`. |
 | **Plottable Wait trends** | `trends` (capability-trend objects), `spotlightTrends` (ids) | Show log-scale charts on Wait; may override/add to warmersun catalog. See schema + skill `future-forge-trends` |
 | **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt. Multi-lesson sets also get a `kind: "module"` wrapper. **The tutor names the spotlight advance after the player has the story.** Defaults to `access: "account"`. |
 | **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Funding credit. Source credit is `companion`, not this name |
@@ -282,6 +283,34 @@ Only when captions should be tighter than `briefMd`, you want **shipped stills**
 | No local policy weather | Omit `rules` |
 
 ---
+
+## Recipe H — optional ontology (lanes 1–2)
+
+Omit `ontology` unless you want the board to prefer this chain over the grounding parse. One entry per tech. Keep `status: "predicted"` on anything after the quest's present year.
+
+```json
+"ontology": [
+  {
+    "techId": "drones",
+    "capability": "Map a place from the air",
+    "trendSummary": "Small drones got cheaper and stayed in the air longer.",
+    "milestones": [
+      {
+        "year": 2026,
+        "label": "Field mapping flights",
+        "status": "reached",
+        "useCases": [{ "title": "Map runoff after rain" }]
+      },
+      {
+        "year": 2030,
+        "label": "All-day village patrol",
+        "status": "predicted",
+        "useCases": [{ "title": "Watch every sluice without a landing" }]
+      }
+    ]
+  }
+]
+```
 
 ## Recipe G — named local rules (optional weather)
 

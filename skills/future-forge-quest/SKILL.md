@@ -53,6 +53,7 @@ Write for these surfaces, not for the JSON. Numbers are character clips in the e
 | `mission.briefMd` | Briefing walk: **one card per paragraph**, merged to 8; then the full brief | Co-inventor, as plain text | **first 2800** |
 | `mission.scene` | Co-inventor's opening line; vision fallback | Imagine locale lock; fast-eval | 500 (600 in AI) |
 | `grounding` | — | **Every** AI judgement: score, timing, sparks, challenge, judge | **first 3000** (fast-eval) |
+| `ontology` | Lanes 1–2 when present | — | optional; omit rather than `[]` |
 | `pressure[role].description` | Crisis hex popup | Sparks (240), scoring (400) | first sentence carries it |
 | `mission.suggestedWhy[id]` | Under each **For this place** card; red-hex "What could help here?" | — | 120; must contain the meter label to rank first |
 | `spotlight.encourageCopy` | Under the Spotlight chip; the **Your job** card if the brief has none | — | 280 |

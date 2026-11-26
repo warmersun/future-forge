@@ -129,7 +129,7 @@ export const GLOSSARY = {
     plain: "Cash to place technologies on the board. A pathway that eases a crisis pays some back.",
   },
   "support-resource": {
-    term: "Support",
+    term: "Goodwill",
     plain: "Backing from the public and officials. Some technologies need it to be adopted. Lobby raises it.",
   },
   ap: {

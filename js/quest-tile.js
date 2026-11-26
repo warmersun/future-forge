@@ -895,6 +895,70 @@ export function catalogRecordFromValidated(v, extra = {}) {
 }
 
 /**
+ * Optional structured ontology. Omitted stays valid. Empty array does not.
+ * @param {unknown} raw
+ * @param {Set<string>} techIds
+ */
+function parseOntology(raw, techIds) {
+  if (raw === undefined) return { ok: true, value: null };
+  if (!Array.isArray(raw)) return { ok: false, details: ["ontology_not_array"] };
+  if (!raw.length) return { ok: false, details: ["ontology_empty"] };
+  const details = [];
+  const value = [];
+  raw.forEach((entry, i) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      details.push(`ontology_${i}_not_object`);
+      return;
+    }
+    const techId = String(entry.techId || "").trim();
+    if (!techId || !techIds.has(techId)) {
+      details.push(`ontology_unknown_tech:${techId || "(empty)"}`);
+      return;
+    }
+    if (entry.milestones !== undefined && !Array.isArray(entry.milestones)) {
+      details.push(`ontology_${i}_milestones_not_array`);
+      return;
+    }
+    const milestones = (entry.milestones || []).map((m, j) => {
+      if (!m || typeof m !== "object" || Array.isArray(m)) {
+        details.push(`ontology_${i}_milestone_${j}_not_object`);
+        return null;
+      }
+      const year = Number(m.year);
+      const useIn = Array.isArray(m.useCases) ? m.useCases : entry.useCases;
+      const useCases = Array.isArray(useIn)
+        ? useIn.map((u) => {
+            if (typeof u === "string") return { title: u.slice(0, 80) };
+            if (!u || typeof u !== "object") return null;
+            return {
+              ...(u.id ? { id: String(u.id).slice(0, 80) } : {}),
+              title: String(u.title || "").slice(0, 80),
+              ...(u.blurb ? { blurb: String(u.blurb).slice(0, 280) } : {}),
+              ...(u.world ? { world: String(u.world).slice(0, 16) } : {}),
+            };
+          }).filter(Boolean)
+        : [];
+      return {
+        ...(m.id ? { id: String(m.id).slice(0, 80) } : {}),
+        year: Number.isFinite(year) ? year : 2026,
+        label: String(m.label || "Milestone").slice(0, 180),
+        status: m.status === "predicted" ? "predicted" : "reached",
+        ...(m.detail ? { detail: String(m.detail).slice(0, 280) } : {}),
+        useCases,
+      };
+    }).filter(Boolean);
+    value.push({
+      techId,
+      ...(entry.capability ? { capability: String(entry.capability).slice(0, 400) } : {}),
+      ...(entry.trendSummary ? { trendSummary: String(entry.trendSummary).slice(0, 400) } : {}),
+      milestones,
+    });
+  });
+  if (details.length) return { ok: false, details };
+  return { ok: true, value };
+}
+
+/**
  * @param {object} tile
  * @param {{ techIds?: string[], globalIds?: string[] }} [opts]
  * @returns {{ ok: true, tile: object, mission: object } | { ok: false, error: string, details?: string[] }}
@@ -1125,6 +1189,14 @@ export function validateQuestTile(tile, opts = {}) {
     details.push(...metersParsed.details);
   }
 
+  let ontology = null;
+  const ontologyRaw = pickTileOrMissionField(tile, missionIn, "ontology");
+  if (ontologyRaw !== undefined) {
+    const parsedOntology = parseOntology(ontologyRaw, techIds);
+    if (!parsedOntology.ok) details.push(...parsedOntology.details);
+    else ontology = parsedOntology.value;
+  }
+
   if (details.length) {
     return { ok: false, error: "validation_failed", details };
   }
@@ -1214,6 +1286,7 @@ export function validateQuestTile(tile, opts = {}) {
   if (titleImageUrl) mission.titleImageUrl = titleImageUrl;
   if (companion) mission.companion = companion;
   if (predictionBankId) mission.predictionBankId = predictionBankId;
+  if (ontology) mission.ontology = ontology;
 
   const normalizedTile = {
     schema: QUEST_TILE_SCHEMA,
@@ -1231,6 +1304,7 @@ export function validateQuestTile(tile, opts = {}) {
     research,
     globalId,
     mission,
+    ...(ontology ? { ontology } : {}),
   };
   if (grounding) {
     normalizedTile.grounding = grounding;

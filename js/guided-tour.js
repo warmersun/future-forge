@@ -345,9 +345,9 @@ export function resolveTourStep(raw) {
     if (s.ui.techCatalogHidden) {
       return step(
         "E0",
-        "Open emerging tech",
-        "The catalog is tucked away. Open it, then pick a tech to invent with.",
-        sel("#screen-workshop [data-tech-dock-handle]")
+        "Add a technology",
+        "Open Add tech, then pick a tech to invent with.",
+        sel("#screen-workshop #btn-add-tech")
       );
     }
     if (s.spotlightTechId) {
@@ -364,7 +364,7 @@ export function resolveTourStep(raw) {
         "E2",
         "Pick a suggested tech",
         "Start with a suggested emTech for this place — then Ask for ideas. The AI will mint 3 tiles.",
-        sel("#screen-workshop .tech-card.recommended")
+        sel("#ontology-tech-picker .tech-card.recommended")
       );
     }
     return step(
@@ -398,8 +398,8 @@ export function resolveTourStep(raw) {
     return step(
       "F3",
       "Place an idea on the board",
-      "Drag a tile onto the hex board (or double-click). Dock it against a crisis hex so the pathway can turn yellow.",
-      sel("#hex-idea-cards")
+      "Tap a spark in the pathway lane. Then plug that pathway into a crisis.",
+      sel("#ontology-sparks")
     );
   }
 
@@ -431,9 +431,9 @@ export function resolveTourStep(raw) {
   if (!s.focusedTechId && s.placedInventionCount === 0 && s.ui.techCatalogHidden) {
     return step(
       "E0",
-      "Open emerging tech",
-      "Open the catalog to pick another emTech.",
-      sel("#screen-workshop [data-tech-dock-handle]")
+      "Add a technology",
+      "Open Add tech and pick another emTech.",
+      sel("#screen-workshop #btn-add-tech")
     );
   }
 
@@ -651,17 +651,55 @@ export function queryTourTarget(step, root) {
   if (!step?.target || !scope?.querySelector) return null;
   const t = step.target;
   const lookup = (sel) => queryIn(scope, sel) || (doc && scope !== doc ? queryIn(doc, sel) : null);
+  const onOntology = Boolean(doc?.body?.classList?.contains?.("ontology-board"));
   if (t.kind === "tech" && t.id) {
+    const id = cssIdent(t.id);
+    if (onOntology) {
+      const ontTech =
+        lookup(`#ontology-lane-tech [data-tech-id="${id}"]`) ||
+        lookup(`#ontology-tech-picker [data-tech-id="${id}"]`) ||
+        lookup("#btn-add-tech");
+      if (ontTech) return ontTech;
+    }
     return (
-      lookup(`.tech-card[data-id="${cssIdent(t.id)}"]`) ||
-      lookup(`[data-tech-focus="${cssIdent(t.id)}"]`)
+      lookup(`.tech-card[data-id="${id}"]`) ||
+      lookup(`[data-tech-focus="${id}"]`)
     );
   }
   if (t.kind === "hex-tile" && t.id) {
+    const id = cssIdent(t.id);
+    if (onOntology) {
+      const ontCard =
+        lookup(`#ontology-board [data-crisis-id="${id}"]`) ||
+        lookup(`#ontology-board [data-challenger-id="${id}"]`) ||
+        lookup(`#ontology-board [data-pathway-id="${id}"]`) ||
+        lookup("#ontology-lane-crisis");
+      if (ontCard) return ontCard;
+    }
     return (
-      lookup(`#hex-board-svg [data-id="${cssIdent(t.id)}"]`) ||
-      lookup(`#hex-board [data-id="${cssIdent(t.id)}"]`)
+      lookup(`#hex-board-svg [data-id="${id}"]`) ||
+      lookup(`#hex-board [data-id="${id}"]`)
     );
+  }
+  if (t.selector && onOntology) {
+    const ontMap = {
+      ".hex-tile-popup-card": "#ontology-roadblock",
+      "#hex-board-pending": "#ontology-board",
+      "#hex-create-pending": "#ontology-lane-pathway",
+      "#feasibility": "#ontology-lane-crisis",
+      "#tech-list": "#btn-add-tech",
+      "#btn-wait": '#ontology-board [data-action="year-plus"][data-years="2"]',
+      "#btn-end-turn": '#ontology-board [data-action="year-plus"][data-years="1"]',
+      "#btn-mint-custom": '#ontology-board [data-action="write-pathway"]',
+      "#btn-lobby": "#ontology-board .ontology-tools",
+      "#btn-learn-tech": '#ontology-lane-tech [data-action="learn-tech"]',
+      "#hex-island-how": '#ontology-lane-pathway [data-action="edit-pathway-how"]',
+    };
+    const mapped = ontMap[t.selector];
+    if (mapped) {
+      const hit = lookup(mapped);
+      if (hit) return hit;
+    }
   }
   if (t.selector) return lookup(t.selector);
   return null;

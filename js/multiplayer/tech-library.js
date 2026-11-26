@@ -110,7 +110,7 @@ export function paintTechLibrary(el, opts) {
           `<span class="tech-cost-chip tech-cost-budget">${cost.budget}$</span>`,
         ];
         if (cost.will > 0) {
-          bits.push(`<span class="tech-cost-chip tech-cost-will">Will ${cost.will}</span>`);
+          bits.push(`<span class="tech-cost-chip tech-cost-will">Goodwill ${cost.will}</span>`);
         }
         bits.push(`<span class="tech-cost-chip tech-cost-ap">1 AP</span>`);
         costHtml = `<span class="tech-cost-row">${bits.join("")}</span>`;

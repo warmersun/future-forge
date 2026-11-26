@@ -173,6 +173,8 @@ import {
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
 import { createHexWorkshop } from "./hex/hex-workshop.js?v=calm-stage-2";
+import { createPathwayWorkshop } from "./board/pathway-workshop.js?v=ontology-1";
+import { isPathwayBoard, migrateToPathwayBoard, projectToTiles } from "./board/pathway-model.js";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=calm-stage-1";
 import {
   boardHolds,
@@ -336,6 +338,7 @@ import {
   paintQuestBriefing,
   paintQuestJob,
   resetQuestBriefing,
+  setBriefingDismissed,
 } from "./briefing-ui.js?v=calm-stage-2";
 import {
   WORKSHOP_STAGES,
@@ -411,7 +414,6 @@ import { featuresForPlayMode, forgetLegacySparkKey } from "./sim/play-mode.js";
 import { splitTray, whyHere, capabilityLine, pickTechsForCrisis, spotlightAdvanceForAi } from "./tech-why.js";
 import { termHtml, bindGlossaryTaps } from "./glossary.js";
 import {
-  resolveConceptCard,
   conceptById,
   readMutedConcepts,
   setConceptMuted,
@@ -1858,7 +1860,9 @@ function foresightPoolOpts(extra = {}) {
 
 function ensureHexWorkshop() {
   if (hexWorkshop) return hexWorkshop;
-  hexWorkshop = createHexWorkshop({
+  const ontology = typeof document !== "undefined" && document.querySelector("#ontology-board");
+  const factory = ontology ? createPathwayWorkshop : createHexWorkshop;
+  hexWorkshop = factory({
     $: (sel) => $(sel),
     isIntroductionHidden: (id) => crisisIntroduction.isHidden(id),
     getBoard: () => state.hexBoard || createEmptyBoard(),
@@ -1878,6 +1882,29 @@ function ensureHexWorkshop() {
     getPlace: () => state.mission?.place || "",
     getMissionTitle: () => state.mission?.title || "",
     getMission: () => state.mission || null,
+    isTutorial: () => Boolean(state.tutorialRun),
+    getPredictions: () => activePinnedBank()?.predictions || [],
+    getTrends: (techId) =>
+      mergeTrendsForStack({
+        catalog: state.hostedTrends || [],
+        questTrends: state.mission?.trends || [],
+        spotlightTrendIds: state.mission?.spotlightTrends || [],
+        selectedTechIds: techId
+          ? [String(techId)]
+          : state.selectedTechIds || [],
+        spotlightTechId: state.mission?.spotlight?.techId || null,
+      }),
+    openLearnTech: (techId) => {
+      if (techId) openTechModal(String(techId));
+    },
+    toggleVoice: () => {
+      if (isCoInventorTabMode()) setSideTab("coinventor");
+      else setCoInventorCollapsed(false);
+      document.querySelector("#co-voice")?.click();
+    },
+    isVoiceActive: () =>
+      document.querySelector("#co-voice")?.getAttribute("aria-pressed") === "true",
+    enforceWorlds: () => GAME.enforceWorldDocking !== false,
     getRunWorld: () => state.runWorld,
     getRunId: () => state.cloudRunId || state.runWorld,
     getRequestIdentity: () => !roomBridge.isRoom() && hotseatBridge.isHotseat()
@@ -1968,11 +1995,22 @@ function ensureHexWorkshop() {
     playChallengerReel: (opts) => playChallengerReel(opts),
     spendIdeaAp: () => {
       if (!apEnabled()) return { ok: true };
-      return spendContributionAp("idea-sparks");
+      const pay = spendContributionAp("idea-sparks");
+      // The workshop waits on the result itself. Settle so the turn is not left ai_pending.
+      if (pay?.ok && !pay.roomPaid && state.pendingAi) {
+        dispatchSim("resolve_ai");
+        renderHud();
+      }
+      return pay;
     },
     spendChallengeAp: () => {
       if (!apEnabled()) return { ok: true };
-      return spendContributionAp("judge-challenge");
+      const pay = spendContributionAp("judge-challenge");
+      if (pay?.ok && !pay.roomPaid && state.pendingAi) {
+        dispatchSim("resolve_ai");
+        renderHud();
+      }
+      return pay;
     },
     spendFirstSummonAp: () => spendFirstSummonAp(),
     refundFirstSummonAp: () => refundFirstSummonAp(),
@@ -4877,8 +4915,8 @@ function shuffleCopy(arr) {
 
 /**
  * Home CTAs.
- * - Tutorial not done: primary Start tutorial → (Spark); Start a Quest secondary.
- * - Tutorial done: Start tutorial hidden; primary Start a Quest →; Reset tutorial in small text.
+ * Start a Quest stays the catalog door. The quick-try button stays visible
+ * and keeps the 90-second label after the player finishes it once.
  */
 function renderTitleCtas() {
   const start = $("#btn-start");
@@ -4909,10 +4947,10 @@ function renderTitleCtas() {
     const done = readTutorialDone();
     tut.hidden = false;
     tut.removeAttribute("hidden");
-    tut.textContent = done ? "Replay tutorial" : "Tutorial";
+    tut.textContent = done ? "Try the 90-Second Quest again →" : "Try a 90-Second Quest →";
     tut.title = done
-      ? "Walk the Paddy Step Wells Quest again"
-      : "Guided Quest: Clean Water, the Paddy Step Wells";
+      ? "Walk the Paddy Step Wells Quest again. No typing."
+      : "90-second Clean Water quest: the Paddy Step Wells. No typing.";
   }
 }
 
@@ -5961,6 +5999,7 @@ async function refreshHostedTrends(opts = {}) {
     return [];
   } finally {
     syncCapabilityExplorer();
+    if (state.screen === "workshop") hexWorkshop?.paint?.();
   }
 }
 
@@ -8882,6 +8921,11 @@ function startMission(mission, opts = {}) {
   resetQuestBriefing({
     clearDismissed: !opts.restore,
   });
+  // resetQuestBriefing just cleared every dismiss flag. The 90-second quest
+  // is the board itself, so mark this mission briefed again before the walk paints.
+  if (state.tutorialRun && merged?.id) {
+    setBriefingDismissed(merged.id, true);
+  }
   const restored = applyContinueSnapshot(
     {
       cloudRunId: null,
@@ -8964,6 +9008,12 @@ function startMission(mission, opts = {}) {
   const res = state.mission?.resources || mission.resources || {};
   state.apMax = res.apMax ?? GAME.apMax ?? 3;
   state.ap = state.apMax;
+  // The 90-second loop places two techs, asks once, and answers one roadblock.
+  // Default AP 3 runs out on that last reply. The economy formulas stay as they are.
+  if (state.tutorialRun && state.apMax < 4) {
+    state.apMax = 4;
+    state.ap = 4;
+  }
   state.apSpentThisTurn = 0;
   state.aiTaxThisTurn = false;
   state.writeCommitsThisTurn = 0;
@@ -9000,7 +9050,12 @@ function startMission(mission, opts = {}) {
   try {
     const hex = ensureHexWorkshop();
     if (restored.skipSeed && restored.hexBoard) {
-      state.hexBoard = restored.hexBoard;
+      let incoming = restored.hexBoard;
+      if (typeof document !== "undefined" && document.querySelector("#ontology-board")) {
+        incoming = projectToTiles(migrateToPathwayBoard(incoming));
+        if (incoming && typeof incoming === "object") incoming.questYear = state.year;
+      }
+      state.hexBoard = incoming;
       hex.paint();
       hex.syncPathwayScores?.();
       if (restored.year != null) hex.refreshAfterYearChange?.();
@@ -9039,7 +9094,10 @@ function startMission(mission, opts = {}) {
   } catch (e) {
     console.warn("[hex board seed]", e);
   }
-  crisisIntroduction.prepare(state.hexBoard, !opts.restore);
+  crisisIntroduction.prepare(
+    state.hexBoard,
+    !opts.restore && !state.tutorialRun && !isPathwayBoard(state.hexBoard)
+  );
   resetWorkshopScroll();
   showScreen("workshop");
   setSideTab(state.sideTab || "vision");
@@ -9809,11 +9867,11 @@ function assessFeasibility() {
       storyLevel === "green"
     ) {
       scaleLevel = "green";
-      scaleNote = `Scale-ready: multi-tech stack, solid story, capital (Budget ${b}, Support ${w}).`;
+      scaleNote = `Scale-ready: multi-tech stack, solid story, capital (Budget ${b}, Goodwill ${w}).`;
     } else if (capitalThin || techs.length === 1 || !opsReady || timingLevel === "yellow") {
       scaleLevel = "yellow";
       scaleNote = capitalThin
-        ? `Scale is thin on capital (Budget ${b}, Support ${w}) — expansion may stall.`
+        ? `Scale is thin on capital (Budget ${b}, Goodwill ${w}) — expansion may stall.`
         : techs.length === 1
           ? "Single-tech pilot can scale, but ops breadth is limited."
           : "Scale is possible but shaky — strengthen story, capital, or timing claims.";
@@ -10113,7 +10171,7 @@ function paintResourceChips(prefix) {
     showHudChip(budgetEl, true);
     showHudChip(willEl, true);
     if (budgetEl) budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
-    if (willEl) willEl.textContent = `Support ${state.will ?? 0}`;
+    if (willEl) willEl.textContent = `Goodwill ${state.will ?? 0}`;
   } else {
     showHudChip(budgetEl, false);
     showHudChip(willEl, false);
@@ -10145,7 +10203,7 @@ function renderHud() {
   const willEl = $("#hud-will");
   if (willEl && budgetWillEnabled()) {
     willEl.title =
-      "Support (public + policy) — not a crisis meter. ≥4 boosts deploy drop; 0 hurts it. Lobby raises Support.";
+      "Goodwill (public + policy) — not a crisis meter. ≥4 boosts deploy drop; 0 hurts it. Lobby raises Goodwill.";
   }
   syncEconomyChromeVisibility();
   paintHudPressureMeters($("#hud-pressure"));
@@ -10294,7 +10352,7 @@ function renderTechList() {
       const marketHit =
         budgetWillEnabled() && marketAffectsTech(currentMarketNews(), t);
       const costTitle = cost
-        ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: ${cost.budget} Budget${cost.will ? `, ${cost.will} Support` : ""}${
+        ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: ${cost.budget} Budget${cost.will ? `, ${cost.will} Goodwill` : ""}${
             apEnabled() ? ", 1 AP" : ""
           }${cost.frontierRisk ? ` · early-tech risk ${cost.frontierRisk}` : ""}${
             marketHit ? " · market news active" : ""
@@ -10319,7 +10377,7 @@ function renderTechList() {
           bits.push(
             `<span class="tech-cost-chip tech-cost-will${
               wDelta > 0 ? " tech-cost-up" : wDelta < 0 ? " tech-cost-down" : ""
-            }" title="Support needed to adopt this">Support ${cost.will}${
+            }" title="Goodwill needed to adopt this">Goodwill ${cost.will}${
               wDelta ? ` (${wDelta > 0 ? "+" : ""}${wDelta})` : ""
             }</span>`
           );
@@ -11253,7 +11311,10 @@ function challengeBlockReason() {
   const panel = hexPathwayPanel(state.hexBoard);
   if (panel.overall !== "red") return "";
   if (panel.bonds.level === "red") {
-    return `${panel.bonds.note}. Connect an idea to every crisis hex before the hard questions.`;
+    const connectCopy = document?.body?.classList?.contains?.("ontology-board")
+      ? "Plug a pathway into every crisis before summoning the hard questions."
+      : "Connect an idea to every crisis hex before the hard questions.";
+    return `${panel.bonds.note}. ${connectCopy}`;
   }
   if (panel.coverage.level === "red") return panel.coverage.note;
   return "Pathway is red.";
@@ -12438,14 +12499,14 @@ function lobbyToast(payload, events) {
   const ev = (events || []).find((e) => e.type === "lobby");
   const label = ev?.rule?.label || payload?.write?.label || "";
   if (payload.write) {
-    return `On the books: ${label || "new rule"} · Support ${state.will}`;
+    return `On the books: ${label || "new rule"} · Goodwill ${state.will}`;
   }
   if (payload.remove) {
-    return `Off the books: ${ev?.rule?.label || "rule"} · Support ${state.will}`;
+    return `Off the books: ${ev?.rule?.label || "rule"} · Goodwill ${state.will}`;
   }
-  if (payload.suspend) return `Paused a local rule · Support ${state.will}`;
-  if (payload.restore) return `Restored a local rule · Support ${state.will}`;
-  return `Lobbied · Budget ${state.budget} · Support ${state.will}`;
+  if (payload.suspend) return `Paused a local rule · Goodwill ${state.will}`;
+  if (payload.restore) return `Restored a local rule · Goodwill ${state.will}`;
+  return `Lobbied · Budget ${state.budget} · Goodwill ${state.will}`;
 }
 
 function lobbyAction() {
@@ -22895,6 +22956,7 @@ function tourSnapshot() {
       (Array.isArray(co?.histories?.coinventor) && co.histories.coinventor.length)
   );
   const popup = $("#hex-tile-popup");
+  const ontPopup = $("#ontology-roadblock");
   const conv = $("#hex-convergence-dialog");
   const draw = $("#hex-challenger-draw");
   const waitBd = $("#wait-confirm-backdrop");
@@ -22973,7 +23035,7 @@ function tourSnapshot() {
     ui: {
       techCatalogHidden: isTechCatalogHidden(),
       waitConfirmOpen: Boolean(waitBd?.classList.contains("open")),
-      tilePopupOpen: Boolean(popup && !popup.hidden),
+      tilePopupOpen: Boolean((popup && !popup.hidden) || ontPopup),
       convergenceOpen: Boolean(conv && !conv.hidden),
       createBusy: Boolean(hex?.isCreateBusy?.()),
       summonBusy: Boolean(hex?.isSummonBusy?.()),
@@ -23042,6 +23104,17 @@ function tutorialSnapshot() {
     ),
     visionUrl: String(
       document.querySelector("#vision-root .vision-image")?.getAttribute("src") || ""
+    ),
+    useCaseCount: Object.keys(board.useCases || {}).length,
+    pathwayCount: Object.keys(board.pathways || {}).length,
+    batteryUseCount: Object.values(board.useCases || {}).filter((uc) => uc?.techId === "battery").length,
+    hasBattery: Object.values(board.pathways || {}).some((pw) =>
+      (pw?.ingredients || []).some((ing) => ing?.techId === "battery")
+    ),
+    fused: Object.values(board.pathways || {}).some((pw) => (pw?.ingredients || []).length >= 2),
+    wired: Object.keys(board.wires || {}).length > 0,
+    roadblockClear: Object.values(board.challengers || {}).some(
+      (ch) => ch && (ch.lamp === "yellow" || ch.lamp === "green")
     ),
   };
 }
@@ -23207,8 +23280,23 @@ function startTutorial() {
   state.tutorialGraduated = false;
   keepTutorialOnTitle = true;
   state.tutorialRun = true;
+  const mission = tutorialPaddyMission();
+  try {
+    setBriefingDismissed(mission?.id, true);
+  } catch {
+    /* briefing store unavailable */
+  }
   syncWorkshopStage();
-  if (state.screen !== "title") showScreen("title");
+  try {
+    startMission(mission);
+    if (state.ap < 5) {
+      state.ap = 5;
+      state.apMax = Math.max(state.apMax || 5, 5);
+      renderHud();
+    }
+  } catch {
+    /* mission not ready */
+  }
   keepTutorialOnTitle = false;
   tutorialCtl?.start?.();
 }
@@ -23329,8 +23417,7 @@ function helpModalOpen() {
 }
 
 /**
- * Coach-marks after any workshop change: follow an open card, or auto-open the
- * next Friend's-seven concept card at its first relevant moment this Quest.
+ * Follow an open tour. Concept cards stay inside ? and do not open on their own.
  */
 function refreshCoachMarks() {
   if (state.tutorialRun && tutorialCtl?.isOpen?.()) {
@@ -23349,25 +23436,7 @@ function refreshCoachMarks() {
     return;
   }
   if (helpModalOpen()) return;
-  if (!state.mission) return;
-  const snap = tourSnapshot();
-  const card = resolveConceptCard(snap, {
-    seen: state.conceptSeen || [],
-    muted: readMutedConcepts(),
-  });
-  if (!card) return;
-  // Only count a card as shown when its anchor is actually visible on screen.
-  if (!coachTargetVisible(queryTourTarget(card))) return;
-  if (!Array.isArray(state.conceptSeen)) state.conceptSeen = [];
-  state.conceptSeen.push(card.id);
-  void guidedTour.openConcept(card, snap);
-}
-
-function coachTargetVisible(el) {
-  if (!el) return false;
-  if (el.closest?.("[hidden]")) return false;
-  const r = el.getBoundingClientRect?.();
-  return Boolean(r && r.width > 0 && r.height > 0);
+  // Concept cards stay inside ?. Gameplay does not open them on its own.
 }
 
 function openRulesHelp() {
@@ -24325,6 +24394,7 @@ async function loadPredictionsFromServer() {
     /* offline / static — no bank; bulletins read as a quiet year */
   } finally {
     syncCapabilityExplorer();
+    if (state.screen === "workshop") hexWorkshop?.paint?.();
   }
 }
 

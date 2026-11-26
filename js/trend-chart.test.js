@@ -140,6 +140,30 @@ describe("trend-chart", () => {
     assert.equal(buildTrendChartConfig(trend).plugins, undefined);
   });
 
+  it("plots clickable playable milestones on the curve and routes clicks by milestoneId", () => {
+    const clicked = [];
+    const cfg = buildTrendChartConfig(trend, {
+      yearNow: 2026,
+      nowLabel: "NOW 2026",
+      compact: true,
+      playableMilestones: [
+        { id: "ms-2026", year: 2026, label: "Clinic kit", status: "reached", dealt: true, useCases: [{}, {}] },
+        { id: "ms-2030", year: 2030, label: "Portable sequencer", status: "predicted", dealt: false, useCases: [{}, {}] },
+      ],
+      onClickMilestone: (id) => clicked.push(id),
+    });
+    assert.equal(cfg.options.scales.x.title.display, false);
+    assert.equal(cfg.options.scales.y.title.display, false);
+    const pr = cfg.data.datasets.find((d) => d.label === "Playable reached");
+    const pf = cfg.data.datasets.find((d) => d.label === "Playable forecast");
+    assert.equal(pr?.data?.length, 1);
+    assert.equal(pf?.data?.length, 1);
+    assert.equal(pf.data[0].early, true);
+    const prIdx = cfg.data.datasets.indexOf(pr);
+    cfg.options.onClick({}, [{ datasetIndex: prIdx, index: 0 }], { data: cfg.data });
+    assert.deepEqual(clicked, ["ms-2026"]);
+  });
+
   it("destroyTrendChart tolerates null", () => {
     destroyTrendChart(null);
     destroyTrendChart({ destroy() {} });

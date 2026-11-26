@@ -191,6 +191,10 @@ Markdown **`grounding`** stays AI SoT prose — it is **not** a substitute for c
 "spotlightTrends": ["gene-seq-cost-per-genome"]
 ```
 
+## Optional `ontology` (lanes 1–2, no model call)
+
+Omit the key and the board still fills lanes 1–2 from `grounding` plus the catalog. When present, `ontology` is an array of `{ techId, capability?, trendSummary?, milestones[] }`. Each milestone is `{ year, label, status: "reached"|"predicted", useCases[] }`. `techId` must be a catalog id. An empty array is invalid (`ontology_empty`). An unknown id is `ontology_unknown_tech:<id>`. A predicted milestone stays predicted when the quest year passes it. The wire only changes from dashed to solid.
+
 ## Optional `grounding` (AI source of truth)
 
 Free-text / Markdown for **authoritative capability context**. When present, Future Forge injects it into co-inventor, claim-timing assess, challenge pose/coach/judge, art-of-the-possible, etc. Prefer over generic model assumptions.

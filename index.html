@@ -28,9 +28,9 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=calm-stage-2" />
+    <link rel="stylesheet" href="css/styles.css?v=ontology-1" />
   </head>
-  <body>
+  <body class="ontology-board">
     <div id="ff-account" hidden>
       <button type="button" class="btn btn-ghost btn-sm" id="ff-account-signin">
         Sign in
@@ -59,7 +59,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           />
         </a>
         <p class="tagline" id="game-tagline">
-          Invent local pathways with emerging tech — place them on the board as the future arrives.
+          Invent local pathways with emerging tech — wire them to the problem as the future arrives.
         </p>
         <div class="pitch">
           <h2>How it works</h2>
@@ -68,13 +68,13 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               <strong>Pick a Quest</strong> — a concrete place living a piece of a global problem.
             </li>
             <li>
-              <strong>Invent on the hex board</strong> — mint emTech idea tiles, dock worlds that match, ease the crisis lights.
+              <strong>Follow the causal chain</strong> — tech and milestones, use cases, your pathway, then the problem.
             </li>
             <li>
-              <strong>Watch the years tick</strong> — wait and the crisis heats; predictions land on the timeline.
+              <strong>Watch the years tick</strong> — a forecast stays dashed until its year, then the wire goes solid.
             </li>
             <li>
-              <strong>Hold the pathway</strong> — summon the hard questions, turn lights yellow or green before the place falls.
+              <strong>Hold the pathway</strong> — plug it into a crisis, clear the roadblocks, and turn the lights yellow or green.
             </li>
           </ol>
         </div>
@@ -88,9 +88,9 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             type="button"
             class="btn btn-secondary"
             id="btn-tutorial"
-            title="Guided Quest: Clean Water, the Paddy Step Wells"
+            title="90-second Clean Water quest: the Paddy Step Wells. No typing."
           >
-            Tutorial
+            Try a 90-Second Quest →
           </button>
           <button type="button" class="btn btn-secondary" id="btn-cloud-continue" hidden>
             Continue
@@ -437,7 +437,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           <span class="hud-turn" id="hs-hud-turn">Round 1</span>
           <span class="hud-ap" id="hs-hud-ap">AP 3/3</span>
           <span class="hud-budget" id="hs-hud-budget">Budget 5$</span>
-          <span class="hud-will" id="hs-hud-will">Support 3</span>
+          <span class="hud-will" id="hs-hud-will">Goodwill 3</span>
         </div>
         <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
             <img src="assets/brand/ff-by-warmersun-transparent-bg.png" alt="" width="1242" height="347" />
@@ -718,7 +718,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           <span class="hud-turn" id="mp-hud-turn">Round 1</span>
           <span class="hud-ap" id="mp-hud-ap">AP 3/3</span>
           <span class="hud-budget" id="mp-hud-budget">Budget 5$</span>
-          <span class="hud-will" id="mp-hud-will">Support 3</span>
+          <span class="hud-will" id="mp-hud-will">Goodwill 3</span>
         </div>
         <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
             <img src="assets/brand/ff-by-warmersun-transparent-bg.png" alt="" width="1242" height="347" />
@@ -1081,7 +1081,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           <span class="hud-resources" id="hud-resources">
             <span class="hud-ap" id="hud-ap" hidden title="Action points">AP 3/3</span>
             <span class="hud-budget" id="hud-budget" hidden title="Budget">Budget 5$</span>
-            <span class="hud-will" id="hud-will" hidden title="Support">Support 3</span>
+            <span class="hud-will" id="hud-will" hidden title="Goodwill">Goodwill 3</span>
           </span>
         </div>
         <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
@@ -1223,6 +1223,22 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             <div id="year-advance-banner" class="year-advance-banner" hidden aria-live="polite"></div>
           </div>
 
+          <div id="crisis-introduction-cards" class="crisis-introduction-cards" hidden></div>
+          <div
+            id="hex-challenger-draw"
+            class="challenger-draw hex-challenger-draw"
+            hidden
+            aria-live="polite"
+          >
+            <p class="challenger-draw-kicker">Who challenges your invent?</p>
+            <p class="challenger-draw-status" id="hex-challenger-draw-status">Summoning the hard questions…</p>
+            <div class="challenger-draw-viewport">
+              <div class="challenger-draw-track" id="hex-challenger-draw-reel"></div>
+            </div>
+          </div>
+
+          <div id="ontology-board" class="ontology-board" aria-label="Ontology board"></div>
+
           <section id="invent-capability-explorer" class="capability-explorer" aria-label="Capability outlook" hidden></section>
 
           <div class="invent-form invent-form-hex">
@@ -1262,7 +1278,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               </div>
               <div class="hex-tile-create-body" id="hex-tile-create-body">
                 <div class="hex-tile-create-actions form-actions">
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-ask-ideas">Ask for ideas</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-ask-ideas-legacy">Ask for ideas</button>
                   <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-ideas" hidden>Refresh</button>
                 </div>
                 <div class="field" id="field-hex-how">
@@ -1348,7 +1364,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             </dialog>
 
             <div class="hex-board-dock">
-              <div id="crisis-introduction-cards" class="crisis-introduction-cards" hidden></div>
               <div class="hex-board-wrap" id="hex-board-wrap">
               <div class="hex-board-toolbar">
                 <p class="hex-board-status" id="hex-board-status" aria-live="polite">Place ideas on the board. Looking at the board is the thinking.</p>
@@ -1389,18 +1404,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               >
                 <span class="ai-snake" aria-hidden="true"></span>
                 <span class="ai-pending-label" id="hex-board-pending-text">Challengers are reading your pathway…</span>
-              </div>
-              <div
-                id="hex-challenger-draw"
-                class="challenger-draw hex-challenger-draw"
-                hidden
-                aria-live="polite"
-              >
-                <p class="challenger-draw-kicker">Who challenges your invent?</p>
-                <p class="challenger-draw-status" id="hex-challenger-draw-status">Summoning the hard questions…</p>
-                <div class="challenger-draw-viewport">
-                  <div class="challenger-draw-track" id="hex-challenger-draw-reel"></div>
-                </div>
               </div>
               <div class="hex-board" id="hex-board">
                 <svg id="hex-board-svg" viewBox="0 0 1400 900" role="img" aria-label="Invention hex board"></svg>
@@ -1682,7 +1685,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           <span class="hud-resources">
             <span class="hud-ap" id="ch-hud-ap" hidden title="Action points">AP 3/3</span>
             <span class="hud-budget" id="ch-hud-budget" hidden title="Budget">Budget 5$</span>
-            <span class="hud-will" id="ch-hud-will" hidden title="Support">Support 3</span>
+            <span class="hud-will" id="ch-hud-will" hidden title="Goodwill">Goodwill 3</span>
           </span>
         </div>
         <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
@@ -1992,7 +1995,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           <span class="hud-resources">
             <span class="hud-ap" id="dep-hud-ap" hidden title="Action points">AP 3/3</span>
             <span class="hud-budget" id="dep-hud-budget" hidden title="Budget">Budget 5$</span>
-            <span class="hud-will" id="dep-hud-will" hidden title="Support">Support 3</span>
+            <span class="hud-will" id="dep-hud-will" hidden title="Goodwill">Goodwill 3</span>
           </span>
         </div>
         <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
@@ -2611,6 +2614,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=calm-stage-2"></script>
+    <script type="module" src="js/main.js?v=ontology-1"></script>
   </body>
 </html>
