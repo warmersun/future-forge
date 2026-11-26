@@ -182,6 +182,7 @@ import {
   techIdsFromBoard,
   placedTechEconomy,
   stackPlacementPlan,
+  stackBatchPlacementGate,
   creditedTechIdsFromBoard,
   techIdsWithUnplacedInventions,
   cloneBoard,
@@ -1232,6 +1233,24 @@ function canPlaceInventionOnStack(tile) {
   return canAffordTech(tech);
 }
 
+/** Several new tiles share one budget, one will pool, and one stack cap. */
+function canPlaceInventionsOnStack(tiles) {
+  return stackBatchPlacementGate(tiles, {
+    selectedTechIds: state.selectedTechIds,
+    board: state.hexBoard,
+    stackCap: stackCapLimit(),
+    apEnabled: apEnabled(),
+    budgetWillEnabled: budgetWillEnabled(),
+    spendableAp: getSpendableAp(),
+    spendableBudget: getSpendableBudget(),
+    spendableWill: getSpendableWill(),
+    costFor: (id) => {
+      const tech = techById(id);
+      return tech ? techCost(tech) : null;
+    },
+  });
+}
+
 function paintAfterStackReconcile() {
   renderTechList();
   renderSelectedChips();
@@ -1356,6 +1375,23 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
   }
 
   if (hotseatBridge.isHotseat()) {
+    const sessionSnap = hotseatBridge.getSession?.() ?? null;
+    const learnSnap = [...(state.learnOrder || [])];
+    let mutated = false;
+    // A later tech must not keep an earlier charge when this reconcile is discarded.
+    const undoHotseat = (error, techId) => {
+      if (mutated && sessionSnap) {
+        hotseatBridge.setSession(sessionSnap);
+        hotseatBridge.hydrateSoloState(state, {
+          global: state.global,
+          keepLocalHexBoard: true,
+        });
+        state.learnOrder = learnSnap;
+        paintAfterStackReconcile();
+      }
+      flashUnaffordableTech(techId, error);
+      return { ok: false, error, techId };
+    };
     for (const id of prev) {
       if (wantedSet.has(id)) continue;
       if (!hotseatBridge.canEditStack?.()) continue;
@@ -1363,6 +1399,7 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
       if (r.ok) {
         hotseatBridge.setSession(r.session);
         removeFromLearnOrder(id);
+        mutated = true;
       }
     }
     const viewStackIds = () =>
@@ -1374,7 +1411,7 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
       const freeing = freeIds.includes(id);
       if (!charging && !freeing) continue;
       if (!hotseatBridge.canEditStack?.()) {
-        return { ok: false, error: "stack_locked", techId: id };
+        return undoHotseat("stack_locked", id);
       }
       const onView = viewStackIds().includes(id);
       const r = freeing
@@ -1384,11 +1421,11 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
         : hotseatBridge.layerTechOnView(id, techById(id), onView ? { bill: true } : {});
       if (!r.ok) {
         if (r.error === "already_on_stack") continue;
-        flashUnaffordableTech(id, r.error);
-        return { ok: false, error: r.error, techId: id };
+        return undoHotseat(r.error, id);
       }
       if (r.session) hotseatBridge.setSession(r.session);
       if (!prev.includes(id)) pushLearnOrder(id);
+      mutated = true;
     }
     hotseatBridge.hydrateSoloState(state, {
       global: state.global,
@@ -1399,10 +1436,25 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
     return { ok: true };
   }
 
+  const simSnap = simSliceFromState(state);
+  const learnSnap = [...(state.learnOrder || [])];
+  let soloMutated = false;
+  const undoSolo = (error, techId) => {
+    if (soloMutated) {
+      applySimSliceToState(state, simSnap);
+      state.learnOrder = learnSnap;
+      paintAfterStackReconcile();
+    }
+    flashUnaffordableTech(techId, error);
+    return { ok: false, error, techId };
+  };
   for (const id of prev) {
     if (wantedSet.has(id)) continue;
     const r = dispatchSim("deselect_tech", { techId: id });
-    if (r.ok) removeFromLearnOrder(id);
+    if (r.ok) {
+      removeFromLearnOrder(id);
+      soloMutated = true;
+    }
   }
   for (const id of wanted) {
     const charging = chargeSet.has(id);
@@ -1415,11 +1467,9 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
       free: freeing,
       bill: charging && already,
     });
-    if (!r.ok) {
-      flashUnaffordableTech(id, r.error);
-      return { ok: false, error: r.error, techId: id };
-    }
+    if (!r.ok) return undoSolo(r.error, id);
     if (!state.learnOrder.includes(id)) pushLearnOrder(id);
+    soloMutated = true;
   }
   state.aiTiming = null;
   scheduleAiTimingAssess();
@@ -1943,6 +1993,7 @@ function ensureHexWorkshop() {
       state.selectedTechIds = ids;
     },
     canPlaceInvention: (tile) => canPlaceInventionOnStack(tile),
+    canPlaceInventions: (tiles) => canPlaceInventionsOnStack(tiles),
     isSignedIn: () => isClerkSignedIn(),
     onSignedIn: (fn) => onClerkSession(fn),
     listCollectorCards: () => listCollectorCards(),
@@ -13363,6 +13414,7 @@ const LEAN_EVAL_MODES = new Set([
   "score-pathway",
   "assess-feasibility",
   "idea-sparks",
+  "workbench-lens",
   "assess-plain",
   "pose-challenge",
   "judge-scrutiny-move",

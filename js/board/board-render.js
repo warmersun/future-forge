@@ -178,6 +178,25 @@ export function resolveChainHighlight(view) {
     }
   };
 
+  const pwDirectTechIds = (pw) => {
+    const coveredByUc = new Set();
+    for (const ing of pw?.ingredients || []) {
+      for (const uid of ing.useCaseIds || []) {
+        const uc = ucById.get(uid);
+        if (uc?.techId) coveredByUc.add(uc.techId);
+      }
+    }
+    const direct = [];
+    const seen = new Set();
+    for (const ing of pw?.ingredients || []) {
+      if (ing.techId && !coveredByUc.has(ing.techId) && !seen.has(ing.techId)) {
+        seen.add(ing.techId);
+        direct.push(ing.techId);
+      }
+    }
+    return direct;
+  };
+
   const addUpstreamFromPathway = (pw) => {
     if (!pw) return;
     pathwayIds.add(pw.id);
@@ -190,6 +209,10 @@ export function resolveChainHighlight(view) {
           addUpstreamFromUseCase(uc);
         }
       }
+    }
+    for (const tid of pwDirectTechIds(pw)) {
+      techIds.add(tid);
+      tier2Edges.add(`tech:${tid}->${pw.id}`);
     }
   };
 
@@ -231,6 +254,9 @@ export function resolveChainHighlight(view) {
     }
     for (const pw of pathways) {
       if ((pw.ingredients || []).some((ing) => ing.techId === track.techId)) {
+        if (pwDirectTechIds(pw).includes(track.techId)) {
+          tier2Edges.add(`tech:${track.techId}->${pw.id}`);
+        }
         addDownstreamFromPathway(pw.id);
       }
     }
@@ -554,14 +580,36 @@ export function renderOntologyBoard(view) {
     "";
   const highlight = resolveChainHighlight(view);
 
+  const ucById = new Map(useCases.map((u) => [u.id, u]));
   const directTechUseCases = new Set(
     useCases.filter((uc) => !uc.milestoneId && uc.techId).map((uc) => uc.techId)
   );
+  const directTechPathways = new Set();
+  for (const pw of pathways) {
+    const coveredByUc = new Set();
+    for (const ing of pw.ingredients || []) {
+      for (const uid of ing.useCaseIds || []) {
+        const uc = ucById.get(uid);
+        if (uc?.techId) coveredByUc.add(uc.techId);
+      }
+    }
+    for (const ing of pw.ingredients || []) {
+      if (ing.techId && !coveredByUc.has(ing.techId)) {
+        directTechPathways.add(ing.techId);
+      }
+    }
+  }
 
   const techLane = tracks.length
     ? tracks
         .map((track) =>
-          renderTrack(track, year, focusedTechId, highlight, directTechUseCases.has(track.techId))
+          renderTrack(
+            track,
+            year,
+            focusedTechId,
+            highlight,
+            directTechUseCases.has(track.techId) || directTechPathways.has(track.techId)
+          )
         )
         .join("")
     : `<div class="ontology-empty-card">
@@ -625,6 +673,7 @@ export function renderOntologyBoard(view) {
         editing: view?.editingPathwayId === pw.id,
         focused: view?.focusedPathwayId === pw.id,
         highlight,
+        ucById,
       })
     )
     .join("");
@@ -678,11 +727,56 @@ export function renderOntologyBoard(view) {
       })()
     : "";
 
+  const wb = view?.workbench || { open: false, draftCount: 0 };
+  const wbOpen = Boolean(wb.open);
+  const wbBadge = wb.draftCount > 0 ? ` <span class="ontology-wb-badge">${wb.draftCount}</span>` : "";
+
+  const lanesBody = wbOpen
+    ? `<div class="ontology-lanes is-workbench-open">
+        ${renderWorkbenchLeftRail(tracks, useCases, year, selected, wb)}
+        ${renderWorkbenchStudio(view, wb, tracks, useCases, pathways, crises, wires, selected)}
+        ${renderWorkbenchRightRail(crises, wires, rules)}
+      </div>`
+    : `<div class="ontology-lanes">
+        <section id="ontology-lane-tech" class="ontology-lane" data-lane="tech" aria-label="Tech and milestones">
+          <header class="ontology-lane-head">
+            <h2><span class="ontology-lane-num">1</span> Tech &amp; Milestones</h2>
+            <button type="button" class="ontology-mini-btn is-accent" id="btn-add-tech" data-action="toggle-picker">+ Add tech</button>
+          </header>
+          <div class="ontology-lane-body">${techLane}</div>
+        </section>
+        <section id="ontology-lane-use" class="ontology-lane" data-lane="use" aria-label="Use cases">
+          <header class="ontology-lane-head">
+            <h2><span class="ontology-lane-num">2</span> Use Cases</h2>
+            <button type="button" class="ontology-mini-btn" data-action="toggle-custom-use">+ Custom</button>
+          </header>
+          <div class="ontology-lane-body">${customUseForm}${useLane}</div>
+        </section>
+        <section id="ontology-lane-pathway" class="ontology-lane" data-lane="pathway" data-drop="pathway" aria-label="Pathway">
+          <header class="ontology-lane-head">
+            <div class="ontology-lane-title-row">
+              <h2><span class="ontology-lane-num">3</span> Pathway</h2>
+              <div class="ontology-lane-head-btns">
+                <button type="button" class="ontology-mini-btn is-wb-open" id="btn-open-workbench" data-action="toggle-workbench" title="Expand Lane 3 into the Double-Diamond Innovation Workbench (Convergence Canvas, SIT, SCAMPER)">⤢ Workbench${wbBadge}</button>
+                <button type="button" class="ontology-mini-btn" data-action="human-step" title="Add an ordinary human workflow or non-emTech step">+ Human</button>
+              </div>
+            </div>
+          </header>
+          <div class="ontology-lane-body">${pathLane}</div>
+        </section>
+        <section id="ontology-lane-problem" class="ontology-lane" data-lane="problem" data-drop="crisis" aria-label="Problem">
+          <header class="ontology-lane-head">
+            <h2><span class="ontology-lane-num">4</span> Problem</h2>
+          </header>
+          <div class="ontology-lane-body">${problemLane}</div>
+        </section>
+      </div>`;
+
   return `<div class="ontology-topbar">
       <div class="ontology-circuit" role="tablist" aria-label="Lanes">
         <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="tech">1 · Tech <span>${tracks.length}</span></button>
         <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="use">2 · Use Cases <span>${useCases.length}</span></button>
-        <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="pathway">3 · Pathway <span>${pathways.length}</span></button>
+        <button type="button" class="ontology-step-pill${wbOpen ? " is-active" : ""}" data-action="jump-lane" data-lane="pathway">3 · Pathway <span>${pathways.length}</span></button>
         <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="problem">4 · Problem <span>${crises.length}</span></button>
       </div>
       <div class="ontology-calendar" role="group" aria-label="Quest timeline">
@@ -692,7 +786,7 @@ export function renderOntologyBoard(view) {
       </div>
       <div class="ontology-toolbar-right">
         ${
-          view?.unused?.count > 0
+          view?.unused?.count > 0 && !wbOpen
             ? `<button type="button" class="ontology-mini-btn is-prune" data-action="prune-unused" title="${escapeHtml(view.unused.tooltip || "Remove unconnected items")}">🧹 Clear unused <span class="ontology-prune-count">${view.unused.count}</span></button>`
             : ""
         }
@@ -710,42 +804,14 @@ export function renderOntologyBoard(view) {
     </div>
     ${summonBanner}
     <div class="ontology-lanes-scroll" data-lanes-scroll>
-    <div class="ontology-lanes-stage${highlight ? " has-chain-highlight" : ""}" data-lanes-stage>
-      <svg class="ontology-wires" viewBox="0 0 1000 800" aria-hidden="true">${renderFallbackWires(wires, pathways, crises, highlight, "base")}</svg>
-      <svg class="ontology-wires is-active-layer" viewBox="0 0 1000 800" aria-hidden="true">${renderFallbackWires(wires, pathways, crises, highlight, "active")}</svg>
-      <div class="ontology-wire-tokens" data-wire-tokens>${wireRoadblockTokens}</div>
-      <div class="ontology-lanes">
-        <section id="ontology-lane-tech" class="ontology-lane" data-lane="tech" aria-label="Tech and milestones">
-          <header class="ontology-lane-head">
-            <h2><span class="ontology-lane-num">1</span> Tech &amp; Milestones</h2>
-            <button type="button" class="ontology-mini-btn is-accent" id="btn-add-tech" data-action="toggle-picker">+ Add tech</button>
-          </header>
-          <div class="ontology-lane-body">${techLane}</div>
-        </section>
-        <section id="ontology-lane-use" class="ontology-lane" data-lane="use" aria-label="Use cases">
-          <header class="ontology-lane-head">
-            <h2><span class="ontology-lane-num">2</span> Use Cases</h2>
-            <button type="button" class="ontology-mini-btn" data-action="toggle-custom-use">+ Custom</button>
-          </header>
-          <div class="ontology-lane-body">${customUseForm}${useLane}</div>
-        </section>
-        <section id="ontology-lane-pathway" class="ontology-lane" data-lane="pathway" data-drop="pathway" aria-label="Pathway">
-          <header class="ontology-lane-head">
-            <h2><span class="ontology-lane-num">3</span> Pathway</h2>
-            <button type="button" class="ontology-mini-btn" data-action="human-step" title="Add an ordinary human workflow or non-emTech step">+ Human step</button>
-          </header>
-          <div class="ontology-lane-body">${pathLane}</div>
-        </section>
-        <section id="ontology-lane-problem" class="ontology-lane" data-lane="problem" data-drop="crisis" aria-label="Problem">
-          <header class="ontology-lane-head">
-            <h2><span class="ontology-lane-num">4</span> Problem</h2>
-          </header>
-          <div class="ontology-lane-body">${problemLane}</div>
-        </section>
-      </div>
+    <div class="ontology-lanes-stage${highlight && !wbOpen ? " has-chain-highlight" : ""}${wbOpen ? " is-workbench-open" : ""}" data-lanes-stage>
+      <svg class="ontology-wires" viewBox="0 0 1000 800" aria-hidden="true">${wbOpen ? "" : renderFallbackWires(wires, pathways, crises, highlight, "base")}</svg>
+      <svg class="ontology-wires is-active-layer" viewBox="0 0 1000 800" aria-hidden="true">${wbOpen ? "" : renderFallbackWires(wires, pathways, crises, highlight, "active")}</svg>
+      <div class="ontology-wire-tokens" data-wire-tokens>${wbOpen ? "" : wireRoadblockTokens}</div>
+      ${lanesBody}
     </div>
     </div>
-    ${renderTraceBar(highlight, view)}
+    ${wbOpen ? "" : renderTraceBar(highlight, view)}
     ${picker}
     ${roadblockModal}
     ${argumentModal}`;
@@ -918,7 +984,9 @@ function renderTrack(track, year, focusedTechId, highlight = null, hasDirectUseC
   }
 
   const techPortLit = Boolean(
-    highlight && [...highlight.tier1Edges].some((e) => e.startsWith(`tech:${track.techId}->`))
+    highlight &&
+      ([...highlight.tier1Edges].some((e) => e.startsWith(`tech:${track.techId}->`)) ||
+        [...highlight.tier2Edges].some((e) => e.startsWith(`tech:${track.techId}->`)))
   );
 
   return `<article class="ontology-card ontology-tech${isFocused ? " is-focused" : " is-compact"}${trackChainCls}" data-tech-id="${escapeHtml(track.techId)}">
@@ -1011,7 +1079,7 @@ function renderPathwayComposer(opts) {
             (idea) => `<div class="ontology-spark-card${idea.artUrl ? " has-art" : ""}" data-idea-id="${escapeHtml(idea.id)}">
               <button type="button" class="ontology-spark-dismiss" data-action="dismiss-spark" data-idea-id="${escapeHtml(idea.id)}" aria-label="Remove ${escapeHtml(idea.title)}" title="Remove idea">×</button>
               <div class="ontology-spark-main">
-                ${idea.artUrl ? `<img class="ontology-spark-art" src="${escapeHtml(idea.artUrl)}" alt="" loading="lazy" />` : ""}
+                ${idea.artUrl ? `<img class="ontology-spark-art" src="${escapeHtml(idea.artUrl)}" alt="" loading="lazy" draggable="false" />` : ""}
                 <div class="ontology-spark-body">
                   <strong>${escapeHtml(idea.title)}</strong>
                   <p>${escapeHtml(idea.blurb || idea.howText || idea.insertText || "")}</p>
@@ -1034,7 +1102,7 @@ function renderPathwayComposer(opts) {
           <textarea class="ontology-textarea" data-role="draft-how" rows="3" maxlength="2000" placeholder="Who does what, with what hardware/workflow, here this year…">${escapeHtml(opts.draftHow || "")}</textarea>
         </label>
         <div class="ontology-inline-actions">
-          <button type="button" class="btn btn-primary btn-sm" data-action="write-pathway">Mint invention</button>
+          <button type="button" class="btn btn-primary btn-sm" data-action="write-pathway">Form Pathway</button>
           ${opts.voiceSupported ? `<button type="button" class="btn btn-secondary btn-sm${opts.voiceActive ? " is-voice-live" : ""}" data-action="toggle-voice" title="Talk through your idea with the AI co-inventor">🎙️ ${opts.voiceActive ? "Listening…" : "Speak"}</button>` : ""}
           <button type="button" class="btn btn-ghost btn-sm" data-action="toggle-write">Close</button>
         </div>
@@ -1074,7 +1142,7 @@ function renderPathwayCard(pw, crises, wires, opts) {
   const artBanner = arts.length
     ? `<div class="ontology-art-strip${arts.length > 1 ? " is-mosaic" : ""}">${arts
         .slice(0, 2)
-        .map((url) => `<img src="${escapeHtml(url)}" alt="" loading="lazy" />`)
+        .map((url) => `<img src="${escapeHtml(url)}" alt="" loading="lazy" draggable="false" />`)
         .join("")}</div>`
     : artPending
       ? `<div class="ontology-art-shimmer" aria-hidden="true"><span> painting tile…</span></div>`
@@ -1136,6 +1204,14 @@ function renderPathwayCard(pw, crises, wires, opts) {
       </details>`
     : "";
 
+  const remixMenu = `<details class="ontology-pop-menu" data-menu="remix">
+      <summary class="ontology-pill-btn is-remix">🔀 Remix ▾</summary>
+      <div class="ontology-pop-list">
+        <button type="button" data-action="wb-remix" data-source-kind="pathway" data-source-id="${escapeHtml(pw.id)}" data-target-method="sit">📦 Remix with SIT (closed world)</button>
+        <button type="button" data-action="wb-remix" data-source-kind="pathway" data-source-id="${escapeHtml(pw.id)}" data-target-method="scamper">🔧 Remix with SCAMPER (open)</button>
+      </div>
+    </details>`;
+
   const plugMenu = crises.length
     ? `<details class="ontology-pop-menu" data-menu="plug">
         <summary class="ontology-pill-btn is-plug" data-action="plug-into-menu">🔌 Plug (${connectedCrisisIds.size}/${crises.length}) ▾</summary>
@@ -1152,9 +1228,26 @@ function renderPathwayCard(pw, crises, wires, opts) {
       </details>`
     : "";
 
-  const fromUcs = [
-    ...new Set((pw.ingredients || []).flatMap((ing) => ing.useCaseIds || [])),
-  ].join(",");
+  const ucById = opts.ucById instanceof Map ? opts.ucById : null;
+  const liveUcIds = [
+    ...new Set(
+      (pw.ingredients || [])
+        .flatMap((ing) => ing.useCaseIds || [])
+        .filter((uid) => !ucById || ucById.has(uid))
+    ),
+  ];
+  const fromUcs = liveUcIds.join(",");
+  const coveredTechIds = new Set(
+    liveUcIds.map((uid) => ucById?.get(uid)?.techId).filter(Boolean)
+  );
+  const directTechIds = [
+    ...new Set(
+      (pw.ingredients || [])
+        .map((ing) => ing.techId)
+        .filter((tid) => Boolean(tid) && !coveredTechIds.has(tid))
+    ),
+  ];
+  const fromTechs = directTechIds.join(",");
 
   const howSection = opts.editing
     ? `<div class="ontology-edit-how">
@@ -1200,7 +1293,7 @@ function renderPathwayCard(pw, crises, wires, opts) {
     .join(" ");
 
   return `<article class="${pwCardClasses}" data-pathway-id="${escapeHtml(pw.id)}" data-drop="pathway" draggable="true">
-    <span class="ontology-port is-in${fromUcs ? " is-lit" : ""}${inPortLit ? " is-chain-lit" : ""}" data-port-pw-in="${escapeHtml(pw.id)}" data-from-ucs="${escapeHtml(fromUcs)}" aria-hidden="true"></span>
+    <span class="ontology-port is-in${fromUcs || fromTechs ? " is-lit" : ""}${inPortLit ? " is-chain-lit" : ""}" data-port-pw-in="${escapeHtml(pw.id)}" data-from-ucs="${escapeHtml(fromUcs)}" data-from-techs="${escapeHtml(fromTechs)}" aria-hidden="true"></span>
     ${artBanner}
     <header class="ontology-card-head">
       <h3>${escapeHtml(pw.title)}</h3>
@@ -1214,6 +1307,7 @@ function renderPathwayCard(pw, crises, wires, opts) {
     ${howSection}
     <footer class="ontology-pathway-foot">
       ${fuseMenu}
+      ${remixMenu}
       ${plugMenu}
     </footer>
     <span class="ontology-port is-out${connectedCrisisIds.size ? " is-lit" : ""}${outPortLit ? " is-chain-lit" : ""}" data-port-pw-out="${escapeHtml(pw.id)}" title="Drag onto a Crisis in Lane 4 to plug in" aria-hidden="true"></span>
@@ -1442,6 +1536,7 @@ function renderRoadblockModal(ch, isTutorial) {
       <div class="ontology-inline-actions">
         <button type="button" class="btn btn-primary btn-sm${ch.answerPending ? " is-busy" : ""}" data-action="roadblock-submit" data-challenger-id="${escapeHtml(ch.id)}" ${ch.answerPending || ch.drafting ? "disabled" : ""}>${ch.answerPending ? `<span class="ontology-spinner" aria-hidden="true"></span> Judging defense…` : "Submit defense"}</button>
         <button type="button" class="btn btn-secondary btn-sm${ch.drafting ? " is-busy" : ""}" data-action="roadblock-draft-ai" data-challenger-id="${escapeHtml(ch.id)}" ${ch.answerPending || ch.drafting ? "disabled" : ""}>${ch.drafting ? `<span class="ontology-spinner" aria-hidden="true"></span> Drafting…` : "✨ Draft reply (1 AP)"}</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-action="wb-remix-roadblock" data-challenger-id="${escapeHtml(ch.id)}" ${ch.answerPending ? "disabled" : ""} title="Open SCAMPER in the Innovation Workbench preloaded with this roadblock">🔧 Remix in Workbench</button>
         ${isTutorial ? `<button type="button" class="btn btn-secondary btn-sm" data-action="roadblock-suggest" data-challenger-id="${escapeHtml(ch.id)}" ${ch.answerPending ? "disabled" : ""}>Fill tutorial reply →</button>` : ""}
         <button type="button" class="btn btn-ghost btn-sm" data-action="close-roadblock">Close &amp; edit board</button>
       </div>
@@ -1478,6 +1573,603 @@ function renderArgumentModal(pathways, focusedPathwayId, busy) {
   </div>`;
 }
 
+/* ── Expanded Lane 3: Docked Circuit Frame & Double-Diamond Innovation Workbench ── */
+
+function renderWorkbenchLeftRail(tracks, useCases, year, selected, wb) {
+  const techChips = tracks.length
+    ? tracks
+        .map((t) => {
+          const expanded = wb.railExpandedTechId === t.techId;
+          const msRows = expanded
+            ? `<div class="wb-rail-milestones">
+                ${(t.milestones || [])
+                  .slice(0, 4)
+                  .map((m) => {
+                    const isForecast = m.status !== "reached";
+                    const yr = isForecast ? `~${m.year}` : String(m.year);
+                    return `<button type="button" class="wb-rail-ms${m.dealt ? " is-dealt" : ""}${Number(m.year) > year ? " is-early" : ""}" data-action="deal-milestone" data-tech-id="${escapeHtml(t.techId)}" data-milestone-id="${escapeHtml(m.id)}" title="${escapeHtml(m.label)}">
+                      <span>${isForecast ? "◌" : "●"} ${escapeHtml(yr)}</span>
+                      <span class="wb-rail-ms-label">${escapeHtml(m.label)}</span>
+                    </button>`;
+                  })
+                  .join("")}
+              </div>`
+            : "";
+          return `<div class="wb-rail-tech-item${expanded ? " is-open" : ""}">
+            <button type="button" class="wb-rail-tech-chip" data-action="wb-rail-toggle-tech" data-tech-id="${escapeHtml(t.techId)}" title="Click to quick-deal milestones for ${escapeHtml(t.name)}">
+              <span class="wb-rail-tech-name">${t.icon ? `${escapeHtml(t.icon)} ` : ""}${escapeHtml(t.name)}</span>
+              ${worldDot(t.world)}
+            </button>
+            ${msRows}
+          </div>`;
+        })
+        .join("")
+    : `<p class="wb-rail-empty">No techs on board yet.</p>`;
+
+  const usePills = useCases.length
+    ? useCases
+        .map((uc) => {
+          const isSel = selected.has(uc.id);
+          const early = Number(uc.milestoneYear) > year;
+          return `<button type="button" class="wb-rail-uc${isSel ? " is-selected" : ""}${early ? " is-early" : ""}" data-action="toggle-use" data-id="${escapeHtml(uc.id)}" data-usecase-id="${escapeHtml(uc.id)}" draggable="true" title="${escapeHtml(uc.blurb || uc.title)} — click to toggle into Seed, or drag into Workbench">
+            <span class="wb-rail-uc-top">
+              ${worldDot(uc.world)}
+              <span class="wb-rail-uc-tech">${escapeHtml(uc.techName || uc.techId || "")}</span>
+              ${early ? `<span class="wb-rail-early">~${uc.milestoneYear}</span>` : ""}
+              ${isSel ? `<span class="wb-rail-check">✓</span>` : ""}
+            </span>
+            <strong class="wb-rail-uc-title">${escapeHtml(uc.title)}</strong>
+          </button>`;
+        })
+        .join("")
+    : `<p class="wb-rail-empty">Tap a Tech above to unlock milestones &amp; Use Cases.</p>`;
+
+  return `<aside class="ontology-lane wb-dock-rail wb-dock-left" aria-label="Docked Tech and Use Cases">
+    <header class="ontology-lane-head">
+      <div class="ontology-lane-title-row">
+        <h2><span class="ontology-lane-num">1–2</span> Inputs</h2>
+        <button type="button" class="ontology-mini-btn is-accent" data-action="toggle-picker" title="Add another emerging tech">+ Tech</button>
+      </div>
+    </header>
+    <div class="wb-rail-section">
+      <span class="wb-rail-kicker">Active Techs (${tracks.length})</span>
+      <div class="wb-rail-tech-list">${techChips}</div>
+    </div>
+    <div class="wb-rail-section is-grow">
+      <span class="wb-rail-kicker">Use Cases (${useCases.length})</span>
+      <div class="wb-rail-uc-list">${usePills}</div>
+    </div>
+  </aside>`;
+}
+
+function renderWorkbenchRightRail(crises, wires, rules) {
+  const ruleCount = (rules || []).length;
+  const cards = crises.length
+    ? crises
+        .map((c) => {
+          const inbound = wires.filter((w) => w.crisisId === c.id);
+          const roadblocks = inbound.flatMap((w) => w.challengers || []);
+          const rbButtons = roadblocks
+            .map((ch) => {
+              const meta = challengerMeta(ch.angle);
+              return `<button type="button" class="wb-rail-rb is-${escapeHtml(ch.lamp || "red")}" data-action="wb-remix-roadblock" data-challenger-id="${escapeHtml(ch.id)}" title="Click to remix blocked Pathway in SCAMPER">
+                <img src="${escapeHtml(meta.visual)}" alt="" />
+                <span>🛑 ${escapeHtml(meta.label)}</span>
+              </button>`;
+            })
+            .join("");
+          return `<article class="wb-rail-crisis is-${escapeHtml(c.lamp || "red")}" data-crisis-id="${escapeHtml(c.id)}" data-drop="crisis">
+            <div class="wb-rail-crisis-top">
+              <span class="wb-rail-crisis-role">${escapeHtml(roleLabel(c.role))}</span>
+              ${lampDot(c.lamp, inbound.some((w) => w.pending))}
+            </div>
+            <strong class="wb-rail-crisis-name">${escapeHtml(c.name || c.role)}</strong>
+            <div class="wb-rail-crisis-meta">
+              ${c.level != null ? `<span>Meter ${c.level}/5${c.goal != null ? ` (≤${c.goal})` : ""}</span>` : ""}
+              <span>${inbound.length} wired</span>
+            </div>
+            ${rbButtons ? `<div class="wb-rail-rbs">${rbButtons}</div>` : ""}
+          </article>`;
+        })
+        .join("")
+    : `<p class="wb-rail-empty">Crises appear here.</p>`;
+
+  return `<aside class="ontology-lane wb-dock-rail wb-dock-right" data-lane="problem" data-drop="crisis" aria-label="Docked Problem targets">
+    <header class="ontology-lane-head">
+      <div class="ontology-lane-title-row">
+        <h2><span class="ontology-lane-num">4</span> Problem</h2>
+        <button type="button" class="ontology-mini-btn" data-action="tool-lobby" title="Lobby a local rule">🏛️ ${ruleCount || "+"}</button>
+      </div>
+    </header>
+    <p class="wb-rail-hint">Drop any Pathway below onto a Crisis to plug in.</p>
+    <div class="wb-rail-crisis-list">${cards}</div>
+  </aside>`;
+}
+
+function renderWorkbenchMethodControls(wb, useCases, selected) {
+  if (wb.method === "convergence") {
+    const conv = wb.convergence;
+    const pair = conv.pairAnalysis;
+    const zonesHtml = conv.zones
+      .map(
+        (z) => `<div class="wb-conv-zone is-${escapeHtml(z.id)}${z.highlightBridge ? " is-bridge-needed" : ""}">
+          <div class="wb-conv-zone-head">
+            ${worldBadge(z.id)}
+            <span class="wb-conv-zone-sub">${z.highlightBridge ? "⚠️ Bridge gap" : escapeHtml(z.subtitle)}</span>
+          </div>
+          <div class="wb-conv-groups">
+            ${z.groups
+              .map(
+                (g) => `<div class="wb-conv-group">
+                  <span class="wb-conv-dom" style="--dom-color:${escapeHtml(g.color)}">${escapeHtml(g.domainLabel)}</span>
+                  <div class="wb-conv-chips">
+                    ${g.techs
+                      .map((t) => {
+                        const cls = [
+                          "wb-conv-chip",
+                          t.inPlay ? "is-in-play" : "",
+                          t.synergy ? "is-synergy" : "",
+                          t.recommended ? "is-rec" : "",
+                          t.selectedSlot === "A" ? "is-slot-a" : "",
+                          t.selectedSlot === "B" ? "is-slot-b" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ");
+                        const slotTag = t.selectedSlot
+                          ? `<span class="wb-conv-slot">${t.selectedSlot}</span>`
+                          : "";
+                        return `<button type="button" class="${cls}" data-action="wb-conv-pick" data-tech-id="${escapeHtml(t.id)}" title="${escapeHtml(t.name)}${t.inPlay ? " (on board)" : ""}${t.synergy ? " — ⚡ Synergy pair!" : ""} — ${escapeHtml(t.summary)}">
+                          ${slotTag}<span>${escapeHtml(t.icon ? `${t.icon} ` : "")}${escapeHtml(t.name)}</span>
+                        </button>`;
+                      })
+                      .join("")}
+                  </div>
+                </div>`
+              )
+              .join("")}
+          </div>
+        </div>`
+      )
+      .join("");
+
+    const slotA = pair.techA
+      ? `<span class="wb-pair-pill is-a">${escapeHtml(pair.techA.icon ? `${pair.techA.icon} ` : "")}${escapeHtml(pair.techA.name)} ${worldDot(pair.techA.polarity)}</span>`
+      : `<span class="wb-pair-pill is-empty">Pick Tech A</span>`;
+    const slotB = pair.techB
+      ? `<span class="wb-pair-pill is-b">${escapeHtml(pair.techB.icon ? `${pair.techB.icon} ` : "")}${escapeHtml(pair.techB.name)} ${worldDot(pair.techB.polarity)}</span>`
+      : `<span class="wb-pair-pill is-empty">Pick Tech B</span>`;
+
+    return `<div class="wb-method-panel is-convergence">
+      <div class="wb-conv-legend">
+        <span class="wb-legend-item"><i class="is-in-play"></i> On board</span>
+        <span class="wb-legend-item"><i class="is-synergy"></i> ⚡ Synergy partner</span>
+        <span class="wb-legend-item">Click any 2 chips to intersect</span>
+      </div>
+      <div class="wb-conv-map">${zonesHtml}</div>
+      <div class="wb-pair-bar${pair.ready ? " is-ready" : ""}">
+        <div class="wb-pair-slots">
+          ${slotA}
+          <span class="wb-pair-x" aria-hidden="true">×</span>
+          ${slotB}
+          ${pair.techA ? `<button type="button" class="ontology-link-btn" data-action="wb-conv-clear">Clear</button>` : ""}
+        </div>
+        ${pair.badge ? `<span class="wb-pair-badge${pair.knownSynergy ? " is-synergy" : pair.needsBridge ? " is-warn" : ""}">${escapeHtml(pair.badge)}</span>` : ""}
+      </div>
+    </div>`;
+  }
+
+  if (wb.method === "sit") {
+    const seedSelect = renderSeedSelector(wb);
+    const quads = wb.sitLenses
+      .map(
+        (lens) => `<button type="button" class="wb-sit-card${wb.sitLens === lens.id ? " is-on" : ""}" data-action="wb-sit-select" data-lens="${escapeHtml(lens.id)}">
+          <div class="wb-sit-top">
+            <span class="wb-sit-sym" aria-hidden="true">${escapeHtml(lens.symbol)}</span>
+            <strong>${escapeHtml(lens.label)}</strong>
+          </div>
+          <span class="wb-sit-short">${escapeHtml(lens.short)}</span>
+        </button>`
+      )
+      .join("");
+    return `<div class="wb-method-panel is-sit">
+      ${seedSelect}
+      <div class="wb-sit-grid" role="radiogroup" aria-label="SIT closed-world lenses">${quads}</div>
+    </div>`;
+  }
+
+  if (wb.method === "scamper") {
+    const seedSelect = renderSeedSelector(wb);
+    const chosenSet = new Set(wb.scamperLetters || []);
+    const recommendedSet = new Set(wb.challengerGuide?.scamper || []);
+    const rbBanner =
+      wb.remixSeed?.challengerAngle
+        ? (() => {
+            const meta = challengerMeta(wb.remixSeed.challengerAngle);
+            return `<div class="wb-challenger-banner">
+              <img src="${escapeHtml(meta.visual)}" alt="" />
+              <div>
+                <strong>🛑 Unblocking ${escapeHtml(meta.label)}</strong>
+                <p>${escapeHtml(wb.remixSeed.challengerQuestion || wb.challengerGuide?.note || "")}</p>
+              </div>
+            </div>`;
+          })()
+        : "";
+    const pills = wb.scamperLenses
+      .map((l) => {
+        const on = chosenSet.has(l.id);
+        const rec = recommendedSet.has(l.id);
+        return `<button type="button" class="wb-scamper-pill${on ? " is-on" : ""}${rec ? " is-rec" : ""}" data-action="wb-scamper-toggle" data-letter="${escapeHtml(l.id)}" title="${escapeHtml(l.label)}: ${escapeHtml(l.hint)}">
+          <span class="wb-scamper-letter">${escapeHtml(l.letter)}</span>
+          <span class="wb-scamper-name">${escapeHtml(l.label)}</span>
+        </button>`;
+      })
+      .join("");
+    return `<div class="wb-method-panel is-scamper">
+      ${rbBanner}
+      ${seedSelect}
+      <div class="wb-scamper-head">
+        <span>Toggle 1–3 remix lenses (focused bench):</span>
+        <button type="button" class="ontology-link-btn" data-action="wb-scamper-top3" title="Auto-select the 3 strongest SCAMPER lenses for this seed">🎯 Pick Top 3</button>
+      </div>
+      <div class="wb-scamper-bar">${pills}</div>
+    </div>`;
+  }
+
+  // Default: "seed"
+  const pickedUcs = useCases.filter((u) => selected.has(u.id));
+  const ucStrip = pickedUcs.length
+    ? `<div class="wb-seed-ucs">${pickedUcs
+        .map(
+          (u) =>
+            `<span class="wb-seed-uc-chip">${worldDot(u.world)} ${escapeHtml(u.title)} <button type="button" class="ontology-chip-x" data-action="toggle-use" data-id="${escapeHtml(u.id)}" aria-label="Unselect ${escapeHtml(u.title)}">×</button></span>`
+        )
+        .join("")}</div>`
+    : `<p class="wb-seed-hint">Tip: tap any unlocked Use Case in the left rail (or keep exploring with your focused tech) to anchor your Seed drafts.</p>`;
+
+  return `<div class="wb-method-panel is-seed">${ucStrip}</div>`;
+}
+
+function renderSeedSelector(wb) {
+  const choices = wb.seedChoices || [];
+  const activeKey = wb.remixSeed ? `${wb.remixSeed.kind}:${wb.remixSeed.id}` : "";
+  if (!choices.length) {
+    return `<div class="wb-seed-bar"><span class="wb-seed-bar-label">Seed:</span> <strong>${escapeHtml(wb.remixSeed?.title || "Active Tech")}</strong></div>`;
+  }
+  return `<div class="wb-seed-bar">
+    <label class="wb-seed-select-wrap">
+      <span class="wb-seed-bar-label">Remixing:</span>
+      <select class="ontology-trend-select wb-seed-select" data-action="wb-pick-seed">
+        ${choices
+          .map(
+            (c) =>
+              `<option value="${escapeHtml(c.key)}"${c.key === activeKey ? " selected" : ""}>${escapeHtml(c.label)}</option>`
+          )
+          .join("")}
+      </select>
+    </label>
+  </div>`;
+}
+
+function renderWorkbenchIdeaCard(idea) {
+  const remixMenu = `<details class="ontology-pop-menu wb-draft-remix" data-menu="draft-remix">
+    <summary class="ontology-link-btn">Remix ▾</summary>
+    <div class="ontology-pop-list">
+      <button type="button" data-action="wb-remix" data-source-kind="draft" data-source-id="${escapeHtml(idea.id)}" data-target-method="sit">📦 Into SIT</button>
+      <button type="button" data-action="wb-remix" data-source-kind="draft" data-source-id="${escapeHtml(idea.id)}" data-target-method="scamper">🔧 Into SCAMPER</button>
+    </div>
+  </details>`;
+
+  const artThumb = idea.artUrl
+    ? `<img class="wb-idea-art" src="${escapeHtml(idea.artUrl)}" alt="" loading="lazy" draggable="false" />`
+    : idea.artPending
+      ? `<div class="wb-idea-thumb-shimmer" title="Visualizing idea…"><span>🎨</span></div>`
+      : `<div class="wb-idea-thumb-fallback is-${escapeHtml(normalizeWorld(idea.world))}" aria-hidden="true">${worldIconSvg(idea.world)}</div>`;
+
+  const costLabel = idea.mintCostLabel || "0$";
+  const metaBadges = [
+    idea.hasSynergy ? `<span class="ontology-badge is-conv">⚡ ×1.25</span>` : "",
+    idea.earlyForecast ? `<span class="ontology-early-pill">~${idea.earlyForecast}</span>` : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  return `<article class="wb-idea-card${idea.artUrl ? " has-art" : ""}" data-wb-draft-id="${escapeHtml(idea.id)}" draggable="true">
+    <header class="wb-draft-head">
+      <span class="wb-lens-tag is-${escapeHtml(idea.method || "seed")}">${escapeHtml(idea.lensLabel || "Idea")}</span>
+      ${worldBadge(idea.world)}
+      ${metaBadges}
+      <button type="button" class="ontology-icon-btn is-remove" data-action="wb-delete-draft" data-draft-id="${escapeHtml(idea.id)}" aria-label="Remove idea ${escapeHtml(idea.title)}" title="Remove idea">×</button>
+    </header>
+    <div class="wb-idea-main">
+      <div class="wb-idea-thumb">${artThumb}</div>
+      <div class="wb-idea-body">
+        <strong class="wb-draft-title">${escapeHtml(idea.title)}</strong>
+        <p class="wb-draft-how">${escapeHtml(idea.howText)}</p>
+      </div>
+    </div>
+    <footer class="wb-draft-foot">
+      <div class="wb-draft-meta">
+        ${idea.eases ? `<span class="ontology-eases-tag">Aims at: ${escapeHtml(idea.eases)}</span>` : ""}
+        ${remixMenu}
+      </div>
+      <button type="button" class="wb-mint-idea-btn" data-action="wb-mint-idea" data-idea-id="${escapeHtml(idea.id)}" title="Use this idea to form a Pathway in Converge">
+        → Use in Pathway (${escapeHtml(costLabel)})
+      </button>
+    </footer>
+  </article>`;
+}
+
+function renderWorkbenchVisualPathway(pw, crises, wires, enforceWorlds) {
+  const ings = pw.ingredients || [];
+  const multi = ings.length > 1;
+  const convPairs = new Set(
+    (pw.convergences || []).flatMap((c) => {
+      if (c.aId && c.bId) return [`${c.aId}|${c.bId}`, `${c.bId}|${c.aId}`];
+      return [];
+    })
+  );
+
+  const tilesHtml = ings
+    .map((ing, idx) => {
+      const nextIng = ings[idx + 1];
+      const isConvLink = Boolean(nextIng && convPairs.has(`${ing.id}|${nextIng.id}`));
+      const artContent = ing.artUrl
+        ? `<img class="wb-inv-art" src="${escapeHtml(ing.artUrl)}" alt="${escapeHtml(ing.title)}" loading="lazy" draggable="false" />`
+        : ing.artPending
+          ? `<div class="wb-inv-shimmer" aria-label="Visualizing invention"><span>🎨 Painting…</span></div>`
+          : `<div class="wb-inv-fallback is-${escapeHtml(normalizeWorld(ing.world))}">
+              ${worldIconSvg(ing.world)}
+              <span>${escapeHtml(ing.techId || "Human")}</span>
+            </div>`;
+
+      const tile = `<div class="wb-inv-tile${multi ? " is-part" : " is-solo"}">
+        <div class="wb-inv-art-box">
+          ${artContent}
+          <span class="wb-inv-world-overlay">${worldDot(ing.world)}</span>
+          ${multi ? `<button type="button" class="wb-inv-unfuse" data-action="unfuse" data-pathway-id="${escapeHtml(pw.id)}" data-ingredient-id="${escapeHtml(ing.id)}" title="Split back into its own invention" aria-label="Unfuse ${escapeHtml(ing.title)}">×</button>` : ""}
+        </div>
+        <div class="wb-inv-caption">
+          <strong class="wb-inv-title" title="${escapeHtml(ing.title)}">${escapeHtml(ing.title)}</strong>
+        </div>
+      </div>`;
+
+      const connector = nextIng
+        ? `<div class="wb-chain-link${isConvLink ? " is-conv" : ""}" title="${isConvLink ? "Convergence synergy ×1.25" : "Assembled into Pathway"}">${isConvLink ? "⚡" : "+"}</div>`
+        : "";
+      return tile + connector;
+    })
+    .join("");
+
+  const pct =
+    pw.timingPct != null
+      ? Math.max(5, Math.min(99, Math.round(pw.timingPct)))
+      : pw.timingLevel === "green"
+        ? 82
+        : pw.timingLevel === "yellow"
+          ? 55
+          : 22;
+  const timingBar = `<div class="ontology-timing-bar is-${escapeHtml(pw.timingLevel || "yellow")}${pw.timingPending ? " is-pending" : ""}" title="${escapeHtml(pw.timingReason || "Year-honesty check")}">
+    <div class="ontology-timing-fill" style="width:${pct}%"></div>
+    <span class="ontology-timing-label">${
+      pw.timingPending
+        ? "⏳ Checking year honesty…"
+        : pw.timingReason
+          ? escapeHtml(pw.timingReason)
+          : pw.timingLevel === "green"
+            ? `Honest for this year (${pct}%)`
+            : `Stretch claim (${pct}%)`
+    }</span>
+  </div>`;
+
+  const convBadges = (pw.convergences || [])
+    .map(
+      (row) =>
+        `<span class="ontology-badge is-conv" title="${escapeHtml(row.reason || "")}">⚡ ${escapeHtml(row.title || "Convergence")} ×1.25</span>`
+    )
+    .join("");
+
+  const bridgeBlock =
+    pw.bridge && enforceWorlds
+      ? `<div class="wb-visual-bridge-warn">
+          <span class="ontology-badge is-bridge">⚠️ Missing Bridge</span>
+          <button type="button" class="ontology-mini-btn wb-add-bridge-btn" data-action="wb-add-human-bridge" data-pathway-id="${escapeHtml(pw.id)}">+ Human Bridge (0$)</button>
+        </div>`
+      : "";
+
+  const assembleMenu = (pw.fuseTargets || []).length
+    ? `<details class="ontology-pop-menu" data-menu="fuse">
+        <summary class="ontology-pill-btn">⚗️ Assemble ▾</summary>
+        <div class="ontology-pop-list">
+          ${pw.fuseTargets
+            .map(
+              (other) =>
+                `<button type="button" data-action="fuse-pair" data-pathway-id="${escapeHtml(pw.id)}" data-source-id="${escapeHtml(other.id)}">+ ${escapeHtml(other.title)}</button>`
+            )
+            .join("")}
+        </div>
+      </details>`
+    : "";
+
+  const connected = wires.filter((w) => w.pathwayId === pw.id);
+  const plugMenu = crises.length
+    ? `<details class="ontology-pop-menu" data-menu="plug">
+        <summary class="ontology-pill-btn is-plug">🔌 Plug (${connected.length}/${crises.length}) ▾</summary>
+        <div class="ontology-pop-list">
+          ${crises
+            .map((c) => {
+              const wired = wires.find((w) => w.pathwayId === pw.id && w.crisisId === c.id);
+              return wired
+                ? `<button type="button" class="is-wired" data-action="unplug" data-wire-id="${escapeHtml(wired.id)}">✓ ${escapeHtml(c.name || c.role)} (Unplug)</button>`
+                : `<button type="button" data-action="plug-pair" data-pathway-id="${escapeHtml(pw.id)}" data-crisis-id="${escapeHtml(c.id)}">→ ${escapeHtml(c.name || c.role)}</button>`;
+            })
+            .join("")}
+        </div>
+      </details>`
+    : "";
+
+  const remixMenu = `<details class="ontology-pop-menu" data-menu="remix">
+      <summary class="ontology-pill-btn is-remix">🔀 Remix ▾</summary>
+      <div class="ontology-pop-list">
+        <button type="button" data-action="wb-remix" data-source-kind="pathway" data-source-id="${escapeHtml(pw.id)}" data-target-method="sit">📦 Into SIT</button>
+        <button type="button" data-action="wb-remix" data-source-kind="pathway" data-source-id="${escapeHtml(pw.id)}" data-target-method="scamper">🔧 Into SCAMPER</button>
+      </div>
+    </details>`;
+
+  return `<article class="wb-visual-pathway${multi ? " is-assembled" : ""}" data-pathway-id="${escapeHtml(pw.id)}" data-drop="wb-fuse-pathway" draggable="true">
+    <header class="wb-visual-pw-head">
+      ${lampDot(pw.timingLevel, pw.timingPending || pw.scoring)}
+      <span class="wb-visual-pw-kind">${multi ? `Assembled Pathway · ${ings.length} parts` : "Pathway · 1 part"}</span>
+      <button type="button" class="ontology-icon-btn is-remove" data-action="remove-pathway" data-pathway-id="${escapeHtml(pw.id)}" aria-label="Remove ${escapeHtml(pw.title)}" title="Remove invention">×</button>
+    </header>
+    <div class="wb-visual-chain">${tilesHtml}</div>
+    ${timingBar}
+    ${convBadges ? `<div class="ontology-badges">${convBadges}</div>` : ""}
+    ${bridgeBlock}
+    <footer class="wb-visual-pw-foot">
+      ${assembleMenu}
+      ${remixMenu}
+      ${plugMenu}
+    </footer>
+  </article>`;
+}
+
+function renderWorkbenchStudio(view, wb, tracks, useCases, pathways, crises, wires, selected) {
+  const scarcityChipsHtml = (wb.scarcityChips || [])
+    .map((chip) => {
+      const active = wb.scarcityFocus === chip.label;
+      return `<button type="button" class="wb-scarcity-chip${active ? " is-on" : ""}" data-action="wb-pick-scarcity" data-label="${escapeHtml(chip.label)}" title="${escapeHtml(chip.detail)}">
+        ${chip.roleLabel ? `<span class="wb-scarcity-role">${escapeHtml(chip.roleLabel)}</span>` : ""}
+        <span>${escapeHtml(chip.label)}</span>
+      </button>`;
+    })
+    .join("");
+
+  const tabsHtml = (wb.methods || [])
+    .map(
+      (m) => `<button type="button" class="wb-method-tab${wb.method === m.id ? " is-on" : ""}" data-action="wb-set-method" data-method="${escapeHtml(m.id)}" role="tab" aria-selected="${wb.method === m.id ? "true" : "false"}">
+        <span>${m.icon} ${escapeHtml(m.label)}</span>
+      </button>`
+    )
+    .join("");
+
+  const methodControlsHtml = renderWorkbenchMethodControls(wb, useCases, selected);
+
+  // AI deal button(s) tailored to active method
+  let aiDealBtns = "";
+  if (wb.method === "convergence") {
+    const ready = wb.convergence?.pairAnalysis?.ready;
+    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${wb.busy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${!ready || wb.busy ? "disabled" : ""}>
+      ${wb.busy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : "✨ Deal Convergence Ideas (AI)"}
+    </button>`;
+  } else if (wb.method === "sit") {
+    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${wb.busy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${wb.busy ? "disabled" : ""}>
+      ${wb.busy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : "✨ Deal 1 SIT Idea (AI)"}
+    </button>
+    <button type="button" class="btn btn-ghost btn-sm" data-action="wb-deal-ai" data-scope="all" ${wb.busy ? "disabled" : ""} title="Generate one idea for each of the 4 closed-world SIT lenses">✨ All 4</button>`;
+  } else if (wb.method === "scamper") {
+    const n = (wb.scamperLetters || []).length || 1;
+    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${wb.busy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${wb.busy ? "disabled" : ""}>
+      ${wb.busy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : `✨ Deal ${n} SCAMPER ${n === 1 ? "Idea" : "Ideas"} (AI)`}
+    </button>`;
+  } else {
+    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${wb.busy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${wb.busy ? "disabled" : ""}>
+      ${wb.busy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : "✨ Deal 3 Ideas (AI)"}
+    </button>`;
+  }
+
+  const ideasList = wb.ideas || wb.drafts || [];
+  const ideaCount = ideasList.length;
+  const ideasHtml = ideaCount
+    ? ideasList.map(renderWorkbenchIdeaCard).join("")
+    : `<div class="wb-empty-bench">
+        <p><strong>0$ Ideas</strong> — Explore freely here. Nothing costs Budget until you click <strong>→ Use in Pathway</strong>.</p>
+        <p>Write your own idea above or click <strong>✨ Deal AI</strong> to generate illustrated idea cards.</p>
+      </div>`;
+
+  // CONVERGE column: Graphical Pathway Assembly Canvas
+  const enforce = view?.enforceWorlds !== false;
+  const visualPathwaysHtml = pathways.length
+    ? pathways.map((pw) => renderWorkbenchVisualPathway(pw, crises, wires, enforce)).join("")
+    : `<div class="wb-assemble-empty">
+        <div class="wb-visual-flow" aria-hidden="true">
+          <span class="wb-flow-node is-art">🖼️ Idea</span>
+          <span class="wb-flow-arrow">+</span>
+          <span class="wb-flow-node is-art">🖼️ Idea</span>
+          <span class="wb-flow-arrow">→</span>
+          <span class="wb-flow-node">⚡ Pathway</span>
+          <span class="wb-flow-arrow">→</span>
+          <span class="wb-flow-node is-plug">🔌 Crisis</span>
+        </div>
+        <p>Bring illustrated ideas over from <strong>Ideas</strong> on the left (click <strong>→ Use in Pathway</strong> or drag an Idea card here).</p>
+        <p>Drag cards together here to assemble a Pathway, then drag it onto a Crisis in Lane 4.</p>
+      </div>`;
+
+  return `<section id="ontology-lane-pathway" class="ontology-lane ontology-workbench" data-lane="pathway" data-drop="pathway" aria-label="Innovation Workbench">
+    <header class="wb-head">
+      <div class="wb-head-left">
+        <h2><span class="ontology-lane-num">3</span> Innovation Workbench</h2>
+        <span class="wb-head-tag">Double Diamond · Private Studio</span>
+      </div>
+      <div class="wb-head-right">
+        <button type="button" class="ontology-mini-btn" data-action="human-step" title="Add an illustrated 0$ human workflow step to Converge">+ Human step (0$)</button>
+        <button type="button" class="ontology-mini-btn is-accent" id="btn-close-workbench" data-action="toggle-workbench" title="Collapse back to 4-lane circuit view">⤡ Collapse</button>
+      </div>
+    </header>
+
+    <div class="wb-diamond1" aria-label="Diamond 1: Scarcity focus">
+      <span class="wb-d1-kicker" title="Diamond 1: frame what is scarce before diverging (optional)">◆ What is scarce here?</span>
+      <div class="wb-scarcity-chips">${scarcityChipsHtml}</div>
+      <div class="wb-scarcity-custom">
+        <input type="text" class="wb-scarcity-input" data-role="wb-scarcity-input" maxlength="140" value="${escapeHtml(wb.scarcityFocus || "")}" placeholder="Or type your own scarcity…" aria-label="Custom scarcity focus" />
+        ${wb.scarcityFocus ? `<button type="button" class="ontology-icon-btn" data-action="wb-clear-scarcity" title="Clear scarcity focus">×</button>` : ""}
+      </div>
+    </div>
+
+    <div class="wb-diamond2">
+      <div class="wb-col wb-diverge">
+        <div class="wb-col-head">
+          <span class="wb-col-title">◇ DIVERGE</span>
+          <span class="wb-cost-pill is-free">0$ · Explore &amp; Remix</span>
+        </div>
+        <div class="wb-method-tabs" role="tablist" aria-label="Innovation methods">${tabsHtml}</div>
+        ${methodControlsHtml}
+        <div class="wb-prompt-box">
+          <p class="wb-prompt-q">${escapeHtml(wb.prompt?.question || "")}</p>
+          ${wb.prompt?.hint ? `<p class="wb-prompt-hint">${escapeHtml(wb.prompt.hint)}</p>` : ""}
+          <input type="text" class="wb-draft-title-input" data-role="wb-draft-title" maxlength="72" value="${escapeHtml(wb.draftTitle || "")}" placeholder="Short idea title (optional)" />
+          <textarea class="ontology-textarea wb-draft-textarea" data-role="wb-draft-text" rows="2" maxlength="1200" placeholder="Write your own idea in 1–2 concrete sentences (0$, 0 AP)…">${escapeHtml(wb.draftText || "")}</textarea>
+          <div class="wb-prompt-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-action="wb-add-player-draft">+ Save Idea (0$)</button>
+            ${view?.voiceSupported ? `<button type="button" class="btn btn-ghost btn-sm${view?.voiceActive ? " is-voice-live" : ""}" data-action="toggle-voice" title="Talk through this lens with the AI co-inventor">🎙️</button>` : ""}
+            <span class="wb-actions-sep"></span>
+            ${aiDealBtns}
+          </div>
+        </div>
+        ${wb.busy ? `<div class="ontology-busy-banner" role="status"><span class="ontology-spinner" aria-hidden="true"></span> Generating illustrated idea cards…</div>` : ""}
+        <div class="wb-bench-head">
+          <span>Ideas (${ideaCount})</span>
+          ${ideaCount > 0 ? `<button type="button" class="ontology-link-btn is-dismiss" data-action="wb-clear-drafts">Clear ideas</button>` : ""}
+        </div>
+        <div class="wb-drafts-bench">${ideasHtml}</div>
+      </div>
+
+      <div class="wb-col wb-converge">
+        <div class="wb-col-head">
+          <span class="wb-col-title">◆ CONVERGE</span>
+          <span class="wb-cost-pill is-commit">$ · Assemble Pathways</span>
+        </div>
+        <div class="wb-assemble-canvas${pathways.length ? " has-items" : ""}" data-drop="wb-assemble-canvas">
+          <div class="wb-bench-head">
+            <span>Pathway Assembly (${pathways.length})</span>
+            <span class="wb-active-tip">Drag together to assemble · drag to Lane 4</span>
+          </div>
+          <div class="wb-visual-list">${visualPathwaysHtml}</div>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
 /**
  * Measure live port positions inside `[data-lanes-stage]` and draw crisp,
  * scroll-accurate cubic Bezier wires across all 3 lane gaps (`1→2`, `2→3`, `3→4`),
@@ -1495,6 +2187,11 @@ export function syncOntologyWireGeometry(root, opts = {}) {
   const baseSvg = stage?.querySelector?.("svg.ontology-wires:not(.is-active-layer)");
   const activeSvg = stage?.querySelector?.("svg.ontology-wires.is-active-layer");
   if (!stage || !baseSvg || typeof stage.getBoundingClientRect !== "function") return;
+  if (stage.classList?.contains("is-workbench-open")) {
+    baseSvg.innerHTML = "";
+    if (activeSvg) activeSvg.innerHTML = "";
+    return;
+  }
 
   const stageRect = stage.getBoundingClientRect();
   const w = Math.max(stage.scrollWidth || 0, Math.round(stageRect.width));
@@ -1520,7 +2217,7 @@ export function syncOntologyWireGeometry(root, opts = {}) {
 
   const bezier = (p1, p2) => {
     const span = Math.abs(p2.x - p1.x);
-    const dx = span >= 8 ? Math.max(12, Math.min(span * 0.52, 64)) : 16;
+    const dx = span >= 8 ? Math.max(18, Math.min(span * 0.42, 140)) : 16;
     return `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${(p1.x + dx).toFixed(1)} ${p1.y.toFixed(1)}, ${(p2.x - dx).toFixed(1)} ${p2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
   };
 
@@ -1556,14 +2253,16 @@ export function syncOntologyWireGeometry(root, opts = {}) {
     );
   }
 
-  // Tier 2: Lane 2 Use Case -> Lane 3 Pathway
+  // Tier 2: Lane 2 Use Case -> Lane 3 Pathway, plus direct Lane 1 Tech -> Lane 3 Pathway
+  // (when an ingredient was invented directly from a Tech or Convergence Canvas without a Lane 2 Use Case).
   for (const pwPort of stage.querySelectorAll("[data-port-pw-in]")) {
     const pwId = pwPort.getAttribute("data-port-pw-in");
-    const csv = pwPort.getAttribute("data-from-ucs") || "";
-    if (!csv || !pwId) continue;
+    if (!pwId) continue;
     const p2 = centerOf(pwPort);
     if (!p2) continue;
-    for (const ucId of csv.split(",").filter(Boolean)) {
+
+    const ucCsv = pwPort.getAttribute("data-from-ucs") || "";
+    for (const ucId of ucCsv.split(",").filter(Boolean)) {
       const ucOut = stage.querySelector(`[data-port-uc-out="${CSS?.escape ? CSS.escape(ucId) : ucId}"]`);
       const p1 = centerOf(ucOut);
       if (!p1) continue;
@@ -1576,6 +2275,22 @@ export function syncOntologyWireGeometry(root, opts = {}) {
         `<path class="ontology-wire-path is-tier-2${hlCls}" data-wire-state="${tone === "early" ? "early" : "solid"}" d="${bezier(p1, p2)}"${dash} />`,
         isHit
       );
+    }
+
+    const techCsv = pwPort.getAttribute("data-from-techs") || "";
+    for (const techId of techCsv.split(",").filter(Boolean)) {
+      const techOut = stage.querySelector(
+        `[data-port-tech="${CSS?.escape ? CSS.escape(techId) : techId}"]`
+      );
+      const p1 = centerOf(techOut);
+      if (!p1) continue;
+      const isHit = Boolean(highlight && highlight.tier2Edges?.has(`tech:${techId}->${pwId}`));
+      const hlCls = highlight ? (isHit ? " is-highlighted" : " is-dimmed") : "";
+      const markup = `<path class="ontology-wire-path is-tier-2 is-direct-tech${hlCls}" data-wire-state="solid" data-from-tech="${escapeHtml(techId)}" data-to-pw="${escapeHtml(pwId)}" d="${bezier(p1, p2)}" />`;
+      // When no chain highlight is active, draw direct Tech -> Pathway wires in the foreground
+      // SVG layer so they stay visible across empty Lane 2 rather than hiding behind Lane 2's card surface.
+      if ((!highlight || isHit) && activeSvg) activePaths.push(markup);
+      else basePaths.push(markup);
     }
   }
 

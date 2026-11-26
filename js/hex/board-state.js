@@ -1326,6 +1326,77 @@ export function stackPlacementPlan(tile, board, selectedTechIds) {
 }
 
 /**
+ * Afford several new tray tiles as one delta.
+ * Later tiles see earlier accepts, so one tech is not charged or slotted twice,
+ * and two techs that each fit alone can still fail together.
+ * @param {object[]} tiles
+ * @param {{
+ *   selectedTechIds?: string[],
+ *   board?: object|null,
+ *   stackCap?: number,
+ *   apEnabled?: boolean,
+ *   budgetWillEnabled?: boolean,
+ *   spendableAp?: number,
+ *   spendableBudget?: number,
+ *   spendableWill?: number,
+ *   costFor?: (techId: string) => { budget?: number, will?: number }|null,
+ * }} ctx
+ * @returns {{ ok: true } | { ok: false, error?: string, techId?: string }}
+ */
+export function stackBatchPlacementGate(tiles, ctx = {}) {
+  const selected = new Set(ctx.selectedTechIds || []);
+  const econ = placedTechEconomy(ctx.board);
+  const onField = new Set(econ.all);
+  const paid = new Set(econ.paid);
+  const collectorOnly = new Set(econ.collectorOnly);
+  const charged = new Set();
+  let ap = Number(ctx.spendableAp) || 0;
+  let budget = Number(ctx.spendableBudget) || 0;
+  let will = Number(ctx.spendableWill) || 0;
+  const cap = Number(ctx.stackCap) > 0 ? Number(ctx.stackCap) : 6;
+  const apOn = Boolean(ctx.apEnabled);
+  const bwOn = Boolean(ctx.budgetWillEnabled);
+
+  for (const tile of tiles || []) {
+    if (!tile?.techId || (tile.q != null && tile.r != null)) continue;
+    const id = tile.techId;
+    const collector = isCollectorTile(tile);
+    const alreadySelected = selected.has(id);
+    const alreadyOn = onField.has(id);
+    const newSlot = !alreadyOn && !alreadySelected;
+    if (newSlot && selected.size >= cap) {
+      return { ok: false, error: "stack full", techId: id };
+    }
+    const alreadyPaid =
+      paid.has(id) || charged.has(id) || (alreadySelected && !collectorOnly.has(id));
+    const charge = !collector && !alreadyPaid;
+    if (charge) {
+      const cost = ctx.costFor?.(id);
+      if (!cost) return { ok: false, techId: id };
+      if (apOn && ap < 1) return { ok: false, error: "no_ap", techId: id };
+      if (bwOn) {
+        const needBudget = Number(cost.budget) || 0;
+        const needWill = Number(cost.will) || 0;
+        if (budget < needBudget) return { ok: false, error: "no_budget", techId: id };
+        if (will < needWill) return { ok: false, error: "no_will", techId: id };
+        budget -= needBudget;
+        will -= needWill;
+      }
+      if (apOn) ap -= 1;
+      charged.add(id);
+      paid.add(id);
+      collectorOnly.delete(id);
+    }
+    if (newSlot) {
+      selected.add(id);
+      onField.add(id);
+      if (collector) collectorOnly.add(id);
+    }
+  }
+  return { ok: true };
+}
+
+/**
  * Tech ids on invention tiles that sit in a yellow/green given's pathway.
  * Tray tiles and isolated (undocked) inventions do not count.
  * Call on a held quest: those pathways are the invents that passed the
@@ -1550,6 +1621,10 @@ export function isInlineArtUrl(url) {
  */
 export function boardForWire(board) {
   const next = cloneBoard(board);
+  // Lane 3 Innovation Workbench drafts and lens states are strictly solo/private;
+  // only committed pathways and wires sync across seats.
+  if ("workbench" in next) delete next.workbench;
+  if ("workbenchDrafts" in next) delete next.workbenchDrafts;
   for (const t of Object.values(next.tiles || {})) {
     if (t && isInlineArtUrl(t.artUrl)) t.artUrl = null;
   }

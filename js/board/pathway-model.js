@@ -200,6 +200,70 @@ export function acceptedArgumentsForPathway(board, pathway) {
     .map((a) => a.claim);
 }
 
+/**
+ * Collect settled ingredient timing judgments and settled pathway crisis-score
+ * reasons for `fact-check-argument`, putting `focusPathwayId` first so the
+ * pathway the player is arguing for is never truncated out.
+ *
+ * @param {object|null|undefined} board
+ * @param {string|null} [focusPathwayId]
+ * @returns {{ timings: object[], pathways: object[] }}
+ */
+export function settledPathwayAssessments(board, focusPathwayId = null) {
+  if (!isPathwayBoard(board)) return { timings: [], pathways: [] };
+  const allPathways = Object.values(board.pathways || {});
+  allPathways.sort((a, b) => {
+    if (focusPathwayId) {
+      if (a.id === focusPathwayId && b.id !== focusPathwayId) return -1;
+      if (b.id === focusPathwayId && a.id !== focusPathwayId) return 1;
+    }
+    return (Number(a.createdOrder) || 0) - (Number(b.createdOrder) || 0);
+  });
+
+  const timings = [];
+  const pathways = [];
+  const seenFp = new Set();
+
+  for (const pw of allPathways) {
+    const howFallback = composePathwayHow(pw);
+    for (const ing of pw.ingredients || []) {
+      if (ing.timingPending) continue;
+      const level = ing.timingLevel;
+      if (level !== "red" && level !== "yellow" && level !== "green") continue;
+      timings.push({
+        tileId: ing.id,
+        techId: ing.techId || null,
+        howText: String(ing.howText || howFallback || "").slice(0, 400),
+        level,
+        reason: String(ing.timingReason || "").slice(0, 400),
+      });
+    }
+
+    const fp = pathwayContentFingerprint(pw, board);
+    if (seenFp.has(fp)) continue;
+    seenFp.add(fp);
+    const impact = board.pathwayImpacts?.[fp];
+    if (!impact) continue;
+    const crisisReasons = {};
+    for (const [role, reason] of Object.entries(impact.crisisReasons || {})) {
+      if (isImpactRolePending(impact, role)) continue;
+      const text = String(reason || "").trim();
+      if (text) crisisReasons[role] = text.slice(0, 280);
+    }
+    if (!Object.keys(crisisReasons).length) continue;
+    pathways.push({
+      fingerprint: fp,
+      inventionIds: (pw.ingredients || []).map((ing) => ing.id),
+      crisisReasons,
+    });
+  }
+
+  return {
+    timings: timings.slice(0, 8),
+    pathways: pathways.slice(0, 4),
+  };
+}
+
 export function pathwayContentFingerprint(pathway, board = null) {
   const parts = (pathway?.ingredients || [])
     .map((ing) => [
@@ -383,6 +447,94 @@ export function createPathway(board, partial = {}) {
     argumentIds: [],
   };
   return { board: bump(next), pathwayId: id, ingredientId: ingredient.id };
+}
+
+function ensureTrackInPlace(next, techId) {
+  const id = String(techId || "");
+  if (!id || next.techTracks[id]) return;
+  const maxOrder = Object.values(next.techTracks).reduce(
+    (m, t) => Math.max(m, Number(t?.addedOrder) || 0),
+    0
+  );
+  next.techTracks[id] = {
+    techId: id,
+    addedOrder: maxOrder + 1,
+    chartOpen: false,
+    activeMilestoneIds: [],
+    collectorCardIds: [],
+  };
+}
+
+/**
+ * Atomically mint 1 or more staged Workbench ingredient partials into a single
+ * Pathway (single-ingredient or pre-fused multi-ingredient). Auto-adds any newly
+ * introduced emTech tracks to Lane 1 and computes Convergence synergies.
+ *
+ * @param {object} board
+ * @param {object[]} partials
+ * @param {{ id?: string, customHow?: string }} [opts]
+ */
+export function mintStagedDraftsToPathway(board, partials = [], opts = {}) {
+  const list = Array.isArray(partials) ? partials.filter(Boolean) : [];
+  if (!list.length) {
+    return { board: clone(board), ok: false, pathwayId: null, ingredientIds: [] };
+  }
+  const next = clone(board);
+  const id = opts.id || nextId(next, "pw");
+  const maxOrder = Object.values(next.pathways).reduce(
+    (m, p) => Math.max(m, Number(p?.createdOrder) || 0),
+    0
+  );
+  const ingredients = list.map((p) => {
+    const ing = ingredientFrom(next, p, next.useCases);
+    if (ing.techId) ensureTrackInPlace(next, ing.techId);
+    return ing;
+  });
+  next.pathways[id] = {
+    id,
+    createdOrder: maxOrder + 1,
+    ingredients,
+    customHow: String(opts.customHow || "").slice(0, 4000),
+    convergences: convergenceRows(ingredients),
+    rdBoost: null,
+    argumentIds: [],
+  };
+  return {
+    board: bump(next),
+    ok: true,
+    pathwayId: id,
+    ingredientIds: ingredients.map((ing) => ing.id),
+  };
+}
+
+/**
+ * Fuse 1 or more staged Workbench ingredient partials directly into an existing Pathway.
+ * Auto-adds any newly introduced emTech tracks to Lane 1 and recomputes Convergences.
+ *
+ * @param {object} board
+ * @param {string} pathwayId
+ * @param {object[]} partials
+ */
+export function fuseDraftIntoPathway(board, pathwayId, partials = []) {
+  const list = Array.isArray(partials) ? partials.filter(Boolean) : [];
+  const next = clone(board);
+  const target = next.pathways?.[pathwayId];
+  if (!target || !list.length) {
+    return { board: next, ok: false, pathwayId: null, ingredientIds: [] };
+  }
+  const added = list.map((p) => {
+    const ing = ingredientFrom(next, p, next.useCases);
+    if (ing.techId) ensureTrackInPlace(next, ing.techId);
+    return ing;
+  });
+  target.ingredients = [...target.ingredients, ...added];
+  target.convergences = convergenceRows(target.ingredients);
+  return {
+    board: bump(next),
+    ok: true,
+    pathwayId,
+    ingredientIds: added.map((ing) => ing.id),
+  };
 }
 
 export function removePathway(board, pathwayId) {
@@ -687,6 +839,14 @@ export function setIngredientArt(
   return bump(next);
 }
 
+export function isImpactRolePending(impact, role) {
+  if (!impact || !impact.pending) return false;
+  if (impact.pendingRoles && typeof impact.pendingRoles === "object") {
+    return Boolean(impact.pendingRoles[role]);
+  }
+  return true;
+}
+
 export function plugWire(board, pathwayId, crisisId) {
   const next = clone(board);
   if (!next.pathways[pathwayId] || !next.crises[crisisId]) return { board: next, ok: false };
@@ -696,12 +856,35 @@ export function plugWire(board, pathwayId, crisisId) {
   if (existing) return { board: next, ok: true, wireId: existing.id, already: true };
   const id = nextId(next, "wire");
   next.wires[id] = { id, pathwayId, crisisId };
+  const role = next.crises[crisisId]?.role || "local";
   const impactKey = pathwayContentFingerprint(next.pathways[pathwayId], next);
-  next.pathwayImpacts[impactKey] = {
-    ...(next.pathwayImpacts[impactKey] || {}),
-    pathwayId,
-    pending: true,
-  };
+  const prev = next.pathwayImpacts[impactKey];
+  const alreadyScoredRole = Boolean(
+    prev &&
+      !prev.earlyBlocked &&
+      !isImpactRolePending(prev, role) &&
+      prev.crisisDelta &&
+      Object.prototype.hasOwnProperty.call(prev.crisisDelta, role)
+  );
+  if (!alreadyScoredRole) {
+    const pendingRoles =
+      prev?.pendingRoles && typeof prev.pendingRoles === "object"
+        ? { ...prev.pendingRoles }
+        : prev?.pending
+          ? Object.fromEntries(
+              Object.values(next.wires || {})
+                .filter((w) => w.pathwayId === pathwayId)
+                .map((w) => [next.crises?.[w.crisisId]?.role || "local", true])
+            )
+          : {};
+    pendingRoles[role] = true;
+    next.pathwayImpacts[impactKey] = {
+      ...(prev || {}),
+      pathwayId,
+      pendingRoles,
+      pending: true,
+    };
+  }
   return { board: bump(next), ok: true, wireId: id, already: false };
 }
 
@@ -709,9 +892,28 @@ export function unplugWire(board, wireId) {
   const next = clone(board);
   const wire = next.wires[wireId];
   if (!wire) return next;
+  const removedRole = next.crises?.[wire.crisisId]?.role || "local";
   delete next.wires[wireId];
   for (const [id, ch] of Object.entries(next.challengers)) {
     if (ch.wireId === wireId) delete next.challengers[id];
+  }
+  const pathway = next.pathways?.[wire.pathwayId];
+  if (pathway) {
+    const fp = pathwayContentFingerprint(pathway, next);
+    const impact = next.pathwayImpacts?.[fp];
+    if (impact?.pendingRoles && impact.pendingRoles[removedRole]) {
+      const stillNeedsRole = Object.values(next.wires || {}).some(
+        (w) =>
+          w.pathwayId === wire.pathwayId &&
+          (next.crises?.[w.crisisId]?.role || "local") === removedRole
+      );
+      if (!stillNeedsRole) {
+        const nextPendingRoles = { ...impact.pendingRoles };
+        delete nextPendingRoles[removedRole];
+        impact.pendingRoles = nextPendingRoles;
+        impact.pending = Object.keys(nextPendingRoles).length > 0;
+      }
+    }
   }
   return refreshCrisisLamps(bump(next)).board;
 }
@@ -917,7 +1119,7 @@ export function refreshCrisisLamps(board, winMax = {}) {
       const pathway = next.pathways[wire.pathwayId];
       const fp = pathwayContentFingerprint(pathway, next);
       const impact = next.pathwayImpacts?.[fp];
-      if (!impact || impact.pending) continue;
+      if (!impact || isImpactRolePending(impact, role)) continue;
       const delta = Number(impact.crisisDelta?.[role]);
       const n = Number.isFinite(delta) ? delta : 0;
       sum += n;
@@ -949,7 +1151,7 @@ export function boardHolds(board, questYear) {
       const pathway = board.pathways[wire.pathwayId];
       const fp = pathwayContentFingerprint(pathway, board);
       const impact = board.pathwayImpacts?.[fp];
-      if (!impact || impact.pending) return false;
+      if (!impact || isImpactRolePending(impact, crisis.role || "local")) return false;
     }
   }
   for (const pathwayId of wiredPathwayIds) {
@@ -978,10 +1180,14 @@ export function applyScoreToCrisis(board, crisisId, score, winMax = {}) {
     const pathway = next.pathways[wire.pathwayId];
     const fp = pathwayContentFingerprint(pathway, next);
     const prev = next.pathwayImpacts?.[fp] || {};
+    const nextPendingRoles =
+      prev.pendingRoles && typeof prev.pendingRoles === "object" ? { ...prev.pendingRoles } : {};
+    delete nextPendingRoles[role];
     next.pathwayImpacts[fp] = {
       ...prev,
       pathwayId: pathway.id,
-      pending: false,
+      pendingRoles: nextPendingRoles,
+      pending: Object.keys(nextPendingRoles).length > 0,
       crisisDelta: { ...(prev.crisisDelta || {}), [role]: delta },
       crisisReasons: { ...(prev.crisisReasons || {}), [role]: reason },
     };

@@ -780,4 +780,572 @@ describe("pathway workshop", () => {
     assert.equal(ease.length, 0);
     assert.equal(Object.keys(h.board.wires).length, 0);
   });
+
+  it("supports graphical Innovation Workbench: Ideas (0$), mint one-by-one with images, assemble Pathways visually, and remix roadblocks", async () => {
+    const bills = [];
+    const lensCalls = [];
+    const paintedPrompts = [];
+    const h = harness({
+      api: {
+        reconcileStackFromBoard: (ids) => {
+          bills.push([...ids]);
+          return { ok: true };
+        },
+        fetchIdeaImage: async (opts) => {
+          paintedPrompts.push(opts.ideaId);
+          return `/assets/generated/${opts.ideaId}.jpg`;
+        },
+        coInvent: async (mode, _msg, extra) => {
+          if (mode === "workbench-lens") {
+            lensCalls.push({ method: extra.method, lenses: extra.lenses, techIds: extra.techIds });
+            if (extra.method === "sit") {
+              return {
+                ideas: (extra.lenses || ["subtraction"]).map((lens) => ({
+                  id: `ai-sit-${lens}`,
+                  lens,
+                  title: `SIT ${lens} loop`,
+                  howText: `Operators apply ${lens} to run brine recovery locally in Paddy Step Wells.`,
+                  techId: extra.techIds?.[0] || "drones",
+                  world: "atoms",
+                  eases: "Clean Water",
+                })),
+              };
+            }
+            return {
+              ideas: [
+                {
+                  id: "ai-conv-1",
+                  lens: "convergence",
+                  title: "Drone + Battery Loop",
+                  howText: "Battery swap racks keep mapped drones flying all shift over Paddy Step Wells.",
+                  techId: extra.techIds?.[0] || "drones",
+                  secondaryTechId: extra.techIds?.[1] || "battery",
+                  world: "atoms",
+                  eases: "Clean Water",
+                },
+              ],
+            };
+          }
+          if (mode === "assess-feasibility" || mode === "assess-plain") {
+            return { timing: { level: "green", reason: "Honest today." } };
+          }
+          return {};
+        },
+      },
+    });
+    h.ws.seedFromMission({
+      id: "wb-test-quest",
+      place: "Paddy Step Wells",
+      pressure: { "Clean Water": 4 },
+      spotlight: { techId: "drones" },
+    });
+
+    // Collapsed view renders Workbench open button
+    assert.match(h.root.innerHTML, /btn-open-workbench/);
+    assert.match(h.root.innerHTML, /Workbench/);
+
+    // Expand Workbench into Docked Circuit Frame
+    h.ws.openWorkbench();
+    assert.match(h.root.innerHTML, /is-workbench-open/);
+    assert.match(h.root.innerHTML, /What is scarce here/);
+    assert.match(h.root.innerHTML, /Ideas \(0\)/);
+    assert.match(h.root.innerHTML, /\+ Save Idea \(0\$\)/);
+    assert.doesNotMatch(h.root.innerHTML, /Save &amp; Stage/);
+    assert.doesNotMatch(h.root.innerHTML, /Draft Bench/);
+    assert.doesNotMatch(h.root.innerHTML, /Mint Pathway/);
+
+    // Player saves a 0$ Idea in Diverge -> zero Budget billing, zero board mutations, image queued
+    const iPlayer = h.ws.addPlayerWorkbenchIdea({
+      title: "Co-op Sluice Ledger",
+      howText: "Local stewards verify every flight log before opening irrigation gates.",
+      techId: null,
+      world: "plain",
+    });
+    assert.ok(iPlayer);
+    assert.equal(bills.length, 0, "Diverge idea must never bill Budget");
+    assert.equal(Object.keys(h.board.pathways).length, 0, "Ideas stay off committed board until minted");
+    assert.match(h.root.innerHTML, /Ideas \(1\)/);
+    assert.match(h.root.innerHTML, /Use in Pathway \(0\$\)/);
+    assert.doesNotMatch(h.root.innerHTML, /Mint Idea/);
+
+    // Convergence Canvas [drones × battery] AI deal
+    h.ws.setWorkbenchMethod("convergence");
+    h.ws.clearConvergencePair();
+    h.ws.pickConvergenceTech("drones");
+    h.ws.pickConvergenceTech("battery");
+    const convIdeas = await h.ws.dealWorkbenchAiIdeas("focused");
+    assert.equal(convIdeas.length, 1);
+    assert.equal(lensCalls[0].method, "convergence");
+    assert.deepEqual(lensCalls[0].techIds, ["drones", "battery"]);
+    assert.equal(bills.length, 0, "AI ideas remain 0$ until minted");
+
+    // Let background image promises settle
+    await new Promise((r) => setTimeout(r, 10));
+    assert.ok(paintedPrompts.length >= 2, "ideas get visualized with images");
+
+    // Mint ideas ONE BY ONE, then visually assemble them into a Pathway
+    assert.equal(h.ws.mintWorkbenchIdea(convIdeas[0].id), true);
+    assert.equal(h.ws.mintWorkbenchIdea(iPlayer.id), true);
+    assert.equal(bills.length, 2, "each minted idea commits cleanly");
+    const pwIds = Object.keys(h.board.pathways);
+    assert.equal(pwIds.length, 2, "two separate minted inventions before assembly");
+    assert.ok(h.board.techTracks.battery, "Battery auto-added to Lane 1");
+
+    // Assemble the two minted inventions into ONE visual Pathway
+    const [pwA, pwB] = pwIds;
+    assert.equal(h.ws.fuse(pwA, pwB), true);
+    assert.equal(Object.keys(h.board.pathways).length, 1);
+    const pw = h.board.pathways[pwA];
+    assert.equal(pw.ingredients.length, 3, "Convergence pair (2) + Human step (1)");
+    assert.ok(pw.convergences.length >= 1, "Drones × Battery convergence recorded");
+    assert.match(h.root.innerHTML, /wb-visual-pathway is-assembled/);
+    assert.match(h.root.innerHTML, /wb-inv-tile/);
+    assert.match(h.root.innerHTML, /wb-chain-link/);
+    assert.match(h.root.innerHTML, /<img class="wb-inv-art"/);
+
+    // SIT All-4 deals 4 focused closed-world ideas
+    h.ws.remixInWorkbench("pathway", pw.id, "sit");
+    const sitAll = await h.ws.dealWorkbenchAiIdeas("all");
+    assert.equal(sitAll.length, 4);
+    assert.deepEqual(lensCalls[1].lenses, ["subtraction", "division", "multiplication", "addition"]);
+
+    // Fuse one SIT idea directly into existing Pathway
+    assert.equal(h.ws.fuseStagedIntoPathway(pw.id, sitAll[0].id), true);
+    assert.equal(h.board.pathways[pw.id].ingredients.length, 4);
+
+    // Roadblock remix opens SCAMPER with the challenger's 3 recommended letters
+    const crisisId = Object.keys(h.board.crises)[0];
+    await h.ws.plug(pw.id, crisisId);
+    await h.ws.summonNextChallenger();
+    const chId = Object.keys(h.board.challengers)[0];
+    assert.ok(chId);
+    assert.equal(h.ws.remixRoadblockInWorkbench(chId), true);
+    const wbState = h.ws.getWorkbenchState();
+    assert.equal(wbState.open, true);
+    assert.equal(wbState.method, "scamper");
+    assert.equal(wbState.scamperLetters.length, 3);
+    assert.match(h.root.innerHTML, /wb-challenger-banner/);
+
+    // Collapse cleanly back to 4-lane circuit view
+    h.ws.closeWorkbench();
+    assert.equal(h.ws.getWorkbenchState().open, false);
+    assert.doesNotMatch(h.root.innerHTML, /ontology-lanes is-workbench-open/);
+  });
+
+  it("refuses a two-tech mint when the combined bill does not fit and leaves the board unbilled", () => {
+    const bills = [];
+    const flashes = [];
+    const h = harness({
+      api: {
+        canPlaceInventions: (tiles) => {
+          const ids = tiles.map((t) => t.techId);
+          if (ids.length > 1) return { ok: false, error: "no_budget", techId: ids[1] };
+          return { ok: true };
+        },
+        reconcileStackFromBoard: (ids) => {
+          bills.push([...ids]);
+          return { ok: true };
+        },
+        flashUnaffordableTech: (id, error) => flashes.push({ id, error }),
+      },
+    });
+    h.ws.seedFromMission({
+      place: "Paddy Step Wells",
+      pressure: { "Clean Water": 4 },
+      spotlight: { techId: "drones" },
+    });
+    const before = Object.keys(h.board.pathways).length;
+    const billsBefore = bills.length;
+    const idea = h.ws.addPlayerWorkbenchIdea({
+      title: "Drone battery loop",
+      howText: "Battery racks keep the mapped drones flying over the wells all afternoon.",
+      techId: "drones",
+      secondaryTechId: "battery",
+    });
+    assert.ok(idea);
+    assert.equal(h.ws.mintWorkbenchIdea(idea.id), false);
+    assert.equal(bills.length, billsBefore);
+    assert.equal(Object.keys(h.board.pathways).length, before);
+    assert.deepEqual(flashes[0], { id: "battery", error: "no_budget" });
+    assert.ok(h.ws.getWorkbenchState().drafts.some((d) => d.id === idea.id));
+  });
+
+  it("highlights only the specific hovered Crisis card (not all of Lane 4) during Pathway drag-and-drop", () => {
+    const listeners = {};
+    const makeEl = (attrs = {}, parent = null) => {
+      const cls = new Set();
+      const el = {
+        attrs: { ...attrs },
+        parent,
+        classList: {
+          add: (c) => cls.add(c),
+          remove: (c) => cls.delete(c),
+          contains: (c) => cls.has(c),
+        },
+        getAttribute: (k) => (k in el.attrs ? el.attrs[k] : null),
+        hasAttribute: (k) => k in el.attrs,
+        contains: (other) => {
+          let cur = other;
+          while (cur) {
+            if (cur === el) return true;
+            cur = cur.parent || null;
+          }
+          return false;
+        },
+        closest: (sel) => {
+          const checks = sel.split(",").map((s) => s.trim());
+          let cur = el;
+          while (cur) {
+            for (const c of checks) {
+              const m = c.match(/^\[([^=\]]+)(?:=['"]?([^'"\]]+)['"]?)?\]$/);
+              if (m) {
+                const [, attr, val] = m;
+                if (val === undefined ? cur.hasAttribute(attr) : cur.getAttribute(attr) === val) {
+                  return cur;
+                }
+              }
+            }
+            cur = cur.parent || null;
+          }
+          return null;
+        },
+      };
+      return el;
+    };
+
+    const problemLane = makeEl({ "data-lane": "problem", "data-drop": "crisis" });
+    const crisis1 = makeEl({ "data-crisis-id": "c-1", "data-drop": "crisis" }, problemLane);
+    const crisis2 = makeEl({ "data-crisis-id": "c-2", "data-drop": "crisis" }, problemLane);
+    const pwCard = makeEl({ "data-pathway-id": "pw-1", "data-drop": "pathway" });
+    problemLane.querySelectorAll = (s) => (s === "[data-crisis-id]" ? [crisis1, crisis2] : []);
+    const allEls = [problemLane, crisis1, crisis2, pwCard];
+
+    let board = null;
+    const rootCls = new Set();
+    const root = {
+      innerHTML: "",
+      classList: {
+        add: (c) => rootCls.add(c),
+        remove: (c) => rootCls.delete(c),
+        contains: (c) => rootCls.has(c),
+      },
+      addEventListener: (type, fn) => {
+        listeners[type] = fn;
+      },
+      querySelector: () => null,
+      querySelectorAll: (sel) =>
+        sel === ".is-drop-hover" ? allEls.filter((e) => e.classList.contains("is-drop-hover")) : [],
+      contains: () => true,
+    };
+
+    const ws = createPathwayWorkshop({
+      $: (sel) => (sel === "#ontology-board" ? root : null),
+      getBoard: () => board,
+      setBoard: (b) => { board = b; },
+      getYear: () => 2026,
+      getMission: () => ({
+        place: "Steamholt",
+        pressure: { "Wasted Brine": 3, "Truck Feedstock": 2 },
+      }),
+      getPlace: () => "Steamholt",
+      canPlaceInvention: () => ({ ok: true }),
+      reconcileStackFromBoard: () => ({ ok: true }),
+      grantPathwayEase: () => {},
+    });
+    ws.seedFromMission({
+      place: "Steamholt",
+      pressure: { "Wasted Brine": 3, "Truck Feedstock": 2 },
+    });
+    // Add a real Pathway + read actual seeded Crisis IDs so drop connects a real wire
+    const idea = ws.addPlayerWorkbenchIdea({
+      title: "Local Relay",
+      howText: "Local stewards coordinate dispatch.",
+      world: "plain",
+    });
+    ws.mintWorkbenchIdea(idea.id);
+    const realPwId = Object.keys(board.pathways)[0];
+    const [realCrisisId1, realCrisisId2] = Object.keys(board.crises);
+    const realPwCard = makeEl({ "data-pathway-id": realPwId, "data-drop": "pathway" });
+    const realCrisis1 = makeEl({ "data-crisis-id": realCrisisId1, "data-drop": "crisis" }, problemLane);
+    const realCrisis2 = makeEl({ "data-crisis-id": realCrisisId2, "data-drop": "crisis" }, problemLane);
+    const realCrisis2Child = makeEl({}, realCrisis2);
+    problemLane.querySelectorAll = (s) =>
+      s === "[data-crisis-id]" ? [realCrisis1, realCrisis2] : [];
+    allEls.push(realPwCard, realCrisis1, realCrisis2, realCrisis2Child);
+
+    const dataStore = {};
+    const dt = {
+      effectAllowed: "none",
+      dropEffect: "none",
+      setData: (k, v) => { dataStore[k] = v; },
+      getData: (k) => dataStore[k] || "",
+    };
+
+    // Start dragging Pathway
+    listeners.dragstart({ target: realPwCard, dataTransfer: dt });
+    assert.equal(rootCls.has("is-dragging-pathway"), true);
+    assert.equal(dt.effectAllowed, "all");
+
+    // Dragging over Lane 4 empty gutter must NOT highlight the whole lane
+    let prevented = false;
+    listeners.dragover({
+      target: problemLane,
+      dataTransfer: dt,
+      preventDefault: () => { prevented = true; },
+    });
+    assert.equal(prevented, false);
+    assert.equal(problemLane.classList.contains("is-drop-hover"), false);
+
+    // Dragging over Crisis 1 highlights ONLY Crisis 1
+    prevented = false;
+    listeners.dragover({
+      target: realCrisis1,
+      dataTransfer: dt,
+      preventDefault: () => { prevented = true; },
+    });
+    assert.equal(prevented, true);
+    assert.equal(dt.dropEffect, "move");
+    assert.equal(realCrisis1.classList.contains("is-drop-hover"), true);
+    assert.equal(realCrisis2.classList.contains("is-drop-hover"), false);
+    assert.equal(problemLane.classList.contains("is-drop-hover"), false);
+
+    // Moving to Crisis 2 clears Crisis 1 and highlights ONLY Crisis 2
+    listeners.dragover({
+      target: realCrisis2Child,
+      dataTransfer: dt,
+      preventDefault: () => {},
+    });
+    assert.equal(realCrisis1.classList.contains("is-drop-hover"), false);
+    assert.equal(realCrisis2.classList.contains("is-drop-hover"), true);
+    assert.equal(problemLane.classList.contains("is-drop-hover"), false);
+
+    // Dropping on Crisis 2 (even if browser overwrote text/plain!) MUST plug the wire
+    let dropPrevented = false;
+    listeners.drop({
+      target: realCrisis2Child,
+      dataTransfer: { getData: () => "data:image/jpeg;base64,abc" },
+      preventDefault: () => { dropPrevented = true; },
+    });
+    assert.equal(dropPrevented, true);
+    assert.equal(rootCls.has("is-dragging-pathway"), false);
+    assert.equal(realCrisis2.classList.contains("is-drop-hover"), false);
+    const wires = Object.values(board.wires);
+    assert.equal(wires.length, 1, "drop must connect Pathway to Crisis 2");
+    assert.equal(wires[0].pathwayId, realPwId);
+    assert.equal(wires[0].crisisId, realCrisisId2);
+  });
+
+  it("wires direct Lane 1 Tech -> Lane 3 Pathway ports and chain edges when a Pathway skips Lane 2 Use Cases", () => {
+    const view = {
+      year: 2026,
+      trace: { type: "pathway", id: "pw-conv" },
+      tracks: [
+        { techId: "drones", name: "Drones", world: "atoms", milestones: [] },
+        { techId: "iot", name: "Internet of Things", world: "split", milestones: [] },
+      ],
+      useCases: [],
+      pathways: [
+        {
+          id: "pw-conv",
+          title: "Drone + IoT sensors",
+          howText: "Sensors on drones guide delivery.",
+          timingLevel: "green",
+          timingPct: 76,
+          ingredients: [
+            { id: "ing-1", techId: "drones", title: "Drones", world: "atoms", useCaseIds: [] },
+            { id: "ing-2", techId: "iot", title: "IoT", world: "split", useCaseIds: [] },
+          ],
+          convergences: [],
+        },
+      ],
+      crises: [{ id: "cr-1", role: "local", name: "Blood Too Late", lamp: "yellow" }],
+      wires: [{ id: "w-1", pathwayId: "pw-conv", crisisId: "cr-1", lamp: "yellow" }],
+    };
+
+    const hl = resolveChainHighlight(view);
+    assert.ok(hl);
+    assert.equal(hl.tier2Edges.has("tech:drones->pw-conv"), true);
+    assert.equal(hl.tier2Edges.has("tech:iot->pw-conv"), true);
+
+    const html = renderOntologyBoard(view);
+    assert.match(html, /data-port-pw-in="pw-conv"[^>]*data-from-techs="drones,iot"/);
+    assert.match(html, /is-tech-port is-lit is-chain-lit" data-port-tech="drones"/);
+    assert.match(html, /is-tech-port is-lit is-chain-lit" data-port-tech="iot"/);
+    assert.match(html, /is-in is-lit is-chain-lit" data-port-pw-in="pw-conv"/);
+  });
+
+  it("scores only the newly plugged crisis when connecting an unchanged Pathway to a second crisis", async () => {
+    const scoreCalls = [];
+    const easeGrants = [];
+    let releaseSecond = null;
+    const h = harness({
+      api: {
+        coInvent: async (mode, _text, ctx) => {
+          if (mode === "idea-sparks") {
+            return {
+              ideas: [
+                {
+                  id: "spark-1",
+                  title: "Clinic Delivery Relay",
+                  howText: "Battery drones fly pre-packed blood kits directly to rural clinics.",
+                },
+              ],
+            };
+          }
+          if (mode === "score-pathway") {
+            const roles = (ctx?.crisisRoles || []).map((c) => c.role);
+            scoreCalls.push(roles);
+            if (scoreCalls.length === 1) {
+              return {
+                crisisDelta: { local: -1 },
+                crisisReasons: { local: "First crisis settled reason." },
+              };
+            }
+            return new Promise((resolve) => {
+              const r2 = roles[0] || "global";
+              releaseSecond = () =>
+                resolve({
+                  crisisDelta: { [r2]: -1 },
+                  crisisReasons: { [r2]: "Second crisis settled reason." },
+                });
+            });
+          }
+          return {};
+        },
+        grantPathwayEase: (opts) => easeGrants.push(opts),
+      },
+    });
+    h.ws.seedFromMission({
+      place: "Brackenfold",
+      pressure: { "Blood Too Late": 3, "Cut-Off Districts": 2, "Blood Bank Doubt": 2 },
+      spotlight: { techId: "drones" },
+    });
+    const drones = resolveTechTrack("drones");
+    const reached = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    h.ws.dealMilestone("drones", reached.id);
+    await h.ws.askForIdeas();
+    h.ws.placeSpark("spark-1");
+
+    const pwId = Object.keys(h.board.pathways)[0];
+    const [crisis1Id, crisis2Id] = Object.keys(h.board.crises);
+    const role1 = h.board.crises[crisis1Id].role;
+    const role2 = h.board.crises[crisis2Id].role;
+
+    // 1. Plug into Crisis 1
+    await h.ws.plug(pwId, crisis1Id);
+    assert.deepEqual(scoreCalls, [[role1]]);
+    assert.equal(easeGrants.length, 1);
+    assert.deepEqual(easeGrants[0].crisisDelta, { [role1]: -1 });
+    const fp = Object.keys(h.board.pathwayImpacts)[0];
+    assert.equal(h.board.pathwayImpacts[fp].crisisReasons[role1], "First crisis settled reason.");
+
+    // 2. Plug same unchanged Pathway into Crisis 2
+    const pendingSecond = h.ws.plug(pwId, crisis2Id);
+    assert.equal(typeof releaseSecond, "function");
+
+    // While Crisis 2 is scoring: ONLY Crisis 2 was sent to score-pathway, AND Crisis 1 stays settled (not re-scoring)!
+    assert.deepEqual(scoreCalls, [[role1], [role2]]);
+    assert.equal(h.board.crises[crisis1Id].delta, -1);
+    assert.match(h.root.innerHTML, /First crisis settled reason\./);
+    const scoringMatches = [...h.root.innerHTML.matchAll(/Scoring…/g)];
+    assert.equal(scoringMatches.length, 1, "only the newly connected crisis wire should show Scoring…");
+
+    // Resolve Crisis 2
+    releaseSecond();
+    await pendingSecond;
+    assert.equal(h.board.pathwayImpacts[fp].crisisDelta[role1], -1);
+    assert.equal(h.board.pathwayImpacts[fp].crisisDelta[role2], -1);
+    assert.equal(h.board.pathwayImpacts[fp].crisisReasons[role1], "First crisis settled reason.");
+    assert.equal(h.board.pathwayImpacts[fp].crisisReasons[role2], "Second crisis settled reason.");
+    assert.equal(h.board.pathwayImpacts[fp].pending, false);
+    assert.equal(easeGrants.length, 2);
+    assert.deepEqual(easeGrants[1].crisisDelta, { [role2]: -1 }, "ease is granted only for the newly scored crisis");
+
+    // 3. Unplugging and re-plugging Crisis 2 uses the cached score with ZERO model calls
+    const wire2 = Object.values(h.board.wires).find((w) => w.crisisId === crisis2Id);
+    await h.ws.unplug(wire2.id);
+    await h.ws.plug(pwId, crisis2Id);
+    assert.deepEqual(scoreCalls, [[role1], [role2]], "re-plugging an unchanged pathway makes no extra score call");
+  });
+
+  it("sends settled timing and pathway assessments to fact-check-argument and rescores on accept", async () => {
+    const factChecks = [];
+    const scoreArgsSeen = [];
+    let apCharges = 0;
+    const h = harness({
+      api: {
+        spendArgumentAp: () => {
+          apCharges += 1;
+          return { ok: true };
+        },
+        coInvent: async (mode, _text, ctx) => {
+          if (mode === "idea-sparks") {
+            return {
+              ideas: [
+                {
+                  id: "spark-1",
+                  title: "Flying Car Shuttle",
+                  howText: "Flying car, so people do not need a road network.",
+                },
+              ],
+            };
+          }
+          if (mode === "score-pathway") {
+            scoreArgsSeen.push(ctx?.acceptedArguments || []);
+            const role = ctx?.crisisRoles?.[0]?.role || "local";
+            return {
+              crisisDelta: { [role]: (ctx?.acceptedArguments || []).length ? -1 : 0 },
+              crisisReasons: {
+                [role]: (ctx?.acceptedArguments || []).length
+                  ? "Accepted 2026 certification case shifts score."
+                  : "Flying cars are not a 2026 way to move blood bags.",
+              },
+            };
+          }
+          if (mode === "fact-check-argument") {
+            factChecks.push(ctx);
+            return {
+              verdict: "accept",
+              reason: "Commercial light eVTOL air-taxi corridors began certified flights in 2026.",
+            };
+          }
+          return {};
+        },
+      },
+    });
+    h.ws.seedFromMission({
+      place: "Brackenfold",
+      pressure: { "Blood Too Late": 3, "Cut-Off Districts": 2 },
+      spotlight: { techId: "drones" },
+    });
+    const drones = resolveTechTrack("drones");
+    const reached = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    h.ws.dealMilestone("drones", reached.id);
+    await h.ws.askForIdeas();
+    h.ws.placeSpark("spark-1");
+
+    const pwId = Object.keys(h.board.pathways)[0];
+    const crisisId = Object.keys(h.board.crises)[0];
+    await h.ws.plug(pwId, crisisId);
+
+    const res = await h.ws.submitArgument(
+      pwId,
+      "Certified commercial eVTOL point-to-point shuttles already operate in 2026."
+    );
+    assert.equal(apCharges, 1);
+    assert.equal(res?.verdict, "accept");
+    assert.equal(factChecks.length, 1);
+    assert.ok(factChecks[0].assessments, "fact-check-argument must receive assessments");
+    assert.ok(factChecks[0].assessments.timings.length >= 1, "settled timing assessment included");
+    assert.equal(factChecks[0].assessments.pathways.length, 1, "settled pathway assessment included");
+    assert.match(
+      Object.values(factChecks[0].assessments.pathways[0].crisisReasons)[0],
+      /Flying cars are not a 2026 way/
+    );
+    // Accepted argument triggers a rescore that includes the accepted claim
+    assert.equal(scoreArgsSeen.length, 2);
+    assert.deepEqual(scoreArgsSeen[1], [
+      "Certified commercial eVTOL point-to-point shuttles already operate in 2026.",
+    ]);
+  });
 });

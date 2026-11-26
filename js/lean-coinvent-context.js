@@ -145,6 +145,51 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     };
   }
 
+  if (mode === "workbench-lens") {
+    const rawIds = Array.isArray(rest.techIds)
+      ? rest.techIds.map(String).filter(Boolean).slice(0, 4)
+      : [];
+    const fallbackIds =
+      rawIds.length > 0
+        ? rawIds
+        : (rest.focusTechId ? [String(rest.focusTechId)] : [...(snap.selectedTechIds || [])]).slice(0, 3);
+    const techs =
+      typeof snap.techsForIds === "function" ? snap.techsForIds(fallbackIds) : [];
+    const stakeholder = String(rest.stakeholder ?? snap.stakeholder ?? "").trim();
+    const metersRaw = rest.crisisMeters ?? snap.crisisMeters;
+    const crisisMeters = Array.isArray(metersRaw)
+      ? metersRaw
+          .filter((x) => x && typeof x === "object" && x.label)
+          .slice(0, 3)
+          .map((x) => ({
+            label: String(x.label).slice(0, 60),
+            role: x.role || null,
+            level: Number(x.level) || 0,
+            goal: Number.isFinite(Number(x.goal)) ? Number(x.goal) : 1,
+            description: String(x.description || "").slice(0, 240),
+          }))
+      : [];
+    return {
+      ...base,
+      method: String(rest.method || "seed").slice(0, 24),
+      lenses: Array.isArray(rest.lenses)
+        ? rest.lenses.map(String).slice(0, 4)
+        : [],
+      techIds: fallbackIds,
+      availableTechs: techs,
+      scarcity: String(rest.scarcity || "").slice(0, 140),
+      seedTitle: String(rest.seedTitle || "").slice(0, 80),
+      seedText: String(rest.seedText || "").slice(0, 1200),
+      challengerAngle: rest.challengerAngle ? String(rest.challengerAngle).slice(0, 32) : null,
+      challengerQuestion: rest.challengerQuestion ? String(rest.challengerQuestion).slice(0, 400) : null,
+      avoidTitles: Array.isArray(rest.avoidTitles)
+        ? rest.avoidTitles.map(String).slice(0, 12)
+        : [],
+      ...(stakeholder ? { stakeholder } : {}),
+      ...(crisisMeters.length ? { crisisMeters } : {}),
+    };
+  }
+
   if (mode === "fact-check-argument") {
     const assessments =
       rest.assessments && typeof rest.assessments === "object" ? rest.assessments : {};

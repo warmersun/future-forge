@@ -69,6 +69,8 @@ import {
   removeUseCase,
   addCustomUseCase,
   createPathway,
+  mintStagedDraftsToPathway,
+  fuseDraftIntoPathway,
   removePathway,
   findUnusedItems,
   pruneUnusedItems,
@@ -88,6 +90,7 @@ import {
   settleArgument,
   removeArgument,
   acceptedArgumentsForPathway,
+  settledPathwayAssessments,
   summonChallenger,
   setChallengerAnswer,
   resolveChallengerLamp,
@@ -99,7 +102,24 @@ import {
   needsBridgeWarning,
   refreshCrisisLamps,
   isUseCaseEarly,
+  isImpactRolePending,
 } from "./pathway-model.js";
+import {
+  WORKBENCH_METHODS,
+  SIT_LENSES,
+  SCAMPER_LENSES,
+  CHALLENGER_LENS_MAP,
+  extractScarcityPrompts,
+  buildConvergenceCanvas,
+  recommendedScamperForSeed,
+  buildLensPrompt,
+  draftToIngredientPartials,
+  evaluateStagedDrafts,
+  sanitizeWorkbenchDrafts,
+  localWorkbenchLensDrafts,
+  formatLensBadge,
+  normalizeWorkbenchWorld,
+} from "./workbench-methods.js";
 
 const TUTORIAL_SUGGESTED_REPLY =
   "The growers' committee signs the flight calendar and the co-op pays for the packs. Nobody pays to drink.";
@@ -166,10 +186,41 @@ export function createPathwayWorkshop(api) {
   const selectedTrendByTech = new Map();
   /** @type {Map<string, boolean>} */
   const chartOverride = new Map();
-  /** @type {Set<string>} */
-  const scoringPathwayIds = new Set();
+  /** @type {Map<string, Map<string, number>>} */
+  const scoringPathwayRoles = new Map();
   /** @type {Set<string>} */
   const polishingPathwayIds = new Set();
+
+  function addScoringRoles(pathwayId, roles) {
+    if (!pathwayId || !Array.isArray(roles) || !roles.length) return;
+    let map = scoringPathwayRoles.get(pathwayId);
+    if (!map) {
+      map = new Map();
+      scoringPathwayRoles.set(pathwayId, map);
+    }
+    for (const role of roles) {
+      map.set(role, (map.get(role) || 0) + 1);
+    }
+  }
+
+  function removeScoringRoles(pathwayId, roles) {
+    const map = scoringPathwayRoles.get(pathwayId);
+    if (!map) return;
+    for (const role of roles || []) {
+      const nextCount = (map.get(role) || 0) - 1;
+      if (nextCount > 0) map.set(role, nextCount);
+      else map.delete(role);
+    }
+    if (map.size === 0) scoringPathwayRoles.delete(pathwayId);
+  }
+
+  function isScoringPathway(pathwayId) {
+    return Boolean(scoringPathwayRoles.get(pathwayId)?.size);
+  }
+
+  function isScoringPathwayRole(pathwayId, role) {
+    return Boolean(scoringPathwayRoles.get(pathwayId)?.get(role));
+  }
 
   let focusedTechId = null;
   let focusedPathwayId = null;
@@ -198,6 +249,138 @@ export function createPathwayWorkshop(api) {
   let collectionLoad = null;
   let collectorFilterTech = "all";
   const scoreFollowup = new WeakMap();
+
+  // Lane 3 Innovation Workbench (strictly solo/local — never written to board or synced over MP)
+  let workbenchOpen = false;
+  let wbMethod = "seed";
+  let wbScarcityFocus = "";
+  let wbConvergencePair = [];
+  let wbSitLens = "subtraction";
+  let wbScamperLetters = ["S", "C", "R"];
+  let wbRemixSeed = null;
+  let wbDraftTitle = "";
+  let wbDraftText = "";
+  let wbDrafts = [];
+  let wbStagedIds = [];
+  let wbLensBusy = false;
+  let wbRailExpandedTechId = null;
+
+  function browserStorage() {
+    if (typeof window === "undefined") return null;
+    try {
+      return window.localStorage || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function wbStorageKey() {
+    const m = api.getMission?.();
+    const id = String(m?.id || m?.title || "").trim();
+    return id ? `ff.workbench.v1:${id}` : "";
+  }
+
+  function persistLocalWorkbench() {
+    const storage = browserStorage();
+    if (!storage) return;
+    const key = wbStorageKey();
+    if (!key) return;
+    try {
+      const compactIdeas = wbDrafts.slice(0, 20).map((d) => ({
+        ...d,
+        artPending: false,
+        artUrl:
+          typeof d.artUrl === "string" && d.artUrl.startsWith("data:")
+            ? null
+            : d.artUrl || null,
+      }));
+      const payload = {
+        scarcityFocus: wbScarcityFocus,
+        activeMethod: wbMethod,
+        convergencePair: wbConvergencePair,
+        sitLens: wbSitLens,
+        scamperLetters: wbScamperLetters,
+        ideas: compactIdeas,
+      };
+      storage.setItem(key, JSON.stringify(payload));
+    } catch {
+      /* storage optional */
+    }
+  }
+
+  function clearLocalWorkbenchStorage() {
+    const storage = browserStorage();
+    if (!storage) return;
+    const key = wbStorageKey();
+    if (!key) return;
+    try {
+      storage.removeItem(key);
+    } catch {
+      /* storage optional */
+    }
+  }
+
+  function resetWorkbenchMemory(clearStorage = false) {
+    workbenchOpen = false;
+    wbMethod = "seed";
+    wbScarcityFocus = "";
+    wbConvergencePair = [];
+    wbSitLens = "subtraction";
+    wbScamperLetters = ["S", "C", "R"];
+    wbRemixSeed = null;
+    wbDraftTitle = "";
+    wbDraftText = "";
+    wbDrafts = [];
+    wbStagedIds = [];
+    wbLensBusy = false;
+    wbRailExpandedTechId = null;
+    if (clearStorage) clearLocalWorkbenchStorage();
+  }
+
+  function restoreLocalWorkbench() {
+    resetWorkbenchMemory(false);
+    const storage = browserStorage();
+    if (!storage) return;
+    const key = wbStorageKey();
+    if (!key) return;
+    try {
+      const raw = storage.getItem(key);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return;
+      if (typeof parsed.scarcityFocus === "string") {
+        wbScarcityFocus = parsed.scarcityFocus.slice(0, 140);
+      }
+      if (["seed", "convergence", "sit", "scamper"].includes(parsed.activeMethod)) {
+        wbMethod = parsed.activeMethod;
+      }
+      if (Array.isArray(parsed.convergencePair)) {
+        wbConvergencePair = parsed.convergencePair.map(String).filter((id) => Boolean(techById(id))).slice(0, 2);
+      }
+      if (SIT_LENSES.some((l) => l.id === parsed.sitLens)) {
+        wbSitLens = parsed.sitLens;
+      }
+      if (Array.isArray(parsed.scamperLetters)) {
+        const clean = parsed.scamperLetters
+          .map((l) => String(l).toUpperCase())
+          .filter((id) => SCAMPER_LENSES.some((l) => l.id === id))
+          .slice(0, 3);
+        if (clean.length) wbScamperLetters = clean;
+      }
+      const storedList = Array.isArray(parsed.ideas)
+        ? parsed.ideas
+        : Array.isArray(parsed.drafts)
+          ? parsed.drafts
+          : [];
+      if (storedList.length) {
+        wbDrafts = storedList
+          .filter((d) => d && typeof d === "object" && d.id && d.title && d.howText)
+          .slice(0, 20);
+      }
+    } catch {
+      /* ignore corrupt local storage */
+    }
+  }
 
   function countUnusedSparks() {
     let total = 0;
@@ -233,6 +416,160 @@ export function createPathwayWorkshop(api) {
       count,
       parts,
       tooltip: parts ? `Remove unconnected items: ${parts}` : "Nothing unconnected to clear",
+    };
+  }
+
+  function resolveEffectiveRemixSeed(current, useCases, pathways, activeFocus) {
+    if (wbRemixSeed && wbRemixSeed.howText) return wbRemixSeed;
+    if (wbDrafts.length) {
+      const top = wbDrafts[0];
+      return {
+        kind: "draft",
+        id: top.id,
+        title: top.title,
+        howText: top.howText,
+        techId: top.techId || activeFocus || null,
+        world: top.world || "bits",
+      };
+    }
+    const focusPw =
+      pathways.find((p) => p.id === focusedPathwayId) || pathways[0] || null;
+    if (focusPw) {
+      return {
+        kind: "pathway",
+        id: focusPw.id,
+        title: focusPw.title,
+        howText: focusPw.howText || "",
+        techId: focusPw.ingredients?.[0]?.techId || activeFocus || null,
+        world: focusPw.ingredients?.[0]?.world || "bits",
+      };
+    }
+    const selUc = selectedIds()
+      .map((id) => current?.useCases?.[id])
+      .filter(Boolean)[0] || useCases[0] || null;
+    if (selUc) {
+      return {
+        kind: "usecase",
+        id: selUc.id,
+        title: selUc.title,
+        howText: selUc.blurb || selUc.title,
+        techId: selUc.techId || activeFocus || null,
+        world: selUc.world || "bits",
+      };
+    }
+    const tech = activeFocus ? techById(activeFocus) : null;
+    if (tech) {
+      return {
+        kind: "tech",
+        id: tech.id,
+        title: tech.name,
+        howText: tech.summary || tech.name,
+        techId: tech.id,
+        world: tech.polarity || "bits",
+      };
+    }
+    return null;
+  }
+
+  function buildSeedChoices(useCases, pathways) {
+    const out = [];
+    for (const d of wbDrafts) {
+      out.push({ key: `draft:${d.id}`, kind: "draft", id: d.id, label: `Idea · ${d.title}` });
+    }
+    for (const pw of pathways) {
+      out.push({ key: `pathway:${pw.id}`, kind: "pathway", id: pw.id, label: `Pathway · ${pw.title}` });
+    }
+    for (const uc of useCases) {
+      out.push({ key: `usecase:${uc.id}`, kind: "usecase", id: uc.id, label: `Use case · ${uc.title}` });
+    }
+    return out;
+  }
+
+  function workbenchViewFor(current, activeFocus, mission, crises, useCases, pathways, y) {
+    const place = api.getPlace?.() || mission?.place || "";
+    const scarcityChips = extractScarcityPrompts(mission, crises);
+    const liveDraftIds = new Set(wbDrafts.map((d) => d.id));
+    wbStagedIds = wbStagedIds.filter((id) => liveDraftIds.has(id));
+    const stagedSet = new Set(wbStagedIds);
+    const stagedDrafts = wbStagedIds
+      .map((id) => wbDrafts.find((d) => d.id === id))
+      .filter(Boolean);
+
+    const effectiveSeed = resolveEffectiveRemixSeed(current, useCases, pathways, activeFocus);
+    const convergence = buildConvergenceCanvas(
+      current?.techTracks || {},
+      mission,
+      wbConvergencePair,
+      { place, scarcity: wbScarcityFocus, year: y }
+    );
+    const selectedUcs = selectedIds()
+      .map((id) => current?.useCases?.[id])
+      .filter(Boolean);
+    const activeTech = activeFocus ? techById(activeFocus) : null;
+    const prompt = buildLensPrompt(wbMethod, {
+      place,
+      year: y,
+      scarcity: wbScarcityFocus,
+      useCaseTitles: selectedUcs.map((u) => u.title),
+      techName: activeTech?.name || "",
+      convergencePair: wbConvergencePair,
+      sitLens: wbSitLens,
+      scamperLetters: wbScamperLetters,
+      seedTitle: effectiveSeed?.title || "",
+      seedText: effectiveSeed?.howText || "",
+      challengerAngle: effectiveSeed?.challengerAngle || null,
+      challengerQuestion: effectiveSeed?.challengerQuestion || "",
+    });
+    const budgetEnabled = api.budgetWillEnabled?.() !== false;
+    const enforce = enforceWorlds();
+    const preflight = evaluateStagedDrafts(stagedDrafts, current, y, {
+      budgetWillEnabled: budgetEnabled,
+      enforceWorlds: enforce,
+    });
+
+    const ideasView = wbDrafts.map((d) => {
+      const check = evaluateStagedDrafts([d], current, y, {
+        budgetWillEnabled: budgetEnabled,
+        enforceWorlds: enforce,
+      });
+      return {
+        ...d,
+        staged: stagedSet.has(d.id),
+        mintCostLabel: check.cost.label,
+        mintCost: check.cost,
+        hasSynergy: (check.convergences || []).length > 0,
+        earlyForecast: check.horizon.early ? check.horizon.year : null,
+      };
+    });
+
+    return {
+      open: workbenchOpen,
+      method: wbMethod,
+      methods: WORKBENCH_METHODS,
+      scarcityFocus: wbScarcityFocus,
+      scarcityChips,
+      convergence,
+      sitLenses: SIT_LENSES,
+      sitLens: wbSitLens,
+      scamperLenses: SCAMPER_LENSES,
+      scamperLetters: [...wbScamperLetters],
+      remixSeed: effectiveSeed,
+      seedChoices: buildSeedChoices(useCases, pathways),
+      prompt,
+      draftTitle: wbDraftTitle,
+      draftText: wbDraftText,
+      ideas: ideasView,
+      ideaCount: ideasView.length,
+      drafts: ideasView,
+      draftCount: ideasView.length,
+      stagedDrafts,
+      stagedCount: stagedDrafts.length,
+      preflight,
+      busy: wbLensBusy,
+      railExpandedTechId: wbRailExpandedTechId,
+      challengerGuide: effectiveSeed?.challengerAngle
+        ? CHALLENGER_LENS_MAP[effectiveSeed.challengerAngle] || null
+        : null,
     };
   }
 
@@ -295,7 +632,8 @@ export function createPathwayWorkshop(api) {
       const impact = current.pathwayImpacts?.[fp];
       const role = crisis?.role || "local";
       const pending =
-        (Boolean(impact?.pending) || scoringPathwayIds.has(wire.pathwayId)) && !timing?.early;
+        (isImpactRolePending(impact, role) || isScoringPathwayRole(wire.pathwayId, role)) &&
+        !timing?.early;
       const summoning =
         summoningState && summoningState.wireId === wire.id ? summoningState : null;
       return {
@@ -383,7 +721,7 @@ export function createPathwayWorkshop(api) {
           timingPct: timing.timingPct,
           timingReason: timing.timingReason,
           timingPending: timing.pending,
-          scoring: scoringPathwayIds.has(pw.id),
+          scoring: isScoringPathway(pw.id),
           polishing: polishingPathwayIds.has(pw.id),
           bridge: needsBridgeWarning(pw, enforceWorlds()),
           rdBoost: pw.rdBoost,
@@ -414,6 +752,15 @@ export function createPathwayWorkshop(api) {
     const open = openChallengerId ? current?.challengers?.[openChallengerId] : null;
     const sparks = activeFocus ? sparkBatches.get(activeFocus)?.ideas || [] : [];
     const unused = unusedSummaryFor(current, activeFocus);
+    const workbench = workbenchViewFor(
+      current,
+      activeFocus,
+      mission,
+      crises,
+      useCases,
+      pathways,
+      y
+    );
 
     return {
       year: y,
@@ -430,6 +777,7 @@ export function createPathwayWorkshop(api) {
       rules: current?.rules || [],
       sparks,
       unused,
+      workbench,
       createBusy,
       summoning: summoningState,
       pickerOpen,
@@ -593,6 +941,14 @@ export function createPathwayWorkshop(api) {
     const prevEcon = placedTechEconomy(prev);
     const projected = projectToTiles(next);
     projected.questYear = year();
+    if (opts.bill) {
+      const afford = affordProjectedBoard(prev, projected);
+      if (afford && afford.ok === false) {
+        api.flashUnaffordableTech?.(afford.techId, afford.error);
+        paint();
+        return false;
+      }
+    }
     api.setBoard?.(projected);
     if (opts.bill && api.reconcileStackFromBoard) {
       const econ = placedTechEconomy(projected);
@@ -642,13 +998,91 @@ export function createPathwayWorkshop(api) {
     );
   }
 
+  /** Price every new tech in one mint together. Two that each fit alone can still fail as a pair. */
+  function gateNewTechs(current, partials) {
+    const tiles = [];
+    const checked = new Set();
+    for (const p of partials || []) {
+      if (!p?.techId || checked.has(p.techId)) continue;
+      checked.add(p.techId);
+      const already = Object.values(current.pathways || {}).some((pw) =>
+        (pw.ingredients || []).some((ing) => ing.techId === p.techId)
+      );
+      if (already && !p.collectorCardId) continue;
+      const free =
+        p.collectorCardId &&
+        !Object.values(current.pathways || {}).some((pw) =>
+          (pw.ingredients || []).some((ing) => ing.collectorCardId === p.collectorCardId)
+        );
+      tiles.push({
+        id: "pending",
+        kind: "invention",
+        techId: p.techId,
+        q: null,
+        r: null,
+        origin: free ? "collector" : "pathway",
+        collectorCardId: free ? p.collectorCardId : null,
+      });
+    }
+    if (!tiles.length) return { ok: true };
+    if (api.canPlaceInventions) return api.canPlaceInventions(tiles) || { ok: true };
+    for (const tile of tiles) {
+      const gate = api.canPlaceInvention?.(tile);
+      if (gate && gate.ok === false) return { ...gate, techId: tile.techId };
+    }
+    return { ok: true };
+  }
+
+  /**
+   * Summed new-tech cost and stack slots for the projected field.
+   * Skipped when a paid tech leaves the board — that refund can fund the add,
+   * and reconcile rolls the charge back if the remainder still fails.
+   */
+  function affordProjectedBoard(prevBoard, nextBoard) {
+    if (!api.canPlaceInventions) return { ok: true };
+    const prevEcon = placedTechEconomy(prevBoard);
+    const nextEcon = placedTechEconomy(nextBoard);
+    const prevPaid = new Set(prevEcon.paid);
+    const nextPaid = new Set(nextEcon.paid);
+    if (prevEcon.paid.some((id) => !nextPaid.has(id))) return { ok: true };
+    const prevAll = new Set(prevEcon.all);
+    const tiles = [];
+    for (const id of nextEcon.all) {
+      if (prevPaid.has(id)) continue;
+      if (nextPaid.has(id)) {
+        tiles.push({
+          id: "pending",
+          kind: "invention",
+          techId: id,
+          q: null,
+          r: null,
+          origin: "pathway",
+        });
+        continue;
+      }
+      if (!prevAll.has(id) && nextEcon.collectorOnly.includes(id)) {
+        tiles.push({
+          id: "pending",
+          kind: "invention",
+          techId: id,
+          q: null,
+          r: null,
+          origin: "collector",
+          collectorCardId: "batch",
+        });
+      }
+    }
+    if (!tiles.length) return { ok: true };
+    return api.canPlaceInventions(tiles) || { ok: true };
+  }
+
   function seedFromMission(mission) {
     tracks.clear();
     sparkBatches.clear();
     expandedDescTechs.clear();
     selectedTrendByTech.clear();
     chartOverride.clear();
-    scoringPathwayIds.clear();
+    scoringPathwayRoles.clear();
     polishingPathwayIds.clear();
     summoningState = null;
     draftingRoadblockId = null;
@@ -662,6 +1096,7 @@ export function createPathwayWorkshop(api) {
     customUseOpen = false;
     writeOpen = false;
     draftHow = "";
+    resetWorkbenchMemory(true);
 
     let next = migrateToPathwayBoard(seedCrisisTiles(mission));
     next = setPinnedRules(next, api.getRules?.() || mission?.rules || []);
@@ -702,7 +1137,7 @@ export function createPathwayWorkshop(api) {
     expandedDescTechs.clear();
     selectedTrendByTech.clear();
     chartOverride.clear();
-    scoringPathwayIds.clear();
+    scoringPathwayRoles.clear();
     polishingPathwayIds.clear();
     summoningState = null;
     draftingRoadblockId = null;
@@ -719,6 +1154,7 @@ export function createPathwayWorkshop(api) {
     customUseOpen = false;
     writeOpen = false;
     draftHow = "";
+    restoreLocalWorkbench();
 
     const current = isPathwayBoard(incomingBoard) ? incomingBoard : board();
     const trackIds = Object.keys(current?.techTracks || {});
@@ -823,7 +1259,7 @@ export function createPathwayWorkshop(api) {
     }
   }
 
-  async function assessIngredientFeasibility(pathwayId, ingredientId) {
+  async function assessIngredientFeasibility(pathwayId, ingredientId, opts = {}) {
     const current = board();
     const pw = current?.pathways?.[pathwayId];
     const ing = pw?.ingredients?.find((row) => row.id === ingredientId);
@@ -884,7 +1320,7 @@ export function createPathwayWorkshop(api) {
     });
     const isWired = Object.values(updated.wires || {}).some((w) => w.pathwayId === pathwayId);
     if (!commit(updated, { bill: false })) return;
-    if (isWired) commit(await scoreWired(board()), { bill: false });
+    if (isWired && !opts.skipScore) commit(await scoreWired(board()), { bill: false });
   }
 
   async function askForIdeas(opts = {}) {
@@ -1182,13 +1618,13 @@ export function createPathwayWorkshop(api) {
     const how =
       provided ||
       "Local volunteers and stewards coordinate the daily handoff and check results in person.";
-    const needArt = Boolean(api.fetchIdeaImage && provided);
+    const needArt = Boolean(api.fetchIdeaImage);
     const created = createPathway(board(), {
       techId: null,
       title: provided ? provided.split(/[.!?]/)[0].trim().slice(0, 56) : "Human workflow step",
       howText: how,
       world: "plain",
-      imagePrompt: provided ? provided.slice(0, 400) : "",
+      imagePrompt: how.slice(0, 400),
       artPending: needArt,
       timingLevel: provided ? "yellow" : "green",
       timingPct: provided ? 75 : 88,
@@ -1198,15 +1634,17 @@ export function createPathwayWorkshop(api) {
     writeOpen = false;
     focusedPathwayId = created.pathwayId;
     traceSelection = { type: "pathway", id: created.pathwayId };
-    if (!provided) {
+    if (!provided && !workbenchOpen) {
       editingPathwayId = created.pathwayId;
       editHowBuffer = how;
     }
     const ok = commit(created.board, { bill: false });
-    if (ok && provided) {
-      assessIngredientFeasibility(created.pathwayId, created.ingredientId).catch((e) =>
-        console.warn("[assess-plain]", e)
-      );
+    if (ok) {
+      if (provided) {
+        assessIngredientFeasibility(created.pathwayId, created.ingredientId).catch((e) =>
+          console.warn("[assess-plain]", e)
+        );
+      }
       if (needArt) {
         const y = year();
         const place = api.getPlace?.() || "";
@@ -1218,7 +1656,7 @@ export function createPathwayWorkshop(api) {
           artId,
           place,
           year: y,
-          imagePrompt: provided.slice(0, 400),
+          imagePrompt: how.slice(0, 400),
           kind: "plain",
         });
       }
@@ -1370,6 +1808,8 @@ export function createPathwayWorkshop(api) {
           kind: "early",
           pathwayId,
           fingerprint: fp,
+          inventionIds,
+          scoredRoles: roles,
           impact: {
             pathwayId,
             inventionIds,
@@ -1377,6 +1817,7 @@ export function createPathwayWorkshop(api) {
             crisisReasons: Object.fromEntries(roles.map((r) => [r, reason])),
             concerns: {},
             earlyBlocked: true,
+            pendingRoles: {},
             pending: false,
           },
         });
@@ -1384,30 +1825,48 @@ export function createPathwayWorkshop(api) {
       }
 
       const cached = snap.pathwayImpacts?.[fp];
+      const forcePathway = forceIds.has(pathwayId);
       const pwChallengers = Object.values(snap.challengers || {}).filter(
         (ch) => ch.pathwayId === pathwayId
       );
       const needsConcernScore = pwChallengers.some(
         (ch) => !cached?.concerns?.[ch.angle] && fp !== ch.posedAgainstFingerprint
       );
-      const allRolesCached =
-        cached &&
-        !cached.pending &&
-        !cached.earlyBlocked &&
-        !forceIds.has(pathwayId) &&
-        !needsConcernScore &&
-        roles.every((r) => cached.crisisDelta && r in cached.crisisDelta);
+      const canReuseCachedRoles = Boolean(cached && !cached.earlyBlocked && !forcePathway);
+      const missingRoles = canReuseCachedRoles
+        ? roles.filter(
+            (r) =>
+              isImpactRolePending(cached, r) ||
+              !cached.crisisDelta ||
+              !Object.prototype.hasOwnProperty.call(cached.crisisDelta, r)
+          )
+        : [...roles];
 
-      if (allRolesCached) {
+      if (missingRoles.length === 0 && !needsConcernScore) {
         results.push({
           kind: "cached",
           pathwayId,
           fingerprint: fp,
+          inventionIds,
+          scoredRoles: [],
           score: cached,
-          impact: cached,
+          impact: {
+            ...cached,
+            pendingRoles: {},
+            pending: false,
+          },
         });
         continue;
       }
+
+      const rolesToScore = missingRoles.length > 0 ? missingRoles : roles;
+      const crisesToScore =
+        missingRoles.length > 0
+          ? targetCrises.filter((c) => missingRoles.includes(c.role || "local"))
+          : targetCrises;
+      const includeConcerns = Boolean(
+        pwChallengers.length && (forcePathway || needsConcernScore)
+      );
 
       const howCombined = composePathwayHow(pathway);
       const inventions = pathway.ingredients.map((ing) => ({
@@ -1421,24 +1880,26 @@ export function createPathwayWorkshop(api) {
         feasibilityPct: timing.timingPct ?? ing.timingPct ?? 82,
         polarity: ing.world === "plain" ? "curve" : ing.world,
       }));
-      const heurOpts = { mission, rules, crisisRoles: roles };
+      const heurOpts = { mission, rules, crisisRoles: rolesToScore };
       const heur = heuristicPathwayScore(inventions, y, heurOpts);
       let score = heur;
 
       if (api.coInvent) {
-        scoringPathwayIds.add(pathwayId);
+        addScoringRoles(pathwayId, rolesToScore);
         paint();
         try {
-          const concernsPayload = pwChallengers.map((ch) => ({
-            angle: ch.angle,
-            challengeSpeech: ch.speech || "",
-            challengeQuestion: ch.question || "",
-            playerAnswer: ch.playerAnswer || "",
-            inventChanged: Boolean(
-              ch.posedAgainstFingerprint && fp !== ch.posedAgainstFingerprint
-            ),
-            posedHowText: ch.posedHowText || "",
-          }));
+          const concernsPayload = includeConcerns
+            ? pwChallengers.map((ch) => ({
+                angle: ch.angle,
+                challengeSpeech: ch.speech || "",
+                challengeQuestion: ch.question || "",
+                playerAnswer: ch.playerAnswer || "",
+                inventChanged: Boolean(
+                  ch.posedAgainstFingerprint && fp !== ch.posedAgainstFingerprint
+                ),
+                posedHowText: ch.posedHowText || "",
+              }))
+            : [];
           const acceptedArgs = acceptedArgumentsForPathway(snap, pathway);
           const ai = await api.coInvent("score-pathway", howCombined, {
             pathway: {
@@ -1461,7 +1922,7 @@ export function createPathwayWorkshop(api) {
             grounding: api.getGrounding?.() || null,
             pressureBase: snap.pressureBase || {},
             winMax: mission?.winMax || missionWinMax(),
-            crisisRoles: targetCrises.map((c) => ({
+            crisisRoles: crisesToScore.map((c) => ({
               role: c.role || "local",
               name: c.name,
               meterKey: c.meterKey || c.name,
@@ -1473,9 +1934,9 @@ export function createPathwayWorkshop(api) {
           if (ai && (ai.crisisDelta || ai.concerns)) {
             score = clampPathwayScore(
               blendPathwayScore(
-                normalizePathwayScore(ai, roles),
+                normalizePathwayScore(ai, rolesToScore),
                 heur,
-                roles
+                rolesToScore
               ),
               inventions,
               heurOpts
@@ -1485,7 +1946,7 @@ export function createPathwayWorkshop(api) {
         } catch {
           score = heur;
         } finally {
-          scoringPathwayIds.delete(pathwayId);
+          removeScoringRoles(pathwayId, rolesToScore);
         }
       }
 
@@ -1493,15 +1954,11 @@ export function createPathwayWorkshop(api) {
         kind: "fresh",
         pathwayId,
         fingerprint: fp,
+        inventionIds,
+        scoredRoles: missingRoles.length > 0 ? [...missingRoles] : [],
+        scoredConcerns: includeConcerns,
+        forceReset: forcePathway || Boolean(cached?.earlyBlocked),
         score,
-        impact: {
-          pathwayId,
-          inventionIds,
-          crisisDelta: score.crisisDelta || {},
-          crisisReasons: score.crisisReasons || {},
-          concerns: score.concerns || {},
-          pending: false,
-        },
       });
     }
 
@@ -1521,36 +1978,102 @@ export function createPathwayWorkshop(api) {
       );
       if (!stillWired) continue;
       const prev = landing.pathwayImpacts?.[result.fingerprint];
-      const keepLive =
-        result.kind === "cached" && prev && !prev.pending && !prev.earlyBlocked;
-      if (!keepLive) {
+
+      if (result.kind === "early") {
         landing.pathwayImpacts[result.fingerprint] = result.impact;
-        if (result.kind !== "cached") applied = true;
+        applied = true;
+        continue;
       }
-      if (result.kind === "fresh") {
-        const wasUnsettled = !prev || prev.pending || prev.earlyBlocked;
-        if (wasUnsettled) {
-          const connected = new Set();
-          for (const wire of Object.values(landing.wires || {})) {
-            if (wire.pathwayId !== result.pathwayId) continue;
-            connected.add(landing.crises?.[wire.crisisId]?.role || "local");
-          }
-          const crisisDelta = {};
-          for (const role of connected) {
-            const n = Number(result.score?.crisisDelta?.[role]);
-            if (Number.isFinite(n) && n < 0) crisisDelta[role] = n;
-          }
-          if (Object.keys(crisisDelta).length) ease.push(crisisDelta);
+
+      if (result.kind === "cached") {
+        const keepLive = prev && !prev.pending && !prev.earlyBlocked;
+        if (!keepLive) {
+          landing.pathwayImpacts[result.fingerprint] = result.impact;
+        }
+        continue;
+      }
+
+      // Fresh incremental merge: preserve already-scored crisis roles unless forceReset
+      const newlySettledRoles = (result.scoredRoles || []).filter(
+        (role) =>
+          !prev ||
+          prev.earlyBlocked ||
+          isImpactRolePending(prev, role) ||
+          !prev.crisisDelta ||
+          !Object.prototype.hasOwnProperty.call(prev.crisisDelta, role)
+      );
+      const baseDelta =
+        !result.forceReset && prev && !prev.earlyBlocked && prev.crisisDelta
+          ? { ...prev.crisisDelta }
+          : {};
+      const baseReasons =
+        !result.forceReset && prev && !prev.earlyBlocked && prev.crisisReasons
+          ? { ...prev.crisisReasons }
+          : {};
+      const baseConcerns =
+        !result.forceReset && prev && !prev.earlyBlocked && prev.concerns
+          ? { ...prev.concerns }
+          : {};
+      for (const role of result.scoredRoles || []) {
+        if (
+          result.score?.crisisDelta &&
+          Object.prototype.hasOwnProperty.call(result.score.crisisDelta, role)
+        ) {
+          baseDelta[role] = result.score.crisisDelta[role];
+        }
+        if (
+          result.score?.crisisReasons &&
+          Object.prototype.hasOwnProperty.call(result.score.crisisReasons, role)
+        ) {
+          baseReasons[role] = result.score.crisisReasons[role];
         }
       }
-      if (result.kind === "early") continue;
-      for (const ch of Object.values(landing.challengers || {})) {
-        if (ch.pathwayId !== result.pathwayId) continue;
-        const cRow = result.score?.concerns?.[ch.angle] || result.impact?.concerns?.[ch.angle];
-        const concernLamp = typeof cRow === "string" ? cRow : cRow?.level;
-        ch.lamp = resolveChallengerLamp(ch, pathway, concernLamp, landing);
-        if (cRow?.reason && !ch.playerAnswer) {
-          ch.answerFeedback = String(cRow.reason).slice(0, 400);
+      const mergedConcerns = result.scoredConcerns
+        ? { ...baseConcerns, ...(result.score?.concerns || {}) }
+        : baseConcerns;
+      const nextPendingRoles =
+        !result.forceReset && prev?.pendingRoles && typeof prev.pendingRoles === "object"
+          ? { ...prev.pendingRoles }
+          : {};
+      for (const role of result.scoredRoles || []) {
+        delete nextPendingRoles[role];
+      }
+      const mergedImpact = {
+        pathwayId: result.pathwayId,
+        inventionIds: result.inventionIds,
+        crisisDelta: baseDelta,
+        crisisReasons: baseReasons,
+        concerns: mergedConcerns,
+        pendingRoles: nextPendingRoles,
+        pending: Object.keys(nextPendingRoles).length > 0,
+      };
+      landing.pathwayImpacts[result.fingerprint] = mergedImpact;
+      applied = true;
+
+      if (newlySettledRoles.length) {
+        const connected = new Set();
+        for (const wire of Object.values(landing.wires || {})) {
+          if (wire.pathwayId !== result.pathwayId) continue;
+          connected.add(landing.crises?.[wire.crisisId]?.role || "local");
+        }
+        const crisisDelta = {};
+        for (const role of newlySettledRoles) {
+          if (!connected.has(role)) continue;
+          const n = Number(baseDelta[role]);
+          if (Number.isFinite(n) && n < 0) crisisDelta[role] = n;
+        }
+        if (Object.keys(crisisDelta).length) ease.push(crisisDelta);
+      }
+
+      if (result.scoredConcerns || result.forceReset) {
+        for (const ch of Object.values(landing.challengers || {})) {
+          if (ch.pathwayId !== result.pathwayId) continue;
+          const cRow = mergedConcerns?.[ch.angle];
+          const concernLamp = typeof cRow === "string" ? cRow : cRow?.level;
+          ch.lamp = resolveChallengerLamp(ch, pathway, concernLamp, landing);
+          if (cRow?.reason && !ch.playerAnswer) {
+            ch.answerFeedback = String(cRow.reason).slice(0, 400);
+          }
         }
       }
     }
@@ -1912,31 +2435,37 @@ export function createPathwayWorkshop(api) {
     }
   }
 
-  async function submitArgumentForm(form) {
-    if (argumentBusy) return;
-    const fd = new FormData(form);
-    const pathwayId =
-      String(fd.get("pathwayId") || "").trim() ||
+  async function submitArgument(pathwayId, rawClaim) {
+    if (argumentBusy) return null;
+    const targetPathwayId =
+      String(pathwayId || "").trim() ||
       focusedPathwayId ||
       Object.keys(board()?.pathways || {})[0];
-    const claim = String(fd.get("claim") || "").trim();
-    if (!pathwayId || !board()?.pathways?.[pathwayId]) {
+    const claim = String(rawClaim || "").trim();
+    if (!targetPathwayId || !board()?.pathways?.[targetPathwayId]) {
       api.flashToast?.("Create a Pathway in Lane 3 before filing an argument.");
-      return;
+      return null;
     }
     if (claim.length < 12) {
       api.flashToast?.("State a concrete demonstrated fact (at least one full sentence).");
-      return;
+      return null;
+    }
+    const assessments = settledPathwayAssessments(board(), targetPathwayId);
+    if (!assessments.timings.length && !assessments.pathways.length) {
+      api.flashToast?.(
+        "Wait for a timing check or plug this Pathway into a Crisis before filing an argument."
+      );
+      return null;
     }
     const pay = api.spendArgumentAp?.();
     if (pay && pay.ok === false) {
       api.flashToast?.(pay.reason || "Not enough AP (1 AP required).");
-      return;
+      return null;
     }
     argumentBusy = true;
     argumentModalOpen = false;
     const argId = `arg-${Date.now().toString(36)}`;
-    let next = attachArgument(board(), pathwayId, {
+    let next = attachArgument(board(), targetPathwayId, {
       id: argId,
       claim,
       verdict: "pending",
@@ -1950,6 +2479,7 @@ export function createPathwayWorkshop(api) {
       if (api.coInvent) {
         const data = await api.coInvent("fact-check-argument", "[Fact-check argument]", {
           claim,
+          assessments,
           year: year(),
           place: api.getPlace?.() || "",
           grounding: api.getGrounding?.() || null,
@@ -1964,7 +2494,7 @@ export function createPathwayWorkshop(api) {
       if (!verdict) {
         commit(removeArgument(board(), argId), { bill: false });
         api.flashToast?.("Fact-check could not verify — argument removed.");
-        return;
+        return null;
       }
       let settled = settleArgument(board(), argId, verdict, reason);
       api.flashToast?.(
@@ -1972,23 +2502,36 @@ export function createPathwayWorkshop(api) {
           ? `⚖️ Argument accepted: ${reason || "attached to pathway."}`
           : `⚖️ Argument rejected: ${reason || "claim not verified."}`
       );
-      if (!commit(settled, { bill: false })) return;
+      if (!commit(settled, { bill: false })) return null;
       if (verdict === "accept") {
+        const pwNow = board()?.pathways?.[targetPathwayId];
+        for (const ing of pwNow?.ingredients || []) {
+          if (ing.timingLevel && ing.timingLevel !== "green") {
+            await assessIngredientFeasibility(targetPathwayId, ing.id, { skipScore: true });
+          }
+        }
         const isWired = Object.values(board()?.wires || {}).some(
-          (w) => w.pathwayId === pathwayId
+          (w) => w.pathwayId === targetPathwayId
         );
         if (isWired) {
-          commit(await scoreWired(board(), { forcePathwayIds: new Set([pathwayId]) }), {
+          commit(await scoreWired(board(), { forcePathwayIds: new Set([targetPathwayId]) }), {
             bill: false,
           });
         }
       }
+      return { id: argId, verdict, reason };
     } catch {
       commit(removeArgument(board(), argId), { bill: false });
       api.flashToast?.("Fact-check failed — argument removed.");
+      return null;
     } finally {
       argumentBusy = false;
     }
+  }
+
+  async function submitArgumentForm(form) {
+    const fd = new FormData(form);
+    return submitArgument(fd.get("pathwayId"), fd.get("claim"));
   }
 
   async function showCollection() {
@@ -2121,6 +2664,816 @@ export function createPathwayWorkshop(api) {
     }
   }
 
+  // ── Lane 3 Innovation Workbench actions (strictly solo/local until Mint/Fuse) ──
+
+  function openWorkbench(opts = {}) {
+    workbenchOpen = true;
+    if (opts.method && ["seed", "convergence", "sit", "scamper"].includes(opts.method)) {
+      wbMethod = opts.method;
+    }
+    if (!wbConvergencePair.length) {
+      const current = board();
+      const firstTech = focusedTechId || Object.keys(current?.techTracks || {})[0] || null;
+      if (firstTech) wbConvergencePair = [firstTech];
+    }
+    paint();
+    return true;
+  }
+
+  function closeWorkbench() {
+    workbenchOpen = false;
+    paint();
+    return true;
+  }
+
+  function toggleWorkbench() {
+    return workbenchOpen ? closeWorkbench() : openWorkbench();
+  }
+
+  function setWorkbenchMethod(method) {
+    if (!["seed", "convergence", "sit", "scamper"].includes(method)) return false;
+    wbMethod = method;
+    if (method === "convergence" && !wbConvergencePair.length) {
+      const firstTech = focusedTechId || Object.keys(board()?.techTracks || {})[0] || null;
+      if (firstTech) wbConvergencePair = [firstTech];
+    }
+    persistLocalWorkbench();
+    paint();
+    return true;
+  }
+
+  function pickWorkbenchScarcity(label) {
+    const clean = String(label || "").trim().slice(0, 140);
+    wbScarcityFocus = wbScarcityFocus === clean ? "" : clean;
+    persistLocalWorkbench();
+    paint();
+    return wbScarcityFocus;
+  }
+
+  function pickConvergenceTech(techId) {
+    const id = String(techId || "");
+    if (!techById(id)) return false;
+    const idx = wbConvergencePair.indexOf(id);
+    if (idx >= 0) {
+      wbConvergencePair = wbConvergencePair.filter((t) => t !== id);
+    } else if (wbConvergencePair.length < 2) {
+      wbConvergencePair = [...wbConvergencePair, id];
+    } else {
+      wbConvergencePair = [wbConvergencePair[0], id];
+    }
+    persistLocalWorkbench();
+    paint();
+    return true;
+  }
+
+  function clearConvergencePair() {
+    wbConvergencePair = [];
+    persistLocalWorkbench();
+    paint();
+  }
+
+  function selectSitLens(lensId) {
+    if (!SIT_LENSES.some((l) => l.id === lensId)) return false;
+    wbSitLens = lensId;
+    persistLocalWorkbench();
+    paint();
+    return true;
+  }
+
+  function toggleScamperLetter(letter) {
+    const id = String(letter || "").toUpperCase();
+    if (!SCAMPER_LENSES.some((l) => l.id === id)) return false;
+    if (wbScamperLetters.includes(id)) {
+      if (wbScamperLetters.length > 1) {
+        wbScamperLetters = wbScamperLetters.filter((l) => l !== id);
+      }
+    } else if (wbScamperLetters.length >= 3) {
+      wbScamperLetters = [...wbScamperLetters.slice(1), id];
+    } else {
+      wbScamperLetters = [...wbScamperLetters, id];
+    }
+    persistLocalWorkbench();
+    paint();
+    return true;
+  }
+
+  function pickTop3Scamper() {
+    const current = board();
+    const seed = resolveEffectiveRemixSeed(
+      current,
+      Object.values(current?.useCases || {}),
+      Object.values(current?.pathways || {}).map((pw) => ({
+        ...pw,
+        title: pw.ingredients.map((i) => i.title).slice(0, 2).join(" + "),
+        howText: composePathwayHow(pw),
+      })),
+      focusedTechId
+    );
+    const hasBridgeGap = evaluateStagedDrafts(
+      wbStagedIds.map((id) => wbDrafts.find((d) => d.id === id)).filter(Boolean),
+      current,
+      year(),
+      { enforceWorlds: enforceWorlds() }
+    ).worldChain.needsBridge;
+    wbScamperLetters = recommendedScamperForSeed({
+      challengerAngle: seed?.challengerAngle || null,
+      seedText: seed?.howText || "",
+      world: seed?.world || "",
+      hasBridgeGap,
+    });
+    persistLocalWorkbench();
+    paint();
+    return [...wbScamperLetters];
+  }
+
+  function selectRemixSeedByKey(key) {
+    const raw = String(key || "");
+    const [kind, ...rest] = raw.split(":");
+    const targetId = rest.join(":");
+    const current = board();
+    if (kind === "draft") {
+      const d = wbDrafts.find((row) => row.id === targetId);
+      if (!d) return false;
+      wbRemixSeed = {
+        kind: "draft",
+        id: d.id,
+        title: d.title,
+        howText: d.howText,
+        techId: d.techId || focusedTechId || null,
+        world: d.world || "bits",
+      };
+    } else if (kind === "pathway") {
+      const pw = current?.pathways?.[targetId];
+      if (!pw) return false;
+      wbRemixSeed = {
+        kind: "pathway",
+        id: pw.id,
+        title: pw.ingredients.map((i) => i.title).slice(0, 2).join(" + ") || "Pathway",
+        howText: composePathwayHow(pw),
+        techId: pw.ingredients?.[0]?.techId || focusedTechId || null,
+        world: pw.ingredients?.[0]?.world || "bits",
+      };
+    } else if (kind === "usecase") {
+      const uc = current?.useCases?.[targetId];
+      if (!uc) return false;
+      wbRemixSeed = {
+        kind: "usecase",
+        id: uc.id,
+        title: uc.title,
+        howText: uc.blurb || uc.title,
+        techId: uc.techId || focusedTechId || null,
+        world: uc.world || "bits",
+      };
+    } else {
+      return false;
+    }
+    paint();
+    return true;
+  }
+
+  function remixInWorkbench(sourceKind, sourceId, targetMethod = "sit") {
+    const method = targetMethod === "scamper" ? "scamper" : "sit";
+    if (!selectRemixSeedByKey(`${sourceKind}:${sourceId}`)) return false;
+    workbenchOpen = true;
+    wbMethod = method;
+    if (method === "scamper") {
+      wbScamperLetters = recommendedScamperForSeed({ seedText: wbRemixSeed?.howText || "" });
+    }
+    persistLocalWorkbench();
+    paint();
+    return true;
+  }
+
+  function remixRoadblockInWorkbench(challengerId) {
+    const current = board();
+    const ch = current?.challengers?.[challengerId];
+    if (!ch) return false;
+    const pw = current?.pathways?.[ch.pathwayId];
+    const angle = String(ch.angle || "stakeholder").toLowerCase();
+    const guide = CHALLENGER_LENS_MAP[angle] || CHALLENGER_LENS_MAP.stakeholder;
+    wbRemixSeed = {
+      kind: "roadblock",
+      id: ch.id,
+      pathwayId: ch.pathwayId,
+      title:
+        pw?.ingredients?.map((i) => i.title).slice(0, 2).join(" + ") || "Blocked Pathway",
+      howText: pw ? composePathwayHow(pw) : "",
+      techId: pw?.ingredients?.[0]?.techId || focusedTechId || null,
+      world: pw?.ingredients?.[0]?.world || "bits",
+      challengerAngle: angle,
+      challengerQuestion: ch.question || ch.speech || "",
+    };
+    wbScamperLetters = [...guide.scamper];
+    wbSitLens = guide.sit;
+    wbMethod = "scamper";
+    openChallengerId = null;
+    workbenchOpen = true;
+    persistLocalWorkbench();
+    paint();
+    return true;
+  }
+
+  function addPlayerWorkbenchDraft(opts = {}) {
+    const root = rootEl();
+    const liveTitle = root?.querySelector?.("[data-role='wb-draft-title']");
+    const liveText = root?.querySelector?.("[data-role='wb-draft-text']");
+    if (liveTitle && typeof liveTitle.value === "string") wbDraftTitle = liveTitle.value;
+    if (liveText && typeof liveText.value === "string") wbDraftText = liveText.value;
+
+    const text = String(opts.howText ?? wbDraftText ?? "").trim();
+    if (text.length < 10) {
+      api.flashToast?.("Write at least one concrete sentence describing how this draft works.");
+      return null;
+    }
+
+    const current = board();
+    const ids = selectedIds();
+    const firstUc = current?.useCases?.[ids[0]];
+    let techId = opts.techId !== undefined ? opts.techId : null;
+    let secondaryTechId = opts.secondaryTechId !== undefined ? opts.secondaryTechId : null;
+    let world = opts.world || null;
+    let lens = wbMethod;
+    let lensLabel = "✍️ Your Draft";
+    let useCaseIds = [];
+    let collectorCardId = null;
+
+    if (wbMethod === "convergence" && opts.techId === undefined) {
+      techId = wbConvergencePair[0] || focusedTechId || null;
+      secondaryTechId = wbConvergencePair[1] || null;
+      lens = "convergence";
+      lensLabel =
+        techId && secondaryTechId
+          ? `🔀 ${techById(techId)?.name || techId} × ${techById(secondaryTechId)?.name || secondaryTechId}`
+          : "🔀 Convergence · Yours";
+    } else if (wbMethod === "sit" && opts.techId === undefined) {
+      const seed = wbRemixSeed;
+      techId = seed?.techId ?? focusedTechId ?? null;
+      world = seed?.world || null;
+      lens = wbSitLens;
+      lensLabel = `${formatLensBadge("sit", wbSitLens)} · Yours`;
+    } else if (wbMethod === "scamper" && opts.techId === undefined) {
+      const seed = wbRemixSeed;
+      techId = seed?.techId ?? focusedTechId ?? null;
+      world = seed?.world || null;
+      lens = wbScamperLetters[0] || "S";
+      lensLabel = `${formatLensBadge("scamper", lens)} · Yours`;
+    } else if (opts.techId === undefined) {
+      techId = firstUc?.techId ?? focusedTechId ?? null;
+      world = firstUc?.world || null;
+      useCaseIds = [...ids];
+      collectorCardId = firstUc?.collectorCardId || null;
+      lens = "seed";
+      lensLabel = "💡 Seed · Yours";
+    }
+
+    const rawTitle = String(opts.title ?? wbDraftTitle ?? "").trim();
+    const title =
+      rawTitle.slice(0, 72) ||
+      wordClip(text.split(/[.!?]/)[0].trim(), 52) ||
+      "Local idea";
+
+    const ideaId = `idea-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const needArt = Boolean(api.fetchIdeaImage);
+    const idea = {
+      id: ideaId,
+      method: opts.method || wbMethod,
+      lens,
+      lensLabel: opts.lensLabel || lensLabel,
+      author: "player",
+      title,
+      howText: text.slice(0, 1200),
+      techId,
+      secondaryTechId: secondaryTechId && secondaryTechId !== techId ? secondaryTechId : null,
+      useCaseIds,
+      world: normalizeWorkbenchWorld(world, techId),
+      eases: String(opts.eases ?? wbScarcityFocus ?? "").slice(0, 60),
+      imagePrompt: text.slice(0, 400),
+      artUrl: null,
+      artId: null,
+      artPending: needArt,
+      collectorCardId,
+      seedLabel: wbRemixSeed?.title ? `From ${wbRemixSeed.title}` : "",
+    };
+
+    wbDrafts = [idea, ...wbDrafts].slice(0, 20);
+    wbDraftTitle = "";
+    wbDraftText = "";
+    persistLocalWorkbench();
+    paint();
+    if (needArt) {
+      void fetchArtForWorkbenchIdeas([idea]);
+    }
+    return idea;
+  }
+
+  async function fetchArtForWorkbenchIdeas(ideas) {
+    if (!api.fetchIdeaImage || !Array.isArray(ideas) || !ideas.length) return;
+    const place = api.getPlace?.() || "";
+    const y = year();
+    for (const row of ideas) {
+      if (!row || row.artUrl) continue;
+      const target = wbDrafts.find((d) => d.id === row.id);
+      if (!target) continue;
+      const artId =
+        target.artId ||
+        ideaImageId({
+          techId: target.techId || "plain",
+          ideaId: target.id,
+          place,
+          year: y,
+        });
+      target.artId = artId;
+      target.artPending = true;
+      try {
+        const url = await api.fetchIdeaImage({
+          techId: target.techId || "plain",
+          ideaId: target.id,
+          artId,
+          place,
+          year: y,
+          imagePrompt: target.imagePrompt || target.howText?.slice(0, 400) || target.title,
+          kind: target.techId ? undefined : "plain",
+        });
+        const live = wbDrafts.find((d) => d.id === row.id);
+        if (live) {
+          live.artUrl = url || null;
+          live.artId = artId;
+          live.artPending = false;
+          persistLocalWorkbench();
+          paint();
+        }
+      } catch {
+        const live = wbDrafts.find((d) => d.id === row.id);
+        if (live) {
+          live.artPending = false;
+          paint();
+        }
+      }
+    }
+  }
+
+  function addHumanBridgeToPathway(pathwayId) {
+    const current = board();
+    if (!isPathwayBoard(current) || !current.pathways?.[pathwayId]) return false;
+    const place = api.getPlace?.() || "this place";
+    const mission = api.getMission?.() || {};
+    const steward =
+      String(mission.stakeholder || "Local operators").split(",")[0].trim() || "Local operators";
+    const how = `${steward} confirms digital readings in ${place} and executes the physical valve, route, or ledger handoff in person so no software glitch acts unchecked.`;
+    const y = year();
+    const fused = fuseDraftIntoPathway(current, pathwayId, [
+      {
+        techId: null,
+        title: `${steward} handoff`,
+        howText: how,
+        world: "plain",
+        imagePrompt: how.slice(0, 400),
+        artPending: Boolean(api.fetchIdeaImage),
+        timingLevel: "green",
+        timingPct: 88,
+        timingPending: false,
+      },
+    ]);
+    if (!fused.ok) return false;
+    focusedPathwayId = pathwayId;
+    traceSelection = { type: "pathway", id: pathwayId };
+    const ok = commit(fused.board, { bill: false });
+    if (!ok) return false;
+    runPostMintPipelines(pathwayId, fused.ingredientIds, fused.board, y, { skipFeasibility: true });
+    const isWired = Object.values(fused.board.wires || {}).some((w) => w.pathwayId === pathwayId);
+    if (isWired) {
+      scoreWired(board(), { forcePathwayIds: new Set([pathwayId]) })
+        .then((scored) => commit(scored, { bill: false }))
+        .catch((e) => console.warn(e));
+    }
+    api.flashToast?.("Added 0$ Human Bridge step to pathway.");
+    return true;
+  }
+
+  function addHumanBridgeDraft() {
+    const place = api.getPlace?.() || "this place";
+    const mission = api.getMission?.() || {};
+    const steward = String(mission.stakeholder || "Local operators").split(",")[0].trim() || "Local operators";
+    const idea = addPlayerWorkbenchDraft({
+      method: "seed",
+      lensLabel: "🤝 Human Bridge · 0$",
+      title: `${steward} verification & handoff`,
+      howText: `${steward} confirms digital readings in ${place} and executes the physical valve, route, or ledger handoff in person so no software glitch acts unchecked.`,
+      techId: null,
+      secondaryTechId: null,
+      world: "plain",
+      eases: wbScarcityFocus || "",
+    });
+    return idea;
+  }
+
+  async function dealWorkbenchAiDrafts(scope = "focused") {
+    if (wbLensBusy) return [];
+    const current = board();
+    if (!isPathwayBoard(current)) return [];
+    const mission = api.getMission?.() || {};
+    const place = api.getPlace?.() || mission.place || "";
+    const y = year();
+    const crises = Object.values(current.crises || {});
+    const pathways = Object.values(current.pathways || {}).map((pw) => ({
+      ...pw,
+      title: pw.ingredients.map((i) => i.title).slice(0, 2).join(" + "),
+      howText: composePathwayHow(pw),
+    }));
+    const useCases = Object.values(current.useCases || {});
+
+    if (wbMethod === "convergence" && wbConvergencePair.length < 2) {
+      api.flashToast?.("Pick two technologies on the Convergence Canvas first.");
+      return [];
+    }
+
+    const pay = api.spendIdeaAp?.();
+    if (pay && pay.ok === false) {
+      api.flashToast?.(pay.reason || "Not enough AP");
+      return [];
+    }
+
+    const activeFocus = focusedTechId || Object.keys(current.techTracks || {})[0] || null;
+    const selectedUcs = selectedIds()
+      .map((id) => current.useCases?.[id])
+      .filter(Boolean);
+    const effectiveSeed = resolveEffectiveRemixSeed(current, useCases, pathways, activeFocus);
+
+    let lenses = [];
+    let techIds = [];
+    if (wbMethod === "convergence") {
+      lenses = ["convergence"];
+      techIds = [...wbConvergencePair];
+    } else if (wbMethod === "sit") {
+      lenses = scope === "all" ? SIT_LENSES.map((l) => l.id) : [wbSitLens];
+      techIds = [effectiveSeed?.techId || activeFocus].filter(Boolean);
+    } else if (wbMethod === "scamper") {
+      lenses = wbScamperLetters.length ? [...wbScamperLetters] : ["S"];
+      techIds = [effectiveSeed?.techId || activeFocus].filter(Boolean);
+    } else {
+      lenses = ["seed"];
+      const ucTechs = selectedUcs.map((u) => u.techId).filter(Boolean);
+      techIds = [...new Set([...ucTechs, activeFocus].filter(Boolean))].slice(0, 2);
+    }
+
+    const ctx = {
+      method: wbMethod,
+      lenses,
+      techIds,
+      focusTechId: techIds[0] || activeFocus,
+      scarcity: wbScarcityFocus || crises[0]?.name || "",
+      eases: wbScarcityFocus || crises[0]?.name || "",
+      seedTitle: effectiveSeed?.title || "",
+      seedText: effectiveSeed?.howText || "",
+      useCaseHint: selectedUcs.map((u) => u.title).join("; "),
+      useCaseIds: wbMethod === "seed" ? selectedIds() : [],
+      challengerAngle: effectiveSeed?.challengerAngle || null,
+      challengerQuestion: effectiveSeed?.challengerQuestion || null,
+      stakeholder: mission.stakeholder || "",
+      avoidTitles: wbDrafts.map((d) => d.title).slice(0, 12),
+      year: y,
+      place,
+    };
+
+    wbLensBusy = true;
+    api.setAiBusy?.(true);
+    paint();
+    try {
+      let drafts = [];
+      if (api.coInvent) {
+        try {
+          const data = await api.coInvent(
+            "workbench-lens",
+            `[Workbench ${wbMethod}: ${lenses.join(", ")}]`,
+            ctx
+          );
+          drafts = sanitizeWorkbenchDrafts(data?.ideas, ctx);
+        } catch {
+          drafts = [];
+        }
+      }
+      if (!drafts.length) {
+        drafts = localWorkbenchLensDrafts(ctx);
+      }
+      // Guarantee unique IDs even across repeated deals
+      const stamp = Date.now().toString(36);
+      const needArt = Boolean(api.fetchIdeaImage);
+      const stamped = drafts.map((d, idx) => ({
+        ...d,
+        id: `${d.id}-${stamp}-${idx}`,
+        artUrl: d.artUrl || null,
+        artId: d.artId || null,
+        artPending: needArt && !d.artUrl,
+      }));
+      wbDrafts = [...stamped, ...wbDrafts].slice(0, 20);
+      persistLocalWorkbench();
+      if (needArt) {
+        void fetchArtForWorkbenchIdeas(stamped);
+      }
+      return stamped;
+    } finally {
+      wbLensBusy = false;
+      api.setAiBusy?.(false);
+      api.onCreateIdle?.();
+      paint();
+    }
+  }
+
+  function toggleStageDraft(draftId) {
+    const id = String(draftId || "");
+    if (!wbDrafts.some((d) => d.id === id)) return false;
+    if (wbStagedIds.includes(id)) {
+      wbStagedIds = wbStagedIds.filter((x) => x !== id);
+    } else {
+      wbStagedIds = [...wbStagedIds, id];
+    }
+    persistLocalWorkbench();
+    paint();
+    return true;
+  }
+
+  function stageDraft(draftId) {
+    const id = String(draftId || "");
+    if (!wbDrafts.some((d) => d.id === id)) return false;
+    if (!wbStagedIds.includes(id)) {
+      wbStagedIds = [...wbStagedIds, id];
+      persistLocalWorkbench();
+      paint();
+    }
+    return true;
+  }
+
+  function deleteWorkbenchDraft(draftId) {
+    const id = String(draftId || "");
+    const before = wbDrafts.length;
+    wbDrafts = wbDrafts.filter((d) => d.id !== id);
+    wbStagedIds = wbStagedIds.filter((x) => x !== id);
+    if (wbDrafts.length === before) return false;
+    persistLocalWorkbench();
+    paint();
+    return true;
+  }
+
+  function clearWorkbenchDrafts() {
+    if (!wbDrafts.length && !wbStagedIds.length) return false;
+    wbDrafts = [];
+    wbStagedIds = [];
+    persistLocalWorkbench();
+    paint();
+    return true;
+  }
+
+  function runPostMintPipelines(pathwayId, ingredientIds, mintedBoard, y, opts = {}) {
+    const pw = mintedBoard?.pathways?.[pathwayId];
+    if (!pw) return;
+    const place = api.getPlace?.() || "";
+    const toAssess = [];
+    const toPaint = [];
+    for (const ingId of ingredientIds || []) {
+      const ing = pw.ingredients.find((r) => r.id === ingId);
+      if (!ing) continue;
+      const early = (ing.useCaseIds || []).some((ucId) =>
+        isUseCaseEarly(mintedBoard.useCases?.[ucId], y)
+      );
+      if (!early && !opts.skipFeasibility) toAssess.push(ing.id);
+      if (api.fetchIdeaImage && !ing.artUrl) {
+        const ideaId = `mint-${ing.id}`;
+        const artId =
+          ing.artId ||
+          ideaImageId({
+            techId: ing.techId || "plain",
+            ideaId,
+            place,
+            year: y,
+          });
+        toPaint.push({
+          ingId: ing.id,
+          opts: {
+            techId: ing.techId || "plain",
+            ideaId,
+            artId,
+            place,
+            year: y,
+            imagePrompt: ing.imagePrompt || ing.howText?.slice(0, 400) || ing.title,
+            kind: ing.techId ? "mint" : "plain",
+          },
+        });
+      }
+    }
+    if (toPaint.length) {
+      void (async () => {
+        for (const item of toPaint) {
+          await fetchArtForIngredient(pathwayId, item.ingId, item.opts);
+        }
+      })();
+    }
+    if (toAssess.length) {
+      // Run sequentially so multi-ingredient Workbench mints do not burst-trigger /api/co-invent rate limits
+      void (async () => {
+        for (const ingId of toAssess) {
+          try {
+            await assessIngredientFeasibility(pathwayId, ingId);
+          } catch (e) {
+            console.warn("[assess-feasibility]", e);
+          }
+        }
+      })();
+    }
+  }
+
+  /**
+   * Mint ONE Idea from the Ideas list into an illustrated Invention on the Converge canvas.
+   * Players then assemble minted Inventions together into Pathways.
+   */
+  function mintWorkbenchIdea(ideaId) {
+    const current = board();
+    if (!isPathwayBoard(current)) return false;
+    const id = String(ideaId || "");
+    const idea = wbDrafts.find((d) => d.id === id);
+    if (!idea) return false;
+
+    const y = year();
+    const partials = draftToIngredientPartials(idea).map((p) => {
+      const early = (p.useCaseIds || []).some((ucId) =>
+        isUseCaseEarly(current.useCases?.[ucId], y)
+      );
+      return {
+        ...p,
+        artPending: Boolean(api.fetchIdeaImage && !p.artUrl),
+        timingLevel: early ? "red" : "yellow",
+        timingPct: early ? 20 : 76,
+        timingPending: !early,
+      };
+    });
+
+    const gate = gateNewTechs(current, partials);
+    if (gate && gate.ok === false) {
+      api.flashUnaffordableTech?.(gate.techId, gate.error);
+      return false;
+    }
+
+    const minted = mintStagedDraftsToPathway(current, partials);
+    if (!minted.ok) return false;
+
+    const prevDrafts = [...wbDrafts];
+    const prevStaged = [...wbStagedIds];
+    wbDrafts = wbDrafts.filter((d) => d.id !== id);
+    wbStagedIds = wbStagedIds.filter((x) => x !== id);
+    focusedPathwayId = minted.pathwayId;
+    traceSelection = { type: "pathway", id: minted.pathwayId };
+
+    const ok = commit(minted.board, { bill: true });
+    if (!ok) {
+      wbDrafts = prevDrafts;
+      wbStagedIds = prevStaged;
+      paint();
+      return false;
+    }
+
+    persistLocalWorkbench();
+    runPostMintPipelines(minted.pathwayId, minted.ingredientIds, minted.board, y);
+    const pw = minted.board.pathways?.[minted.pathwayId];
+    if (pw && (pw.ingredients || []).length >= 2 && !(pw.convergences || []).length) {
+      void checkAiConvergence(minted.pathwayId);
+    }
+    api.flashToast?.(`Added "${idea.title}" to Pathway Assembly. Drag cards together to combine, or drag to a Crisis.`);
+    return true;
+  }
+
+  function mintStagedDrafts() {
+    const current = board();
+    if (!isPathwayBoard(current)) return false;
+    const staged = wbStagedIds
+      .map((id) => wbDrafts.find((d) => d.id === id))
+      .filter(Boolean);
+    if (!staged.length) {
+      api.flashToast?.("Stage at least one Draft Card into Converge first.");
+      return false;
+    }
+
+    const y = year();
+    const partials = staged.flatMap((d) =>
+      draftToIngredientPartials(d).map((p) => {
+        const early = (p.useCaseIds || []).some((ucId) =>
+          isUseCaseEarly(current.useCases?.[ucId], y)
+        );
+        return {
+          ...p,
+          artPending: Boolean(api.fetchIdeaImage && !p.artUrl),
+          timingLevel: early ? "red" : "yellow",
+          timingPct: early ? 20 : 76,
+          timingPending: !early,
+        };
+      })
+    );
+
+    // Pre-check affordability for each unique new tech
+    const gate = gateNewTechs(current, partials);
+    if (gate && gate.ok === false) {
+      api.flashUnaffordableTech?.(gate.techId, gate.error);
+      return false;
+    }
+
+    const minted = mintStagedDraftsToPathway(current, partials);
+    if (!minted.ok) return false;
+
+    const consumedSet = new Set(wbStagedIds);
+    const prevDrafts = [...wbDrafts];
+    const prevStaged = [...wbStagedIds];
+    wbDrafts = wbDrafts.filter((d) => !consumedSet.has(d.id));
+    wbStagedIds = [];
+    focusedPathwayId = minted.pathwayId;
+    traceSelection = { type: "pathway", id: minted.pathwayId };
+
+    const ok = commit(minted.board, { bill: true });
+    if (!ok) {
+      wbDrafts = prevDrafts;
+      wbStagedIds = prevStaged;
+      paint();
+      return false;
+    }
+
+    persistLocalWorkbench();
+    runPostMintPipelines(minted.pathwayId, minted.ingredientIds, minted.board, y);
+    const pw = minted.board.pathways?.[minted.pathwayId];
+    if (pw && (pw.ingredients || []).length >= 2 && !(pw.convergences || []).length) {
+      void checkAiConvergence(minted.pathwayId);
+    }
+    api.flashToast?.(
+      staged.length > 1
+        ? `Formed fused Pathway from ${staged.length} ideas.`
+        : `Formed Pathway "${staged[0].title}".`
+    );
+    return true;
+  }
+
+  function fuseStagedIntoPathway(pathwayId, explicitDraftId = null) {
+    const current = board();
+    if (!isPathwayBoard(current) || !current.pathways?.[pathwayId]) return false;
+    const toFuseIds = explicitDraftId
+      ? [explicitDraftId]
+      : [...wbStagedIds];
+    const drafts = toFuseIds
+      .map((id) => wbDrafts.find((d) => d.id === id))
+      .filter(Boolean);
+    if (!drafts.length) {
+      api.flashToast?.("Stage a draft first to fuse it into an existing Pathway.");
+      return false;
+    }
+
+    const y = year();
+    const partials = drafts.flatMap((d) =>
+      draftToIngredientPartials(d).map((p) => {
+        const early = (p.useCaseIds || []).some((ucId) =>
+          isUseCaseEarly(current.useCases?.[ucId], y)
+        );
+        return {
+          ...p,
+          artPending: Boolean(api.fetchIdeaImage && !p.artUrl),
+          timingLevel: early ? "red" : "yellow",
+          timingPct: early ? 20 : 76,
+          timingPending: !early,
+        };
+      })
+    );
+
+    const gate = gateNewTechs(current, partials);
+    if (gate && gate.ok === false) {
+      api.flashUnaffordableTech?.(gate.techId, gate.error);
+      return false;
+    }
+
+    const fused = fuseDraftIntoPathway(current, pathwayId, partials);
+    if (!fused.ok) return false;
+
+    const consumedSet = new Set(toFuseIds);
+    const prevDrafts = [...wbDrafts];
+    const prevStaged = [...wbStagedIds];
+    wbDrafts = wbDrafts.filter((d) => !consumedSet.has(d.id));
+    wbStagedIds = wbStagedIds.filter((id) => !consumedSet.has(id));
+    focusedPathwayId = pathwayId;
+    traceSelection = { type: "pathway", id: pathwayId };
+
+    const ok = commit(fused.board, { bill: true });
+    if (!ok) {
+      wbDrafts = prevDrafts;
+      wbStagedIds = prevStaged;
+      paint();
+      return false;
+    }
+
+    persistLocalWorkbench();
+    runPostMintPipelines(pathwayId, fused.ingredientIds, fused.board, y);
+    const isWired = Object.values(fused.board.wires || {}).some((w) => w.pathwayId === pathwayId);
+    if (isWired) {
+      scoreWired(board(), { forcePathwayIds: new Set([pathwayId]) })
+        .then((scored) => commit(scored, { bill: false }))
+        .catch((e) => console.warn(e));
+    }
+    api.flashToast?.("Fused draft into Pathway.");
+    return true;
+  }
+
   function pruneUnused() {
     const current = board();
     if (!isPathwayBoard(current)) return false;
@@ -2179,7 +3532,7 @@ export function createPathwayWorkshop(api) {
       }
       if (
         target?.closest?.(
-          "button, a, input, textarea, select, label, summary, details, canvas, .ontology-modal-scrim, .ontology-composer, .ontology-rules, .ontology-topbar, .ontology-trace-bar"
+          "button, a, input, textarea, select, label, summary, details, canvas, .ontology-modal-scrim, .ontology-composer, .ontology-workbench, .ontology-rules, .ontology-topbar, .ontology-trace-bar"
         )
       ) {
         return;
@@ -2437,6 +3790,82 @@ export function createPathwayWorkshop(api) {
       btn.closest?.("details.ontology-tools")?.removeAttribute?.("open");
       showCollection().catch((e) => console.warn(e));
       return;
+    } else if (action === "toggle-workbench") {
+      toggleWorkbench();
+      return;
+    } else if (action === "wb-set-method") {
+      setWorkbenchMethod(btn.getAttribute("data-method"));
+      return;
+    } else if (action === "wb-pick-scarcity") {
+      pickWorkbenchScarcity(btn.getAttribute("data-label"));
+      return;
+    } else if (action === "wb-clear-scarcity") {
+      wbScarcityFocus = "";
+      persistLocalWorkbench();
+    } else if (action === "wb-conv-pick") {
+      pickConvergenceTech(btn.getAttribute("data-tech-id"));
+      return;
+    } else if (action === "wb-conv-clear") {
+      clearConvergencePair();
+      return;
+    } else if (action === "wb-sit-select") {
+      selectSitLens(btn.getAttribute("data-lens"));
+      return;
+    } else if (action === "wb-scamper-toggle") {
+      toggleScamperLetter(btn.getAttribute("data-letter"));
+      return;
+    } else if (action === "wb-scamper-top3") {
+      pickTop3Scamper();
+      return;
+    } else if (action === "wb-add-player-draft") {
+      addPlayerWorkbenchDraft();
+      return;
+    } else if (action === "wb-add-human-draft") {
+      addHumanBridgeDraft();
+      return;
+    } else if (action === "wb-add-human-bridge") {
+      addHumanBridgeToPathway(btn.getAttribute("data-pathway-id"));
+      return;
+    } else if (action === "wb-mint-idea") {
+      mintWorkbenchIdea(btn.getAttribute("data-idea-id") || btn.getAttribute("data-draft-id"));
+      return;
+    } else if (action === "wb-deal-ai") {
+      dealWorkbenchAiDrafts(btn.getAttribute("data-scope") || "focused").catch((e) =>
+        console.warn(e)
+      );
+      return;
+    } else if (action === "wb-toggle-stage") {
+      toggleStageDraft(btn.getAttribute("data-draft-id"));
+      return;
+    } else if (action === "wb-delete-draft") {
+      deleteWorkbenchDraft(btn.getAttribute("data-draft-id"));
+      return;
+    } else if (action === "wb-clear-drafts") {
+      clearWorkbenchDrafts();
+      return;
+    } else if (action === "wb-remix") {
+      btn.closest?.("details")?.removeAttribute?.("open");
+      remixInWorkbench(
+        btn.getAttribute("data-source-kind"),
+        btn.getAttribute("data-source-id"),
+        btn.getAttribute("data-target-method")
+      );
+      return;
+    } else if (action === "wb-remix-roadblock") {
+      remixRoadblockInWorkbench(btn.getAttribute("data-challenger-id"));
+      return;
+    } else if (action === "wb-mint-staged") {
+      mintStagedDrafts();
+      return;
+    } else if (action === "wb-fuse-staged") {
+      fuseStagedIntoPathway(btn.getAttribute("data-pathway-id"));
+      return;
+    } else if (action === "wb-rail-toggle-tech") {
+      const tid = btn.getAttribute("data-tech-id");
+      if (tid) {
+        focusedTechId = tid;
+        wbRailExpandedTechId = wbRailExpandedTechId === tid ? null : tid;
+      }
     } else if (action === "prune-unused") {
       pruneUnused();
       return;
@@ -2463,6 +3892,13 @@ export function createPathwayWorkshop(api) {
       editHowBuffer = el.value;
     } else if (role === "roadblock-text") {
       roadblockDraft = el.value;
+    } else if (role === "wb-scarcity-input") {
+      wbScarcityFocus = el.value.slice(0, 140);
+      persistLocalWorkbench();
+    } else if (role === "wb-draft-title") {
+      wbDraftTitle = el.value.slice(0, 72);
+    } else if (role === "wb-draft-text") {
+      wbDraftText = el.value.slice(0, 1200);
     }
   }
 
@@ -2503,8 +3939,14 @@ export function createPathwayWorkshop(api) {
   }
 
   function onChange(event) {
+    const root = rootEl();
+    const seedSel = event.target?.closest?.("select[data-action='wb-pick-seed']");
+    if (seedSel && root?.contains(seedSel)) {
+      selectRemixSeedByKey(seedSel.value);
+      return;
+    }
     const sel = event.target?.closest?.("select[data-action='select-trend']");
-    if (!sel || !rootEl()?.contains(sel)) return;
+    if (!sel || !root?.contains(sel)) return;
     const techId = sel.getAttribute("data-tech-id");
     if (techId && sel.value) {
       selectedTrendByTech.set(techId, sel.value);
@@ -2537,56 +3979,188 @@ export function createPathwayWorkshop(api) {
       collectionCards = null;
       collectionLoad = null;
     });
+    let activeDrag = null;
+
+    function asElement(node) {
+      if (!node) return null;
+      return node.nodeType === 3 ? node.parentElement || null : node;
+    }
+
+    function parseDragPayload(payload) {
+      const s = String(payload || "");
+      if (s.startsWith("path:")) return { kind: "path", id: s.slice(5) };
+      if (s.startsWith("draft:")) return { kind: "draft", id: s.slice(6) };
+      if (s.startsWith("use:")) return { kind: "use", id: s.slice(4) };
+      return null;
+    }
+
+    function clearDropHovers(exceptEl = null) {
+      root.querySelectorAll?.(".is-drop-hover").forEach((el) => {
+        if (el !== exceptEl) el.classList.remove("is-drop-hover");
+      });
+    }
+
+    function resolveDropTarget(rawTarget, drag) {
+      const targetEl = asElement(rawTarget);
+      if (!targetEl?.closest) return null;
+      if (drag?.kind === "path") {
+        const crisisCard = targetEl.closest("[data-crisis-id]");
+        if (crisisCard) return crisisCard;
+        const problemLane = targetEl.closest("[data-lane='problem']");
+        if (problemLane) {
+          const allCrisisCards = problemLane.querySelectorAll?.("[data-crisis-id]");
+          if (allCrisisCards && allCrisisCards.length === 1) return allCrisisCards[0];
+          return null;
+        }
+        const pwCard = targetEl.closest("[data-pathway-id]");
+        if (pwCard && pwCard.getAttribute("data-pathway-id") !== drag.id) {
+          return pwCard;
+        }
+        return null;
+      }
+      if (drag?.kind === "draft") {
+        const pwTarget = targetEl.closest("[data-drop='wb-fuse-pathway']");
+        if (pwTarget) return pwTarget;
+        return targetEl.closest("[data-drop='wb-assemble-canvas'], [data-drop='wb-stage']");
+      }
+      if (drag?.kind === "use") {
+        return targetEl.closest("[data-drop='wb-assemble-canvas'], [data-drop='wb-stage'], [data-lane='pathway']");
+      }
+      return targetEl.closest("[data-drop]");
+    }
+
+    function handleDragHover(event) {
+      const zone = resolveDropTarget(event.target, activeDrag);
+      clearDropHovers(zone);
+      if (!zone) return;
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+      }
+      zone.classList.add("is-drop-hover");
+    }
+
     root.addEventListener("dragstart", (event) => {
-      const card = event.target?.closest?.("[data-usecase-id], [data-pathway-id]");
+      const targetEl = asElement(event.target);
+      if (targetEl?.closest?.("textarea, input, select")) return;
+      const card = targetEl?.closest?.("[data-wb-draft-id], [data-usecase-id], [data-pathway-id]");
       if (!card) return;
-      const payload = card.getAttribute("data-usecase-id")
-        ? `use:${card.getAttribute("data-usecase-id")}`
-        : `path:${card.getAttribute("data-pathway-id")}`;
-      event.dataTransfer?.setData("text/plain", payload);
+      let payload = "";
+      if (card.getAttribute("data-wb-draft-id")) {
+        const did = card.getAttribute("data-wb-draft-id");
+        activeDrag = { kind: "draft", id: did };
+        payload = `draft:${did}`;
+      } else if (card.getAttribute("data-usecase-id")) {
+        const uid = card.getAttribute("data-usecase-id");
+        activeDrag = { kind: "use", id: uid };
+        payload = `use:${uid}`;
+      } else {
+        const pid = card.getAttribute("data-pathway-id");
+        activeDrag = { kind: "path", id: pid };
+        payload = `path:${pid}`;
+        root.classList?.add("is-dragging-pathway");
+      }
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "all";
+        try {
+          event.dataTransfer.setData("application/x-future-forge", payload);
+        } catch {}
+        try {
+          event.dataTransfer.setData("text/plain", payload);
+        } catch {}
+      }
       card.classList.add("is-dragging");
     });
     root.addEventListener("dragend", (event) => {
-      event.target?.closest?.(".is-dragging")?.classList.remove("is-dragging");
-      root.querySelectorAll?.(".is-drop-hover").forEach((el) => el.classList.remove("is-drop-hover"));
+      activeDrag = null;
+      root.classList?.remove("is-dragging-pathway");
+      asElement(event.target)?.closest?.(".is-dragging")?.classList.remove("is-dragging");
+      root.querySelectorAll?.(".is-dragging").forEach((el) => el.classList.remove("is-dragging"));
+      clearDropHovers();
     });
-    root.addEventListener("dragover", (event) => {
-      const zone = event.target?.closest?.("[data-drop]");
-      if (!zone) return;
-      event.preventDefault();
-      zone.classList.add("is-drop-hover");
-    });
+    root.addEventListener("dragenter", handleDragHover);
+    root.addEventListener("dragover", handleDragHover);
     root.addEventListener("dragleave", (event) => {
-      const zone = event.target?.closest?.("[data-drop]");
-      if (zone && !zone.contains(event.relatedTarget)) {
+      const zone = resolveDropTarget(event.target, activeDrag);
+      const related = asElement(event.relatedTarget);
+      if (zone && !zone.contains?.(related)) {
         zone.classList.remove("is-drop-hover");
       }
     });
     root.addEventListener("drop", (event) => {
-      root.querySelectorAll?.(".is-drop-hover").forEach((el) => el.classList.remove("is-drop-hover"));
-      const zone = event.target?.closest?.("[data-drop]");
-      if (!zone) return;
+      const dragSnapshot = activeDrag;
+      activeDrag = null;
+      root.classList?.remove("is-dragging-pathway");
+      root.querySelectorAll?.(".is-dragging").forEach((el) => el.classList.remove("is-dragging"));
+      clearDropHovers();
+      const targetEl = asElement(event.target);
+      const customPayload = (() => {
+        try {
+          return event.dataTransfer?.getData("application/x-future-forge") || "";
+        } catch {
+          return "";
+        }
+      })();
+      const textPayload = (() => {
+        try {
+          return event.dataTransfer?.getData("text/plain") || "";
+        } catch {
+          return "";
+        }
+      })();
+      const effectiveDrag =
+        dragSnapshot ||
+        parseDragPayload(customPayload) ||
+        parseDragPayload(textPayload);
+      const zone = resolveDropTarget(targetEl, effectiveDrag);
+      if (!zone || !effectiveDrag?.id) return;
       event.preventDefault();
-      const payload = event.dataTransfer?.getData("text/plain") || "";
-      if (payload.startsWith("use:") && zone.getAttribute("data-drop") === "pathway") {
-        const ucId = payload.slice(4);
+      const dropKind = zone.getAttribute("data-drop");
+      if (effectiveDrag.kind === "draft") {
+        const draftId = effectiveDrag.id;
+        if (dropKind === "wb-assemble-canvas") {
+          mintWorkbenchIdea(draftId);
+        } else if (dropKind === "wb-stage") {
+          stageDraft(draftId);
+        } else if (dropKind === "wb-fuse-pathway") {
+          const targetPwId =
+            zone.getAttribute("data-pathway-id") ||
+            targetEl?.closest?.("[data-pathway-id]")?.getAttribute("data-pathway-id");
+          if (targetPwId) fuseStagedIntoPathway(targetPwId, draftId);
+        }
+        return;
+      }
+      if (
+        effectiveDrag.kind === "use" &&
+        (dropKind === "pathway" || dropKind === "wb-stage" || dropKind === "wb-assemble-canvas")
+      ) {
+        const ucId = effectiveDrag.id;
         const uc = board()?.useCases?.[ucId];
         if (!uc) return;
         if (uc.techId) focusedTechId = uc.techId;
-        selectedUseCaseIds = [ucId];
-        writeOpen = true;
-        paint();
-      } else if (payload.startsWith("path:")) {
-        const sourceId = payload.slice(5);
-        if (zone.getAttribute("data-drop") === "crisis") {
-          const crisisId =
-            event.target.closest("[data-crisis-id]")?.getAttribute("data-crisis-id") ||
-            Object.keys(board()?.crises || {})[0];
-          if (crisisId) plug(sourceId, crisisId).catch((e) => console.warn(e));
-        } else if (zone.getAttribute("data-drop") === "pathway") {
-          const targetId = event.target
-            .closest("[data-pathway-id]")
-            ?.getAttribute("data-pathway-id");
+        if (workbenchOpen) {
+          if (!selectedUseCaseIds.includes(ucId)) {
+            selectedUseCaseIds = [...selectedUseCaseIds, ucId];
+          }
+          wbMethod = "seed";
+          paint();
+        } else {
+          selectedUseCaseIds = [ucId];
+          writeOpen = true;
+          paint();
+        }
+      } else if (effectiveDrag.kind === "path") {
+        const sourceId = effectiveDrag.id;
+        const crisisId =
+          zone.getAttribute("data-crisis-id") ||
+          targetEl?.closest?.("[data-crisis-id]")?.getAttribute("data-crisis-id") ||
+          null;
+        if (crisisId) {
+          plug(sourceId, crisisId).catch((e) => console.warn(e));
+        } else if (dropKind === "pathway" || dropKind === "wb-fuse-pathway") {
+          const targetId =
+            zone.getAttribute("data-pathway-id") ||
+            targetEl?.closest?.("[data-pathway-id]")?.getAttribute("data-pathway-id");
           if (targetId && targetId !== sourceId) {
             fuse(targetId, sourceId);
           }
@@ -2740,5 +4314,44 @@ export function createPathwayWorkshop(api) {
     showCollection,
     adoptCollector,
     pruneUnused,
+    submitArgument,
+    openWorkbench,
+    closeWorkbench,
+    toggleWorkbench,
+    setWorkbenchMethod,
+    pickWorkbenchScarcity,
+    pickConvergenceTech,
+    clearConvergencePair,
+    selectSitLens,
+    toggleScamperLetter,
+    pickTop3Scamper,
+    remixInWorkbench,
+    remixRoadblockInWorkbench,
+    addPlayerWorkbenchDraft,
+    addPlayerWorkbenchIdea: addPlayerWorkbenchDraft,
+    addHumanBridgeDraft,
+    addHumanBridgeToPathway,
+    dealWorkbenchAiDrafts,
+    dealWorkbenchAiIdeas: dealWorkbenchAiDrafts,
+    mintWorkbenchIdea,
+    toggleStageDraft,
+    deleteWorkbenchDraft,
+    deleteWorkbenchIdea: deleteWorkbenchDraft,
+    clearWorkbenchDrafts,
+    clearWorkbenchIdeas: clearWorkbenchDrafts,
+    mintStagedDrafts,
+    fuseStagedIntoPathway,
+    getWorkbenchState: () => ({
+      open: workbenchOpen,
+      method: wbMethod,
+      scarcityFocus: wbScarcityFocus,
+      convergencePair: [...wbConvergencePair],
+      sitLens: wbSitLens,
+      scamperLetters: [...wbScamperLetters],
+      ideas: wbDrafts.map((d) => ({ ...d })),
+      drafts: wbDrafts.map((d) => ({ ...d })),
+      stagedIds: [...wbStagedIds],
+      remixSeed: wbRemixSeed ? { ...wbRemixSeed } : null,
+    }),
   };
 }

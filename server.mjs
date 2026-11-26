@@ -102,6 +102,7 @@ import {
   searchSystemLineForMode,
 } from "./js/server/ai-search.mjs";
 import { ideasOrFallback } from "./js/idea-cards.js";
+import { sanitizeWorkbenchDrafts, localWorkbenchLensDrafts } from "./js/board/workbench-methods.js";
 import { sanitizeScrutiny } from "./js/scrutiny-shared.js";
 import {
   FAST_EVAL_MODES,
@@ -971,6 +972,9 @@ function buildUserPayload({ messages, context, mode }) {
     "idea-sparks":
       "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (\u226460 chars), blurb (\u2264140), insertText/howText (\u2264280), imagePrompt (\u2264400), year, eases }. eases = the exact label of one context.crisisMeters entry this spark helps most; aim at least one spark at the meter furthest above its goal; write for context.stakeholder when named. Three DIFFERENT angles. Pilot-honest. title is a plain noun phrase a learner can say aloud (what the idea is, not a slogan; no coined slang). howText/insertText is one clear mechanism sentence in everyday words, using the named person/place when known. Leave proposals empty. If context.refresh is true, do not repeat context.avoidTitles." +
       GROUNDING_HINT,
+    "workbench-lens":
+      "Return structured visual Draft Cards for the Innovation Workbench in top-level ideas[]. Honor context.method (seed | convergence | sit | scamper), context.lenses[], context.techIds[], context.scarcity, context.seedText, and optional context.challengerAngle / context.challengerQuestion. Each card: { id, lens, lensLabel, title (<=64 chars), howText (<=360 chars), techId, secondaryTechId, world (bits|atoms|split|plain), eases, imagePrompt }. Pilot-honest local mechanisms only. Leave proposals empty." +
+      GROUNDING_HINT,
     "evaluate-neighbors":
       "Judge hex-board traffic lights for context.hexEval.givens from EACH given's FULL reachable invention pathway (neighbors[] + pathway howText/techIds; direct:true = edge contact) plus playerAnswer if present. Judge the combination as one invent. Crisis: role criteria — local = here-and-now / local fit; global = root cause / sustainable; support = public buy-in + scale beyond pilot; honor prior; green OK when honest. Concern: judge against stored challengeSpeech/challengeQuestion AND playerAnswer — hard question honestly answered by the pathway plus written answer? Docking/touching is NOT addressing. Docked with no answer and no pathway mechanism that answers THIS challenge stays red. yellow = partial honest address; green only if the pathway honestly holds the answer. Return lights: [{id, level:red|yellow|green, reason}]. Do not rewrite inventions. Leave proposals empty." +
       GROUNDING_HINT,
@@ -1218,11 +1222,12 @@ function extractJson(text) {
 
 function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat", context = {}) {
   const ids = new Set(availableIds);
-  // SIT / SCAMPER / idea-sparks are brainstorm sparks — never offer Apply how-it-works
+  // SIT / SCAMPER / idea-sparks / workbench-lens are brainstorm sparks — never offer Apply how-it-works
   const brainstormOnly =
     mode === "sit" ||
     mode === "scamper" ||
     mode === "idea-sparks" ||
+    mode === "workbench-lens" ||
     mode === "evaluate-neighbors" ||
     mode === "score-pathway";
   const empty = {
@@ -1290,6 +1295,9 @@ function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat", cont
 
   if (mode === "idea-sparks") {
     out.ideas = ideasOrFallback(parsed.ideas, null, context);
+  } else if (mode === "workbench-lens") {
+    const clean = sanitizeWorkbenchDrafts(parsed.ideas, context);
+    out.ideas = clean.length ? clean : localWorkbenchLensDrafts(context);
   }
 
   // Tutor session exit signal (learning modules)

@@ -23,6 +23,8 @@ import {
   addTechTrack,
   dealMilestone,
   createPathway,
+  mintStagedDraftsToPathway,
+  fuseDraftIntoPathway,
   fusePathways,
   unfuseIngredient,
   composePathwayHow,
@@ -54,6 +56,8 @@ import {
   acceptedArgumentsForPathway,
   pairConverges,
 } from "./pathway-model.js";
+
+import { boardForWire } from "../hex/board-state.js";
 
 const milestone = {
   id: "ms-drones-2026",
@@ -431,5 +435,50 @@ describe("pathway board", () => {
     );
     assert.equal(modestLit.crises["crisis-local"].lamp, "red");
     assert.equal(modestLit.crises["crisis-global"].lamp, "red");
+  });
+
+  it("atomically mints multi-draft pathways, auto-adds missing tech tracks, computes convergence, and strips private workbench state on the wire", () => {
+    const start = addTechTrack(createPathwayBoard(), "drones");
+    const minted = mintStagedDraftsToPathway(start, [
+      {
+        techId: "drones",
+        title: "Mapped scout",
+        howText: "Drones inspect sluices.",
+        world: "atoms",
+      },
+      {
+        techId: "battery",
+        title: "Swap packs",
+        howText: "Rapid battery swaps keep drones flying.",
+        world: "atoms",
+      },
+    ]);
+    assert.equal(minted.ok, true);
+    assert.equal(minted.ingredientIds.length, 2);
+    assert.ok(minted.board.techTracks.battery, "auto-adds missing Convergence tech to Lane 1");
+    const pw = minted.board.pathways[minted.pathwayId];
+    assert.equal(pw.ingredients.length, 2);
+    assert.ok(pw.convergences.length >= 1, "computes Drones × Battery convergence");
+
+    const fused = fuseDraftIntoPathway(minted.board, minted.pathwayId, [
+      {
+        techId: null,
+        title: "Co-op schedule",
+        howText: "Stewards sign off before flights.",
+        world: "plain",
+      },
+    ]);
+    assert.equal(fused.ok, true);
+    assert.equal(fused.board.pathways[minted.pathwayId].ingredients.length, 3);
+
+    const dirty = {
+      ...fused.board,
+      workbench: { drafts: [{ id: "d-private", title: "Private scratch" }] },
+      workbenchDrafts: [{ id: "d-private" }],
+    };
+    const wire = boardForWire(dirty);
+    assert.equal("workbench" in wire, false);
+    assert.equal("workbenchDrafts" in wire, false);
+    assert.ok(wire.pathways[minted.pathwayId], "committed pathways still sync");
   });
 });

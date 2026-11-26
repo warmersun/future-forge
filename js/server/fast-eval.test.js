@@ -1040,3 +1040,57 @@ describe("fact-check-argument", () => {
     assert.match(empty.reason, /did not check out/);
   });
 });
+
+describe("workbench-lens fast-eval", () => {
+  it("builds lean structured payloads and sanitizes or falls back cleanly", () => {
+    assert.equal(isFastEvalMode("workbench-lens"), true);
+    const payload = buildFastPayload("workbench-lens", {
+      method: "scamper",
+      lenses: ["R", "C"],
+      techIds: ["geothermal"],
+      availableTechs: [{ id: "geothermal", name: "Geothermal Power", summary: "Baseload earth heat." }],
+      scarcity: "Wasted Brine",
+      seedTitle: "Brine Loop",
+      seedText: "Pumps carry hot geothermal brine to turbines.",
+      challengerAngle: "moloch",
+      challengerQuestion: "Who stops operators from dumping hot brine at night?",
+      place: "Steamholt",
+      year: 2026,
+    });
+    assert.equal(payload.mode, "workbench-lens");
+    assert.equal(payload.method, "scamper");
+    assert.deepEqual(payload.lenses, ["R", "C"]);
+    assert.equal(payload.scarcity, "Wasted Brine");
+    assert.equal(payload.challengerAngle, "moloch");
+
+    const sanitized = sanitizeFast(
+      "workbench-lens",
+      {
+        ideas: [
+          {
+            id: "sc-r",
+            lens: "R",
+            title: "Co-op Night Valve Ledger",
+            howText: "Residents hold live brine flow telemetry and automatic diversion lockouts in Steamholt.",
+            techId: "geothermal",
+            world: "atoms",
+            eases: "Wasted Brine",
+          },
+        ],
+      },
+      "ai",
+      { method: "scamper", lenses: ["R"], techIds: ["geothermal"], place: "Steamholt", year: 2026 }
+    );
+    assert.equal(sanitized.ideas.length, 1);
+    assert.equal(sanitized.ideas[0].lens, "R");
+    assert.equal(sanitized.ideas[0].techId, "geothermal");
+
+    const fallback = sanitizeFast(
+      "workbench-lens",
+      { ideas: [] },
+      "ai",
+      { method: "sit", lenses: ["subtraction", "division"], techIds: ["geothermal"], place: "Steamholt", year: 2026 }
+    );
+    assert.equal(fallback.ideas.length, 2);
+  });
+});
