@@ -602,4 +602,46 @@ describe("pathway workshop", () => {
     assert.match(human, /ontology-world-svg is-plain/);
     assert.match(human, />Human<\/span>/);
   });
+
+  it("pruneUnused clears unconnected techs, use cases, unplugged pathways, and sparks with 1-step undo", async () => {
+    const h = harness();
+    h.ws.seedFromMission({ place: "Paddy Step Wells", pressure: { "Clean Water": 3 }, spotlight: { techId: "drones" } });
+    const drones = resolveTechTrack("drones");
+    const solar = resolveTechTrack("solar");
+    const dronesMs = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    const solarMs = solar.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+
+    h.ws.dealMilestone("drones", dronesMs.id);
+    h.ws.focusTech("solar");
+    h.ws.dealMilestone("solar", solarMs.id);
+
+    // Ask for ideas on solar (creates 3 unplaced sparks), place spark-1 and plug it into crisis,
+    // place spark-2 as an unplugged pathway, and leave spark-3 unplaced.
+    await h.ws.askForIdeas();
+    h.ws.placeSpark("spark-1");
+    const wiredPwId = Object.keys(h.board.pathways)[0];
+    const crisisId = Object.keys(h.board.crises)[0];
+    await h.ws.plug(wiredPwId, crisisId);
+    h.ws.placeSpark("spark-2");
+    assert.equal(Object.keys(h.board.pathways).length, 2);
+    assert.match(h.root.innerHTML, /data-action="prune-unused"/);
+    assert.match(h.root.innerHTML, /Clear unused/);
+
+    // Prune everything unconnected.
+    assert.equal(h.ws.pruneUnused(), true);
+    assert.deepEqual(Object.keys(h.board.pathways), [wiredPwId]);
+    assert.deepEqual(Object.keys(h.board.techTracks), ["solar"]);
+    assert.equal(h.ws.hasSparkBatch("solar"), false);
+    assert.doesNotMatch(h.root.innerHTML, /data-action="prune-unused"/);
+    assert.match(h.root.innerHTML, /data-action="undo-prune"/);
+    assert.match(h.root.innerHTML, /Undo clear/);
+
+    // 1-step Undo restores everything cleanly.
+    assert.equal(h.ws.undoPrune(), true);
+    assert.equal(Object.keys(h.board.pathways).length, 2);
+    assert.ok(h.board.techTracks.drones);
+    assert.ok(h.board.techTracks.solar);
+    assert.equal(h.ws.hasSparkBatch("solar"), true);
+    assert.match(h.root.innerHTML, /data-action="prune-unused"/);
+  });
 });

@@ -413,6 +413,117 @@ export function removePathway(board, pathwayId) {
 }
 
 /**
+ * Identify items that were explored/considered but are not connected to the active causal chain:
+ * - When at least one Pathway is wired to a Crisis: unplugged pathways, use cases not feeding
+ *   a wired pathway, and tech tracks not feeding a wired pathway are unused.
+ * - When Pathways exist but none are wired yet: all pathways stay; use cases and tech tracks
+ *   not feeding any pathway are unused (keeping focusedTechId if no tech is referenced yet).
+ * - When no Pathways exist yet: all dealt use cases stay; extra tech tracks with zero dealt
+ *   use cases are unused (keeping focusedTechId or the first tech when nothing has use cases).
+ *
+ * @param {object|null|undefined} board
+ * @param {{ focusedTechId?: string|null }} [opts]
+ */
+export function findUnusedItems(board, opts = {}) {
+  if (!isPathwayBoard(board)) {
+    return { techIds: [], useCaseIds: [], pathwayIds: [], count: 0 };
+  }
+  const wires = Object.values(board.wires || {});
+  const pathways = Object.values(board.pathways || {});
+  const useCases = Object.values(board.useCases || {});
+  const techIds = Object.keys(board.techTracks || {});
+
+  const keepPathwayIds =
+    wires.length > 0
+      ? new Set(wires.map((w) => w.pathwayId).filter((id) => Boolean(board.pathways?.[id])))
+      : new Set(pathways.map((p) => p.id));
+
+  const unusedPathwayIds = pathways
+    .filter((p) => !keepPathwayIds.has(p.id))
+    .map((p) => p.id);
+
+  const keepUseCaseIds = new Set();
+  if (keepPathwayIds.size > 0) {
+    for (const pwId of keepPathwayIds) {
+      const pw = board.pathways?.[pwId];
+      for (const ing of pw?.ingredients || []) {
+        for (const ucId of ing.useCaseIds || []) {
+          if (board.useCases?.[ucId]) keepUseCaseIds.add(ucId);
+        }
+      }
+    }
+  } else {
+    for (const uc of useCases) keepUseCaseIds.add(uc.id);
+  }
+
+  const unusedUseCaseIds = useCases
+    .filter((uc) => !keepUseCaseIds.has(uc.id))
+    .map((uc) => uc.id);
+
+  const keepTechIds = new Set();
+  for (const pwId of keepPathwayIds) {
+    const pw = board.pathways?.[pwId];
+    for (const ing of pw?.ingredients || []) {
+      if (ing.techId && board.techTracks?.[ing.techId]) keepTechIds.add(ing.techId);
+    }
+  }
+  for (const ucId of keepUseCaseIds) {
+    const uc = board.useCases?.[ucId];
+    if (uc?.techId && board.techTracks?.[uc.techId]) keepTechIds.add(uc.techId);
+  }
+  // Never leave an unwired/early board with zero techs just because nothing has been wired yet.
+  if (keepTechIds.size === 0 && wires.length === 0 && techIds.length > 0) {
+    const fallback =
+      opts.focusedTechId && board.techTracks?.[opts.focusedTechId]
+        ? opts.focusedTechId
+        : techIds[0];
+    if (fallback) keepTechIds.add(fallback);
+  }
+
+  const unusedTechIds = techIds.filter((id) => !keepTechIds.has(id));
+  const count = unusedTechIds.length + unusedUseCaseIds.length + unusedPathwayIds.length;
+  return {
+    techIds: unusedTechIds,
+    useCaseIds: unusedUseCaseIds,
+    pathwayIds: unusedPathwayIds,
+    count,
+  };
+}
+
+/**
+ * Remove all unconnected items identified by `findUnusedItems`.
+ * @param {object} board
+ * @param {{ focusedTechId?: string|null }} [opts]
+ */
+export function pruneUnusedItems(board, opts = {}) {
+  const unused = findUnusedItems(board, opts);
+  if (!isPathwayBoard(board) || unused.count === 0) {
+    return { board, removed: unused };
+  }
+  let next = clone(board);
+  for (const pwId of unused.pathwayIds) {
+    next = removePathway(next, pwId);
+  }
+  for (const ucId of unused.useCaseIds) {
+    next = removeUseCase(next, ucId);
+  }
+  for (const techId of unused.techIds) {
+    next = removeTechTrack(next, techId);
+  }
+  // Clean up orphan milestone flags on surviving tech tracks that no longer have dealt use cases.
+  for (const track of Object.values(next.techTracks || {})) {
+    if (!Array.isArray(track.activeMilestoneIds) || !track.activeMilestoneIds.length) continue;
+    const liveMsIds = new Set(
+      Object.values(next.useCases || {})
+        .filter((uc) => uc.techId === track.techId && uc.milestoneId)
+        .map((uc) => uc.milestoneId)
+    );
+    track.activeMilestoneIds = track.activeMilestoneIds.filter((id) => liveMsIds.has(id));
+  }
+  return { board: bump(next), removed: unused };
+}
+
+/**
  * True when two ingredients belong to genuinely synergistic emTech families
  * (via TECHS.pairs) or bridge distinct domains through a converter.
  */

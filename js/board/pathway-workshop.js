@@ -69,6 +69,8 @@ import {
   addCustomUseCase,
   createPathway,
   removePathway,
+  findUnusedItems,
+  pruneUnusedItems,
   fusePathways,
   unfuseIngredient,
   setPathwayHow,
@@ -194,6 +196,58 @@ export function createPathwayWorkshop(api) {
   let collectionCards = null;
   let collectionLoad = null;
   let collectorFilterTech = "all";
+  let lastPruneUndo = null;
+
+  function countUnusedSparks() {
+    let total = 0;
+    for (const batch of sparkBatches.values()) {
+      total += (batch?.ideas || []).length;
+    }
+    return total;
+  }
+
+  function snapshotSparks() {
+    const out = new Map();
+    for (const [k, v] of sparkBatches.entries()) {
+      out.set(k, {
+        ...v,
+        ideas: [...(v?.ideas || [])],
+        ids: [...(v?.ids || [])],
+        titles: [...(v?.titles || [])],
+        seenTitles: [...(v?.seenTitles || [])],
+      });
+    }
+    return out;
+  }
+
+  function formatUnusedParts({ techCount, useCaseCount, pathwayCount, sparkCount }) {
+    const parts = [];
+    if (techCount) parts.push(`${techCount} ${techCount === 1 ? "tech" : "techs"}`);
+    if (useCaseCount) parts.push(`${useCaseCount} ${useCaseCount === 1 ? "use case" : "use cases"}`);
+    if (pathwayCount) parts.push(`${pathwayCount} ${pathwayCount === 1 ? "pathway" : "pathways"}`);
+    if (sparkCount) parts.push(`${sparkCount} ${sparkCount === 1 ? "idea" : "ideas"}`);
+    return parts.join(", ");
+  }
+
+  function unusedSummaryFor(current, activeFocus) {
+    const u = findUnusedItems(current, { focusedTechId: activeFocus });
+    const sparkCount = countUnusedSparks();
+    const techCount = u.techIds.length;
+    const useCaseCount = u.useCaseIds.length;
+    const pathwayCount = u.pathwayIds.length;
+    const count = techCount + useCaseCount + pathwayCount + sparkCount;
+    const parts = formatUnusedParts({ techCount, useCaseCount, pathwayCount, sparkCount });
+    return {
+      ...u,
+      techCount,
+      useCaseCount,
+      pathwayCount,
+      sparkCount,
+      count,
+      parts,
+      tooltip: parts ? `Remove unconnected items: ${parts}` : "Nothing unconnected to clear",
+    };
+  }
 
   function board() {
     return api.getBoard?.() || null;
@@ -372,6 +426,7 @@ export function createPathwayWorkshop(api) {
     const wires = currentWiresView(current, y);
     const open = openChallengerId ? current?.challengers?.[openChallengerId] : null;
     const sparks = activeFocus ? sparkBatches.get(activeFocus)?.ideas || [] : [];
+    const unused = unusedSummaryFor(current, activeFocus);
 
     return {
       year: y,
@@ -387,6 +442,8 @@ export function createPathwayWorkshop(api) {
       wires,
       rules: current?.rules || [],
       sparks,
+      unused,
+      canUndoPrune: Boolean(lastPruneUndo),
       createBusy,
       summoning: summoningState,
       pickerOpen,
@@ -536,6 +593,7 @@ export function createPathwayWorkshop(api) {
 
   function commit(next, opts = {}) {
     if (!isPathwayBoard(next)) return false;
+    if (!opts.keepPruneUndo) lastPruneUndo = null;
     next.questYear = year();
     const prev = board();
     const prevEcon = placedTechEconomy(prev);
@@ -603,6 +661,7 @@ export function createPathwayWorkshop(api) {
     customUseOpen = false;
     writeOpen = false;
     draftHow = "";
+    lastPruneUndo = null;
 
     let next = migrateToPathwayBoard(seedCrisisTiles(mission));
     next = setPinnedRules(next, api.getRules?.() || mission?.rules || []);
@@ -660,6 +719,7 @@ export function createPathwayWorkshop(api) {
     customUseOpen = false;
     writeOpen = false;
     draftHow = "";
+    lastPruneUndo = null;
 
     const current = isPathwayBoard(incomingBoard) ? incomingBoard : board();
     const trackIds = Object.keys(current?.techTracks || {});
@@ -1987,6 +2047,85 @@ export function createPathwayWorkshop(api) {
     );
   }
 
+  function pruneUnused() {
+    const current = board();
+    if (!isPathwayBoard(current)) return false;
+    const activeFocus = focusedTechId || Object.keys(current.techTracks || {})[0] || null;
+    const summary = unusedSummaryFor(current, activeFocus);
+    if (summary.count === 0) {
+      api.flashToast?.("Everything on the board is already connected.");
+      return false;
+    }
+    const undoSnap = {
+      board: structuredClone(current),
+      sparks: snapshotSparks(),
+      focusedTechId,
+      focusedPathwayId,
+      selectedUseCaseIds: [...selectedUseCaseIds],
+    };
+
+    for (const batch of sparkBatches.values()) {
+      if (batch) {
+        batch.ideas = [];
+        batch.ids = [];
+        batch.titles = [];
+      }
+    }
+
+    const { board: pruned, removed } = pruneUnusedItems(current, { focusedTechId: activeFocus });
+    const removedTechSet = new Set(removed.techIds);
+    const removedUcSet = new Set(removed.useCaseIds);
+    const removedPwSet = new Set(removed.pathwayIds);
+
+    selectedUseCaseIds = selectedUseCaseIds.filter((id) => !removedUcSet.has(id));
+    if (focusedPathwayId && removedPwSet.has(focusedPathwayId)) focusedPathwayId = null;
+    if (editingPathwayId && removedPwSet.has(editingPathwayId)) {
+      editingPathwayId = null;
+      editHowBuffer = "";
+    }
+    for (const tid of removed.techIds) chartOverride.delete(tid);
+    if (focusedTechId && removedTechSet.has(focusedTechId)) {
+      focusedTechId = Object.keys(pruned.techTracks || {})[0] || null;
+    }
+    if (traceSelection) {
+      if (
+        (traceSelection.type === "tech" && removedTechSet.has(traceSelection.id)) ||
+        (traceSelection.type === "usecase" && removedUcSet.has(traceSelection.id)) ||
+        (traceSelection.type === "pathway" && removedPwSet.has(traceSelection.id))
+      ) {
+        traceSelection = null;
+      }
+    }
+
+    lastPruneUndo = undoSnap;
+    if (removed.count > 0) {
+      const ok = commit(pruned, { bill: removed.pathwayIds.length > 0, keepPruneUndo: true });
+      if (!ok) {
+        lastPruneUndo = null;
+        return false;
+      }
+    } else {
+      paint();
+    }
+    api.flashToast?.(`Cleared ${summary.parts}.`);
+    return true;
+  }
+
+  function undoPrune() {
+    if (!lastPruneUndo) return false;
+    const snap = lastPruneUndo;
+    lastPruneUndo = null;
+    sparkBatches.clear();
+    for (const [k, v] of snap.sparks.entries()) sparkBatches.set(k, v);
+    focusedTechId = snap.focusedTechId;
+    focusedPathwayId = snap.focusedPathwayId;
+    selectedUseCaseIds = [...snap.selectedUseCaseIds];
+    for (const tid of Object.keys(snap.board?.techTracks || {})) trackFor(tid);
+    const ok = commit(snap.board, { bill: true });
+    if (ok) api.flashToast?.("Restored cleared items.");
+    return ok;
+  }
+
   function jumpYear(years) {
     const id = Number(years) === 2 ? "#btn-wait" : "#btn-end-turn";
     const btn = api.$?.(id) || (typeof document !== "undefined" ? document.querySelector(id) : null);
@@ -2284,6 +2423,12 @@ export function createPathwayWorkshop(api) {
       btn.closest?.("details.ontology-tools")?.removeAttribute?.("open");
       showCollection().catch((e) => console.warn(e));
       return;
+    } else if (action === "prune-unused") {
+      pruneUnused();
+      return;
+    } else if (action === "undo-prune") {
+      undoPrune();
+      return;
     } else if (action === "tool-share") {
       btn.closest?.("details.ontology-tools")?.removeAttribute?.("open");
       document.querySelector("[data-share-puzzle]")?.click();
@@ -2566,5 +2711,7 @@ export function createPathwayWorkshop(api) {
     },
     showCollection,
     adoptCollector,
+    pruneUnused,
+    undoPrune,
   };
 }

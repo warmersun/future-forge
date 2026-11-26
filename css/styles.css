@@ -16356,6 +16356,47 @@ body.ontology-board .ontology-mini-btn.is-accent {
   color: #bae6fd;
 }
 
+body.ontology-board .ontology-mini-btn.is-prune {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.08);
+  color: #fecaca;
+}
+
+body.ontology-board .ontology-mini-btn.is-prune:hover {
+  border-color: rgba(248, 113, 113, 0.65);
+  background: rgba(248, 113, 113, 0.18);
+  color: #ffffff;
+}
+
+body.ontology-board .ontology-prune-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: rgba(248, 113, 113, 0.22);
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+body.ontology-board .ontology-mini-btn.is-undo {
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(56, 189, 248, 0.14);
+  color: #bae6fd;
+}
+
+body.ontology-board .ontology-mini-btn.is-undo:hover {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.24);
+  color: #ffffff;
+}
+
 /* Cards & Ports */
 body.ontology-board .ontology-card {
   position: relative;

@@ -691,6 +691,13 @@ export function renderOntologyBoard(view) {
         <button type="button" class="ontology-time-btn is-jump" data-action="year-plus" data-years="2" title="Look Ahead: inspect capability curves and jump +2 years">+2 yrs</button>
       </div>
       <div class="ontology-toolbar-right">
+        ${
+          view?.unused?.count > 0
+            ? `<button type="button" class="ontology-mini-btn is-prune" data-action="prune-unused" title="${escapeHtml(view.unused.tooltip || "Remove unconnected items")}">🧹 Clear unused <span class="ontology-prune-count">${view.unused.count}</span></button>`
+            : view?.canUndoPrune
+              ? `<button type="button" class="ontology-mini-btn is-undo" data-action="undo-prune" title="Restore the unconnected items you just cleared">↩ Undo clear</button>`
+              : ""
+        }
         <details class="ontology-tools">
           <summary class="ontology-mini-btn">Research &amp; Policy</summary>
           <div class="ontology-tools-menu">

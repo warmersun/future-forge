@@ -44,6 +44,8 @@ import {
   removeTechTrack,
   removeUseCase,
   removePathway,
+  findUnusedItems,
+  pruneUnusedItems,
   attachRd,
   attachArgument,
   settleArgument,
@@ -298,5 +300,61 @@ describe("pathway board", () => {
 
     b = removeTechTrack(b, "drones");
     assert.equal(b.techTracks.drones, undefined);
+  });
+
+  it("findUnusedItems and pruneUnusedItems clear unconnected branches in both unwired and wired states", () => {
+    let b = seedCrises(createPathwayBoard(), [
+      { id: "crisis-local", role: "local", name: "Clean Water", lamp: "red" },
+    ]);
+    b = addTechTrack(b, "drones");
+    // Fresh board with a single focused tech has nothing unused.
+    assert.equal(findUnusedItems(b, { focusedTechId: "drones" }).count, 0);
+
+    // Add a second tech + deal milestones on both.
+    b = addTechTrack(b, "solar");
+    b = dealMilestone(b, "drones", {
+      id: "ms-drones-2026",
+      year: 2026,
+      status: "reached",
+      label: "Autonomous scout",
+      useCases: [
+        { id: "uc-d1", title: "Map canal", blurb: "Map canal", world: "atoms" },
+        { id: "uc-d2", title: "Deliver vial", blurb: "Deliver vial", world: "atoms" },
+      ],
+    });
+    b = dealMilestone(b, "solar", {
+      id: "ms-solar-2026",
+      year: 2026,
+      status: "reached",
+      label: "Cheap PV",
+      useCases: [
+        { id: "uc-s1", title: "Pump water", blurb: "Pump water", world: "atoms" },
+      ],
+    });
+
+    // Build two pathways: one from drones (uc-d1), one from solar (uc-s1). Neither plugged yet.
+    const pwA = createPathway(b, { techId: "drones", useCaseIds: ["uc-d1"], title: "Canal drone", howText: "Map canal." });
+    const pwB = createPathway(pwA.board, { techId: "solar", useCaseIds: ["uc-s1"], title: "Solar pump", howText: "Pump water." });
+
+    // Unwired stage: both pathways stay, only uc-d2 is unused.
+    const unwiredUnused = findUnusedItems(pwB.board, { focusedTechId: "drones" });
+    assert.deepEqual(unwiredUnused.pathwayIds, []);
+    assert.deepEqual(unwiredUnused.techIds, []);
+    assert.deepEqual(unwiredUnused.useCaseIds, ["uc-d2"]);
+
+    // Plug pwA into crisis-local; leave pwB unplugged.
+    const wired = plugWire(pwB.board, pwA.pathwayId, "crisis-local").board;
+    const wiredUnused = findUnusedItems(wired, { focusedTechId: "solar" });
+    assert.deepEqual(wiredUnused.pathwayIds, [pwB.pathwayId]);
+    assert.deepEqual(wiredUnused.useCaseIds.sort(), ["uc-d2", "uc-s1"]);
+    assert.deepEqual(wiredUnused.techIds, ["solar"]);
+
+    const pruned = pruneUnusedItems(wired, { focusedTechId: "solar" });
+    assert.equal(pruned.removed.count, 4);
+    assert.deepEqual(Object.keys(pruned.board.pathways), [pwA.pathwayId]);
+    assert.deepEqual(Object.keys(pruned.board.useCases), ["uc-d1"]);
+    assert.deepEqual(Object.keys(pruned.board.techTracks), ["drones"]);
+    assert.equal(Object.keys(pruned.board.wires).length, 1);
+    assert.equal(findUnusedItems(pruned.board).count, 0);
   });
 });
