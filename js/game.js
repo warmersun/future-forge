@@ -9114,6 +9114,7 @@ function startMission(mission, opts = {}) {
   state.marketNewsShownId = null;
   state.lastYearBulletin = null;
   lastYearPulseKey = null;
+  resetInfoBannerTimers();
   state.outcome = null;
   state.runReport = null;
   state.aiTiming = null;
@@ -9576,17 +9577,7 @@ function renderWorkshop() {
         : `Hit 5 on any meter or year ${m.collapseYear} and the mission ends. Open ? for more.`);
   }
 
-  const wr = $("#wait-report");
-  if (wr) {
-    if (state.waitReport) {
-      wr.hidden = false;
-      wr.innerHTML = state.waitReport;
-      attachReadAloud(wr);
-    } else {
-      wr.hidden = true;
-      refreshReadAloud(wr);
-    }
-  }
+  renderWaitReportBanner();
 
   const nameEl = $("#invention-name");
   // Never wipe the name field while the player is mid-keystroke
@@ -22714,23 +22705,189 @@ function marketNewsImageUrl(news) {
   return p || null;
 }
 
-/**
- * Compact persistent banner under the mission scene.
- * @param {{ pulse?: boolean, scrollIntoView?: boolean }} [opts]
- */
-function renderMarketBanner(opts = {}) {
-  const hosts = [
+const WAIT_REPORT_AUTO_HIDE_MS = 8000;
+const MARKET_BANNER_AUTO_HIDE_MS = 7000;
+const MARKET_BANNER_POST_MODAL_HIDE_MS = 6000;
+const INFO_BANNER_RESUME_MS = 2500;
+const INFO_BANNER_FADE_MS = 450;
+const dismissedMarketBannerKeys = new Set();
+
+function clearBannerTimers(el) {
+  if (!el) return;
+  clearTimeout(el._autoFadeT);
+  clearTimeout(el._autoHideT);
+  clearTimeout(el._pulseTimer);
+  el._autoFadeT = null;
+  el._autoHideT = null;
+  el._pulseTimer = null;
+}
+
+function resetInfoBannerTimers() {
+  dismissedMarketBannerKeys.clear();
+  const els = [
+    $("#wait-report"),
     $("#market-news-banner"),
     $("#hs-market-news-banner"),
     $("#mp-market-news-banner"),
   ].filter(Boolean);
+  for (const el of els) {
+    clearBannerTimers(el);
+    el._dismissing = false;
+    el.hidden = true;
+    el.innerHTML = "";
+    el.classList.remove("is-pulse", "is-fly-in", "is-fading");
+    delete el.dataset.bannerKey;
+    delete el.dataset.reportKey;
+  }
+}
+
+function marketBannerKey(news) {
+  if (!news) return "";
+  return `${news.id || news.headline || ""}@r${news.round ?? state.turn ?? 1}`;
+}
+
+function dismissWaitReportBanner(wr, { immediate = false } = {}) {
+  if (!wr) return;
+  clearBannerTimers(wr);
+  wr._dismissing = true;
+  state.waitReport = "";
+  const finish = () => {
+    wr._dismissing = false;
+    wr.hidden = true;
+    wr.innerHTML = "";
+    wr.classList.remove("is-fading");
+    delete wr.dataset.reportKey;
+    refreshReadAloud(wr);
+  };
+  if (immediate || wr.hidden) {
+    finish();
+    return;
+  }
+  wr.classList.add("is-fading");
+  wr._autoHideT = setTimeout(finish, INFO_BANNER_FADE_MS);
+}
+
+function armWaitReportTimeout(wr, delayMs) {
+  if (!wr || wr.hidden || wr._dismissing) return;
+  clearTimeout(wr._autoFadeT);
+  clearTimeout(wr._autoHideT);
+  wr.classList.remove("is-fading");
+  wr._autoFadeT = setTimeout(() => {
+    wr._autoFadeT = null;
+    dismissWaitReportBanner(wr);
+  }, delayMs);
+}
+
+function renderWaitReportBanner() {
+  const wr = $("#wait-report");
+  if (!wr) return;
+  const html = String(state.waitReport || "").trim();
+  if (!html) {
+    if (wr._dismissing) return;
+    clearBannerTimers(wr);
+    wr._dismissing = false;
+    wr.hidden = true;
+    wr.innerHTML = "";
+    wr.classList.remove("is-fading");
+    delete wr.dataset.reportKey;
+    refreshReadAloud(wr);
+    return;
+  }
+  if (wr.dataset.reportKey === html && !wr.hidden && !wr._dismissing) {
+    if (!wr._autoFadeT && !wr._autoHideT && !wr._hovered) {
+      armWaitReportTimeout(wr, WAIT_REPORT_AUTO_HIDE_MS);
+    }
+    return;
+  }
+  clearBannerTimers(wr);
+  wr._dismissing = false;
+  wr.classList.remove("is-fading");
+  wr.hidden = false;
+  wr.dataset.reportKey = html;
+  wr._hovered = false;
+  wr.innerHTML = `<button type="button" class="info-banner-close" data-dismiss-wait-report="1" aria-label="Dismiss turn update" title="Dismiss">×</button><div class="wait-report-body">${html}</div>`;
+  attachReadAloud(wr);
+  if (!wr._bannerWired) {
+    wr._bannerWired = true;
+    wr.addEventListener("click", (ev) => {
+      if (ev.target?.closest?.("[data-dismiss-wait-report]")) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        dismissWaitReportBanner(wr);
+      }
+    });
+    wr.addEventListener("mouseenter", () => {
+      if (wr._dismissing) return;
+      wr._hovered = true;
+      clearTimeout(wr._autoFadeT);
+      clearTimeout(wr._autoHideT);
+      wr._autoFadeT = null;
+      wr._autoHideT = null;
+      wr.classList.remove("is-fading");
+    });
+    wr.addEventListener("mouseleave", () => {
+      wr._hovered = false;
+      if (wr._dismissing) return;
+      if (!wr.hidden && state.waitReport) {
+        armWaitReportTimeout(wr, INFO_BANNER_RESUME_MS);
+      }
+    });
+  }
+  armWaitReportTimeout(wr, WAIT_REPORT_AUTO_HIDE_MS);
+}
+
+function dismissMarketBannerHost(host, key, { immediate = false } = {}) {
+  if (!host) return;
+  clearBannerTimers(host);
+  host._dismissing = true;
+  if (key) dismissedMarketBannerKeys.add(key);
+  const finish = () => {
+    host._dismissing = false;
+    host.hidden = true;
+    host.innerHTML = "";
+    host.classList.remove("is-pulse", "is-fly-in", "is-fading");
+    delete host.dataset.bannerKey;
+  };
+  if (immediate || host.hidden) {
+    finish();
+    return;
+  }
+  host.classList.add("is-fading");
+  host._autoHideT = setTimeout(finish, INFO_BANNER_FADE_MS);
+}
+
+function armMarketBannerTimeout(host, key, delayMs) {
+  if (!host || host.hidden || host._dismissing || isMarketNewsModalOpen()) return;
+  clearTimeout(host._autoFadeT);
+  clearTimeout(host._autoHideT);
+  host.classList.remove("is-fading");
+  host._autoFadeT = setTimeout(() => {
+    host._autoFadeT = null;
+    dismissMarketBannerHost(host, key);
+  }, delayMs);
+}
+
+/**
+ * Compact auto-dismissing banner under the mission scene.
+ * @param {{ pulse?: boolean, scrollIntoView?: boolean, force?: boolean }} [opts]
+ */
+function renderMarketBanner(opts = {}) {
+  // Hotseat and Friends banners belong to paintMarketBanner. A second writer
+  // keeps its own dismiss set and puts a dismissed card back on screen.
+  const hosts = [$("#market-news-banner")].filter(Boolean);
   if (!hosts.length) return;
   const news = currentMarketNews();
-  if (!news) {
+  const key = marketBannerKey(news);
+  if (opts.force && key) dismissedMarketBannerKeys.delete(key);
+  if (!news || (!opts.force && dismissedMarketBannerKeys.has(key))) {
     for (const host of hosts) {
+      if (host._dismissing && !opts.force) continue;
+      clearBannerTimers(host);
+      host._dismissing = false;
       host.hidden = true;
       host.innerHTML = "";
-      host.classList.remove("is-pulse", "is-fly-in");
+      host.classList.remove("is-pulse", "is-fly-in", "is-fading");
+      delete host.dataset.bannerKey;
     }
     return;
   }
@@ -22757,17 +22914,64 @@ function renderMarketBanner(opts = {}) {
           ${escapeHtml(desc.scope)} · ${desc.effects.map(escapeHtml).join(" · ")}
         </span>
       </span>
-    </button>`;
+    </button>
+    <button type="button" class="info-banner-close" data-dismiss-market-banner="1" aria-label="Dismiss market banner" title="Dismiss">×</button>`;
+
+  const hideDelay = opts.pulse ? MARKET_BANNER_POST_MODAL_HIDE_MS : MARKET_BANNER_AUTO_HIDE_MS;
 
   for (const host of hosts) {
-    // Only paint hosts that exist in the active layout (others may be on hidden screens)
     if (!host.isConnected) continue;
+    if (host._dismissing && !opts.force) continue;
+    const alreadyShowingSame =
+      host.dataset.bannerKey === key && !host.hidden && !opts.pulse && !opts.scrollIntoView;
+    if (alreadyShowingSame) {
+      if (!host._autoFadeT && !host._autoHideT && !host._hovered && !isMarketNewsModalOpen()) {
+        armMarketBannerTimeout(host, key, MARKET_BANNER_AUTO_HIDE_MS);
+      }
+      continue;
+    }
+
+    clearBannerTimers(host);
+    host._dismissing = false;
+    host.classList.remove("is-fading");
     host.hidden = false;
     host.dataset.tone = news.tone || "mixed";
+    host.dataset.bannerKey = key;
+    host._hovered = false;
+    host._activeNews = news;
     host.innerHTML = html;
-    host.querySelector("[data-market-open]")?.addEventListener("click", () => {
-      showMarketNewsModal(news);
-    });
+    if (!host._bannerWired) {
+      host._bannerWired = true;
+      host.addEventListener("click", (ev) => {
+        if (ev.target?.closest?.("[data-dismiss-market-banner]")) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          dismissMarketBannerHost(host, host.dataset.bannerKey || "");
+          return;
+        }
+        if (ev.target?.closest?.("[data-market-open]") && host._activeNews) {
+          clearBannerTimers(host);
+          showMarketNewsModal(host._activeNews);
+        }
+      });
+      host.addEventListener("mouseenter", () => {
+        if (host._dismissing) return;
+        host._hovered = true;
+        clearTimeout(host._autoFadeT);
+        clearTimeout(host._autoHideT);
+        host._autoFadeT = null;
+        host._autoHideT = null;
+        host.classList.remove("is-fading");
+      });
+      host.addEventListener("mouseleave", () => {
+        host._hovered = false;
+        if (host._dismissing) return;
+        const activeKey = host.dataset.bannerKey;
+        if (!host.hidden && activeKey && !isMarketNewsModalOpen()) {
+          armMarketBannerTimeout(host, activeKey, INFO_BANNER_RESUME_MS);
+        }
+      });
+    }
 
     if (opts.pulse || opts.scrollIntoView) {
       host.classList.remove("is-pulse", "is-fly-in");
@@ -22784,6 +22988,10 @@ function renderMarketBanner(opts = {}) {
       host._pulseTimer = setTimeout(() => {
         host.classList.remove("is-pulse");
       }, 2200);
+    }
+
+    if (!isMarketNewsModalOpen()) {
+      armMarketBannerTimeout(host, key, hideDelay);
     }
   }
 }

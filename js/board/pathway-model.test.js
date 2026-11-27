@@ -27,6 +27,7 @@ import {
   fuseDraftIntoPathway,
   fusePathways,
   unfuseIngredient,
+  detachIngredientFromPathway,
   composePathwayHow,
   needsBridgeWarning,
   plugWire,
@@ -116,15 +117,23 @@ describe("pathway board", () => {
       world: "atoms",
     });
     assert.equal(Object.keys(b.board.pathwayImpacts).length, 0);
+    b.board.pathways[a.pathwayId].customHow = "Only the mapped drone.";
     const fused = fusePathways(b.board, a.pathwayId, b.pathwayId);
     assert.equal(fused.ok, true);
     const pathway = fused.board.pathways[a.pathwayId];
     assert.equal(pathway.ingredients.length, 2);
     assert.ok(pathway.convergences.length >= 1);
+    assert.equal(pathway.customHow, "");
     assert.match(composePathwayHow(pathway), /sluice/);
     assert.match(composePathwayHow(pathway), /swap pack/);
+    assert.doesNotMatch(composePathwayHow(pathway), /Only the mapped drone/);
     const ing = pathway.ingredients[1];
+    pathway.customHow = "Woven pair.";
     const back = unfuseIngredient(fused.board, a.pathwayId, ing.id);
+    const remain = back.board.pathways[a.pathwayId];
+    assert.ok(remain);
+    assert.equal(remain.customHow, "");
+    assert.doesNotMatch(composePathwayHow(remain), /Woven pair/);
     assert.equal(back.ok, true);
     assert.equal(back.ingredient.artUrl, ing.artUrl);
     assert.equal(back.board.pathways[back.pathwayId].ingredients.length, 1);
@@ -480,5 +489,69 @@ describe("pathway board", () => {
     assert.equal("workbench" in wire, false);
     assert.equal("workbenchDrafts" in wire, false);
     assert.ok(wire.pathways[minted.pathwayId], "committed pathways still sync");
+
+    // Detaching one ingredient keeps remaining pathway intact without spawning a stray pathway
+    const ingToDetach = fused.board.pathways[minted.pathwayId].ingredients[1].id;
+    const det1 = detachIngredientFromPathway(fused.board, minted.pathwayId, ingToDetach);
+    assert.equal(det1.ok, true);
+    assert.equal(det1.pathwayRemoved, false);
+    assert.equal(det1.ingredient.techId, "battery");
+    assert.equal(Object.keys(det1.board.pathways).length, 1);
+    assert.equal(det1.board.pathways[minted.pathwayId].ingredients.length, 2);
+
+    // Detaching until empty removes the pathway and any wires cleanly
+    const remIds = det1.board.pathways[minted.pathwayId].ingredients.map((i) => i.id);
+    const det2 = detachIngredientFromPathway(det1.board, minted.pathwayId, remIds[0]);
+    const det3 = detachIngredientFromPathway(det2.board, minted.pathwayId, remIds[1]);
+    assert.equal(det3.ok, true);
+    assert.equal(det3.pathwayRemoved, true);
+    assert.equal(Object.keys(det3.board.pathways).length, 0);
+  });
+
+  it("clears a woven mechanism when an idea is added or removed", () => {
+    const start = addTechTrack(createPathwayBoard(), "drones");
+    const minted = mintStagedDraftsToPathway(start, [
+      {
+        techId: "drones",
+        title: "Mapped scout",
+        howText: "Drones inspect sluices.",
+        world: "atoms",
+      },
+      {
+        techId: "battery",
+        title: "Swap packs",
+        howText: "Rapid battery swaps keep drones flying.",
+        world: "atoms",
+      },
+    ]);
+    const pwId = minted.pathwayId;
+    minted.board.pathways[pwId].customHow = "Woven: only drones and swap packs.";
+
+    const fused = fuseDraftIntoPathway(minted.board, pwId, [
+      {
+        techId: null,
+        title: "Co-op schedule",
+        howText: "Stewards sign off before flights.",
+        world: "plain",
+      },
+    ]);
+    const added = fused.board.pathways[pwId];
+    assert.equal(added.customHow, "");
+    const addedHow = composePathwayHow(added);
+    assert.match(addedHow, /Stewards sign off/);
+    assert.match(addedHow, /Drones inspect sluices/);
+    assert.doesNotMatch(addedHow, /Woven/);
+
+    added.customHow = "Woven after the third idea.";
+    const dropId = added.ingredients.find((i) => i.title === "Swap packs").id;
+    const det = detachIngredientFromPathway(fused.board, pwId, dropId);
+    const kept = det.board.pathways[pwId];
+    assert.equal(det.pathwayRemoved, false);
+    assert.equal(kept.customHow, "");
+    const keptHow = composePathwayHow(kept);
+    assert.match(keptHow, /Drones inspect sluices/);
+    assert.match(keptHow, /Stewards sign off/);
+    assert.doesNotMatch(keptHow, /Rapid battery swaps/);
+    assert.doesNotMatch(keptHow, /Woven/);
   });
 });

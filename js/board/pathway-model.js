@@ -102,6 +102,11 @@ export function composePathwayHow(pathway) {
     .join("\n\n");
 }
 
+function clearWovenHow(pathway) {
+  // Woven text names one ingredient set, so a changed set falls back to each idea.
+  if (pathway) pathway.customHow = "";
+}
+
 export function needsBridgeWarning(pathway, enforceWorlds = true) {
   if (!enforceWorlds) return false;
   const worlds = (pathway?.ingredients || []).map((ing) => ing.world);
@@ -528,6 +533,7 @@ export function fuseDraftIntoPathway(board, pathwayId, partials = []) {
     return ing;
   });
   target.ingredients = [...target.ingredients, ...added];
+  clearWovenHow(target);
   target.convergences = convergenceRows(target.ingredients);
   return {
     board: bump(next),
@@ -726,9 +732,7 @@ export function fusePathways(board, targetId, sourceId) {
   if (!target || !source || targetId === sourceId) return { board: next, ok: false };
   target.ingredients = [...target.ingredients, ...source.ingredients];
   target.convergences = convergenceRows(target.ingredients);
-  if (!String(target.customHow || "").trim() && String(source.customHow || "").trim()) {
-    target.customHow = source.customHow;
-  }
+  clearWovenHow(target);
   if (!target.rdBoost && source.rdBoost) target.rdBoost = source.rdBoost;
   for (const argId of source.argumentIds || []) {
     if (!target.argumentIds.includes(argId)) target.argumentIds.push(argId);
@@ -763,6 +767,7 @@ export function unfuseIngredient(board, pathwayId, ingredientId) {
   const index = pathway.ingredients.findIndex((ing) => ing.id === ingredientId);
   if (index < 0) return { board: next, ok: false };
   const [ing] = pathway.ingredients.splice(index, 1);
+  clearWovenHow(pathway);
   pathway.convergences = convergenceRows(pathway.ingredients);
   const spawnedId = nextId(next, "pw");
   const maxOrder = Object.values(next.pathways).reduce(
@@ -788,6 +793,51 @@ export function unfuseIngredient(board, pathwayId, ingredientId) {
     }
   }
   return { board: bump(next), ok: true, pathwayId: spawnedId, ingredient: ing };
+}
+
+/**
+ * Remove a single ingredient from a Pathway WITHOUT spawning a stray 1-part Pathway
+ * on the board (used when returning an Idea card to the Workbench Ideas tray or moving
+ * an Idea directly into another Pathway). If no ingredients remain, removes the Pathway
+ * and its wires cleanly.
+ *
+ * @param {object} board
+ * @param {string} pathwayId
+ * @param {string} ingredientId
+ */
+export function detachIngredientFromPathway(board, pathwayId, ingredientId) {
+  const next = clone(board);
+  const pathway = next.pathways?.[pathwayId];
+  if (!pathway) return { board: next, ok: false, ingredient: null, pathwayRemoved: false };
+  const index = pathway.ingredients.findIndex((ing) => ing.id === ingredientId);
+  if (index < 0) return { board: next, ok: false, ingredient: null, pathwayRemoved: false };
+  const [ing] = pathway.ingredients.splice(index, 1);
+  if (!pathway.ingredients.length) {
+    delete next.pathways[pathwayId];
+    for (const [wireId, wire] of Object.entries(next.wires || {})) {
+      if (wire.pathwayId === pathwayId) delete next.wires[wireId];
+    }
+    for (const [chId, ch] of Object.entries(next.challengers || {})) {
+      if (ch.pathwayId === pathwayId) delete next.challengers[chId];
+    }
+    for (const [argId, arg] of Object.entries(next.arguments || {})) {
+      if (arg.pathwayId === pathwayId) delete next.arguments[argId];
+    }
+    return {
+      board: refreshCrisisLamps(bump(next)).board,
+      ok: true,
+      ingredient: ing,
+      pathwayRemoved: true,
+    };
+  }
+  clearWovenHow(pathway);
+  pathway.convergences = convergenceRows(pathway.ingredients);
+  return {
+    board: refreshCrisisLamps(bump(next)).board,
+    ok: true,
+    ingredient: ing,
+    pathwayRemoved: false,
+  };
 }
 
 export function setPathwayHow(board, pathwayId, text) {

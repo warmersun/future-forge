@@ -177,8 +177,47 @@ export function initFriendsUi(api) {
     }
   }
 
+  const dismissedMarketBannerKeys = new Set();
+
+  function clearMpBannerTimers(host) {
+    if (!host) return;
+    clearTimeout(host._autoFadeT);
+    clearTimeout(host._autoHideT);
+    host._autoFadeT = null;
+    host._autoHideT = null;
+  }
+
+  function dismissMpMarketBanner(host, key) {
+    if (!host) return;
+    clearMpBannerTimers(host);
+    host._dismissing = true;
+    if (key) dismissedMarketBannerKeys.add(key);
+    if (host.hidden) {
+      host._dismissing = false;
+      return;
+    }
+    host.classList.add("is-fading");
+    host._autoHideT = setTimeout(() => {
+      host._dismissing = false;
+      host.hidden = true;
+      host.innerHTML = "";
+      host.classList.remove("is-fading");
+      delete host.dataset.bannerKey;
+    }, 450);
+  }
+
+  function armMpMarketBannerTimeout(host, key, delayMs = 7000) {
+    if (!host || host.hidden || host._dismissing) return;
+    clearMpBannerTimers(host);
+    host.classList.remove("is-fading");
+    host._autoFadeT = setTimeout(() => {
+      host._autoFadeT = null;
+      dismissMpMarketBanner(host, key);
+    }, delayMs);
+  }
+
   /**
-   * Compact market banner + optional modal when a full seat-round rolls new prices.
+   * Compact auto-dismissing market banner + optional modal when a full seat-round rolls new prices.
    * @param {string} bannerId
    * @param {object|null|undefined} news
    * @param {number} [round]
@@ -186,16 +225,32 @@ export function initFriendsUi(api) {
   function paintMarketBanner(bannerId, news, round) {
     const host = $(bannerId);
     if (!host) return;
-    if (!news) {
+    const key = news ? `${news.id || news.headline || ""}@r${news.round ?? round ?? 1}` : "";
+    if (!news || dismissedMarketBannerKeys.has(key)) {
+      if (host._dismissing) return;
+      clearMpBannerTimers(host);
+      host._dismissing = false;
       host.hidden = true;
       host.innerHTML = "";
+      host.classList.remove("is-fading");
+      delete host.dataset.bannerKey;
+      return;
+    }
+    if (host._dismissing) return;
+    if (host.dataset.bannerKey === key && !host.hidden) {
       return;
     }
     const desc = describeMarketEffects(news, {
       techName: (id) => techById(id)?.name || id,
     });
+    clearMpBannerTimers(host);
+    host._dismissing = false;
+    host.classList.remove("is-fading");
     host.hidden = false;
     host.dataset.tone = news.tone || "mixed";
+    host.dataset.bannerKey = key;
+    host._hovered = false;
+    host._activeNews = news;
     host.innerHTML = `
       <button type="button" class="market-news-banner-btn" data-market-open="1" title="Open market bulletin">
         <span class="market-news-banner-thumb" aria-hidden="true">
@@ -210,12 +265,40 @@ export function initFriendsUi(api) {
             ${escapeHtml(desc.scope)} · ${desc.effects.map(escapeHtml).join(" · ")}
           </span>
         </span>
-      </button>`;
-    host.querySelector("[data-market-open]")?.addEventListener("click", () => {
-      if (typeof queueMarketNewsModal === "function") {
-        queueMarketNewsModal(news, { force: true });
-      }
-    });
+      </button>
+      <button type="button" class="info-banner-close" data-dismiss-market-banner="1" aria-label="Dismiss market banner" title="Dismiss">×</button>`;
+    if (!host._bannerWired) {
+      host._bannerWired = true;
+      host.addEventListener("click", (ev) => {
+        if (ev.target?.closest?.("[data-dismiss-market-banner]")) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          dismissMpMarketBanner(host, host.dataset.bannerKey || "");
+          return;
+        }
+        if (ev.target?.closest?.("[data-market-open]") && host._activeNews) {
+          clearMpBannerTimers(host);
+          if (typeof queueMarketNewsModal === "function") {
+            queueMarketNewsModal(host._activeNews, { force: true });
+          }
+        }
+      });
+      host.addEventListener("mouseenter", () => {
+        if (host._dismissing) return;
+        host._hovered = true;
+        clearMpBannerTimers(host);
+        host.classList.remove("is-fading");
+      });
+      host.addEventListener("mouseleave", () => {
+        host._hovered = false;
+        if (host._dismissing) return;
+        const activeKey = host.dataset.bannerKey;
+        if (!host.hidden && activeKey) {
+          armMpMarketBannerTimeout(host, activeKey, 2500);
+        }
+      });
+    }
+    armMpMarketBannerTimeout(host, key, 7000);
     if (news.id && news.id !== lastMarketNewsId) {
       lastMarketNewsId = news.id;
       if (typeof queueMarketNewsModal === "function") {

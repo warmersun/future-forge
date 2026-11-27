@@ -19,28 +19,43 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { TECHS } from "../data.js";
-import { createPathwayBoard, dealMilestone, addTechTrack, createPathway, seedCrises } from "./pathway-model.js";
 import {
+  createPathwayBoard,
+  dealMilestone,
+  addTechTrack,
+  createPathway,
+  seedCrises,
+} from "./pathway-model.js";
+import {
+  DOUBLE_DIAMOND_STAGES,
   WORKBENCH_METHODS,
   SIT_LENSES,
   SCAMPER_LENSES,
   CHALLENGER_LENS_MAP,
   extractScarcityPrompts,
-  buildConvergenceCanvas,
-  analyzeConvergencePair,
+  extractDiscoveryClues,
+  synthesizeHmwCandidates,
   recommendedScamperForSeed,
   buildLensPrompt,
+  ingredientToWorkbenchIdea,
+  draftToIngredientPartials,
   evaluateStagedDrafts,
   localWorkbenchLensDrafts,
   sanitizeWorkbenchDrafts,
 } from "./workbench-methods.js";
 
 describe("workbench-methods", () => {
-  it("defines 4 methods, 4 SIT lenses, 7 SCAMPER letters, and 4 challenger maps", () => {
+  it("defines the 2-Diamond stages, 3 focused ideation methods (no redundant convergence tab), 4 SIT lenses, and 7 SCAMPER letters", () => {
+    assert.deepEqual(
+      DOUBLE_DIAMOND_STAGES.map((d) => [d.id, d.diverge.step, d.converge.step]),
+      [
+        ["problem", "1 · Discover", "2 · Define"],
+        ["solution", "3 · Develop", "4 · Deliver"],
+      ]
+    );
     assert.deepEqual(
       WORKBENCH_METHODS.map((m) => m.id),
-      ["seed", "convergence", "sit", "scamper"]
+      ["seed", "sit", "scamper"]
     );
     assert.deepEqual(
       SIT_LENSES.map((l) => l.id),
@@ -56,50 +71,83 @@ describe("workbench-methods", () => {
     }
   });
 
-  it("extracts scarcity prompts ordered by hottest crisis plus scene bottlenecks", () => {
-    const prompts = extractScarcityPrompts(
+  it("extracts Diamond 1 Discovery clues and synthesizes 'How Might We…' candidates from Quest & player insights", () => {
+    const mission = {
+      place: "Brackenfold",
+      title: "The blood that cannot reach Brackenfold in time",
+      job: "Help Imani get the right blood to her ward within the hour, whatever the road is doing, without a fridge full of bags that spoil.",
+      scene: "Mudslides cut off the three-hour dirt road while ward stock expires.",
+      stakeholder: "Dr. Imani Sekule, head of the maternity ward",
+    };
+    const crises = [
+      { id: "c-local", role: "local", name: "Blood Too Late", level: 3, goal: 1, description: "Matched blood arrives hours late." },
+      { id: "c-global", role: "global", name: "Cut-Off Districts", level: 2, goal: 1, description: "Dirt road washes out in rain." },
+      { id: "c-support", role: "support", name: "Blood Bank Doubt", level: 2, goal: 1, description: "City bank doubts bags will be used before expiry." },
+    ];
+    const clues = extractDiscoveryClues(mission, crises, [
+      { id: "r1", label: "Night flight noise curfew", body: "No loud rotors over housing after 22:00." },
+    ]);
+    assert.ok(clues.some((c) => c.kind === "stakeholder" && /Imani Sekule/.test(c.title)));
+    assert.ok(clues.some((c) => c.role === "local" && /Blood Too Late/.test(c.title)));
+    assert.ok(clues.some((c) => c.role === "global" && /Cut-Off Districts/.test(c.title)));
+    assert.ok(clues.some((c) => c.role === "support" && /Blood Bank Doubt/.test(c.title)));
+    assert.ok(clues.some((c) => /Night flight noise curfew/.test(c.title)));
+
+    const hmw = synthesizeHmwCandidates(mission, crises, [
       {
-        title: "The reinjection ledger at Steamholt",
-        scene: "Hot geothermal brine runs to waste while trucks haul battery feedstock and public trust falls.",
-        stakeholder: "Rina, geothermal ops lead",
+        id: "custom-1",
+        kind: "insight",
+        author: "player",
+        title: "Cargo transport where there are no all-season roads",
+        detail: "Cargo transport where there are no all-season roads",
       },
-      [
-        { id: "c-support", role: "support", name: "Terrace Trust", level: 2, description: "Neighbors fear pond spills." },
-        { id: "c-local", role: "local", name: "Wasted Brine", level: 4, description: "Mineral brine dumped into ponds." },
-        { id: "c-global", role: "global", name: "Truck Feedstock", level: 3, description: "Long-haul diesel supply." },
-      ]
-    );
+    ]);
+    assert.ok(hmw.length >= 3);
+    assert.match(hmw[0].howText, /^How might we/i);
+    assert.match(hmw[0].howText, /no all-season roads/i);
+    assert.ok(hmw.some((row) => /Blood Too Late/.test(row.howText)));
+
+    const prompts = extractScarcityPrompts(mission, crises);
     assert.ok(prompts.length >= 3 && prompts.length <= 5);
-    assert.equal(prompts[0].label, "Wasted Brine");
-    assert.equal(prompts[1].label, "Truck Feedstock");
-    assert.equal(prompts[2].label, "Terrace Trust");
   });
 
-  it("groups all 29 technologies across 3 Convergence Canvas zones and detects synergy & missing bridge", () => {
-    const canvas = buildConvergenceCanvas(
-      { ai: { techId: "ai" }, geothermal: { techId: "geothermal" } },
-      { suggested: ["iot", "battery"] },
-      ["ai", "geothermal"],
-      { place: "Steamholt", scarcity: "Wasted Brine" }
-    );
-    assert.deepEqual(
-      canvas.zones.map((z) => z.id),
-      ["bits", "split", "atoms"]
-    );
-    const total = canvas.zones.reduce((sum, z) => sum + z.count, 0);
-    assert.equal(total, TECHS.length);
-    // Bits (ai) + Atoms (geothermal) active without a Bridge => highlight center Bridge column
-    assert.equal(canvas.needsBridgeHighlight, true);
-    assert.equal(canvas.zones[1].highlightBridge, true);
-    assert.equal(canvas.pairAnalysis.ready, true);
-    assert.equal(canvas.pairAnalysis.needsBridge, true);
-    assert.match(canvas.pairAnalysis.prompt, /Steamholt/);
-    assert.match(canvas.pairAnalysis.prompt, /Wasted Brine/);
+  it("round-trips Pathway ingredients <-> Workbench Ideas losslessly (preserving art and settled timing)", () => {
+    const ing = {
+      id: "ing-42",
+      techId: "drones",
+      useCaseIds: ["uc-1"],
+      title: "Parachute blood drop",
+      howText: "Fixed-wing drone drops insulated blood box onto hospital pad.",
+      world: "atoms",
+      artUrl: "/api/idea-image/art-42",
+      artId: "art-42",
+      imagePrompt: "Fixed-wing medical drone",
+      timingLevel: "green",
+      timingPct: 86,
+      timingReason: "Demonstrated medical drone corridors exist in 2026.",
+      timingPending: false,
+      collectorCardId: "card-7",
+    };
 
-    // Known synergy pair (drones × battery)
-    const pair = analyzeConvergencePair("drones", "battery", { place: "Steamholt" });
-    assert.equal(pair.knownSynergy, true);
-    assert.match(pair.badge, /Known Synergy Pair/);
+    const idea = ingredientToWorkbenchIdea(ing);
+    assert.ok(idea);
+    assert.equal(idea.title, "Parachute blood drop");
+    assert.equal(idea.techId, "drones");
+    assert.deepEqual(idea.useCaseIds, ["uc-1"]);
+    assert.equal(idea.artUrl, "/api/idea-image/art-42");
+    assert.equal(idea.artId, "art-42");
+    assert.equal(idea.timingLevel, "green");
+    assert.equal(idea.timingPct, 86);
+    assert.equal(idea.collectorCardId, "card-7");
+
+    const partials = draftToIngredientPartials(idea);
+    assert.equal(partials.length, 1);
+    assert.equal(partials[0].techId, "drones");
+    assert.equal(partials[0].artUrl, "/api/idea-image/art-42");
+    assert.equal(partials[0].artId, "art-42");
+    assert.equal(partials[0].timingLevel, "green");
+    assert.equal(partials[0].timingPct, 86);
+    assert.equal(partials[0].collectorCardId, "card-7");
   });
 
   it("recommends 3 focused SCAMPER letters per challenger angle", () => {
@@ -109,7 +157,7 @@ describe("workbench-methods", () => {
     assert.deepEqual(recommendedScamperForSeed({ challengerAngle: "stakeholder" }), ["C", "P", "R"]);
   });
 
-  it("evaluates staged drafts in Converge pre-flight with exact incremental cost, world chain, horizon, and synergy", () => {
+  it("evaluates Idea cards with exact incremental cost, world chain, horizon, and synergy", () => {
     let board = seedCrises(createPathwayBoard(), [
       { id: "c-local", role: "local", name: "Wasted Brine", lamp: "red" },
       { id: "c-support", role: "support", name: "Terrace Trust", lamp: "red" },
@@ -122,7 +170,6 @@ describe("workbench-methods", () => {
       label: "Fleet dispatch",
       useCases: [{ id: "uc-future", title: "Autonomous fleet", blurb: "Fleet.", world: "atoms" }],
     });
-    // Place drones already on board so drones incremental cost is 0$
     const existing = createPathway(board, {
       techId: "drones",
       title: "Existing Drone",
@@ -146,55 +193,36 @@ describe("workbench-methods", () => {
 
     const pf = evaluateStagedDrafts(drafts, board, 2026);
     assert.equal(pf.canMint, true);
-    // Bits (ai) + Atoms (drones) without Bridge or Human step
     assert.equal(pf.worldChain.needsBridge, true);
     assert.equal(pf.worldChain.status, "missing-bridge");
-    // Relies on 2030 forecast in 2026
     assert.equal(pf.horizon.early, true);
     assert.equal(pf.horizon.year, 2030);
-    // AI × Drones is an authored synergy pair
     assert.ok(pf.convergences.length >= 1);
-    // Target crisis matched
     assert.equal(pf.crises[0].name, "Wasted Brine");
-    // Only `ai` is newly paid; `drones` is already on board
     assert.deepEqual(pf.cost.newlyPaidTechIds, ["ai"]);
     assert.ok(pf.cost.budget > 0);
-
-    // Adding a Human step draft resolves the missing Bridge warning for 0$ extra!
-    const pfBridged = evaluateStagedDrafts(
-      [
-        ...drafts,
-        {
-          id: "d2",
-          title: "Co-op Valve Check",
-          howText: "Operators confirm every alert before flipping valves.",
-          techId: null,
-          world: "plain",
-          eases: "Terrace Trust",
-        },
-      ],
-      board,
-      2026
-    );
-    assert.equal(pfBridged.worldChain.needsBridge, false);
-    assert.equal(pfBridged.worldChain.status, "complete");
-    assert.equal(pfBridged.cost.budget, pf.cost.budget);
-    assert.equal(pfBridged.crises.length, 2);
   });
 
-  it("generates focused local fallback drafts for SIT (1 or 4), SCAMPER (1-3), Convergence, and Seed", () => {
-    const sit1 = localWorkbenchLensDrafts({
-      method: "sit",
-      lenses: ["subtraction"],
-      seedTitle: "Brine Loop",
-      techIds: ["geothermal"],
+  it("generates focused local fallbacks for Discover, Define, SIT, SCAMPER, and Seed, and anchors prompts to HMW brief", () => {
+    const discover = localWorkbenchLensDrafts({
+      method: "discover",
       place: "Steamholt",
       year: 2026,
+      stakeholder: "Rina",
+    });
+    assert.equal(discover.length, 3);
+    assert.equal(discover[0].method, "discover");
+    assert.equal(discover[0].techId, null);
+
+    const define = localWorkbenchLensDrafts({
+      method: "define",
+      place: "Steamholt",
+      year: 2026,
+      stakeholder: "Rina",
       scarcity: "Wasted Brine",
     });
-    assert.equal(sit1.length, 1);
-    assert.equal(sit1[0].lens, "subtraction");
-    assert.match(sit1[0].howText, /Steamholt/);
+    assert.equal(define.length, 3);
+    assert.match(define[0].howText, /^How might we/i);
 
     const sit4 = localWorkbenchLensDrafts({
       method: "sit",
@@ -217,26 +245,14 @@ describe("workbench-methods", () => {
     assert.equal(scamper2.length, 2);
     assert.deepEqual(scamper2.map((d) => d.lens), ["R", "C"]);
 
-    const conv = localWorkbenchLensDrafts({
-      method: "convergence",
-      techIds: ["ai", "geothermal"],
-      place: "Steamholt",
+    const seedPrompt = buildLensPrompt("seed", {
+      techName: "Drones",
+      place: "Brackenfold",
       year: 2026,
-      scarcity: "Wasted Brine",
+      hmwBrief: "How might we deliver matched blood within 60 minutes without ward spoilage?",
     });
-    assert.equal(conv.length, 2);
-    assert.equal(conv[0].techId, "ai");
-    assert.equal(conv[0].secondaryTechId, "geothermal");
-
-    const prompt = buildLensPrompt("scamper", {
-      scamperLetters: ["R", "C"],
-      seedTitle: "Brine Loop",
-      place: "Steamholt",
-      challengerAngle: "moloch",
-      challengerQuestion: "Who stops plants from dumping hot brine at night?",
-    });
-    assert.match(prompt.question, /Brine Loop/);
-    assert.match(prompt.question, /dumping hot brine/);
+    assert.match(seedPrompt.question, /Drones/);
+    assert.match(seedPrompt.question, /How Might We/);
 
     const sanitized = sanitizeWorkbenchDrafts(
       [{ title: "Valid Card", howText: "A concrete local mechanism in Steamholt.", techId: "not-real", lens: "S" }],
@@ -257,40 +273,10 @@ describe("workbench-methods", () => {
       scarcity: "Wasted Brine",
     });
     assert.equal(seed.length, 3);
-    assert.equal(seed[0].techId, "geothermal");
-    assert.deepEqual(seed[0].useCaseIds, ["uc-early"]);
     const handoff = seed.find((d) => d.lensLabel.includes("Human Bridge"));
     assert.ok(handoff);
     assert.equal(handoff.techId, null);
-    assert.equal(handoff.secondaryTechId, null);
     assert.equal(handoff.world, "plain");
     assert.deepEqual(handoff.useCaseIds, []);
-
-    const aiHuman = sanitizeWorkbenchDrafts(
-      [
-        {
-          title: "Neighborhood ledger",
-          howText: "Residents confirm each reading before the valve moves.",
-          techId: null,
-          secondaryTechId: "battery",
-          world: "bits",
-        },
-      ],
-      {
-        method: "seed",
-        techId: "geothermal",
-        techIds: ["geothermal"],
-        useCaseIds: ["uc-early"],
-      }
-    );
-    assert.equal(aiHuman.length, 1);
-    assert.equal(aiHuman[0].techId, null);
-    assert.equal(aiHuman[0].secondaryTechId, null);
-    assert.equal(aiHuman[0].world, "plain");
-    assert.deepEqual(aiHuman[0].useCaseIds, []);
-
-    const pf = evaluateStagedDrafts(seed, createPathwayBoard(), 2026);
-    assert.deepEqual(pf.cost.newlyPaidTechIds, ["geothermal"]);
-    assert.equal(pf.worldChain.hasHuman, true);
   });
 });

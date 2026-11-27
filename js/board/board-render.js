@@ -573,6 +573,7 @@ export function renderOntologyBoard(view) {
   const sparks = Array.isArray(view?.sparks) ? view.sparks : [];
   const catalog = Array.isArray(view?.catalog) ? view.catalog : [];
   const selected = new Set(view?.selectedUseCaseIds || []);
+  const collapsedSet = new Set(view?.collapsedCards || []);
   const focusedTechId = view?.focusedTechId || tracks[0]?.techId || "";
   const focusedTechName =
     tracks.find((t) => t.techId === focusedTechId)?.name ||
@@ -608,7 +609,8 @@ export function renderOntologyBoard(view) {
             year,
             focusedTechId,
             highlight,
-            directTechUseCases.has(track.techId) || directTechPathways.has(track.techId)
+            directTechUseCases.has(track.techId) || directTechPathways.has(track.techId),
+            collapsedSet.has(`tech:${track.techId}`)
           )
         )
         .join("")
@@ -672,6 +674,7 @@ export function renderOntologyBoard(view) {
         enforceWorlds: view?.enforceWorlds !== false,
         editing: view?.editingPathwayId === pw.id,
         focused: view?.focusedPathwayId === pw.id,
+        collapsed: collapsedSet.has(`pathway:${pw.id}`),
         highlight,
         ucById,
       })
@@ -697,7 +700,9 @@ export function renderOntologyBoard(view) {
       </div>
       <div class="ontology-rules-chips">${ruleChips}</div>
     </div>` +
-    (crises.map((c) => renderCrisisCard(c, wires, highlight)).join("") ||
+    (crises
+      .map((c) => renderCrisisCard(c, wires, highlight, collapsedSet.has(`crisis:${c.id}`)))
+      .join("") ||
       `<p class="ontology-empty">Crises land here after the briefing.</p>`);
 
   const picker = view?.pickerOpen
@@ -734,7 +739,7 @@ export function renderOntologyBoard(view) {
   const lanesBody = wbOpen
     ? `<div class="ontology-lanes is-workbench-open">
         ${renderWorkbenchLeftRail(tracks, useCases, year, selected, wb)}
-        ${renderWorkbenchStudio(view, wb, tracks, useCases, pathways, crises, wires, selected)}
+        ${renderWorkbenchStudio(view, wb, tracks, useCases, pathways, crises, wires, selected, collapsedSet)}
         ${renderWorkbenchRightRail(crises, wires, rules)}
       </div>`
     : `<div class="ontology-lanes">
@@ -864,7 +869,45 @@ function renderQualitativeTimeline(track, milestones, year) {
   </div>`;
 }
 
-function renderTrack(track, year, focusedTechId, highlight = null, hasDirectUseCases = false) {
+function renderTimingAssessment(pw) {
+  const pct =
+    pw.timingPct != null
+      ? Math.max(5, Math.min(99, Math.round(pw.timingPct)))
+      : pw.timingLevel === "green"
+        ? 82
+        : pw.timingLevel === "yellow"
+          ? 55
+          : 22;
+  const level = pw.timingLevel || "yellow";
+  const barLabel = pw.timingPending
+    ? "⏳ Checking year honesty…"
+    : level === "green"
+      ? `Honest for this year (${pct}%)`
+      : level === "yellow"
+        ? `Partial stretch (${pct}%)`
+        : `Stretch claim (${pct}%)`;
+  const reason = !pw.timingPending ? String(pw.timingReason || "").trim() : "";
+  return `<div class="ontology-timing-block is-${escapeHtml(level)}">
+    <div class="ontology-timing-bar is-${escapeHtml(level)}${pw.timingPending ? " is-pending" : ""}">
+      <div class="ontology-timing-fill" style="width:${pct}%"></div>
+      <span class="ontology-timing-label">${escapeHtml(barLabel)}</span>
+    </div>
+    ${reason ? `<p class="ontology-timing-reason">${escapeHtml(reason)}</p>` : ""}
+  </div>`;
+}
+
+function collapseChevronBtn(key, collapsed, label) {
+  return `<button type="button" class="ontology-collapse-btn${collapsed ? " is-collapsed" : ""}" data-action="toggle-card-collapse" data-collapse-key="${escapeHtml(key)}" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "Expand" : "Collapse"} ${escapeHtml(label)}" title="${collapsed ? "Expand panel" : "Collapse panel"}"><span aria-hidden="true">${collapsed ? "▸" : "▾"}</span></button>`;
+}
+
+function renderTrack(
+  track,
+  year,
+  focusedTechId,
+  highlight = null,
+  hasDirectUseCases = false,
+  collapsed = false
+) {
   const milestones = Array.isArray(track.milestones) ? track.milestones : [];
   const inPlay = milestones.filter((m) => Number(m.year) <= year);
   const ahead = milestones.filter((m) => Number(m.year) > year);
@@ -983,15 +1026,52 @@ function renderTrack(track, year, focusedTechId, highlight = null, hasDirectUseC
     }
   }
 
+  const dealtCount = milestones.filter((m) => m.dealt).length;
+  const anyMsHighlighted = Boolean(
+    collapsed &&
+      highlight &&
+      milestones.some(
+        (m) =>
+          highlight.milestoneIds?.has(m.id) ||
+          [...(highlight.tier1Edges || [])].some((e) => e.startsWith(`${m.id}->`))
+      )
+  );
   const techPortLit = Boolean(
-    highlight &&
-      ([...highlight.tier1Edges].some((e) => e.startsWith(`tech:${track.techId}->`)) ||
-        [...highlight.tier2Edges].some((e) => e.startsWith(`tech:${track.techId}->`)))
+    anyMsHighlighted ||
+      (highlight &&
+        ([...highlight.tier1Edges].some((e) => e.startsWith(`tech:${track.techId}->`)) ||
+          [...highlight.tier2Edges].some((e) => e.startsWith(`tech:${track.techId}->`))))
+  );
+  const techPortActive = Boolean(hasDirectUseCases || (collapsed && dealtCount > 0));
+  const collapseBtn = collapseChevronBtn(
+    `tech:${track.techId}`,
+    collapsed,
+    track.name || track.techId
   );
 
+  if (collapsed) {
+    const summaryPill =
+      dealtCount > 0
+        ? `${dealtCount} dealt · ${inPlay.length}/${milestones.length}`
+        : `${inPlay.length}/${milestones.length} in play`;
+    return `<article class="ontology-card ontology-tech is-collapsed${isFocused ? " is-focused" : " is-compact"}${trackChainCls}" data-tech-id="${escapeHtml(track.techId)}">
+      <span class="ontology-port is-out is-tech-port${techPortActive ? " is-lit" : ""}${techPortLit ? " is-chain-lit" : ""}" data-port-tech="${escapeHtml(track.techId)}" aria-hidden="true"></span>
+      <header class="ontology-card-head is-collapsed-bar">
+        ${collapseBtn}
+        <button type="button" class="ontology-tech-focus" data-action="focus-tech" data-tech-id="${escapeHtml(track.techId)}">
+          ${track.icon ? `<span class="ontology-tech-icon" aria-hidden="true">${escapeHtml(track.icon)}</span>` : ""}
+          <h3>${escapeHtml(track.name || track.techId)}</h3>
+        </button>
+        <span class="ontology-collapsed-pill" title="${escapeHtml(`${inPlay.length} of ${milestones.length} milestones in play; ${dealtCount} dealt`)}">${escapeHtml(summaryPill)}</span>
+        <button type="button" class="ontology-icon-btn is-remove" data-action="remove-tech" data-tech-id="${escapeHtml(track.techId)}" aria-label="Remove ${escapeHtml(track.name)}" title="Remove from board">×</button>
+      </header>
+    </article>`;
+  }
+
   return `<article class="ontology-card ontology-tech${isFocused ? " is-focused" : " is-compact"}${trackChainCls}" data-tech-id="${escapeHtml(track.techId)}">
-    <span class="ontology-port is-out is-tech-port${hasDirectUseCases ? " is-lit" : ""}${techPortLit ? " is-chain-lit" : ""}" data-port-tech="${escapeHtml(track.techId)}" aria-hidden="true"></span>
+    <span class="ontology-port is-out is-tech-port${techPortActive ? " is-lit" : ""}${techPortLit ? " is-chain-lit" : ""}" data-port-tech="${escapeHtml(track.techId)}" aria-hidden="true"></span>
     <header class="ontology-card-head">
+      ${collapseBtn}
       <button type="button" class="ontology-tech-focus" data-action="focus-tech" data-tech-id="${escapeHtml(track.techId)}">
         ${track.icon ? `<span class="ontology-tech-icon" aria-hidden="true">${escapeHtml(track.icon)}</span>` : ""}
         <h3>${escapeHtml(track.name || track.techId)}</h3>
@@ -1172,19 +1252,7 @@ function renderPathwayCard(pw, crises, wires, opts) {
     })
     .join("");
 
-  const pct = pw.timingPct != null ? Math.max(5, Math.min(99, Math.round(pw.timingPct))) : pw.timingLevel === "green" ? 82 : pw.timingLevel === "yellow" ? 55 : 22;
-  const timingBar = `<div class="ontology-timing-bar is-${escapeHtml(pw.timingLevel || "yellow")}${pw.timingPending ? " is-pending" : ""}" title="${escapeHtml(pw.timingReason || "Year-honesty check")}">
-    <div class="ontology-timing-fill" style="width:${pct}%"></div>
-    <span class="ontology-timing-label">${
-      pw.timingPending
-        ? "⏳ Checking year honesty…"
-        : pw.timingReason
-          ? escapeHtml(pw.timingReason)
-          : pw.timingLevel === "green"
-            ? `Honest for this year (${pct}%)`
-            : `Stretch claim (${pct}%)`
-    }</span>
-  </div>`;
+  const timingBar = renderTimingAssessment(pw);
 
   const connectedCrisisIds = new Set(
     wires.filter((w) => w.pathwayId === pw.id).map((w) => w.crisisId)
@@ -1209,6 +1277,7 @@ function renderPathwayCard(pw, crises, wires, opts) {
       <div class="ontology-pop-list">
         <button type="button" data-action="wb-remix" data-source-kind="pathway" data-source-id="${escapeHtml(pw.id)}" data-target-method="sit">📦 Remix with SIT (closed world)</button>
         <button type="button" data-action="wb-remix" data-source-kind="pathway" data-source-id="${escapeHtml(pw.id)}" data-target-method="scamper">🔧 Remix with SCAMPER (open)</button>
+        <button type="button" data-action="wb-break-pathway" data-pathway-id="${escapeHtml(pw.id)}">↩ Break apart into Ideas</button>
       </div>
     </details>`;
 
@@ -1281,9 +1350,16 @@ function renderPathwayCard(pw, crises, wires, opts) {
     highlight && wires.some((w) => w.pathwayId === pw.id && highlight.wireIds.has(w.id))
   );
 
+  const collapsed = Boolean(opts.collapsed);
+  const collapseBtn = collapseChevronBtn(
+    `pathway:${pw.id}`,
+    collapsed,
+    pw.title || "Pathway"
+  );
   const pwCardClasses = [
     "ontology-card",
     "ontology-pathway",
+    collapsed ? "is-collapsed" : "",
     opts.focused ? "is-focused" : "",
     pw.scoring ? "is-scoring" : "",
     pw.polishing ? "is-polishing" : "",
@@ -1292,14 +1368,32 @@ function renderPathwayCard(pw, crises, wires, opts) {
     .filter(Boolean)
     .join(" ");
 
+  if (collapsed) {
+    const plugSummary = crises.length
+      ? `<span class="ontology-collapsed-pill${connectedCrisisIds.size ? " is-lit" : ""}" title="${connectedCrisisIds.size} of ${crises.length} crises plugged">🔌 ${connectedCrisisIds.size}/${crises.length}</span>`
+      : "";
+    return `<article class="${pwCardClasses}" data-pathway-id="${escapeHtml(pw.id)}" data-drop="pathway" draggable="true">
+      <span class="ontology-port is-in${fromUcs || fromTechs ? " is-lit" : ""}${inPortLit ? " is-chain-lit" : ""}" data-port-pw-in="${escapeHtml(pw.id)}" data-from-ucs="${escapeHtml(fromUcs)}" data-from-techs="${escapeHtml(fromTechs)}" aria-hidden="true"></span>
+      <header class="ontology-card-head is-collapsed-bar">
+        ${collapseBtn}
+        <h3 title="${escapeHtml(pw.title)}">${escapeHtml(pw.title)}</h3>
+        ${plugSummary}
+        ${lampDot(pw.timingLevel, pw.timingPending || pw.scoring)}
+        <button type="button" class="ontology-icon-btn is-remove" data-action="remove-pathway" data-pathway-id="${escapeHtml(pw.id)}" aria-label="Remove ${escapeHtml(pw.title)}" title="Remove pathway">×</button>
+      </header>
+      <span class="ontology-port is-out${connectedCrisisIds.size ? " is-lit" : ""}${outPortLit ? " is-chain-lit" : ""}" data-port-pw-out="${escapeHtml(pw.id)}" title="Drag onto a Crisis in Lane 4 to plug in" aria-hidden="true"></span>
+    </article>`;
+  }
+
   return `<article class="${pwCardClasses}" data-pathway-id="${escapeHtml(pw.id)}" data-drop="pathway" draggable="true">
     <span class="ontology-port is-in${fromUcs || fromTechs ? " is-lit" : ""}${inPortLit ? " is-chain-lit" : ""}" data-port-pw-in="${escapeHtml(pw.id)}" data-from-ucs="${escapeHtml(fromUcs)}" data-from-techs="${escapeHtml(fromTechs)}" aria-hidden="true"></span>
-    ${artBanner}
     <header class="ontology-card-head">
+      ${collapseBtn}
       <h3>${escapeHtml(pw.title)}</h3>
       ${lampDot(pw.timingLevel, pw.timingPending || pw.scoring)}
       <button type="button" class="ontology-icon-btn is-remove" data-action="remove-pathway" data-pathway-id="${escapeHtml(pw.id)}" aria-label="Remove ${escapeHtml(pw.title)}" title="Remove pathway">×</button>
     </header>
+    ${artBanner}
     ${timingBar}
     ${scoringBanner}
     <div class="ontology-chips">${chips}</div>
@@ -1320,7 +1414,7 @@ function worldDot(world) {
   return `<span class="ontology-world-icon is-${key}" title="${escapeHtml(meta.title)}" aria-label="${escapeHtml(meta.label)}">${worldIconSvg(key)}</span>`;
 }
 
-function renderCrisisCard(crisis, wires, highlight = null) {
+function renderCrisisCard(crisis, wires, highlight = null, collapsed = false) {
   const inbound = wires.filter((w) => w.crisisId === crisis.id);
   const roleText = roleLabel(crisis.role);
   const meterPips =
@@ -1394,16 +1488,50 @@ function renderCrisisCard(crisis, wires, highlight = null) {
     .join("");
 
   const anyScoring = inbound.some((w) => w.pending);
+  const blockedCount = inbound.reduce(
+    (sum, w) => sum + (w.challengers || []).filter((ch) => ch.lamp === "red").length,
+    0
+  );
+  const collapseBtn = collapseChevronBtn(
+    `crisis:${crisis.id}`,
+    collapsed,
+    crisis.name || crisis.role || "Crisis"
+  );
+
+  if (collapsed) {
+    const compactMeter =
+      crisis.level != null
+        ? `<span class="ontology-meter-tag" title="Crisis pressure ${crisis.level}/5${crisis.goal != null ? ` · target ≤${crisis.goal}` : ""}">${crisis.level}/5</span>`
+        : "";
+    const statusPill = blockedCount
+      ? `<span class="ontology-collapsed-pill is-warn" title="${blockedCount} open roadblock${blockedCount === 1 ? "" : "s"}">🛑 ${blockedCount}</span>`
+      : inbound.length
+        ? `<span class="ontology-collapsed-pill is-lit" title="${inbound.length} wired pathway${inbound.length === 1 ? "" : "s"}">${inbound.length} wired</span>`
+        : "";
+    return `<article class="ontology-card ontology-crisis is-collapsed is-${escapeHtml(crisis.lamp || "red")}${anyScoring ? " is-scoring" : ""}${crisisChainCls}" data-crisis-id="${escapeHtml(crisis.id)}" data-crisis-slot="${escapeHtml(crisis.id)}" data-drop="crisis">
+      <span class="ontology-port is-in${inbound.length ? " is-lit" : ""}${inPortLit ? " is-chain-lit" : ""}" data-port-crisis-in="${escapeHtml(crisis.id)}" aria-hidden="true"></span>
+      <header class="ontology-card-head is-collapsed-bar">
+        ${collapseBtn}
+        <h3 title="${escapeHtml(crisis.name || crisis.role)}">${escapeHtml(crisis.name || crisis.role)}</h3>
+        ${compactMeter}
+        ${statusPill}
+        ${lampDot(crisis.lamp, anyScoring)}
+      </header>
+    </article>`;
+  }
 
   return `<article class="ontology-card ontology-crisis is-${escapeHtml(crisis.lamp || "red")}${anyScoring ? " is-scoring" : ""}${crisisChainCls}" data-crisis-id="${escapeHtml(crisis.id)}" data-crisis-slot="${escapeHtml(crisis.id)}" data-drop="crisis">
     <span class="ontology-port is-in${inbound.length ? " is-lit" : ""}${inPortLit ? " is-chain-lit" : ""}" data-port-crisis-in="${escapeHtml(crisis.id)}" aria-hidden="true"></span>
     <header class="ontology-card-head">
-      <div>
+      ${collapseBtn}
+      <div class="ontology-crisis-title">
         ${roleText ? `<span class="ontology-crisis-role">${escapeHtml(roleText)}</span>` : ""}
         <h3>${escapeHtml(crisis.name || crisis.role)}</h3>
       </div>
-      ${meterPips}
-      ${lampDot(crisis.lamp, anyScoring)}
+      <div class="ontology-crisis-meta">
+        ${meterPips}
+        ${lampDot(crisis.lamp, anyScoring)}
+      </div>
     </header>
     <p class="ontology-crisis-desc">${escapeHtml(crisis.description || "")}</p>
     ${inbound.length ? `<div class="ontology-inbound-list">${wireReads}</div>` : `<p class="ontology-unplugged-hint">Drag a Pathway here (or use 🔌 Plug) to address this crisis.</p>`}
@@ -1687,77 +1815,6 @@ function renderWorkbenchRightRail(crises, wires, rules) {
 }
 
 function renderWorkbenchMethodControls(wb, useCases, selected) {
-  if (wb.method === "convergence") {
-    const conv = wb.convergence;
-    const pair = conv.pairAnalysis;
-    const zonesHtml = conv.zones
-      .map(
-        (z) => `<div class="wb-conv-zone is-${escapeHtml(z.id)}${z.highlightBridge ? " is-bridge-needed" : ""}">
-          <div class="wb-conv-zone-head">
-            ${worldBadge(z.id)}
-            <span class="wb-conv-zone-sub">${z.highlightBridge ? "⚠️ Bridge gap" : escapeHtml(z.subtitle)}</span>
-          </div>
-          <div class="wb-conv-groups">
-            ${z.groups
-              .map(
-                (g) => `<div class="wb-conv-group">
-                  <span class="wb-conv-dom" style="--dom-color:${escapeHtml(g.color)}">${escapeHtml(g.domainLabel)}</span>
-                  <div class="wb-conv-chips">
-                    ${g.techs
-                      .map((t) => {
-                        const cls = [
-                          "wb-conv-chip",
-                          t.inPlay ? "is-in-play" : "",
-                          t.synergy ? "is-synergy" : "",
-                          t.recommended ? "is-rec" : "",
-                          t.selectedSlot === "A" ? "is-slot-a" : "",
-                          t.selectedSlot === "B" ? "is-slot-b" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ");
-                        const slotTag = t.selectedSlot
-                          ? `<span class="wb-conv-slot">${t.selectedSlot}</span>`
-                          : "";
-                        return `<button type="button" class="${cls}" data-action="wb-conv-pick" data-tech-id="${escapeHtml(t.id)}" title="${escapeHtml(t.name)}${t.inPlay ? " (on board)" : ""}${t.synergy ? " — ⚡ Synergy pair!" : ""} — ${escapeHtml(t.summary)}">
-                          ${slotTag}<span>${escapeHtml(t.icon ? `${t.icon} ` : "")}${escapeHtml(t.name)}</span>
-                        </button>`;
-                      })
-                      .join("")}
-                  </div>
-                </div>`
-              )
-              .join("")}
-          </div>
-        </div>`
-      )
-      .join("");
-
-    const slotA = pair.techA
-      ? `<span class="wb-pair-pill is-a">${escapeHtml(pair.techA.icon ? `${pair.techA.icon} ` : "")}${escapeHtml(pair.techA.name)} ${worldDot(pair.techA.polarity)}</span>`
-      : `<span class="wb-pair-pill is-empty">Pick Tech A</span>`;
-    const slotB = pair.techB
-      ? `<span class="wb-pair-pill is-b">${escapeHtml(pair.techB.icon ? `${pair.techB.icon} ` : "")}${escapeHtml(pair.techB.name)} ${worldDot(pair.techB.polarity)}</span>`
-      : `<span class="wb-pair-pill is-empty">Pick Tech B</span>`;
-
-    return `<div class="wb-method-panel is-convergence">
-      <div class="wb-conv-legend">
-        <span class="wb-legend-item"><i class="is-in-play"></i> On board</span>
-        <span class="wb-legend-item"><i class="is-synergy"></i> ⚡ Synergy partner</span>
-        <span class="wb-legend-item">Click any 2 chips to intersect</span>
-      </div>
-      <div class="wb-conv-map">${zonesHtml}</div>
-      <div class="wb-pair-bar${pair.ready ? " is-ready" : ""}">
-        <div class="wb-pair-slots">
-          ${slotA}
-          <span class="wb-pair-x" aria-hidden="true">×</span>
-          ${slotB}
-          ${pair.techA ? `<button type="button" class="ontology-link-btn" data-action="wb-conv-clear">Clear</button>` : ""}
-        </div>
-        ${pair.badge ? `<span class="wb-pair-badge${pair.knownSynergy ? " is-synergy" : pair.needsBridge ? " is-warn" : ""}">${escapeHtml(pair.badge)}</span>` : ""}
-      </div>
-    </div>`;
-  }
-
   if (wb.method === "sit") {
     const seedSelect = renderSeedSelector(wb);
     const quads = wb.sitLenses
@@ -1786,7 +1843,7 @@ function renderWorkbenchMethodControls(wb, useCases, selected) {
         ? (() => {
             const meta = challengerMeta(wb.remixSeed.challengerAngle);
             return `<div class="wb-challenger-banner">
-              <img src="${escapeHtml(meta.visual)}" alt="" />
+              <img src="${escapeHtml(meta.visual)}" alt="" draggable="false" />
               <div>
                 <strong>🛑 Unblocking ${escapeHtml(meta.label)}</strong>
                 <p>${escapeHtml(wb.remixSeed.challengerQuestion || wb.challengerGuide?.note || "")}</p>
@@ -1824,7 +1881,7 @@ function renderWorkbenchMethodControls(wb, useCases, selected) {
             `<span class="wb-seed-uc-chip">${worldDot(u.world)} ${escapeHtml(u.title)} <button type="button" class="ontology-chip-x" data-action="toggle-use" data-id="${escapeHtml(u.id)}" aria-label="Unselect ${escapeHtml(u.title)}">×</button></span>`
         )
         .join("")}</div>`
-    : `<p class="wb-seed-hint">Tip: tap any unlocked Use Case in the left rail (or keep exploring with your focused tech) to anchor your Seed drafts.</p>`;
+    : `<p class="wb-seed-hint">Tip: tap any unlocked Use Case in the left rail (or switch active Techs in 1–2 Inputs) to anchor your Seed ideas.</p>`;
 
   return `<div class="wb-method-panel is-seed">${ucStrip}</div>`;
 }
@@ -1850,7 +1907,7 @@ function renderSeedSelector(wb) {
   </div>`;
 }
 
-function renderWorkbenchIdeaCard(idea) {
+function renderWorkbenchIdeaCard(idea, wb, pathways = [], collapsed = false) {
   const remixMenu = `<details class="ontology-pop-menu wb-draft-remix" data-menu="draft-remix">
     <summary class="ontology-link-btn">Remix ▾</summary>
     <div class="ontology-pop-list">
@@ -1873,12 +1930,79 @@ function renderWorkbenchIdeaCard(idea) {
     .filter(Boolean)
     .join("");
 
+  const pwList = Array.isArray(pathways) ? pathways : [];
+  let actionButtons = "";
+  if (pwList.length === 0) {
+    actionButtons = `<button type="button" class="wb-mint-idea-btn" data-action="wb-start-pathway" data-idea-id="${escapeHtml(idea.id)}" title="Start a Pathway in Deliver with this idea">
+      → Start Pathway (${escapeHtml(costLabel)})
+    </button>`;
+  } else if (pwList.length === 1) {
+    const pw = pwList[0];
+    actionButtons = `<div class="wb-idea-actions">
+      <button type="button" class="wb-mint-idea-btn" data-action="wb-add-to-pathway" data-idea-id="${escapeHtml(idea.id)}" data-pathway-id="${escapeHtml(pw.id)}" title="Add this idea into Pathway #1: ${escapeHtml(pw.title || "Pathway #1")}">
+        + Add to Pathway #1 (${escapeHtml(costLabel)})
+      </button>
+      <button type="button" class="wb-new-pw-mini-btn" data-action="wb-start-pathway" data-idea-id="${escapeHtml(idea.id)}" title="Start a separate new Pathway with this idea">
+        + New
+      </button>
+    </div>`;
+  } else if (pwList.length <= 3) {
+    const pwBtns = pwList
+      .map(
+        (pw, idx) =>
+          `<button type="button" class="wb-mint-idea-btn is-pw-pick" data-action="wb-add-to-pathway" data-idea-id="${escapeHtml(idea.id)}" data-pathway-id="${escapeHtml(pw.id)}" title="Add this idea into Pathway #${idx + 1}: ${escapeHtml(pw.title || `Pathway #${idx + 1}`)}" aria-label="Add ${escapeHtml(idea.title)} to Pathway #${idx + 1}">+ Pathway #${idx + 1}</button>`
+      )
+      .join("");
+    actionButtons = `<div class="wb-idea-actions">
+      <span class="wb-add-cost-tag" title="Incremental Budget cost to place this idea">(${escapeHtml(costLabel)})</span>
+      ${pwBtns}
+      <button type="button" class="wb-new-pw-mini-btn" data-action="wb-start-pathway" data-idea-id="${escapeHtml(idea.id)}" title="Start a separate new Pathway with this idea">
+        + New
+      </button>
+    </div>`;
+  } else {
+    const items = pwList
+      .map(
+        (pw, idx) =>
+          `<button type="button" data-action="wb-add-to-pathway" data-idea-id="${escapeHtml(idea.id)}" data-pathway-id="${escapeHtml(pw.id)}">+ Pathway #${idx + 1} — ${escapeHtml(pw.title || "Pathway")}</button>`
+      )
+      .join("");
+    actionButtons = `<div class="wb-idea-actions">
+      <details class="ontology-pop-menu wb-add-pw-menu" data-menu="add-pw">
+        <summary class="wb-mint-idea-btn">+ Add to Pathway (${escapeHtml(costLabel)}) ▾</summary>
+        <div class="ontology-pop-list">${items}</div>
+      </details>
+      <button type="button" class="wb-new-pw-mini-btn" data-action="wb-start-pathway" data-idea-id="${escapeHtml(idea.id)}" title="Start a separate new Pathway with this idea">
+        + New
+      </button>
+    </div>`;
+  }
+
+  const collapseBtn = collapseChevronBtn(
+    `wb-idea:${idea.id}`,
+    collapsed,
+    idea.title || "Idea"
+  );
+
+  if (collapsed) {
+    return `<article class="wb-idea-card is-collapsed${idea.artUrl ? " has-art" : ""}" data-wb-draft-id="${escapeHtml(idea.id)}" draggable="true">
+      <header class="wb-draft-head is-collapsed-bar">
+        ${collapseBtn}
+        <span class="wb-lens-tag is-${escapeHtml(idea.method || "seed")}">${escapeHtml(idea.lensLabel || "Idea")}</span>
+        ${worldDot(idea.world)}
+        <strong class="wb-idea-collapsed-title" title="${escapeHtml(idea.title)}">${escapeHtml(idea.title)}</strong>
+        <button type="button" class="ontology-icon-btn is-remove" data-action="wb-delete-draft" data-draft-id="${escapeHtml(idea.id)}" aria-label="Delete idea ${escapeHtml(idea.title)}" title="Discard idea">×</button>
+      </header>
+    </article>`;
+  }
+
   return `<article class="wb-idea-card${idea.artUrl ? " has-art" : ""}" data-wb-draft-id="${escapeHtml(idea.id)}" draggable="true">
     <header class="wb-draft-head">
+      ${collapseBtn}
       <span class="wb-lens-tag is-${escapeHtml(idea.method || "seed")}">${escapeHtml(idea.lensLabel || "Idea")}</span>
       ${worldBadge(idea.world)}
       ${metaBadges}
-      <button type="button" class="ontology-icon-btn is-remove" data-action="wb-delete-draft" data-draft-id="${escapeHtml(idea.id)}" aria-label="Remove idea ${escapeHtml(idea.title)}" title="Remove idea">×</button>
+      <button type="button" class="ontology-icon-btn is-remove" data-action="wb-delete-draft" data-draft-id="${escapeHtml(idea.id)}" aria-label="Delete idea ${escapeHtml(idea.title)}" title="Discard idea">×</button>
     </header>
     <div class="wb-idea-main">
       <div class="wb-idea-thumb">${artThumb}</div>
@@ -1892,21 +2016,34 @@ function renderWorkbenchIdeaCard(idea) {
         ${idea.eases ? `<span class="ontology-eases-tag">Aims at: ${escapeHtml(idea.eases)}</span>` : ""}
         ${remixMenu}
       </div>
-      <button type="button" class="wb-mint-idea-btn" data-action="wb-mint-idea" data-idea-id="${escapeHtml(idea.id)}" title="Use this idea to form a Pathway in Converge">
-        → Use in Pathway (${escapeHtml(costLabel)})
-      </button>
+      ${actionButtons}
     </footer>
   </article>`;
 }
 
-function renderWorkbenchVisualPathway(pw, crises, wires, enforceWorlds) {
+function renderWorkbenchVisualPathway(
+  pw,
+  pwIndex,
+  wb,
+  view,
+  crises,
+  wires,
+  enforceWorlds,
+  collapsed = false
+) {
   const ings = pw.ingredients || [];
   const multi = ings.length > 1;
+  const isTarget = wb?.targetPathwayId === pw.id;
+  const pwNum = pwIndex + 1;
   const convPairs = new Set(
     (pw.convergences || []).flatMap((c) => {
       if (c.aId && c.bId) return [`${c.aId}|${c.bId}`, `${c.bId}|${c.aId}`];
       return [];
     })
+  );
+
+  const trackNameById = new Map(
+    (view?.tracks || []).map((t) => [t.techId, t.name || t.techId])
   );
 
   const tilesHtml = ings
@@ -1916,55 +2053,43 @@ function renderWorkbenchVisualPathway(pw, crises, wires, enforceWorlds) {
       const artContent = ing.artUrl
         ? `<img class="wb-inv-art" src="${escapeHtml(ing.artUrl)}" alt="${escapeHtml(ing.title)}" loading="lazy" draggable="false" />`
         : ing.artPending
-          ? `<div class="wb-inv-shimmer" aria-label="Visualizing invention"><span>🎨 Painting…</span></div>`
+          ? `<div class="wb-inv-shimmer" aria-label="Visualizing idea"><span>🎨 Painting…</span></div>`
           : `<div class="wb-inv-fallback is-${escapeHtml(normalizeWorld(ing.world))}">
               ${worldIconSvg(ing.world)}
               <span>${escapeHtml(ing.techId || "Human")}</span>
             </div>`;
+      const techLabel = ing.techId
+        ? trackNameById.get(ing.techId) || ing.techId
+        : "Human step";
+      const worldMeta = WORLD_META[normalizeWorld(ing.world)] || WORLD_META.bits;
 
-      const tile = `<div class="wb-inv-tile${multi ? " is-part" : " is-solo"}">
+      const tile = `<div class="wb-inv-tile${multi ? " is-part" : " is-solo"}" data-wb-ing-drag="${escapeHtml(pw.id)}:${escapeHtml(ing.id)}" draggable="true" title="${escapeHtml(ing.howText ? `${ing.title}: ${ing.howText} (drag to move or return)` : "Drag back to Ideas or into another Pathway")}">
         <div class="wb-inv-art-box">
           ${artContent}
           <span class="wb-inv-world-overlay">${worldDot(ing.world)}</span>
-          ${multi ? `<button type="button" class="wb-inv-unfuse" data-action="unfuse" data-pathway-id="${escapeHtml(pw.id)}" data-ingredient-id="${escapeHtml(ing.id)}" title="Split back into its own invention" aria-label="Unfuse ${escapeHtml(ing.title)}">×</button>` : ""}
         </div>
         <div class="wb-inv-caption">
-          <strong class="wb-inv-title" title="${escapeHtml(ing.title)}">${escapeHtml(ing.title)}</strong>
+          <div class="wb-inv-caption-top">
+            <strong class="wb-inv-title" title="${escapeHtml(ing.title)}">${escapeHtml(ing.title)}</strong>
+            <button type="button" class="wb-inv-return-btn" data-action="wb-return-ingredient" data-pathway-id="${escapeHtml(pw.id)}" data-ingredient-id="${escapeHtml(ing.id)}" title="Remove from this Pathway and return to Ideas" aria-label="Return ${escapeHtml(ing.title)} to Ideas">↩</button>
+          </div>
+          <span class="wb-inv-meta">${escapeHtml(techLabel)} · ${escapeHtml(worldMeta.label)}</span>
         </div>
       </div>`;
 
       const connector = nextIng
-        ? `<div class="wb-chain-link${isConvLink ? " is-conv" : ""}" title="${isConvLink ? "Convergence synergy ×1.25" : "Assembled into Pathway"}">${isConvLink ? "⚡" : "+"}</div>`
+        ? `<div class="wb-chain-link${isConvLink ? " is-conv" : ""}" title="${isConvLink ? "Convergence synergy ×1.25" : "Combined in Pathway"}">${isConvLink ? "⚡" : "+"}</div>`
         : "";
       return tile + connector;
     })
     .join("");
 
-  const pct =
-    pw.timingPct != null
-      ? Math.max(5, Math.min(99, Math.round(pw.timingPct)))
-      : pw.timingLevel === "green"
-        ? 82
-        : pw.timingLevel === "yellow"
-          ? 55
-          : 22;
-  const timingBar = `<div class="ontology-timing-bar is-${escapeHtml(pw.timingLevel || "yellow")}${pw.timingPending ? " is-pending" : ""}" title="${escapeHtml(pw.timingReason || "Year-honesty check")}">
-    <div class="ontology-timing-fill" style="width:${pct}%"></div>
-    <span class="ontology-timing-label">${
-      pw.timingPending
-        ? "⏳ Checking year honesty…"
-        : pw.timingReason
-          ? escapeHtml(pw.timingReason)
-          : pw.timingLevel === "green"
-            ? `Honest for this year (${pct}%)`
-            : `Stretch claim (${pct}%)`
-    }</span>
-  </div>`;
+  const timingBar = renderTimingAssessment(pw);
 
   const convBadges = (pw.convergences || [])
     .map(
       (row) =>
-        `<span class="ontology-badge is-conv" title="${escapeHtml(row.reason || "")}">⚡ ${escapeHtml(row.title || "Convergence")} ×1.25</span>`
+        `<span class="ontology-badge is-conv" title="${escapeHtml(row.reason || "")}">⚡ ${escapeHtml(row.title || "Synergy")} ×1.25</span>`
     )
     .join("");
 
@@ -1976,19 +2101,38 @@ function renderWorkbenchVisualPathway(pw, crises, wires, enforceWorlds) {
         </div>`
       : "";
 
-  const assembleMenu = (pw.fuseTargets || []).length
-    ? `<details class="ontology-pop-menu" data-menu="fuse">
-        <summary class="ontology-pill-btn">⚗️ Assemble ▾</summary>
-        <div class="ontology-pop-list">
-          ${pw.fuseTargets
-            .map(
-              (other) =>
-                `<button type="button" data-action="fuse-pair" data-pathway-id="${escapeHtml(pw.id)}" data-source-id="${escapeHtml(other.id)}">+ ${escapeHtml(other.title)}</button>`
-            )
-            .join("")}
-        </div>
-      </details>`
+  const isEditing = view?.editingPathwayId === pw.id;
+  const howTextClean = String(pw.howText || "").trim();
+  const scoringBanner = pw.scoring
+    ? `<div class="ontology-busy-banner" role="status" aria-live="polite"><span class="ontology-spinner" aria-hidden="true"></span> Scoring pathway against plugged crises…</div>`
     : "";
+  const howControls = isEditing
+    ? `<div class="ontology-edit-how wb-pw-edit-how">
+        <div class="wb-pw-how-head">
+          <span class="wb-pw-how-kicker">Pathway mechanism</span>
+        </div>
+        <textarea class="ontology-textarea" data-role="pathway-how-input" data-pathway-id="${escapeHtml(pw.id)}" rows="4" maxlength="4000" ${pw.polishing ? "disabled" : ""}>${escapeHtml(pw.howText || "")}</textarea>
+        ${pw.polishing ? `<div class="ontology-busy-banner" role="status"><span class="ontology-spinner" aria-hidden="true"></span> Weaving mechanism with AI…</div>` : ""}
+        <div class="ontology-inline-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-action="save-pathway-how" data-pathway-id="${escapeHtml(pw.id)}" ${pw.polishing ? "disabled" : ""}>Save</button>
+          <button type="button" class="btn btn-secondary btn-sm${pw.polishing ? " is-busy" : ""}" data-action="polish-how" data-pathway-id="${escapeHtml(pw.id)}" ${pw.polishing ? "disabled" : ""}>${pw.polishing ? `<span class="ontology-spinner" aria-hidden="true"></span> Weaving…` : "✨ Polish (AI)"}</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-action="cancel-edit-how" ${pw.polishing ? "disabled" : ""}>Cancel</button>
+        </div>
+      </div>`
+    : `<div class="wb-pw-how-wrap">
+        <div class="wb-pw-how-head">
+          <span class="wb-pw-how-kicker">Pathway mechanism</span>
+          ${pw.hasCustomHow ? `<span class="wb-pw-how-edited">Edited</span>` : ""}
+        </div>
+        <p class="wb-pw-how${howTextClean ? "" : " is-empty"}">${escapeHtml(
+          howTextClean || "No mechanism written yet — click Edit mechanism to describe how this pathway works."
+        )}</p>
+        ${pw.polishing ? `<div class="ontology-busy-banner" role="status"><span class="ontology-spinner" aria-hidden="true"></span> Weaving ideas into one mechanism…</div>` : ""}
+        <div class="wb-pw-how-tools">
+          <button type="button" class="ontology-link-btn" data-action="edit-pathway-how" data-pathway-id="${escapeHtml(pw.id)}" ${pw.polishing ? "disabled" : ""}>✏️ Edit mechanism</button>
+          ${multi ? `<button type="button" class="ontology-link-btn${pw.polishing ? " is-busy" : ""}" data-action="polish-how" data-pathway-id="${escapeHtml(pw.id)}" ${pw.polishing ? "disabled" : ""}>${pw.polishing ? `<span class="ontology-spinner" aria-hidden="true"></span> Weaving…` : "✨ Weave ideas together (AI)"}</button>` : ""}
+        </div>
+      </div>`;
 
   const connected = wires.filter((w) => w.pathwayId === pw.id);
   const plugMenu = crises.length
@@ -2015,35 +2159,226 @@ function renderWorkbenchVisualPathway(pw, crises, wires, enforceWorlds) {
       </div>
     </details>`;
 
-  return `<article class="wb-visual-pathway${multi ? " is-assembled" : ""}" data-pathway-id="${escapeHtml(pw.id)}" data-drop="wb-fuse-pathway" draggable="true">
+  const collapseBtn = collapseChevronBtn(
+    `wb-pathway:${pw.id}`,
+    collapsed,
+    `Pathway #${pwNum}`
+  );
+
+  if (collapsed) {
+    const plugPill =
+      crises.length && connected.length
+        ? `<span class="ontology-collapsed-pill is-lit" title="${connected.length} of ${crises.length} crises plugged">🔌 ${connected.length}/${crises.length}</span>`
+        : "";
+    return `<article class="wb-visual-pathway is-collapsed${multi ? " is-assembled" : ""}${isTarget ? " is-target" : ""}" data-pathway-id="${escapeHtml(pw.id)}" data-drop="wb-fuse-pathway" draggable="true">
+      <header class="wb-visual-pw-head is-collapsed-bar">
+        <div class="wb-pw-head-left">
+          ${collapseBtn}
+          <button type="button" class="wb-pw-select-btn${isTarget ? " is-on" : ""}" data-action="wb-select-pathway" data-pathway-id="${escapeHtml(pw.id)}" title="${escapeHtml(pw.title || `Pathway #${pwNum}`)}">
+            ${lampDot(pw.timingLevel, pw.timingPending || pw.scoring)}
+            <strong>Pathway #${pwNum}</strong>
+            <span class="wb-pw-part-count">${ings.length} ${ings.length === 1 ? "idea" : "ideas"}</span>
+            ${pw.title ? `<span class="wb-pw-collapsed-title">${escapeHtml(pw.title)}</span>` : ""}
+          </button>
+          ${plugPill}
+        </div>
+        <button type="button" class="wb-break-pw-btn is-compact" data-action="wb-break-pathway" data-pathway-id="${escapeHtml(pw.id)}" title="Disassemble Pathway #${pwNum} and return all ${ings.length} idea(s) back to your Ideas tray" aria-label="Break apart Pathway #${pwNum}">
+          ↩
+        </button>
+      </header>
+    </article>`;
+  }
+
+  return `<article class="wb-visual-pathway${multi ? " is-assembled" : ""}${isTarget ? " is-target" : ""}" data-pathway-id="${escapeHtml(pw.id)}" data-drop="wb-fuse-pathway" draggable="true">
     <header class="wb-visual-pw-head">
-      ${lampDot(pw.timingLevel, pw.timingPending || pw.scoring)}
-      <span class="wb-visual-pw-kind">${multi ? `Assembled Pathway · ${ings.length} parts` : "Pathway · 1 part"}</span>
-      <button type="button" class="ontology-icon-btn is-remove" data-action="remove-pathway" data-pathway-id="${escapeHtml(pw.id)}" aria-label="Remove ${escapeHtml(pw.title)}" title="Remove invention">×</button>
+      <div class="wb-pw-head-left">
+        ${collapseBtn}
+        <button type="button" class="wb-pw-select-btn${isTarget ? " is-on" : ""}" data-action="wb-select-pathway" data-pathway-id="${escapeHtml(pw.id)}" title="Focus Pathway #${pwNum}">
+          ${lampDot(pw.timingLevel, pw.timingPending || pw.scoring)}
+          <strong>Pathway #${pwNum}</strong>
+          <span class="wb-pw-part-count">${ings.length} ${ings.length === 1 ? "idea" : "ideas"}</span>
+        </button>
+      </div>
+      <button type="button" class="wb-break-pw-btn" data-action="wb-break-pathway" data-pathway-id="${escapeHtml(pw.id)}" title="Disassemble Pathway #${pwNum} and return all ${ings.length} idea(s) back to your Ideas tray">
+        ↩ Break apart
+      </button>
     </header>
-    <div class="wb-visual-chain">${tilesHtml}</div>
+    <div class="wb-visual-chain">
+      ${tilesHtml}
+      <div class="wb-pw-slot-hint" aria-hidden="true">+ Drop an Idea here to combine into Pathway #${pwNum}</div>
+    </div>
     ${timingBar}
+    ${scoringBanner}
     ${convBadges ? `<div class="ontology-badges">${convBadges}</div>` : ""}
     ${bridgeBlock}
+    ${howControls}
     <footer class="wb-visual-pw-foot">
-      ${assembleMenu}
-      ${remixMenu}
-      ${plugMenu}
+      <div class="wb-pw-foot-left">
+        ${remixMenu}
+        ${plugMenu}
+      </div>
+      <span class="wb-pw-drag-grip" title="Drag this Pathway onto a Crisis in Lane 4 on the right">⋮⋮ Drag to Crisis →</span>
     </footer>
   </article>`;
 }
 
-function renderWorkbenchStudio(view, wb, tracks, useCases, pathways, crises, wires, selected) {
-  const scarcityChipsHtml = (wb.scarcityChips || [])
-    .map((chip) => {
-      const active = wb.scarcityFocus === chip.label;
-      return `<button type="button" class="wb-scarcity-chip${active ? " is-on" : ""}" data-action="wb-pick-scarcity" data-label="${escapeHtml(chip.label)}" title="${escapeHtml(chip.detail)}">
-        ${chip.roleLabel ? `<span class="wb-scarcity-role">${escapeHtml(chip.roleLabel)}</span>` : ""}
-        <span>${escapeHtml(chip.label)}</span>
-      </button>`;
-    })
+function renderDoubleDiamondNav(wb, ideaCount, pathwayCount) {
+  const isProblem = wb.diamond === "problem";
+  const hasBrief = Boolean(String(wb.hmwBrief || "").trim());
+  const d1Status = hasBrief ? "✓ Brief defined" : "Frame problem";
+  const d2Status = `${ideaCount} ${ideaCount === 1 ? "idea" : "ideas"} · ${pathwayCount} ${pathwayCount === 1 ? "pathway" : "pathways"}`;
+
+  return `<nav class="wb-dd-nav" aria-label="Design Thinking Double Diamond">
+    <button type="button" class="wb-dd-diamond is-d1${isProblem ? " is-active" : ""}${hasBrief ? " is-done" : ""}" data-action="wb-set-diamond" data-diamond="problem" aria-pressed="${isProblem ? "true" : "false"}">
+      <svg class="wb-dd-bg-svg" viewBox="0 0 320 64" preserveAspectRatio="none" aria-hidden="true">
+        <polygon points="8,32 160,4 312,32 160,60" />
+        <line x1="160" y1="6" x2="160" y2="58" stroke-dasharray="3 3" />
+      </svg>
+      <div class="wb-dd-content">
+        <div class="wb-dd-top">
+          <span class="wb-dd-kicker">DIAMOND 1 · PROBLEM SPACE</span>
+          <span class="wb-dd-status${hasBrief ? " is-ok" : ""}">${escapeHtml(d1Status)}</span>
+        </div>
+        <div class="wb-dd-phases">
+          <span class="wb-dd-phase"><strong>◇ 1 · Discover</strong> <em>Unpack tensions</em></span>
+          <span class="wb-dd-arrow" aria-hidden="true">→</span>
+          <span class="wb-dd-phase"><strong>◆ 2 · Define</strong> <em>How Might We…</em></span>
+        </div>
+      </div>
+    </button>
+
+    <div class="wb-dd-waist" aria-hidden="true" title="Defined problem brief anchors ideation">◆→◇</div>
+
+    <button type="button" class="wb-dd-diamond is-d2${!isProblem ? " is-active" : ""}" data-action="wb-set-diamond" data-diamond="solution" aria-pressed="${!isProblem ? "true" : "false"}">
+      <svg class="wb-dd-bg-svg" viewBox="0 0 320 64" preserveAspectRatio="none" aria-hidden="true">
+        <polygon points="8,32 160,4 312,32 160,60" />
+        <line x1="160" y1="6" x2="160" y2="58" stroke-dasharray="3 3" />
+      </svg>
+      <div class="wb-dd-content">
+        <div class="wb-dd-top">
+          <span class="wb-dd-kicker">DIAMOND 2 · SOLUTION SPACE</span>
+          <span class="wb-dd-status">${escapeHtml(d2Status)}</span>
+        </div>
+        <div class="wb-dd-phases">
+          <span class="wb-dd-phase"><strong>◇ 3 · Develop</strong> <em>Ideas (0$)</em></span>
+          <span class="wb-dd-arrow" aria-hidden="true">→</span>
+          <span class="wb-dd-phase"><strong>◆ 4 · Deliver</strong> <em>Pathways ($)</em></span>
+        </div>
+      </div>
+    </button>
+  </nav>`;
+}
+
+function renderWorkbenchDiamond1(wb) {
+  const cluesHtml = (wb.discoveryClues || [])
+    .map(
+      (clue) => `<div class="wb-clue-card${clue.selected ? " is-selected" : ""}">
+        <button type="button" class="wb-clue-main" data-action="wb-toggle-clue" data-clue-id="${escapeHtml(clue.id)}" aria-pressed="${clue.selected ? "true" : "false"}">
+          <div class="wb-clue-head">
+            <span class="wb-clue-badge">${escapeHtml(clue.badge || "Clue")}</span>
+            <span class="wb-clue-check" aria-hidden="true">${clue.selected ? "✓ Pinned" : "+ Pin"}</span>
+          </div>
+          <strong class="wb-clue-title">${escapeHtml(clue.title)}</strong>
+          <p class="wb-clue-detail">${escapeHtml(clue.detail)}</p>
+        </button>
+        ${clue.removable ? `<button type="button" class="ontology-icon-btn is-remove wb-clue-del" data-action="wb-remove-clue" data-clue-id="${escapeHtml(clue.id)}" title="Remove insight" aria-label="Remove insight">×</button>` : ""}
+      </div>`
+    )
     .join("");
 
+  const discoverBusy = Boolean(wb.busy && wb.busyKind === "discover");
+  const defineBusy = Boolean(wb.busy && wb.busyKind === "define");
+
+  const activeBrief = String(wb.hmwBrief || "").trim();
+  const hmwList = wb.hmwCandidates || [];
+  const hmwCardsHtml = hmwList.length
+    ? hmwList
+        .map((item) => {
+          const isChosen =
+            Boolean(activeBrief) &&
+            activeBrief.toLowerCase() === String(item.howText || "").trim().toLowerCase();
+          return `<div class="wb-hmw-card${isChosen ? " is-on" : ""}">
+            <button type="button" class="wb-hmw-option${isChosen ? " is-on" : ""}" data-action="wb-pick-hmw" data-hmw="${escapeHtml(item.howText)}" aria-pressed="${isChosen ? "true" : "false"}">
+              <div class="wb-hmw-head">
+                <span class="wb-hmw-tag">${escapeHtml(item.tag || "How Might We")}</span>
+                <span class="wb-hmw-check" aria-hidden="true">${isChosen ? "✓ Selected" : "+ Select"}</span>
+              </div>
+              <p class="wb-hmw-text">${escapeHtml(item.howText)}</p>
+            </button>
+            <button type="button" class="ontology-icon-btn is-remove wb-hmw-del" data-action="wb-remove-hmw" data-hmw-id="${escapeHtml(item.id || "")}" data-hmw="${escapeHtml(item.howText)}" title="Remove problem frame" aria-label="Remove problem frame">×</button>
+          </div>`;
+        })
+        .join("")
+    : `<div class="wb-empty-bench wb-hmw-empty">
+        <p>No suggested problem frames left — write your own brief below, click <strong>✨ Draft HMW Options (AI)</strong>${wb.dismissedHmwCount > 0 ? `, or <button type="button" class="ontology-link-btn" data-action="wb-restore-hmw">Restore defaults</button>` : ""}.</p>
+      </div>`;
+
+  return `<div class="wb-diamond2 wb-problem-grid" aria-label="Diamond 1: Problem Discovery and Definition">
+    <div class="wb-col wb-discover">
+      <div class="wb-col-head">
+        <span class="wb-col-title">◇ 1 · DISCOVER</span>
+        <span class="wb-cost-pill is-free">0$ · Unpack the Problem</span>
+      </div>
+      <p class="wb-stage-lead">Explore what is really happening on the ground before jumping to solutions. Pin the tensions that matter most — or add your own field observation.</p>
+      <div class="wb-clue-list">${cluesHtml}</div>
+      ${discoverBusy ? `<div class="ontology-busy-banner" role="status"><span class="ontology-spinner" aria-hidden="true"></span> Unpacking hidden ground tensions…</div>` : ""}
+      <div class="wb-prompt-box wb-discover-composer">
+        <label class="wb-field-label" for="wb-discovery-input">What else is scarce, broken, or overlooked in this place?</label>
+        <input id="wb-discovery-input" type="text" class="wb-scarcity-input" data-role="wb-discovery-input" maxlength="240" value="${escapeHtml(wb.discoveryInput || "")}" placeholder="e.g. Cargo must cross cut-off terrain where there are no all-season roads…" />
+        <div class="wb-prompt-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-action="wb-add-insight">+ Add Insight (0$)</button>
+          <span class="wb-actions-sep"></span>
+          <button type="button" class="btn btn-secondary btn-sm${discoverBusy ? " is-busy" : ""}" data-action="wb-deal-discover-ai" ${wb.busy ? "disabled" : ""}>
+            ${discoverBusy ? `<span class="ontology-spinner" aria-hidden="true"></span> Unpacking…` : "✨ Unpack Hidden Tensions (AI)"}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="wb-col wb-define">
+      <div class="wb-col-head">
+        <span class="wb-col-title">◆ 2 · DEFINE</span>
+        <span class="wb-cost-pill is-define">0$ · Frame "How Might We…"</span>
+      </div>
+      <p class="wb-stage-lead">Converge your pinned tensions into one sharp <strong>How Might We…</strong> question (naming who, desired outcome, and key constraint — without locking in a gadget yet).</p>
+      <div class="wb-bench-head">
+        <span>Suggested Problem Frames</span>
+        <button type="button" class="ontology-link-btn wb-hmw-ai-btn${defineBusy ? " is-busy" : ""}" data-action="wb-deal-hmw-ai" ${wb.busy ? "disabled" : ""}>
+          ${defineBusy ? `<span class="ontology-spinner" aria-hidden="true"></span> Drafting…` : "✨ Draft HMW Options (AI)"}
+        </button>
+      </div>
+      ${defineBusy ? `<div class="ontology-busy-banner" role="status"><span class="ontology-spinner" aria-hidden="true"></span> Drafting "How Might We…" problem frames…</div>` : ""}
+      <div class="wb-hmw-list">${hmwCardsHtml}</div>
+      <div class="wb-define-box">
+        <div class="wb-define-box-head">
+          <label class="wb-field-label" for="wb-hmw-textarea">◆ Your Defined Design Brief ("How Might We…")</label>
+          ${wb.hmwBrief ? `<button type="button" class="ontology-link-btn is-dismiss" data-action="wb-clear-hmw">Clear</button>` : ""}
+        </div>
+        <textarea id="wb-hmw-textarea" class="ontology-textarea wb-hmw-textarea" data-role="wb-hmw-input" rows="3" maxlength="280" placeholder="Click a suggested frame above or write your own: How might we help…">${escapeHtml(wb.hmwBrief || "")}</textarea>
+        <div class="wb-define-actions">
+          <button type="button" class="btn btn-primary btn-sm wb-lock-hmw-btn" data-action="wb-lock-hmw">
+            ◆ Lock Brief &amp; Develop Ideas →
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" data-action="wb-set-diamond" data-diamond="solution">
+            Skip to Ideas →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderWorkbenchDiamond2(
+  view,
+  wb,
+  useCases,
+  pathways,
+  crises,
+  wires,
+  selected,
+  collapsedSet = new Set()
+) {
+  const ideasBusy = Boolean(wb.busy && (!wb.busyKind || wb.busyKind === "ideas"));
   const tabsHtml = (wb.methods || [])
     .map(
       (m) => `<button type="button" class="wb-method-tab${wb.method === m.id ? " is-on" : ""}" data-action="wb-set-method" data-method="${escapeHtml(m.id)}" role="tab" aria-selected="${wb.method === m.id ? "true" : "false"}">
@@ -2054,43 +2389,57 @@ function renderWorkbenchStudio(view, wb, tracks, useCases, pathways, crises, wir
 
   const methodControlsHtml = renderWorkbenchMethodControls(wb, useCases, selected);
 
-  // AI deal button(s) tailored to active method
   let aiDealBtns = "";
-  if (wb.method === "convergence") {
-    const ready = wb.convergence?.pairAnalysis?.ready;
-    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${wb.busy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${!ready || wb.busy ? "disabled" : ""}>
-      ${wb.busy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : "✨ Deal Convergence Ideas (AI)"}
-    </button>`;
-  } else if (wb.method === "sit") {
-    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${wb.busy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${wb.busy ? "disabled" : ""}>
-      ${wb.busy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : "✨ Deal 1 SIT Idea (AI)"}
+  if (wb.method === "sit") {
+    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${ideasBusy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${wb.busy ? "disabled" : ""}>
+      ${ideasBusy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : "✨ Deal 1 SIT Idea (AI)"}
     </button>
     <button type="button" class="btn btn-ghost btn-sm" data-action="wb-deal-ai" data-scope="all" ${wb.busy ? "disabled" : ""} title="Generate one idea for each of the 4 closed-world SIT lenses">✨ All 4</button>`;
   } else if (wb.method === "scamper") {
     const n = (wb.scamperLetters || []).length || 1;
-    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${wb.busy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${wb.busy ? "disabled" : ""}>
-      ${wb.busy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : `✨ Deal ${n} SCAMPER ${n === 1 ? "Idea" : "Ideas"} (AI)`}
+    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${ideasBusy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${wb.busy ? "disabled" : ""}>
+      ${ideasBusy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : `✨ Deal ${n} SCAMPER ${n === 1 ? "Idea" : "Ideas"} (AI)`}
     </button>`;
   } else {
-    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${wb.busy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${wb.busy ? "disabled" : ""}>
-      ${wb.busy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : "✨ Deal 3 Ideas (AI)"}
+    aiDealBtns = `<button type="button" class="btn btn-secondary btn-sm${ideasBusy ? " is-busy" : ""}" data-action="wb-deal-ai" data-scope="focused" ${wb.busy ? "disabled" : ""}>
+      ${ideasBusy ? `<span class="ontology-spinner" aria-hidden="true"></span> Dealing…` : "✨ Deal 3 Ideas (AI)"}
     </button>`;
   }
 
   const ideasList = wb.ideas || wb.drafts || [];
   const ideaCount = ideasList.length;
   const ideasHtml = ideaCount
-    ? ideasList.map(renderWorkbenchIdeaCard).join("")
+    ? ideasList
+        .map((idea) =>
+          renderWorkbenchIdeaCard(idea, wb, pathways, collapsedSet.has(`wb-idea:${idea.id}`))
+        )
+        .join("")
     : `<div class="wb-empty-bench">
-        <p><strong>0$ Ideas</strong> — Explore freely here. Nothing costs Budget until you click <strong>→ Use in Pathway</strong>.</p>
-        <p>Write your own idea above or click <strong>✨ Deal AI</strong> to generate illustrated idea cards.</p>
+        <p><strong>0$ Ideas</strong> — Explore freely here. Nothing costs Budget until an Idea enters a Pathway.</p>
+        <p>Write your own idea above, click <strong>✨ Deal AI</strong>, or click <strong>↩ Break apart</strong> on any Pathway to return its ideas here for reuse.</p>
       </div>`;
 
-  // CONVERGE column: Graphical Pathway Assembly Canvas
   const enforce = view?.enforceWorlds !== false;
-  const visualPathwaysHtml = pathways.length
-    ? pathways.map((pw) => renderWorkbenchVisualPathway(pw, crises, wires, enforce)).join("")
-    : `<div class="wb-assemble-empty">
+  const visualPathwaysHtml = pathways
+    .map((pw, idx) =>
+      renderWorkbenchVisualPathway(
+        pw,
+        idx,
+        wb,
+        view,
+        crises,
+        wires,
+        enforce,
+        collapsedSet.has(`wb-pathway:${pw.id}`)
+      )
+    )
+    .join("");
+
+  const newPathwaySlot = pathways.length
+    ? `<div class="wb-new-pathway-drop is-compact" data-drop="wb-new-pathway">
+        <span>+ Drop an Idea here (or click <strong>+ New</strong> on an Idea) to start a separate Pathway</span>
+      </div>`
+    : `<div class="wb-assemble-empty wb-new-pathway-drop" data-drop="wb-new-pathway">
         <div class="wb-visual-flow" aria-hidden="true">
           <span class="wb-flow-node is-art">🖼️ Idea</span>
           <span class="wb-flow-arrow">+</span>
@@ -2100,73 +2449,111 @@ function renderWorkbenchStudio(view, wb, tracks, useCases, pathways, crises, wir
           <span class="wb-flow-arrow">→</span>
           <span class="wb-flow-node is-plug">🔌 Crisis</span>
         </div>
-        <p>Bring illustrated ideas over from <strong>Ideas</strong> on the left (click <strong>→ Use in Pathway</strong> or drag an Idea card here).</p>
-        <p>Drag cards together here to assemble a Pathway, then drag it onto a Crisis in Lane 4.</p>
+        <p>Click <strong>→ Start Pathway</strong> on an Idea on the left (or drag it here) to begin Pathway #1.</p>
+        <p>Add more Ideas directly into it, or click <strong>↩ Break apart</strong> anytime to return Ideas to your bench and build different Pathways.</p>
       </div>`;
+
+  const hasBrief = Boolean(String(wb.hmwBrief || "").trim());
+  const hmwBanner = hasBrief
+    ? `<div class="wb-hmw-banner is-locked">
+        <span class="wb-hmw-banner-kicker">◆ Design Brief</span>
+        <strong class="wb-hmw-banner-text">${escapeHtml(wb.hmwBrief)}</strong>
+        <button type="button" class="ontology-link-btn" data-action="wb-set-diamond" data-diamond="problem">✎ Reframe in Diamond 1</button>
+      </div>`
+    : `<div class="wb-hmw-banner is-empty">
+        <span>◇ Want sharper ideas? Frame your <strong>How Might We…</strong> problem brief in Diamond 1 first.</span>
+        <button type="button" class="ontology-link-btn" data-action="wb-set-diamond" data-diamond="problem">← Open Diamond 1</button>
+      </div>`;
+
+  return `${hmwBanner}
+  <div class="wb-diamond2">
+    <div class="wb-col wb-diverge">
+      <div class="wb-col-head">
+        <span class="wb-col-title">◇ 3 · DEVELOP</span>
+        <span class="wb-cost-pill is-free">0$ · Generate &amp; Remix Ideas</span>
+      </div>
+      <div class="wb-method-tabs" role="tablist" aria-label="Ideation methods">${tabsHtml}</div>
+      ${methodControlsHtml}
+      <div class="wb-prompt-box">
+        <p class="wb-prompt-q">${escapeHtml(wb.prompt?.question || "")}</p>
+        ${wb.prompt?.hint ? `<p class="wb-prompt-hint">${escapeHtml(wb.prompt.hint)}</p>` : ""}
+        <input type="text" class="wb-draft-title-input" data-role="wb-draft-title" maxlength="72" value="${escapeHtml(wb.draftTitle || "")}" placeholder="Short idea title (optional)" />
+        <textarea class="ontology-textarea wb-draft-textarea" data-role="wb-draft-text" rows="2" maxlength="1200" placeholder="Write your own idea in 1–2 concrete sentences (0$, 0 AP)…">${escapeHtml(wb.draftText || "")}</textarea>
+        <div class="wb-prompt-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-action="wb-add-player-draft">+ Save Idea (0$)</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-action="wb-add-human-draft" title="Create a 0$ Human Bridge idea card">+ Human Idea (0$)</button>
+          ${view?.voiceSupported ? `<button type="button" class="btn btn-ghost btn-sm${view?.voiceActive ? " is-voice-live" : ""}" data-action="toggle-voice" title="Talk through this lens with the AI co-inventor">🎙️</button>` : ""}
+          <span class="wb-actions-sep"></span>
+          ${aiDealBtns}
+        </div>
+      </div>
+      ${ideasBusy ? `<div class="ontology-busy-banner" role="status"><span class="ontology-spinner" aria-hidden="true"></span> Generating illustrated idea cards…</div>` : ""}
+      <div class="wb-bench-head">
+        <span>Ideas (${ideaCount})</span>
+        ${ideaCount > 0 ? `<button type="button" class="ontology-link-btn is-dismiss" data-action="wb-clear-drafts">Clear ideas</button>` : ""}
+      </div>
+      <div class="wb-drafts-bench" data-drop="wb-ideas-bench">${ideasHtml}</div>
+    </div>
+
+    <div class="wb-col wb-converge">
+      <div class="wb-col-head">
+        <span class="wb-col-title">◆ 4 · DELIVER</span>
+        <span class="wb-cost-pill is-commit">$ · Assemble Pathways</span>
+      </div>
+      <div class="wb-assemble-canvas${pathways.length ? " has-items" : ""}" data-drop="wb-assemble-canvas">
+        <div class="wb-bench-head">
+          <span>Pathways (${pathways.length})</span>
+          <span class="wb-active-tip">↩ Break apart anytime to reuse Ideas</span>
+        </div>
+        <div class="wb-visual-list">
+          ${visualPathwaysHtml}
+          ${newPathwaySlot}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderWorkbenchStudio(
+  view,
+  wb,
+  tracks,
+  useCases,
+  pathways,
+  crises,
+  wires,
+  selected,
+  collapsedSet = new Set()
+) {
+  const ideasList = wb.ideas || wb.drafts || [];
+  const ideaCount = ideasList.length;
+  const ddNav = renderDoubleDiamondNav(wb, ideaCount, pathways.length);
+  const bodyHtml =
+    wb.diamond === "problem"
+      ? renderWorkbenchDiamond1(wb)
+      : renderWorkbenchDiamond2(
+          view,
+          wb,
+          useCases,
+          pathways,
+          crises,
+          wires,
+          selected,
+          collapsedSet
+        );
 
   return `<section id="ontology-lane-pathway" class="ontology-lane ontology-workbench" data-lane="pathway" data-drop="pathway" aria-label="Innovation Workbench">
     <header class="wb-head">
       <div class="wb-head-left">
         <h2><span class="ontology-lane-num">3</span> Innovation Workbench</h2>
-        <span class="wb-head-tag">Double Diamond · Private Studio</span>
+        <span class="wb-head-tag">Design Thinking · Double Diamond</span>
       </div>
       <div class="wb-head-right">
-        <button type="button" class="ontology-mini-btn" data-action="human-step" title="Add an illustrated 0$ human workflow step to Converge">+ Human step (0$)</button>
         <button type="button" class="ontology-mini-btn is-accent" id="btn-close-workbench" data-action="toggle-workbench" title="Collapse back to 4-lane circuit view">⤡ Collapse</button>
       </div>
     </header>
-
-    <div class="wb-diamond1" aria-label="Diamond 1: Scarcity focus">
-      <span class="wb-d1-kicker" title="Diamond 1: frame what is scarce before diverging (optional)">◆ What is scarce here?</span>
-      <div class="wb-scarcity-chips">${scarcityChipsHtml}</div>
-      <div class="wb-scarcity-custom">
-        <input type="text" class="wb-scarcity-input" data-role="wb-scarcity-input" maxlength="140" value="${escapeHtml(wb.scarcityFocus || "")}" placeholder="Or type your own scarcity…" aria-label="Custom scarcity focus" />
-        ${wb.scarcityFocus ? `<button type="button" class="ontology-icon-btn" data-action="wb-clear-scarcity" title="Clear scarcity focus">×</button>` : ""}
-      </div>
-    </div>
-
-    <div class="wb-diamond2">
-      <div class="wb-col wb-diverge">
-        <div class="wb-col-head">
-          <span class="wb-col-title">◇ DIVERGE</span>
-          <span class="wb-cost-pill is-free">0$ · Explore &amp; Remix</span>
-        </div>
-        <div class="wb-method-tabs" role="tablist" aria-label="Innovation methods">${tabsHtml}</div>
-        ${methodControlsHtml}
-        <div class="wb-prompt-box">
-          <p class="wb-prompt-q">${escapeHtml(wb.prompt?.question || "")}</p>
-          ${wb.prompt?.hint ? `<p class="wb-prompt-hint">${escapeHtml(wb.prompt.hint)}</p>` : ""}
-          <input type="text" class="wb-draft-title-input" data-role="wb-draft-title" maxlength="72" value="${escapeHtml(wb.draftTitle || "")}" placeholder="Short idea title (optional)" />
-          <textarea class="ontology-textarea wb-draft-textarea" data-role="wb-draft-text" rows="2" maxlength="1200" placeholder="Write your own idea in 1–2 concrete sentences (0$, 0 AP)…">${escapeHtml(wb.draftText || "")}</textarea>
-          <div class="wb-prompt-actions">
-            <button type="button" class="btn btn-primary btn-sm" data-action="wb-add-player-draft">+ Save Idea (0$)</button>
-            ${view?.voiceSupported ? `<button type="button" class="btn btn-ghost btn-sm${view?.voiceActive ? " is-voice-live" : ""}" data-action="toggle-voice" title="Talk through this lens with the AI co-inventor">🎙️</button>` : ""}
-            <span class="wb-actions-sep"></span>
-            ${aiDealBtns}
-          </div>
-        </div>
-        ${wb.busy ? `<div class="ontology-busy-banner" role="status"><span class="ontology-spinner" aria-hidden="true"></span> Generating illustrated idea cards…</div>` : ""}
-        <div class="wb-bench-head">
-          <span>Ideas (${ideaCount})</span>
-          ${ideaCount > 0 ? `<button type="button" class="ontology-link-btn is-dismiss" data-action="wb-clear-drafts">Clear ideas</button>` : ""}
-        </div>
-        <div class="wb-drafts-bench">${ideasHtml}</div>
-      </div>
-
-      <div class="wb-col wb-converge">
-        <div class="wb-col-head">
-          <span class="wb-col-title">◆ CONVERGE</span>
-          <span class="wb-cost-pill is-commit">$ · Assemble Pathways</span>
-        </div>
-        <div class="wb-assemble-canvas${pathways.length ? " has-items" : ""}" data-drop="wb-assemble-canvas">
-          <div class="wb-bench-head">
-            <span>Pathway Assembly (${pathways.length})</span>
-            <span class="wb-active-tip">Drag together to assemble · drag to Lane 4</span>
-          </div>
-          <div class="wb-visual-list">${visualPathwaysHtml}</div>
-        </div>
-      </div>
-    </div>
+    ${ddNav}
+    ${bodyHtml}
   </section>`;
 }
 
@@ -2236,10 +2623,16 @@ export function syncOntologyWireGeometry(root, opts = {}) {
     const techId = ucPort.getAttribute("data-from-tech");
     const ucId = ucPort.getAttribute("data-port-uc-in");
     if ((!msId && !techId) || !ucId) continue;
-    const srcPort = msId
+    const msPort = msId
       ? stage.querySelector(`[data-port-ms="${CSS?.escape ? CSS.escape(msId) : msId}"]`)
-      : stage.querySelector(`[data-port-tech="${CSS?.escape ? CSS.escape(techId) : techId}"]`);
-    const p1 = centerOf(srcPort);
+      : null;
+    const p1 =
+      (msPort ? centerOf(msPort) : null) ||
+      (techId
+        ? centerOf(
+            stage.querySelector(`[data-port-tech="${CSS?.escape ? CSS.escape(techId) : techId}"]`)
+          )
+        : null);
     const p2 = centerOf(ucPort);
     if (!p1 || !p2) continue;
     const tone = ucPort.getAttribute("data-wire-tone") === "early" ? "early" : "solid";

@@ -781,10 +781,11 @@ describe("pathway workshop", () => {
     assert.equal(Object.keys(h.board.wires).length, 0);
   });
 
-  it("supports graphical Innovation Workbench: Ideas (0$), mint one-by-one with images, assemble Pathways visually, and remix roadblocks", async () => {
+  it("supports the Design Thinking Double-Diamond Workbench: Discover -> Define HMW brief, Develop Ideas (no redundant Convergence tab), modular Pathway assembly, and non-destructive Break Apart", async () => {
     const bills = [];
     const lensCalls = [];
     const paintedPrompts = [];
+    let feasibilityCalls = 0;
     const h = harness({
       api: {
         reconcileStackFromBoard: (ids) => {
@@ -797,14 +798,19 @@ describe("pathway workshop", () => {
         },
         coInvent: async (mode, _msg, extra) => {
           if (mode === "workbench-lens") {
-            lensCalls.push({ method: extra.method, lenses: extra.lenses, techIds: extra.techIds });
+            lensCalls.push({
+              method: extra.method,
+              lenses: extra.lenses,
+              techIds: extra.techIds,
+              hmwBrief: extra.hmwBrief,
+            });
             if (extra.method === "sit") {
               return {
                 ideas: (extra.lenses || ["subtraction"]).map((lens) => ({
                   id: `ai-sit-${lens}`,
                   lens,
                   title: `SIT ${lens} loop`,
-                  howText: `Operators apply ${lens} to run brine recovery locally in Paddy Step Wells.`,
+                  howText: `Operators apply ${lens} to run clean water relays locally in Paddy Step Wells.`,
                   techId: extra.techIds?.[0] || "drones",
                   world: "atoms",
                   eases: "Clean Water",
@@ -814,12 +820,20 @@ describe("pathway workshop", () => {
             return {
               ideas: [
                 {
-                  id: "ai-conv-1",
-                  lens: "convergence",
-                  title: "Drone + Battery Loop",
-                  howText: "Battery swap racks keep mapped drones flying all shift over Paddy Step Wells.",
-                  techId: extra.techIds?.[0] || "drones",
-                  secondaryTechId: extra.techIds?.[1] || "battery",
+                  id: "ai-seed-1",
+                  lens: "seed",
+                  title: "Mapped ridge blood drop",
+                  howText: "Fixed-wing drones fly mapped corridors to deliver insulated packs within 45 minutes.",
+                  techId: "drones",
+                  world: "atoms",
+                  eases: "Clean Water",
+                },
+                {
+                  id: "ai-seed-2",
+                  lens: "seed",
+                  title: "Battery swap cradle",
+                  howText: "Modular battery swap cradles at the clinic pad turn drones around in two minutes.",
+                  techId: "battery",
                   world: "atoms",
                   eases: "Clean Water",
                 },
@@ -827,6 +841,7 @@ describe("pathway workshop", () => {
             };
           }
           if (mode === "assess-feasibility" || mode === "assess-plain") {
+            feasibilityCalls += 1;
             return { timing: { level: "green", reason: "Honest today." } };
           }
           return {};
@@ -836,100 +851,244 @@ describe("pathway workshop", () => {
     h.ws.seedFromMission({
       id: "wb-test-quest",
       place: "Paddy Step Wells",
+      stakeholder: "Dr. Imani Sekule",
       pressure: { "Clean Water": 4 },
       spotlight: { techId: "drones" },
     });
 
     // Collapsed view renders Workbench open button
     assert.match(h.root.innerHTML, /btn-open-workbench/);
-    assert.match(h.root.innerHTML, /Workbench/);
 
-    // Expand Workbench into Docked Circuit Frame
+    // 1. Fresh open starts on Diamond 1 (Problem Space: 1 · Discover -> 2 · Define)
     h.ws.openWorkbench();
     assert.match(h.root.innerHTML, /is-workbench-open/);
-    assert.match(h.root.innerHTML, /What is scarce here/);
-    assert.match(h.root.innerHTML, /Ideas \(0\)/);
-    assert.match(h.root.innerHTML, /\+ Save Idea \(0\$\)/);
-    assert.doesNotMatch(h.root.innerHTML, /Save &amp; Stage/);
-    assert.doesNotMatch(h.root.innerHTML, /Draft Bench/);
-    assert.doesNotMatch(h.root.innerHTML, /Mint Pathway/);
+    assert.match(h.root.innerHTML, /DIAMOND 1 · PROBLEM SPACE/);
+    assert.match(h.root.innerHTML, /DIAMOND 2 · SOLUTION SPACE/);
+    assert.match(h.root.innerHTML, /1 · DISCOVER/);
+    assert.match(h.root.innerHTML, /2 · DEFINE/);
 
-    // Player saves a 0$ Idea in Diverge -> zero Budget billing, zero board mutations, image queued
-    const iPlayer = h.ws.addPlayerWorkbenchIdea({
+    // Player adds a custom Discovery insight, toggles a suggested HMW frame on and off, then locks a brief -> Diamond 2!
+    const insight = h.ws.addPlayerDiscoveryInsight(
+      "Cargo must cross washed-out ridges where there are no all-season roads."
+    );
+    assert.ok(insight);
+    assert.match(h.root.innerHTML, /\+ Select/);
+    const firstHmwMatch = h.root.innerHTML.match(/data-action="wb-pick-hmw" data-hmw="([^"]+)"/);
+    assert.ok(firstHmwMatch, "renders suggested HMW problem frame");
+    const firstHmw = firstHmwMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+    assert.equal(h.ws.pickHmwCandidate(firstHmw), true);
+    assert.equal(h.ws.getWorkbenchState().hmwBrief, firstHmw);
+    assert.match(h.root.innerHTML, /✓ Selected/);
+    assert.equal(h.ws.pickHmwCandidate(firstHmw), false, "clicking selected frame deselects it");
+    assert.equal(h.ws.getWorkbenchState().hmwBrief, "");
+    assert.doesNotMatch(h.root.innerHTML, /✓ Selected/);
+
+    assert.equal(h.ws.lockHmwAndIdeate(), true);
+    assert.equal(h.ws.getWorkbenchState().diamond, "solution");
+    assert.match(h.ws.getWorkbenchState().hmwBrief, /^How might we/i);
+    assert.match(h.root.innerHTML, /wb-hmw-banner is-locked/);
+    assert.match(h.root.innerHTML, /3 · DEVELOP/);
+    assert.match(h.root.innerHTML, /4 · DELIVER/);
+
+    // 2. Redundant Convergence ideation tab is gone; focused methods are Seed, SIT, SCAMPER
+    assert.doesNotMatch(h.root.innerHTML, /wb-conv-map/);
+    assert.doesNotMatch(h.root.innerHTML, /wb-conv-pick/);
+    assert.equal(h.ws.setWorkbenchMethod("convergence"), false);
+
+    // 3. Player saves a 0$ Idea & deals AI Seed Ideas anchored to the locked HMW brief
+    const iHuman = h.ws.addPlayerWorkbenchIdea({
       title: "Co-op Sluice Ledger",
       howText: "Local stewards verify every flight log before opening irrigation gates.",
       techId: null,
       world: "plain",
     });
-    assert.ok(iPlayer);
-    assert.equal(bills.length, 0, "Diverge idea must never bill Budget");
-    assert.equal(Object.keys(h.board.pathways).length, 0, "Ideas stay off committed board until minted");
-    assert.match(h.root.innerHTML, /Ideas \(1\)/);
-    assert.match(h.root.innerHTML, /Use in Pathway \(0\$\)/);
-    assert.doesNotMatch(h.root.innerHTML, /Mint Idea/);
+    assert.ok(iHuman);
+    const seedIdeas = await h.ws.dealWorkbenchAiIdeas("focused");
+    assert.equal(seedIdeas.length, 2);
+    assert.equal(lensCalls[0].method, "seed");
+    assert.match(lensCalls[0].hmwBrief, /^How might we/i);
+    assert.equal(bills.length, 0, "Ideation remains 0$ until an Idea enters a Pathway");
 
-    // Convergence Canvas [drones × battery] AI deal
-    h.ws.setWorkbenchMethod("convergence");
-    h.ws.clearConvergencePair();
-    h.ws.pickConvergenceTech("drones");
-    h.ws.pickConvergenceTech("battery");
-    const convIdeas = await h.ws.dealWorkbenchAiIdeas("focused");
-    assert.equal(convIdeas.length, 1);
-    assert.equal(lensCalls[0].method, "convergence");
-    assert.deepEqual(lensCalls[0].techIds, ["drones", "battery"]);
-    assert.equal(bills.length, 0, "AI ideas remain 0$ until minted");
+    await new Promise((r) => setTimeout(r, 15));
+    assert.ok(paintedPrompts.length >= 3, "all ideas get visualized with images");
+    assert.equal(h.ws.getWorkbenchState().ideas.length, 3);
 
-    // Let background image promises settle
-    await new Promise((r) => setTimeout(r, 10));
-    assert.ok(paintedPrompts.length >= 2, "ideas get visualized with images");
-
-    // Mint ideas ONE BY ONE, then visually assemble them into a Pathway
-    assert.equal(h.ws.mintWorkbenchIdea(convIdeas[0].id), true);
-    assert.equal(h.ws.mintWorkbenchIdea(iPlayer.id), true);
-    assert.equal(bills.length, 2, "each minted idea commits cleanly");
-    const pwIds = Object.keys(h.board.pathways);
-    assert.equal(pwIds.length, 2, "two separate minted inventions before assembly");
-    assert.ok(h.board.techTracks.battery, "Battery auto-added to Lane 1");
-
-    // Assemble the two minted inventions into ONE visual Pathway
-    const [pwA, pwB] = pwIds;
-    assert.equal(h.ws.fuse(pwA, pwB), true);
+    // 4. Clean modular Pathway Assembly:
+    //    - Start Pathway #1 with Idea 1 (moves out of Ideas)
+    //    - Add Idea 2 directly into Pathway #1 (NO intermediate 1-part pathway spawned!)
+    assert.equal(h.ws.startPathwayFromIdea(seedIdeas[0].id), true);
     assert.equal(Object.keys(h.board.pathways).length, 1);
-    const pw = h.board.pathways[pwA];
-    assert.equal(pw.ingredients.length, 3, "Convergence pair (2) + Human step (1)");
-    assert.ok(pw.convergences.length >= 1, "Drones × Battery convergence recorded");
-    assert.match(h.root.innerHTML, /wb-visual-pathway is-assembled/);
-    assert.match(h.root.innerHTML, /wb-inv-tile/);
-    assert.match(h.root.innerHTML, /wb-chain-link/);
-    assert.match(h.root.innerHTML, /<img class="wb-inv-art"/);
+    assert.equal(h.ws.getWorkbenchState().ideas.length, 2);
+    assert.match(h.root.innerHTML, /\+ Add to Pathway #1/);
 
-    // SIT All-4 deals 4 focused closed-world ideas
-    h.ws.remixInWorkbench("pathway", pw.id, "sit");
+    assert.equal(h.ws.addIdeaToPathway(seedIdeas[1].id), true);
+    assert.equal(Object.keys(h.board.pathways).length, 1, "still ONE clean Pathway, not two");
+    assert.equal(h.ws.getWorkbenchState().ideas.length, 1);
+    const pwId = Object.keys(h.board.pathways)[0];
+    assert.equal(h.board.pathways[pwId].ingredients.length, 2);
+    assert.ok(h.board.techTracks.battery, "Battery auto-added to Lane 1");
+    assert.ok(h.board.pathways[pwId].convergences.length >= 1, "Drones × Battery synergy still fires naturally");
+
+    // Let initial feasibility checks settle
+    await new Promise((r) => setTimeout(r, 15));
+    const feasibilityAfterFirstBuild = feasibilityCalls;
+    assert.equal(feasibilityAfterFirstBuild, 2);
+
+    // 5. Detach a single Idea (`returnIngredientToIdeas`) -> returns card to Ideas and refunds unused Battery tech!
+    const batteryIngId = h.board.pathways[pwId].ingredients.find((i) => i.techId === "battery").id;
+    assert.equal(h.ws.returnIngredientToIdeas(pwId, batteryIngId), true);
+    assert.equal(h.board.pathways[pwId].ingredients.length, 1);
+    assert.equal(h.ws.getWorkbenchState().ideas.length, 2, "Battery idea returned to Ideas tray");
+    assert.deepEqual(bills.at(-1), ["drones"], "Battery refunded when no longer in any Pathway");
+
+    // 6. Break apart the entire Pathway (`breakPathwayIntoIdeas`) -> returns remaining Idea with art & settled timing!
+    assert.equal(h.ws.breakPathwayIntoIdeas(pwId), true);
+    assert.equal(Object.keys(h.board.pathways).length, 0, "Pathway cleanly disassembled");
+    assert.equal(h.ws.getWorkbenchState().ideas.length, 3, "All 3 original Ideas are back in Ideas tray");
+    assert.deepEqual(bills.at(-1), [], "All emTech Budget refunded when board has 0 Pathways");
+
+    // 7. Reassemble returned Ideas into a DIFFERENT Pathway (`Battery` + `Human Ledger`) with zero redundant feasibility calls!
+    const batteryIdea = h.ws.getWorkbenchState().ideas.find((d) => d.techId === "battery");
+    const humanIdea = h.ws.getWorkbenchState().ideas.find((d) => d.techId === null);
+    assert.ok(batteryIdea?.artUrl, "returned Idea kept its artwork");
+    assert.equal(batteryIdea?.timingLevel, "green", "returned Idea kept its settled feasibility");
+    assert.equal(h.ws.startPathwayFromIdea(batteryIdea.id), true);
+    assert.equal(h.ws.addIdeaToPathway(humanIdea.id), true);
+    const newPwId = Object.keys(h.board.pathways)[0];
+    assert.equal(h.board.pathways[newPwId].ingredients.length, 2);
+    await new Promise((r) => setTimeout(r, 15));
+    // Battery already had settled green timing; only Human step needed assessment -> at most +1 call
+    assert.ok(feasibilityCalls <= feasibilityAfterFirstBuild + 1);
+
+    // 8. SIT & Roadblock SCAMPER remix still work seamlessly
+    h.ws.remixInWorkbench("pathway", newPwId, "sit");
     const sitAll = await h.ws.dealWorkbenchAiIdeas("all");
     assert.equal(sitAll.length, 4);
-    assert.deepEqual(lensCalls[1].lenses, ["subtraction", "division", "multiplication", "addition"]);
 
-    // Fuse one SIT idea directly into existing Pathway
-    assert.equal(h.ws.fuseStagedIntoPathway(pw.id, sitAll[0].id), true);
-    assert.equal(h.board.pathways[pw.id].ingredients.length, 4);
-
-    // Roadblock remix opens SCAMPER with the challenger's 3 recommended letters
     const crisisId = Object.keys(h.board.crises)[0];
-    await h.ws.plug(pw.id, crisisId);
+    await h.ws.plug(newPwId, crisisId);
     await h.ws.summonNextChallenger();
     const chId = Object.keys(h.board.challengers)[0];
-    assert.ok(chId);
     assert.equal(h.ws.remixRoadblockInWorkbench(chId), true);
-    const wbState = h.ws.getWorkbenchState();
-    assert.equal(wbState.open, true);
-    assert.equal(wbState.method, "scamper");
-    assert.equal(wbState.scamperLetters.length, 3);
+    assert.equal(h.ws.getWorkbenchState().diamond, "solution");
+    assert.equal(h.ws.getWorkbenchState().method, "scamper");
     assert.match(h.root.innerHTML, /wb-challenger-banner/);
 
-    // Collapse cleanly back to 4-lane circuit view
     h.ws.closeWorkbench();
     assert.equal(h.ws.getWorkbenchState().open, false);
-    assert.doesNotMatch(h.root.innerHTML, /ontology-lanes is-workbench-open/);
+  });
+
+  it("refuses to return ideas that would not fit and keeps every card when they do", () => {
+    const toasts = [];
+    const h = harness({
+      api: { flashToast: (msg) => toasts.push(String(msg)) },
+    });
+    h.ws.seedFromMission({
+      place: "Paddy Step Wells",
+      pressure: { "Clean Water": 3 },
+      spotlight: { techId: "drones" },
+    });
+    const first = h.ws.addPlayerWorkbenchIdea({
+      title: "Sluice scout",
+      howText: "A drone maps the silted sluice before the next irrigation turn.",
+      techId: "drones",
+      world: "atoms",
+    });
+    const second = h.ws.addPlayerWorkbenchIdea({
+      title: "Gate ledger",
+      howText: "Stewards sign the gate log before any flight leaves the pad.",
+      techId: null,
+      world: "plain",
+    });
+    assert.equal(h.ws.startPathwayFromIdea(first.id), true);
+    const pwId = Object.keys(h.board.pathways)[0];
+    assert.equal(h.ws.addIdeaToPathway(second.id, pwId), true);
+    assert.equal(h.board.pathways[pwId].ingredients.length, 2);
+
+    for (let i = 0; i < 23; i++) {
+      const idea = h.ws.addPlayerWorkbenchIdea({
+        title: `Spare idea ${i}`,
+        howText: `Local stewards keep spare idea ${i} ready beside the well.`,
+        techId: null,
+        world: "plain",
+      });
+      assert.ok(idea, `filler ${i}`);
+    }
+    assert.equal(h.ws.getWorkbenchState().ideas.length, 23);
+
+    toasts.length = 0;
+    assert.equal(h.ws.breakPathwayIntoIdeas(pwId), false);
+    assert.equal(h.board.pathways[pwId].ingredients.length, 2);
+    assert.equal(h.ws.getWorkbenchState().ideas.length, 23);
+    assert.match(toasts.at(-1) || "", /room for 1 more/);
+
+    const plainId = h.board.pathways[pwId].ingredients.find((i) => !i.techId).id;
+    assert.equal(h.ws.returnIngredientToIdeas(pwId, plainId), true);
+    assert.equal(h.board.pathways[pwId].ingredients.length, 1);
+    assert.equal(h.ws.getWorkbenchState().ideas.length, 24);
+    assert.ok(h.ws.getWorkbenchState().ideas.some((d) => d.title === "Gate ledger"));
+
+    const leftId = h.board.pathways[pwId].ingredients[0].id;
+    toasts.length = 0;
+    assert.equal(h.ws.returnIngredientToIdeas(pwId, leftId), false);
+    assert.equal(h.board.pathways[pwId].ingredients.length, 1);
+    assert.equal(h.ws.getWorkbenchState().ideas.length, 24);
+    assert.match(toasts.at(-1) || "", /Ideas tray is full/);
+
+    const spare = h.ws.getWorkbenchState().ideas.find((d) => d.title.startsWith("Spare idea"));
+    assert.equal(h.ws.deleteWorkbenchIdea(spare.id), true);
+    toasts.length = 0;
+    assert.equal(h.ws.breakPathwayIntoIdeas(pwId), true);
+    assert.equal(h.board.pathways[pwId], undefined);
+    assert.equal(h.ws.getWorkbenchState().ideas.length, 24);
+    assert.match(toasts.at(-1) || "", /Returned 1 idea/);
+    assert.ok(h.ws.getWorkbenchState().ideas.some((d) => d.title === "Sluice scout"));
+  });
+
+  it("drops a woven pathway mechanism when an idea is added or returned", () => {
+    const h = harness();
+    h.ws.seedFromMission({
+      place: "Sablewick",
+      pressure: { "Hidden Leaks": 3 },
+      spotlight: { techId: "drones" },
+    });
+    const a = h.ws.addPlayerWorkbenchIdea({
+      title: "Morning plume board",
+      howText: "Ines ranks the top five methane plumes each clear morning.",
+      techId: "drones",
+      world: "atoms",
+    });
+    const b = h.ws.addPlayerWorkbenchIdea({
+      title: "Valve seal check",
+      howText: "The next clear pass confirms every sealed valve stays tight.",
+      techId: null,
+      world: "plain",
+    });
+    assert.equal(h.ws.startPathwayFromIdea(a.id), true);
+    const pwId = Object.keys(h.board.pathways)[0];
+    h.ws.openWorkbench({ diamond: "solution" });
+    h.board.pathways[pwId].customHow = "Woven: trucks go to the largest plumes only.";
+    h.ws.paint();
+    assert.match(h.root.innerHTML, /Woven: trucks go to the largest plumes only/);
+
+    assert.equal(h.ws.addIdeaToPathway(b.id, pwId), true);
+    assert.equal(h.board.pathways[pwId].customHow, "");
+    assert.doesNotMatch(h.root.innerHTML, /Woven: trucks go to the largest plumes only/);
+    assert.match(
+      h.root.innerHTML,
+      /<p class="wb-pw-how">Ines ranks the top five methane plumes each clear morning\.[\s\S]*The next clear pass confirms every sealed valve stays tight\.<\/p>/
+    );
+
+    h.board.pathways[pwId].customHow = "Woven again after both ideas.";
+    h.ws.paint();
+    const plainId = h.board.pathways[pwId].ingredients.find((i) => !i.techId).id;
+    assert.equal(h.ws.returnIngredientToIdeas(pwId, plainId), true);
+    assert.equal(h.board.pathways[pwId].customHow, "");
+    assert.doesNotMatch(h.root.innerHTML, /Woven again after both ideas/);
+    assert.match(
+      h.root.innerHTML,
+      /<p class="wb-pw-how">Ines ranks the top five methane plumes each clear morning\.<\/p>/
+    );
   });
 
   it("refuses a two-tech mint when the combined bill does not fit and leaves the board unbilled", () => {
@@ -1347,5 +1506,390 @@ describe("pathway workshop", () => {
     assert.deepEqual(scoreArgsSeen[1], [
       "Certified commercial eVTOL point-to-point shuttles already operate in 2026.",
     ]);
+  });
+
+  it("unwraps nested timing payloads and never copies HTTP 429 error messages into timingReason", async () => {
+    let callIdx = 0;
+    const h = harness({
+      api: {
+        coInvent: async (mode) => {
+          if (mode === "assess-feasibility" || mode === "assess-plain") {
+            callIdx += 1;
+            if (callIdx === 1) {
+              return {
+                source: "ai",
+                timing: {
+                  level: "red",
+                  reason: "Consumer flying cars are not deployed at routine scale in 2026.",
+                },
+              };
+            }
+            return {
+              error: "in_flight",
+              message: "Previous requests are still finishing.",
+            };
+          }
+          return {};
+        },
+      },
+    });
+    h.ws.seedFromMission({
+      place: "Brackenfold",
+      pressure: { "Blood Too Late": 3 },
+      spotlight: { techId: "drones" },
+    });
+
+    const i1 = h.ws.addPlayerWorkbenchIdea({
+      title: "Flying car shuttle",
+      howText: "Every villager flies a personal car over the ridge.",
+      techId: "drones",
+      world: "atoms",
+    });
+    const i2 = h.ws.addPlayerWorkbenchIdea({
+      title: "Hospital pad courier",
+      howText: "Nurse checks incoming medical pack on the ward pad.",
+      techId: null,
+      world: "plain",
+    });
+    h.ws.startPathwayFromIdea(i1.id);
+    await new Promise((r) => setTimeout(r, 15));
+    const pwId = Object.keys(h.board.pathways)[0];
+    assert.equal(h.board.pathways[pwId].ingredients[0].timingLevel, "red");
+    assert.match(
+      h.board.pathways[pwId].ingredients[0].timingReason,
+      /Consumer flying cars are not deployed/
+    );
+
+    h.ws.startPathwayFromIdea(i2.id);
+    await new Promise((r) => setTimeout(r, 15));
+    const pw2Id = Object.keys(h.board.pathways).find((id) => id !== pwId);
+    assert.doesNotMatch(
+      h.board.pathways[pw2Id].ingredients[0].timingReason || "",
+      /Previous requests are still finishing/
+    );
+  });
+
+  it("renders direct add buttons for every existing Pathway (#1, #2, etc.) on each Idea card", () => {
+    const h = harness();
+    h.ws.seedFromMission({
+      place: "Sablewick",
+      pressure: { "Hidden Leaks": 3 },
+      spotlight: { techId: "drones" },
+    });
+    h.ws.openWorkbench({ diamond: "solution" });
+
+    const a = h.ws.addPlayerWorkbenchIdea({
+      title: "Morning plume board",
+      howText: "Ines sorts satellite methane flags every morning.",
+      techId: "drones",
+      world: "atoms",
+    });
+    const b = h.ws.addPlayerWorkbenchIdea({
+      title: "Giant plume shortlist",
+      howText: "Crew ranks the top five methane leaks across the district.",
+      techId: "drones",
+      world: "atoms",
+    });
+    const c = h.ws.addPlayerWorkbenchIdea({
+      title: "Next-clear fix check",
+      howText: "Re-scan sealed wellheads on the next clear satellite pass.",
+      techId: null,
+      world: "plain",
+    });
+
+    assert.equal(h.ws.startPathwayFromIdea(a.id), true);
+    assert.equal(h.ws.startPathwayFromIdea(b.id), true);
+    const [pw1Id, pw2Id] = Object.keys(h.board.pathways);
+    assert.ok(pw1Id && pw2Id);
+
+    // Remaining Idea card must offer direct 1-click buttons for BOTH Pathway #1 and Pathway #2, plus + New
+    assert.match(
+      h.root.innerHTML,
+      new RegExp(`data-action="wb-add-to-pathway" data-idea-id="${c.id}" data-pathway-id="${pw1Id}"[^>]*>\\+ Pathway #1<`)
+    );
+    assert.match(
+      h.root.innerHTML,
+      new RegExp(`data-action="wb-add-to-pathway" data-idea-id="${c.id}" data-pathway-id="${pw2Id}"[^>]*>\\+ Pathway #2<`)
+    );
+    assert.match(h.root.innerHTML, /\+ New/);
+
+    // Clicking + Pathway #1 adds directly to Pathway #1 while leaving Pathway #2 at 1 idea
+    assert.equal(h.ws.addIdeaToPathway(c.id, pw1Id), true);
+    assert.equal(h.board.pathways[pw1Id].ingredients.length, 2);
+    assert.equal(h.board.pathways[pw2Id].ingredients.length, 1);
+  });
+
+  it("scopes Diamond 1 AI working indicators to the clicked column and lets players remove and restore HMW framings", async () => {
+    let resolveDefine = null;
+    let resolveDiscover = null;
+    const h = harness({
+      api: {
+        coInvent: async (mode, _prompt, ctx) => {
+          if (mode === "workbench-lens" && ctx?.method === "define") {
+            return await new Promise((r) => {
+              resolveDefine = r;
+            });
+          }
+          if (mode === "workbench-lens" && ctx?.method === "discover") {
+            return await new Promise((r) => {
+              resolveDiscover = r;
+            });
+          }
+          return { ideas: [] };
+        },
+      },
+    });
+
+    h.ws.seedFromMission({
+      place: "Sablewick",
+      stakeholder: "Ines Karaman, who runs Sablewick's only leak-repair crew",
+      pressure: { "Hidden Leaks": 3, "Trapped Heat": 3, "Nobody Answers": 2 },
+      spotlight: { techId: "drones" },
+    });
+    h.ws.openWorkbench({ diamond: "problem" });
+
+    // 1) Click Draft HMW Options (AI) on the right: indicator MUST appear in Define, NOT Discover
+    const definePromise = h.ws.dealHmwOptionsAi();
+    assert.equal(h.ws.getWorkbenchState().busy, true);
+    assert.equal(h.ws.getWorkbenchState().busyKind, "define");
+    const defineHtml = h.root.innerHTML;
+    assert.match(defineHtml, /class="ontology-link-btn wb-hmw-ai-btn is-busy"[^>]*>[\s\S]*Drafting…/);
+    assert.match(defineHtml, /Drafting "How Might We…" problem frames…/);
+    assert.match(defineHtml, /✨ Unpack Hidden Tensions \(AI\)/);
+    assert.doesNotMatch(defineHtml, /Unpacking…/);
+    assert.doesNotMatch(defineHtml, /Unpacking hidden ground tensions…/);
+
+    resolveDefine({
+      ideas: [
+        {
+          title: "False tip filter",
+          howText: "How might we help Ines skip false rumors before burning a full truck day?",
+        },
+        {
+          title: "Silent wellhead accountability",
+          howText: "How might we get operators to claim leaking pads without triggering silence?",
+        },
+      ],
+    });
+    const addedHmw = await definePromise;
+    assert.equal(addedHmw.length, 2);
+    assert.equal(h.ws.getWorkbenchState().busy, false);
+    assert.equal(h.ws.getWorkbenchState().busyKind, null);
+
+    // 2) Click Unpack Hidden Tensions (AI) on the left: indicator MUST appear in Discover, NOT Define
+    const discoverPromise = h.ws.dealDiscoveryInsightsAi();
+    assert.equal(h.ws.getWorkbenchState().busyKind, "discover");
+    const discoverHtml = h.root.innerHTML;
+    assert.match(discoverHtml, /Unpacking…/);
+    assert.match(discoverHtml, /Unpacking hidden ground tensions…/);
+    assert.match(discoverHtml, /✨ Draft HMW Options \(AI\)/);
+    assert.doesNotMatch(discoverHtml, /Drafting…/);
+    assert.doesNotMatch(discoverHtml, /Drafting "How Might We…" problem frames…/);
+
+    resolveDiscover({
+      ideas: [
+        {
+          title: "Unpaved access bottleneck",
+          howText: "Mud washes out the north road for three months every winter.",
+        },
+      ],
+    });
+    await discoverPromise;
+
+    // 3) Every HMW card exposes a removable × button; removing the selected HMW clears the brief
+    assert.match(h.root.innerHTML, /data-action="wb-remove-hmw"/);
+    const selectedText = addedHmw[0].howText;
+    assert.equal(h.ws.getWorkbenchState().hmwBrief, selectedText);
+
+    assert.equal(h.ws.removeHmwOption(addedHmw[0].id, selectedText), true);
+    assert.equal(h.ws.getWorkbenchState().hmwBrief, "");
+    assert.doesNotMatch(h.root.innerHTML, /skip false rumors before burning a full truck day/);
+
+    // Remove remaining HMW options until empty -> Restore defaults appears and restores defaults
+    let guard = 0;
+    while (h.root.innerHTML.includes('data-action="wb-remove-hmw"') && guard < 12) {
+      guard += 1;
+      const m = h.root.innerHTML.match(
+        /data-action="wb-remove-hmw" data-hmw-id="([^"]*)" data-hmw="([^"]*)"/
+      );
+      assert.ok(m, "expected removable HMW button attributes");
+      const unesc = (s) =>
+        s.replaceAll("&quot;", '"').replaceAll("&#39;", "'").replaceAll("&amp;", "&");
+      assert.equal(h.ws.removeHmwOption(unesc(m[1]), unesc(m[2])), true);
+    }
+    assert.doesNotMatch(h.root.innerHTML, /data-action="wb-remove-hmw"/);
+    assert.match(h.root.innerHTML, /data-action="wb-restore-hmw"[^>]*>Restore defaults</);
+
+    assert.equal(h.ws.restoreDismissedHmw(), true);
+    assert.match(h.root.innerHTML, /data-action="wb-remove-hmw"/);
+  });
+
+  it("always shows the full Pathway mechanism description on Workbench Pathway cards without requiring Edit mechanism", () => {
+    const h = harness();
+    h.ws.seedFromMission({
+      place: "Sablewick",
+      pressure: { "Hidden Leaks": 3 },
+      spotlight: { techId: "drones" },
+    });
+    h.ws.openWorkbench({ diamond: "solution" });
+
+    const a = h.ws.addPlayerWorkbenchIdea({
+      title: "Morning plume board",
+      howText:
+        "Each clear morning Ines opens free public satellite methane alerts and ranks the top five plumes so her two trucks stop wasting full days on rumors.",
+      techId: "drones",
+      world: "atoms",
+    });
+    const b = h.ws.addPlayerWorkbenchIdea({
+      title: "Valve seal check",
+      howText:
+        "After a crew seals a wellhead, the next clear pass checks whether the plume vanished before marking the repair complete.",
+      techId: null,
+      world: "plain",
+    });
+
+    assert.equal(h.ws.startPathwayFromIdea(a.id), true);
+    const pwId = Object.keys(h.board.pathways)[0];
+    assert.ok(pwId);
+
+    // Full mechanism text must be visible directly inside .wb-pw-how without clicking Edit mechanism
+    assert.match(h.root.innerHTML, /<div class="wb-pw-how-wrap">/);
+    assert.match(
+      h.root.innerHTML,
+      /<p class="wb-pw-how">Each clear morning Ines opens free public satellite methane alerts and ranks the top five plumes so her two trucks stop wasting full days on rumors\.<\/p>/
+    );
+    assert.doesNotMatch(h.root.innerHTML, /data-role="pathway-how-input"/);
+
+    // Combining a second idea immediately shows both parts in .wb-pw-how
+    assert.equal(h.ws.addIdeaToPathway(b.id, pwId), true);
+    assert.match(
+      h.root.innerHTML,
+      /<p class="wb-pw-how">Each clear morning Ines opens free public satellite methane alerts[\s\S]*After a crew seals a wellhead, the next clear pass checks whether the plume vanished before marking the repair complete\.<\/p>/
+    );
+
+    // Custom/woven Pathway mechanism shows visibly with the Edited pill without entering edit mode
+    h.board.pathways[pwId].customHow =
+      "Satellite alerts dispatch Ines's two trucks to the largest plumes first, and the next clear pass confirms every sealed valve stays tight.";
+    h.ws.paint();
+    assert.match(
+      h.root.innerHTML,
+      /<span class="wb-pw-how-edited">Edited<\/span>/
+    );
+    assert.match(
+      h.root.innerHTML,
+      /<p class="wb-pw-how">Satellite alerts dispatch Ines's two trucks to the largest plumes first, and the next clear pass confirms every sealed valve stays tight\.<\/p>/
+    );
+  });
+
+  it("collapses Tech, Pathway, Crisis, Workbench Pathway, and Workbench Idea cards independently to 1-line summary bars and auto-expands on interaction", async () => {
+    const h = harness();
+    h.ws.seedFromMission({
+      place: "Brackenfold",
+      pressure: { "Blood Too Late": 3, "Cut-Off Districts": 2 },
+      spotlight: { techId: "drones" },
+    });
+
+    // Deal a milestone so a Use Case exists (Use Case cards must NOT have collapse chevrons)
+    const drones = resolveTechTrack("drones");
+    const reached = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    h.ws.dealMilestone("drones", reached.id);
+
+    // Create a Pathway and an extra Workbench Idea
+    const idea1 = h.ws.addPlayerWorkbenchIdea({
+      title: "Ridge blood parachute drop",
+      howText: "Fixed-wing drone drops insulated blood pack to hospital pad.",
+      techId: "drones",
+      world: "atoms",
+    });
+    const idea2 = h.ws.addPlayerWorkbenchIdea({
+      title: "Ward pad nurse handoff",
+      howText: "Charge nurse logs incoming temperature seal and carries unit to theater.",
+      techId: null,
+      world: "plain",
+    });
+    assert.equal(h.ws.startPathwayFromIdea(idea1.id), true);
+    const pwId = Object.keys(h.board.pathways)[0];
+    const crisisId = Object.keys(h.board.crises)[0];
+    assert.ok(pwId && crisisId);
+
+    // 4-lane view: Tech, Pathway, Crisis all start expanded with chevron buttons; Use Cases do not
+    h.board.pathways[pwId].ingredients[0].artUrl = "https://example.test/pw-art.jpg";
+    h.ws.closeWorkbench();
+    assert.match(h.root.innerHTML, /data-collapse-key="tech:drones" aria-expanded="true"/);
+    assert.match(h.root.innerHTML, new RegExp(`data-collapse-key="pathway:${pwId}" aria-expanded="true"`));
+    assert.match(h.root.innerHTML, new RegExp(`data-collapse-key="crisis:${crisisId}" aria-expanded="true"`));
+    assert.doesNotMatch(h.root.innerHTML, /data-collapse-key="usecase:/);
+    // Pathway collapse toggle/header must always render ABOVE its art banner, never below the image
+    const pwToggleIdx = h.root.innerHTML.indexOf(`data-collapse-key="pathway:${pwId}"`);
+    const pwArtIdx = h.root.innerHTML.indexOf("https://example.test/pw-art.jpg");
+    assert.ok(pwToggleIdx > 0 && pwArtIdx > pwToggleIdx, "Pathway collapse toggle should appear above its artwork");
+
+    // Full feasibility rationale renders visibly in .ontology-timing-reason (not truncated inside the progress bar)
+    const longRationale =
+      "By 2026, free public satellite methane alerts already exist: UNEP's Methane Alert and Response System (MARS) has been operational since 2023 and flags large plumes globally.";
+    h.board.pathways[pwId].ingredients[0].timingLevel = "green";
+    h.board.pathways[pwId].ingredients[0].timingPct = 86;
+    h.board.pathways[pwId].ingredients[0].timingReason = longRationale;
+    h.board.pathways[pwId].ingredients[0].timingPending = false;
+    h.ws.paint();
+    assert.match(h.root.innerHTML, /<span class="ontology-timing-label">Honest for this year \(86%\)<\/span>/);
+    assert.match(
+      h.root.innerHTML,
+      /<p class="ontology-timing-reason">By 2026, free public satellite methane alerts already exist: UNEP's Methane Alert and Response System \(MARS\) has been operational since 2023 and flags large plumes globally\.<\/p>/
+    );
+
+    // Collapse Tech card -> compact bar keeps data-port-tech lit and hides milestone rows
+    assert.equal(h.ws.toggleCardCollapse("tech:drones"), true);
+    assert.equal(h.ws.isCardCollapsed("tech", "drones"), true);
+    assert.match(h.root.innerHTML, /class="ontology-card ontology-tech is-collapsed/);
+    assert.match(h.root.innerHTML, /data-port-tech="drones"/);
+    assert.doesNotMatch(h.root.innerHTML, /class="ontology-spine is-solid"/);
+
+    // Collapse 4-lane Pathway card -> compact bar keeps both ports; Workbench Pathway stays expanded (independent!)
+    assert.equal(h.ws.toggleCardCollapse(`pathway:${pwId}`), true);
+    assert.match(h.root.innerHTML, /class="ontology-card ontology-pathway is-collapsed/);
+    assert.match(h.root.innerHTML, new RegExp(`data-port-pw-in="${pwId}"`));
+    assert.match(h.root.innerHTML, new RegExp(`data-port-pw-out="${pwId}"`));
+    assert.doesNotMatch(h.root.innerHTML, /class="ontology-how-wrap"/);
+    assert.equal(h.ws.isCardCollapsed("wb-pathway", pwId), false);
+
+    // Collapse Crisis card -> compact bar keeps drop target + port; plugging auto-expands Crisis!
+    assert.equal(h.ws.toggleCardCollapse(`crisis:${crisisId}`), true);
+    assert.match(h.root.innerHTML, /class="ontology-card ontology-crisis is-collapsed/);
+    assert.match(h.root.innerHTML, new RegExp(`data-port-crisis-in="${crisisId}"`));
+    assert.match(h.root.innerHTML, new RegExp(`data-crisis-id="${crisisId}"[^>]*data-drop="crisis"`));
+    assert.equal(await h.ws.plug(pwId, crisisId), true);
+    assert.equal(h.ws.isCardCollapsed("crisis", crisisId), false);
+    assert.doesNotMatch(
+      h.root.innerHTML,
+      new RegExp(`class="ontology-card ontology-crisis is-collapsed[^"]*" data-crisis-id="${crisisId}"`)
+    );
+
+    // Open Workbench -> Pathway is STILL expanded (independent of 4-lane collapse!), Idea starts expanded
+    h.ws.openWorkbench({ diamond: "solution" });
+    assert.match(h.root.innerHTML, new RegExp(`data-collapse-key="wb-pathway:${pwId}" aria-expanded="true"`));
+    assert.match(h.root.innerHTML, new RegExp(`data-collapse-key="wb-idea:${idea2.id}" aria-expanded="true"`));
+
+    // Collapse both Workbench Idea and Workbench Pathway
+    assert.equal(h.ws.toggleCardCollapse(`wb-idea:${idea2.id}`), true);
+    assert.match(h.root.innerHTML, /class="wb-idea-card is-collapsed/);
+    assert.doesNotMatch(h.root.innerHTML, /class="wb-idea-main"/);
+
+    assert.equal(h.ws.toggleCardCollapse(`wb-pathway:${pwId}`), true);
+    assert.match(h.root.innerHTML, /class="wb-visual-pathway is-collapsed/);
+    assert.doesNotMatch(h.root.innerHTML, /class="wb-pw-how-wrap"/);
+
+    // Adding an Idea into the collapsed Workbench Pathway auto-expands it!
+    assert.equal(h.ws.addIdeaToPathway(idea2.id, pwId), true);
+    assert.equal(h.ws.isCardCollapsed("wb-pathway", pwId), false);
+    assert.match(h.root.innerHTML, /class="wb-pw-how-wrap"/);
+
+    // Session-only reset: seeding a new mission clears all collapsed states
+    h.ws.seedFromMission({
+      place: "Sablewick",
+      pressure: { "Hidden Leaks": 3 },
+      spotlight: { techId: "drones" },
+    });
+    assert.equal(h.ws.isCardCollapsed("tech", "drones"), false);
   });
 });

@@ -18,32 +18,45 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 */
 
 /**
- * Pure, DOM-free structured innovation methods for the Lane 3 Innovation Workbench:
- * - Diamond 1: Scarcity framing from Quest crises & scene
- * - Diverge methods: Seed, 3-zone emTech Convergence Canvas (Bits ↔ Bridge ↔ Atoms),
- *   SIT (4 closed-world lenses), and SCAMPER (7 open remix lenses)
- * - Converge: Deterministic 0ms Pre-Flight matrix (world chain, horizon, synergy,
- *   target perspectives, and exact incremental Budget / Goodwill cost)
- * - Deterministic local draft generators for offline play & unit tests
+ * Pure, DOM-free Design Thinking Double-Diamond & structured ideation methods
+ * for the Lane 3 Innovation Workbench:
+ * - Diamond 1 (Problem Space):
+ *   1. Discover (◇ Diverge): unpack Stakeholder, Here & Now pain, Root Cause,
+ *      Trust/Friction, and Field Constraints from the Quest + player/AI insights
+ *   2. Define (◆ Converge): synthesize & lock a sharp "How Might We…" (HMW) brief
+ * - Diamond 2 (Solution Space):
+ *   3. Develop (◇ Diverge): Seed, SIT (4 closed-world lenses), and SCAMPER (7 open lenses)
+ *   4. Deliver (◆ Converge): modular Idea → Pathway assembly & non-destructive disassembly
  */
 
-import { TECHS, DOMAINS } from "../data.js";
+import { TECHS } from "../data.js";
 import { techCost } from "../sim/economy.js";
 import { collectorInventionIsFree } from "../ontology/collector-ontology.js";
 import { convergenceRows, isUseCaseEarly, needsBridgeWarning } from "./pathway-model.js";
+
+export const DOUBLE_DIAMOND_STAGES = Object.freeze([
+  {
+    id: "problem",
+    num: 1,
+    title: "Diamond 1 · Problem Space",
+    diverge: { step: "1 · Discover", symbol: "◇", sub: "Unpack tensions" },
+    converge: { step: "2 · Define", symbol: "◆", sub: "How Might We…" },
+  },
+  {
+    id: "solution",
+    num: 2,
+    title: "Diamond 2 · Solution Space",
+    diverge: { step: "3 · Develop", symbol: "◇", sub: "Generate Ideas (0$)" },
+    converge: { step: "4 · Deliver", symbol: "◆", sub: "Assemble Pathways ($)" },
+  },
+]);
 
 export const WORKBENCH_METHODS = Object.freeze([
   {
     id: "seed",
     icon: "💡",
     label: "Seed",
-    short: "Scarcity + Use Cases",
-  },
-  {
-    id: "convergence",
-    icon: "🔀",
-    label: "Convergence",
-    short: "Bits ↔ Bridge ↔ Atoms",
+    short: "Answer your How Might We",
   },
   {
     id: "sit",
@@ -169,10 +182,7 @@ export const CHALLENGER_LENS_MAP = Object.freeze({
   },
 });
 
-const WORLD_ORDER = ["bits", "split", "atoms"];
-const DOMAIN_ORDER = ["power", "automator", "mover", "lifeforce", "link", "portal"];
 const VALID_WORLDS = new Set(["bits", "atoms", "split", "plain"]);
-
 const TECH_BY_ID = new Map(TECHS.map((t) => [t.id, t]));
 
 export function techMeta(techId) {
@@ -211,8 +221,8 @@ function roleDisplay(role) {
 }
 
 /**
- * Diamond 1: extract 3–5 concrete scarcity prompts from the live crises and Quest scene.
- * Players can click any chip or type their own scarcity focus (or skip it entirely).
+ * Extract scarcity prompts from live crises and Quest scene (used as bottleneck patterns
+ * inside Diamond 1 Discovery clues and fallback framing).
  *
  * @param {object|null|undefined} mission
  * @param {object[]} [crises]
@@ -247,6 +257,7 @@ export function extractScarcityPrompts(mission, crises = []) {
     mission?.title || "",
     mission?.scene || "",
     mission?.summary || "",
+    mission?.job || "",
     mission?.stakeholder || "",
     ...sortedCrises.map((c) => `${c?.name || ""} ${c?.description || ""}`),
   ]
@@ -256,33 +267,33 @@ export function extractScarcityPrompts(mission, crises = []) {
   const patterns = [
     {
       id: "scarcity:trust",
-      re: /\b(trust|proof|audit|permit|ledger|verified|transparency|legitimac|fear|backlash)\b/,
+      re: /\b(trust|proof|audit|permit|ledger|verified|transparency|legitimac|fear|backlash|doubt)\b/,
       label: "Trusted local proof",
       detail: "Visible, verifiable evidence community stewards can check without middlemen.",
     },
     {
       id: "scarcity:power",
-      re: /\b(power|grid|electric|diesel|fuel|heat|brine|energy|blackout|cool|cold)\b/,
-      label: "Clean reliable energy",
-      detail: "Steady local power or thermal loop without polluting backup runs.",
+      re: /\b(power|grid|electric|diesel|fuel|heat|brine|energy|blackout|cool|cold|fridge|spoil)\b/,
+      label: "Reliable cold chain & power",
+      detail: "Steady local thermal or power loop without waste or backup failures.",
     },
     {
       id: "scarcity:water",
-      re: /\b(water|well|river|brine|silt|flood|drought|irrigation|aquifer|runoff)\b/,
-      label: "Clean safe water",
-      detail: "Protected flow and purity without toxic runoff or waste ponds.",
+      re: /\b(water|well|river|brine|silt|flood|drought|irrigation|aquifer|runoff|mud)\b/,
+      label: "Protected water & terrain",
+      detail: "Safe flow and all-weather access without toxic runoff or washouts.",
     },
     {
       id: "scarcity:supply",
-      re: /\b(truck|feedstock|haul|supply|mineral|lithium|fertilizer|medicine|clinic|parts)\b/,
-      label: "Local materials & supply",
-      detail: "Making or recovering scarce inputs on site instead of fragile long-haul imports.",
+      re: /\b(truck|feedstock|haul|supply|mineral|lithium|fertilizer|medicine|clinic|parts|road|blood)\b/,
+      label: "Timely local delivery & supply",
+      detail: "Reaching people on time without fragile long-haul road bottlenecks.",
     },
     {
       id: "scarcity:time",
-      re: /\b(crew|nurse|teacher|farmer|operator|hours|backlog|wait|inspection|testing|lab)\b/,
-      label: "Skilled crew hours",
-      detail: "Multiplying scarce local human time on the hardest bottleneck.",
+      re: /\b(crew|nurse|teacher|farmer|operator|hours|backlog|wait|inspection|testing|lab|ward)\b/,
+      label: "Skilled local hours",
+      detail: "Multiplying scarce frontline human time on the hardest bottleneck.",
     },
   ];
 
@@ -330,201 +341,212 @@ export function extractScarcityPrompts(mission, crises = []) {
 }
 
 /**
- * Analyze a `[Tech A × Tech B]` intersection on the Convergence Canvas.
+ * Diamond 1 · Step 1 (DISCOVER): unpack rich ground-truth clues from the Quest
+ * (Stakeholder need, Here & now pain, Root cause, Public support/trust friction,
+ * Town rules, and physical/operational constraints).
  *
- * @param {string|null} techIdA
- * @param {string|null} techIdB
- * @param {{ place?: string, scarcity?: string, year?: number }} [ctx]
+ * @param {object|null|undefined} mission
+ * @param {object[]} [crises]
+ * @param {object[]} [rules]
  */
-export function analyzeConvergencePair(techIdA, techIdB, ctx = {}) {
-  const a = techMeta(techIdA);
-  const b = techMeta(techIdB);
-  if (!a && !b) {
-    return {
-      ready: false,
-      techA: null,
-      techB: null,
-      knownSynergy: false,
-      bridgesWorlds: false,
-      needsBridge: false,
-      badge: "",
-      prompt: "Pick any two technologies from Bits, Bridge, or Atoms above to explore their intersection.",
-    };
-  }
-  if (a && !b) {
-    const partners = (a.pairs || [])
-      .map((pid) => techMeta(pid))
-      .filter(Boolean)
-      .slice(0, 4)
-      .map((t) => ({ id: t.id, name: t.name, icon: t.icon || "", world: t.polarity || "bits" }));
-    return {
-      ready: false,
-      techA: a,
-      techB: null,
-      knownSynergy: false,
-      bridgesWorlds: false,
-      needsBridge: false,
-      partners,
-      badge: `Slot A: ${a.name}`,
-      prompt: `Now pick a second technology to intersect with ${a.name} — pulsing chips mark authored synergy pairs.`,
-    };
-  }
-  const techA = a || b;
-  const techB = a ? b : null;
-  if (!techB || techA.id === techB.id) {
-    return {
-      ready: false,
-      techA,
-      techB: null,
-      knownSynergy: false,
-      bridgesWorlds: false,
-      needsBridge: false,
-      badge: `Slot A: ${techA.name}`,
-      prompt: `Pick a different second technology to intersect with ${techA.name}.`,
-    };
+export function extractDiscoveryClues(mission, crises = [], rules = []) {
+  const clues = [];
+  const stakeholder = String(mission?.stakeholder || "").trim();
+  const jobText = String(mission?.job || mission?.summary || mission?.scene || "").trim();
+
+  if (stakeholder || jobText) {
+    const shortWho = stakeholder ? clip(stakeholder.split(",")[0].trim(), 48) : "Frontline steward";
+    clues.push({
+      id: "clue:stakeholder",
+      kind: "stakeholder",
+      badge: "👤 Stakeholder Need",
+      title: stakeholder ? clip(stakeholder, 68) : "Who is counting on us",
+      detail: jobText
+        ? clip(jobText, 180)
+        : `Understand what ${shortWho} needs on the ground without creating new burdens.`,
+      role: null,
+      crisisId: null,
+    });
   }
 
-  const knownSynergy = Boolean(
-    techA.pairs?.includes(techB.id) || techB.pairs?.includes(techA.id)
-  );
-  const wA = techA.polarity || "bits";
-  const wB = techB.polarity || "bits";
-  const bridgesWorlds = wA === "split" || wB === "split";
-  const needsBridge =
-    (wA === "bits" && wB === "atoms") || (wA === "atoms" && wB === "bits");
-
-  const place = String(ctx.place || "this place").trim() || "this place";
-  const scarcity = String(ctx.scarcity || "").trim();
-  const goalPhrase = scarcity ? `make "${scarcity}" abundant` : "ease the core crisis";
-  const bridgeNote = needsBridge
-    ? " Name the human or physical handoff step between digital and physical."
-    : "";
-
-  const badgeParts = [];
-  if (knownSynergy) badgeParts.push("⚡ Known Synergy Pair (×1.25)");
-  if (bridgesWorlds) badgeParts.push("✓ Bridges Bits ↔ Atoms");
-  else if (needsBridge) badgeParts.push("⚠️ Bits + Atoms — add Bridge or Human handoff");
-
-  return {
-    ready: true,
-    techA,
-    techB,
-    knownSynergy,
-    bridgesWorlds,
-    needsBridge,
-    badge: badgeParts.join(" · ") || "Cross-domain intersection",
-    prompt: `How can ${techA.name} + ${techB.name} work together in ${place} to ${goalPhrase}?${bridgeNote}`,
+  const roleMeta = {
+    local: { badge: "🔥 Here & Now Pain", fallback: "Immediate frontline harm" },
+    global: { badge: "🌱 Root Cause", fallback: "Underlying structural driver" },
+    support: { badge: "🤝 Trust & Friction", fallback: "Institutional or community pushback" },
   };
+  const roleOrder = { local: 0, global: 1, support: 2 };
+  const orderedCrises = [...(Array.isArray(crises) ? crises : [])].sort(
+    (a, b) => (roleOrder[a?.role] ?? 9) - (roleOrder[b?.role] ?? 9)
+  );
+
+  for (const c of orderedCrises) {
+    const name = String(c?.name || "").trim();
+    if (!name) continue;
+    const meta = roleMeta[c.role] || { badge: "⚠️ Pressure", fallback: name };
+    const meterBit =
+      c.level != null
+        ? ` (Meter ${c.level}/5${c.goal != null ? `, goal ≤${c.goal}` : ""})`
+        : "";
+    clues.push({
+      id: `clue:crisis:${c.id || slug(name)}`,
+      kind: c.role || "crisis",
+      badge: meta.badge,
+      title: `${name}${meterBit}`,
+      cleanTitle: name,
+      detail: clip(c.description || meta.fallback, 180),
+      role: c.role || null,
+      crisisId: c.id || null,
+    });
+  }
+
+  for (const r of (Array.isArray(rules) ? rules : []).slice(0, 2)) {
+    const label = String(r?.label || "").trim();
+    if (!label) continue;
+    clues.push({
+      id: `clue:rule:${r.id || slug(label)}`,
+      kind: "constraint",
+      badge: "🏛️ Local Rule",
+      title: clip(label, 68),
+      cleanTitle: label,
+      detail: clip(r.body || "Active local regulation shaping what can be fielded here.", 160),
+      role: null,
+      crisisId: null,
+    });
+  }
+
+  const bottlenecks = extractScarcityPrompts(mission, crises).filter((p) => !p.crisisId);
+  for (const b of bottlenecks.slice(0, 2)) {
+    clues.push({
+      id: `clue:${b.id}`,
+      kind: "constraint",
+      badge: "⛓️ Field Constraint",
+      title: b.label,
+      cleanTitle: b.label,
+      detail: b.detail,
+      role: null,
+      crisisId: null,
+    });
+  }
+
+  if (!clues.length) {
+    clues.push({
+      id: "clue:default",
+      kind: "local",
+      badge: "🔥 Ground Reality",
+      title: "What is breaking down right now?",
+      cleanTitle: "Local bottleneck",
+      detail: "Identify who feels the pain first, what causes it upstream, and why quick fixes fail.",
+      role: "local",
+      crisisId: null,
+    });
+  }
+
+  return clues.slice(0, 6);
 }
 
 /**
- * Build the 3-zone emTech Convergence Canvas (`Bits` | `Bridge` | `Atoms`)
- * grouping all 29 technologies by domain with live board highlights.
+ * Diamond 1 · Step 2 (DEFINE): synthesize 3–4 sharp, human-centered
+ * "How Might We…" (HMW) problem statements from the Quest and selected Discover clues,
+ * without locking prematurely onto any single gadget.
  *
- * @param {Record<string, object>|string[]} techTracks
  * @param {object|null|undefined} mission
- * @param {string[]} [selectedPair]
- * @param {{ place?: string, scarcity?: string, year?: number }} [ctx]
+ * @param {object[]} [crises]
+ * @param {object[]} [selectedClues]
  */
-export function buildConvergenceCanvas(
-  techTracks = {},
-  mission = null,
-  selectedPair = [],
-  ctx = {}
-) {
-  const activeIds = new Set(
-    Array.isArray(techTracks) ? techTracks : Object.keys(techTracks || {})
+export function synthesizeHmwCandidates(mission, crises = [], selectedClues = []) {
+  const place = String(mission?.place || "this community").trim() || "this community";
+  const rawStakeholder = String(mission?.stakeholder || "").trim();
+  const shortWho = rawStakeholder
+    ? clip(rawStakeholder.split(",")[0].trim(), 42)
+    : `stewards in ${place}`;
+
+  const byRole = new Map();
+  for (const c of Array.isArray(crises) ? crises : []) {
+    if (c?.role && c?.name && !byRole.has(c.role)) byRole.set(c.role, c);
+  }
+  const localC = byRole.get("local") || crises[0] || null;
+  const globalC = byRole.get("global") || crises[1] || null;
+  const supportC = byRole.get("support") || crises[2] || null;
+
+  const out = [];
+  const pushUnique = (id, tag, text) => {
+    const clean = String(text || "").replace(/\s+/g, " ").trim();
+    if (!clean) return;
+    if (out.some((row) => row.howText.toLowerCase() === clean.toLowerCase())) return;
+    out.push({ id, tag, howText: clip(clean, 220) });
+  };
+
+  // 1. If the player selected specific clues (especially custom insights), synthesize a tailored HMW first!
+  const customSelected = (Array.isArray(selectedClues) ? selectedClues : []).filter(
+    (c) => c && (c.kind === "insight" || c.author === "player" || c.author === "ai")
   );
-  const pair = Array.isArray(selectedPair) ? selectedPair.filter((id) => TECH_BY_ID.has(id)).slice(0, 2) : [];
-  const slotA = pair[0] || null;
-  const slotB = pair[1] || null;
-
-  const suggestedIds = new Set([
-    ...(Array.isArray(mission?.suggested) ? mission.suggested : []),
-    mission?.spotlight?.techId || null,
-  ].filter(Boolean));
-
-  // Highlight synergy partners of Slot A (if picking Slot B), else partners of any active board tech
-  const synergySourceIds = slotA && !slotB ? [slotA] : [...activeIds];
-  const synergyPartnerIds = new Set();
-  for (const srcId of synergySourceIds) {
-    const t = TECH_BY_ID.get(srcId);
-    for (const pid of t?.pairs || []) {
-      if (pid !== slotA) synergyPartnerIds.add(pid);
-    }
+  if (customSelected.length) {
+    const focusInsight = clip(customSelected[0].cleanTitle || customSelected[0].title || customSelected[0].detail, 72);
+    const guardBit = supportC?.name
+      ? ` while earning trust around ${supportC.name}`
+      : localC?.name
+        ? ` so ${localC.name} eases`
+        : "";
+    pushUnique(
+      "hmw-insight",
+      "From Your Discovery",
+      `How might we help ${shortWho} overcome "${focusInsight}" in ${place}${guardBit}?`
+    );
   }
 
-  let hasBitsActive = false;
-  let hasAtomsActive = false;
-  let hasBridgeActive = false;
-  for (const id of activeIds) {
-    const p = TECH_BY_ID.get(id)?.polarity;
-    if (p === "bits") hasBitsActive = true;
-    else if (p === "atoms") hasAtomsActive = true;
-    else if (p === "split") hasBridgeActive = true;
+  // 2. Integrated full-system HMW combining urgent need + trust/constraint
+  if (localC && supportC) {
+    pushUnique(
+      "hmw-integrated",
+      "Balanced System Brief",
+      `How might we help ${shortWho} ease ${localC.name} in ${place} quickly and reliably, without worsening ${supportC.name}?`
+    );
+  } else if (mission?.job) {
+    const cleanedJob = String(mission.job)
+      .replace(/^help\s+/i, "")
+      .replace(/\.$/, "")
+      .trim();
+    pushUnique(
+      "hmw-job",
+      "Core Quest Brief",
+      `How might we help ${clip(cleanedJob, 175)}?`
+    );
   }
-  const needsBridgeHighlight = hasBitsActive && hasAtomsActive && !hasBridgeActive;
 
-  const zoneMeta = {
-    bits: {
-      id: "bits",
-      label: "Bits",
-      subtitle: "Digital, intelligence & coordination",
-    },
-    split: {
-      id: "split",
-      label: "Bridge",
-      subtitle: "Converters linking Bits ↔ Atoms",
-    },
-    atoms: {
-      id: "atoms",
-      label: "Atoms",
-      subtitle: "Physical matter, energy & hardware",
-    },
-  };
+  // 3. Here & now + Root cause HMW
+  if (localC && globalC) {
+    pushUnique(
+      "hmw-root",
+      "Here & Now + Root Cause",
+      `How might we solve ${localC.name} right now while tackling the root driver of ${globalC.name} in ${place}?`
+    );
+  } else if (localC) {
+    pushUnique(
+      "hmw-local",
+      "Urgent Relief",
+      `How might we help ${shortWho} relieve ${localC.name} in ${place} using resources that hold up on the ground?`
+    );
+  }
 
-  const zones = WORLD_ORDER.map((worldId) => {
-    const inWorld = TECHS.filter((t) => (t.polarity || "bits") === worldId);
-    const groups = [];
-    for (const domainId of DOMAIN_ORDER) {
-      const techs = inWorld
-        .filter((t) => t.domain === domainId)
-        .map((t) => ({
-          id: t.id,
-          name: t.name,
-          icon: t.icon || "",
-          domain: t.domain,
-          world: t.polarity || "bits",
-          summary: t.summary || "",
-          inPlay: activeIds.has(t.id),
-          synergy: synergyPartnerIds.has(t.id),
-          recommended: suggestedIds.has(t.id),
-          selectedSlot: t.id === slotA ? "A" : t.id === slotB ? "B" : null,
-          pairs: Array.isArray(t.pairs) ? [...t.pairs] : [],
-        }));
-      if (!techs.length) continue;
-      const dom = DOMAINS[domainId] || { label: domainId, color: "#94a3b8" };
-      groups.push({
-        domainId,
-        domainLabel: dom.label,
-        color: dom.color,
-        techs,
-      });
-    }
-    return {
-      ...zoneMeta[worldId],
-      highlightBridge: worldId === "split" && needsBridgeHighlight,
-      count: inWorld.length,
-      groups,
-    };
-  });
+  // 4. Constraint / Steward trust HMW
+  if (supportC || globalC) {
+    const targetName = supportC?.name || globalC?.name;
+    pushUnique(
+      "hmw-trust",
+      "Trust & Lasting Adoption",
+      `How might we design a transparent local workflow with ${shortWho} that turns ${targetName} from a blocker into shared confidence?`
+    );
+  }
 
-  return {
-    zones,
-    selectedPair: pair,
-    needsBridgeHighlight,
-    pairAnalysis: analyzeConvergencePair(slotA, slotB, ctx),
-  };
+  if (!out.length) {
+    pushUnique(
+      "hmw-fallback",
+      "Problem Brief",
+      `How might we help ${shortWho} relieve the core bottleneck in ${place} honestly and sustainably?`
+    );
+  }
+
+  return out.slice(0, 4);
 }
 
 /**
@@ -541,37 +563,26 @@ export function recommendedScamperForSeed(opts = {}) {
   const text = String(opts?.seedText || "").toLowerCase();
   if (opts?.hasBridgeGap) return ["C", "S", "R"];
   if (/\b(cost|fund|budget|pay|price|expensive|afford)\b/.test(text)) return ["E", "P", "C"];
-  if (/\b(waste|toxic|brine|pollut|emission|heat|water|land)\b/.test(text)) return ["S", "E", "M"];
-  if (/\b(trust|audit|public|permit|fear|vote|fair)\b/.test(text)) return ["R", "C", "A"];
+  if (/\b(waste|toxic|brine|pollut|emission|heat|water|land|spoil)\b/.test(text)) return ["S", "E", "M"];
+  if (/\b(trust|audit|public|permit|fear|vote|fair|doubt)\b/.test(text)) return ["R", "C", "A"];
   return ["S", "C", "R"];
 }
 
 /**
- * Build the tailored Player-Prompt-First guiding question for the active Diverge method.
+ * Build the tailored Player-Prompt-First guiding question for the active Develop method
+ * (`seed`, `sit`, or `scamper`), anchored to the player's Defined HMW brief when present.
  *
- * @param {"seed"|"convergence"|"sit"|"scamper"} method
+ * @param {"seed"|"sit"|"scamper"} method
  * @param {object} [opts]
  */
 export function buildLensPrompt(method, opts = {}) {
   const place = String(opts.place || "this place").trim() || "this place";
   const year = Number(opts.year) || 2026;
+  const hmwBrief = String(opts.hmwBrief || "").trim();
   const scarcity = String(opts.scarcity || "").trim();
   const seedTitle = String(opts.seedTitle || "").trim();
   const seedText = String(opts.seedText || "").trim();
   const seedRef = seedTitle || (seedText ? clip(seedText, 48) : "your active idea");
-
-  if (method === "convergence") {
-    const pair = Array.isArray(opts.convergencePair) ? opts.convergencePair : [];
-    const analysis = analyzeConvergencePair(pair[0], pair[1], { place, scarcity, year });
-    return {
-      heading:
-        analysis.techA && analysis.techB
-          ? `${analysis.techA.name} × ${analysis.techB.name}`
-          : "Pick two technologies to intersect",
-      question: analysis.prompt,
-      hint: analysis.badge || "Select any two chips across Bits, Bridge, and Atoms.",
-    };
-  }
 
   if (method === "sit") {
     const lens = SIT_LENSES.find((l) => l.id === opts.sitLens) || SIT_LENSES[0];
@@ -584,7 +595,7 @@ export function buildLensPrompt(method, opts = {}) {
     return {
       heading: `SIT · ${lens.symbol} ${lens.label}`,
       question: qByLens[lens.id] || lens.hint,
-      hint: lens.hint,
+      hint: hmwBrief ? `Keep aiming at: ${clip(hmwBrief, 120)}` : lens.hint,
     };
   }
 
@@ -598,9 +609,11 @@ export function buildLensPrompt(method, opts = {}) {
     const labels = chosen.map((l) => `${l.letter} (${l.label})`).join(" · ");
     const challengeBit = opts.challengerQuestion
       ? ` to answer: "${clip(opts.challengerQuestion, 95)}"`
-      : scarcity
-        ? ` to ease "${scarcity}"`
-        : "";
+      : hmwBrief
+        ? ` toward your brief`
+        : scarcity
+          ? ` to ease "${scarcity}"`
+          : "";
     return {
       heading: `SCAMPER · ${labels}`,
       question: `Remix "${seedRef}" using ${labels} in ${place}${challengeBit}.`,
@@ -614,19 +627,69 @@ export function buildLensPrompt(method, opts = {}) {
   const capability = ucTitles.length
     ? ucTitles.slice(0, 2).join(" + ")
     : techName || "your chosen emerging tech";
-  const target = scarcity ? `"${scarcity}"` : "the main bottleneck";
+  if (hmwBrief) {
+    return {
+      heading: "Seed Ideas for Your Brief",
+      question: `Using ${capability} in ${place} (${year}), what concrete mechanism answers your "How Might We…" brief?`,
+      hint: "Name who operates it, on what hardware, and how the local handoff works — or deal 3 AI ideas.",
+    };
+  }
+  const target = scarcity ? `"${scarcity}"` : "the core problem";
   return {
-    heading: "Seed from Scarcity + Use Cases",
-    question: `How can ${capability} make ${target} abundant in ${place} (${year})?`,
+    heading: "Seed Ideas",
+    question: `How can ${capability} address ${target} in ${place} (${year})?`,
     hint: "Write one concrete mechanism sentence (who operates it, on what hardware, with what local handoff) — or deal 3 AI ideas.",
   };
 }
 
 /**
- * Expand one Workbench Idea Card into 1 or 2 Pathway ingredient partials.
- * A Convergence Idea with both `techId` and `secondaryTechId` produces two paired
- * ingredients so Convergence synergy (×1.25), World Bridge checks, and incremental
- * Budget billing all match 100%.
+ * Convert a Pathway ingredient cleanly back into a reusable Workbench Idea card
+ * (preserving artwork, settled feasibility timing, world, techId, useCaseIds, and collectorCardId)
+ * so disassembling a Pathway never loses work or re-triggers redundant API calls.
+ *
+ * @param {object} ing
+ * @param {{ id?: string, eases?: string }} [opts]
+ */
+export function ingredientToWorkbenchIdea(ing, opts = {}) {
+  if (!ing || typeof ing !== "object") return null;
+  const tech = ing.techId ? techMeta(ing.techId) : null;
+  const title = clip(ing.title || tech?.name || "Local idea", 72);
+  const howText = String(ing.howText || title).trim().slice(0, 1200);
+  const world = normalizeWorkbenchWorld(ing.world, tech?.id || null);
+  const settledTiming =
+    !ing.timingPending &&
+    (ing.timingLevel === "green" || ing.timingLevel === "yellow" || ing.timingLevel === "red");
+
+  return {
+    id:
+      opts.id ||
+      `idea-${slug(ing.id || title)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+    method: "seed",
+    lens: tech ? "seed" : "human",
+    lensLabel: tech ? `${tech.icon ? `${tech.icon} ` : "💡 "}${tech.name}` : "🤝 Human Step",
+    author: "player",
+    title,
+    howText,
+    techId: tech ? tech.id : null,
+    secondaryTechId: null,
+    useCaseIds: Array.isArray(ing.useCaseIds) ? ing.useCaseIds.map(String) : [],
+    world,
+    eases: String(opts.eases || "").slice(0, 60),
+    imagePrompt: String(ing.imagePrompt || howText || title).slice(0, 400),
+    artUrl: ing.artUrl || null,
+    artId: ing.artId || null,
+    artPending: false,
+    timingLevel: settledTiming ? ing.timingLevel : null,
+    timingPct: settledTiming && ing.timingPct != null ? Number(ing.timingPct) : null,
+    timingReason: settledTiming ? String(ing.timingReason || "").slice(0, 280) : "",
+    collectorCardId: ing.collectorCardId || null,
+    seedLabel: "",
+  };
+}
+
+/**
+ * Expand one Workbench Idea Card into Pathway ingredient partial(s), preserving
+ * existing artwork and settled timing so reassembling Ideas into new Pathways is instant.
  *
  * @param {object} draft
  */
@@ -641,6 +704,11 @@ export function draftToIngredientPartials(draft) {
   const title = clip(draft.title || techA?.name || "Invention", 72);
   const howText = String(draft.howText || "").trim().slice(0, 4000);
   const useCaseIds = Array.isArray(draft.useCaseIds) ? draft.useCaseIds.map(String) : [];
+  const settledTiming =
+    !draft.timingPending &&
+    (draft.timingLevel === "green" ||
+      draft.timingLevel === "yellow" ||
+      draft.timingLevel === "red");
 
   if (techA && techB) {
     return [
@@ -653,6 +721,9 @@ export function draftToIngredientPartials(draft) {
         artUrl: draft.artUrl || null,
         artId: draft.artId || null,
         imagePrompt: String(draft.imagePrompt || howText || title).slice(0, 400),
+        timingLevel: settledTiming ? draft.timingLevel : null,
+        timingPct: settledTiming ? draft.timingPct : null,
+        timingReason: settledTiming ? draft.timingReason || "" : "",
         collectorCardId: draft.collectorCardId || null,
       },
       {
@@ -664,6 +735,9 @@ export function draftToIngredientPartials(draft) {
         artUrl: null,
         artId: null,
         imagePrompt: `${techB.name} supporting ${clip(title, 60)}: ${clip(howText, 240)}`.slice(0, 400),
+        timingLevel: null,
+        timingPct: null,
+        timingReason: "",
         collectorCardId: null,
       },
     ];
@@ -679,15 +753,17 @@ export function draftToIngredientPartials(draft) {
       artUrl: draft.artUrl || null,
       artId: draft.artId || null,
       imagePrompt: String(draft.imagePrompt || howText || title).slice(0, 400),
+      timingLevel: settledTiming ? draft.timingLevel : null,
+      timingPct: settledTiming ? draft.timingPct : null,
+      timingReason: settledTiming ? draft.timingReason || "" : "",
       collectorCardId: draft.collectorCardId || null,
     },
   ];
 }
 
 /**
- * Deterministic 0ms Converge Pre-Flight evaluation for staged Draft Cards.
- * Computes World chain completeness, Curve horizon, ⚡ Synergy pairs, target Crises,
- * and exact incremental Budget / Goodwill cost BEFORE the player spends a dollar.
+ * Deterministic 0ms evaluation for Idea Card incremental cost, world chain,
+ * horizon, and synergy against the live board.
  *
  * @param {object[]} drafts
  * @param {object|null|undefined} board
@@ -716,11 +792,11 @@ export function evaluateStagedDrafts(drafts, board, questYear = 2026, opts = {})
   const missingBridge = needsBridgeWarning({ ingredients }, enforceWorlds);
 
   let worldStatus = "empty";
-  let worldSummary = "Stage 1 or more drafts to inspect handoff, horizon, and cost.";
+  let worldSummary = "Add 1 or more ideas to a Pathway to inspect handoff, horizon, and cost.";
   if (ingredients.length > 0) {
     if (missingBridge) {
       worldStatus = "missing-bridge";
-      worldSummary = "Bits + Atoms staged without a Bridge or Human handoff step.";
+      worldSummary = "Bits + Atoms combined without a Bridge or Human handoff step.";
     } else if (hasBits && hasAtoms && (hasBridge || hasHuman)) {
       worldStatus = "complete";
       worldSummary = "Complete Bits ↔ Bridge/Human ↔ Atoms handoff.";
@@ -733,8 +809,8 @@ export function evaluateStagedDrafts(drafts, board, questYear = 2026, opts = {})
     } else {
       worldStatus = "single-world";
       worldSummary = hasBits
-        ? "Bits-only draft — ready to mint, or stage an Atoms/Bridge draft to act physically."
-        : "Atoms-only draft — ready to mint, or stage a Bits/Bridge draft for sensing/control.";
+        ? "Bits-only idea — combine with an Atoms/Bridge idea to act physically."
+        : "Atoms-only idea — combine with a Bits/Bridge idea for sensing/control.";
     }
   }
 
@@ -866,30 +942,24 @@ export function evaluateStagedDrafts(drafts, board, questYear = 2026, opts = {})
 }
 
 /**
- * Sanitize structured AI lens draft cards (`mode: "workbench-lens"`), guaranteeing
- * valid techIds, worlds, lenses, and concise field bounds.
+ * Sanitize structured AI lens cards (`mode: "workbench-lens"`), supporting both
+ * Diamond 1 (`discover`, `define`) and Diamond 2 (`seed`, `sit`, `scamper`).
  *
  * @param {unknown} rawIdeas
  * @param {object} [opts]
  */
 export function sanitizeWorkbenchDrafts(rawIdeas, opts = {}) {
-  const method = ["seed", "convergence", "sit", "scamper"].includes(opts.method)
+  const method = ["discover", "define", "seed", "sit", "scamper"].includes(opts.method)
     ? opts.method
     : "seed";
   const defaultTechId =
-    opts.techId && TECH_BY_ID.has(opts.techId)
-      ? opts.techId
-      : Array.isArray(opts.techIds) && TECH_BY_ID.has(opts.techIds[0])
-        ? opts.techIds[0]
-        : null;
-  const secondaryDefault =
-    method === "convergence" &&
-    Array.isArray(opts.techIds) &&
-    opts.techIds[1] &&
-    TECH_BY_ID.has(opts.techIds[1]) &&
-    opts.techIds[1] !== defaultTechId
-      ? opts.techIds[1]
-      : null;
+    method === "discover" || method === "define"
+      ? null
+      : opts.techId && TECH_BY_ID.has(opts.techId)
+        ? opts.techId
+        : Array.isArray(opts.techIds) && TECH_BY_ID.has(opts.techIds[0])
+          ? opts.techIds[0]
+          : null;
   const defaultEases = String(opts.eases || opts.scarcity || "").slice(0, 60);
   const useCaseIds = Array.isArray(opts.useCaseIds) ? opts.useCaseIds.map(String) : [];
   const seedLabel = String(opts.seedTitle || "").slice(0, 72);
@@ -901,15 +971,37 @@ export function sanitizeWorkbenchDrafts(rawIdeas, opts = {}) {
   for (let i = 0; i < list.length && out.length < 4; i++) {
     const row = list[i];
     if (!row || typeof row !== "object") continue;
-    const title = clip(row.title || row.name || "", 72);
+    const title = clip(row.title || row.name || (method === "define" ? "How Might We" : ""), 72);
     const howText = String(row.howText || row.insertText || row.blurb || "")
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 1200);
     if (!title || howText.length < 12) continue;
-    const tKey = title.toLowerCase();
-    if (seenTitles.has(tKey)) continue;
-    seenTitles.add(tKey);
+    const dedupeKey = method === "define" ? howText.toLowerCase() : title.toLowerCase();
+    if (seenTitles.has(dedupeKey)) continue;
+    seenTitles.add(dedupeKey);
+
+    if (method === "discover" || method === "define") {
+      out.push({
+        id: `draft-${slug(row.id || `${method}-${title}`)}-${i + 1}`,
+        method,
+        lens: method === "define" ? "hmw" : "discover",
+        lensLabel:
+          String(row.lensLabel || "").trim().slice(0, 48) || formatLensBadge(method, method),
+        author: "ai",
+        title,
+        howText,
+        techId: null,
+        secondaryTechId: null,
+        useCaseIds: [],
+        world: "plain",
+        eases: defaultEases,
+        imagePrompt: "",
+        collectorCardId: null,
+        seedLabel: "",
+      });
+      continue;
+    }
 
     // Explicit null is a human step. Absent or unknown ids fall back to the selected tech.
     const humanStep = row.techId === null;
@@ -924,7 +1016,7 @@ export function sanitizeWorkbenchDrafts(rawIdeas, opts = {}) {
           TECH_BY_ID.has(String(row.secondaryTechId)) &&
           String(row.secondaryTechId) !== rawTechId
         ? String(row.secondaryTechId)
-        : secondaryDefault;
+        : null;
 
     const lens = String(row.lens || opts.lenses?.[i] || opts.lenses?.[0] || method).slice(0, 32);
     const lensLabel =
@@ -954,6 +1046,8 @@ export function sanitizeWorkbenchDrafts(rawIdeas, opts = {}) {
 }
 
 export function formatLensBadge(method, lens) {
+  if (method === "discover") return "🔍 Field Tension";
+  if (method === "define") return "◆ How Might We";
   if (method === "sit") {
     const row = SIT_LENSES.find((l) => l.id === lens);
     return row ? `SIT · ${row.symbol} ${row.label}` : "SIT";
@@ -962,75 +1056,96 @@ export function formatLensBadge(method, lens) {
     const row = SCAMPER_LENSES.find((l) => l.id === String(lens || "").toUpperCase());
     return row ? `SCAMPER · ${row.letter} ${row.label}` : "SCAMPER";
   }
-  if (method === "convergence") return "🔀 Convergence";
   return "💡 Seed";
 }
 
 /**
- * Deterministic offline/fallback Draft Card generator for all 4 Workbench methods.
- * Grounded in place, year, stakeholder, scarcity, chosen techs, and seed text.
+ * Deterministic offline/fallback generator for Diamond 1 (`discover`, `define`)
+ * and Diamond 2 (`seed`, `sit`, `scamper`).
  *
  * @param {object} opts
  */
 export function localWorkbenchLensDrafts(opts = {}) {
-  const method = ["seed", "convergence", "sit", "scamper"].includes(opts.method)
+  const method = ["discover", "define", "seed", "sit", "scamper"].includes(opts.method)
     ? opts.method
     : "seed";
   const place = String(opts.place || "this town").trim() || "this town";
   const year = Number(opts.year) || 2026;
-  const stakeholder = String(opts.stakeholder || "local operators").split(",")[0].trim() || "local operators";
+  const stakeholder =
+    String(opts.stakeholder || "local operators").split(",")[0].trim() || "local operators";
+  const hmwBrief = String(opts.hmwBrief || "").trim();
   const scarcity = String(opts.scarcity || opts.eases || "").trim();
   const eases = String(opts.eases || scarcity || "").slice(0, 60);
   const seedTitle = String(opts.seedTitle || "").trim();
-  const seedText = String(opts.seedText || "").trim();
   const techIds = Array.isArray(opts.techIds) ? opts.techIds.filter((id) => TECH_BY_ID.has(id)) : [];
   const techA = techMeta(techIds[0] || opts.techId);
-  const techB = techMeta(techIds[1]);
   const useCaseIds = Array.isArray(opts.useCaseIds) ? opts.useCaseIds.map(String) : [];
 
-  const goalText = scarcity ? `ease ${scarcity}` : "relieve the top local bottleneck";
-  const baseAnchor = seedTitle || (techA ? techA.name : "local workflow");
-
-  if (method === "convergence" && techA && techB) {
-    const needBridge =
-      (techA.polarity === "bits" && techB.polarity === "atoms") ||
-      (techA.polarity === "atoms" && techB.polarity === "bits");
-    const handoff = needBridge
-      ? ` ${stakeholder} verifies each physical switchover on a shared local checklist.`
-      : "";
+  if (method === "discover") {
     return sanitizeWorkbenchDrafts(
       [
         {
-          id: `conv-${techA.id}-${techB.id}-loop`,
-          lens: "convergence",
-          lensLabel: `🔀 ${techA.name} × ${techB.name}`,
-          title: clip(`${techA.name} + ${techB.name} loop`, 64),
-          howText: `In ${place} (${year}), ${techA.name.toLowerCase()} guides ${techB.name.toLowerCase()} in one closed local cycle so ${stakeholder} can ${goalText} on site.${handoff}`,
-          techId: techA.id,
-          secondaryTechId: techB.id,
-          world: techA.polarity || "bits",
-          eases,
+          id: "discover-handoff-gap",
+          lensLabel: "🔍 Handoff Gap",
+          title: "Last-mile timing & handoff friction",
+          howText: `Even when supplies exist upstream, ${stakeholder} in ${place} faces delays and spoilage at the final handoff when conditions deteriorate.`,
         },
         {
-          id: `conv-${techA.id}-${techB.id}-shared`,
-          lens: "convergence",
-          lensLabel: `🔀 ${techA.name} × ${techB.name}`,
-          title: clip(`Co-op ${techB.name.toLowerCase()} guided by ${techA.name.toLowerCase()}`, 64),
-          howText: `${stakeholder} runs modular ${techB.name.toLowerCase()} units dispatched by ${techA.name.toLowerCase()} in ${place}, cutting waste and proving results publicly each week.${handoff}`,
-          techId: techA.id,
-          secondaryTechId: techB.id,
-          world: techA.polarity || "bits",
-          eases,
+          id: "discover-trust-loop",
+          lensLabel: "🔍 Verification Gap",
+          title: "Missing proof between partners",
+          howText: `Regional partners hesitate to commit scarce stock to ${place} without live, trustworthy proof that each unit reaches its intended outcome without waste.`,
+        },
+        {
+          id: "discover-upkeep-load",
+          lensLabel: "🔍 Frontline Load",
+          title: "Zero spare crew for complex upkeep",
+          howText: `${stakeholder} already works at full capacity in ${year}, so any fragile workflow requiring specialist maintenance will stall after week one.`,
         },
       ],
-      { method, techIds: [techA.id, techB.id], eases, scarcity, useCaseIds, seedTitle }
+      { method: "discover", eases, scarcity }
     );
   }
 
+  if (method === "define") {
+    const target = scarcity || "urgent community needs";
+    return sanitizeWorkbenchDrafts(
+      [
+        {
+          id: "define-hmw-speed",
+          lensLabel: "◆ Urgent Relief",
+          title: "Fast, all-conditions delivery",
+          howText: `How might we help ${stakeholder} address ${target} in ${place} reliably on demand, without keeping idle stock that goes to waste?`,
+        },
+        {
+          id: "define-hmw-trust",
+          lensLabel: "◆ Shared Confidence",
+          title: "Transparent accountability",
+          howText: `How might we give both ${stakeholder} and upstream partners verifiable proof of every delivery in ${place} so trust and supply grow together?`,
+        },
+        {
+          id: "define-hmw-simple",
+          lensLabel: "◆ Frontline Simplicity",
+          title: "Zero-burden local operation",
+          howText: `How might we embed the solution into ${stakeholder}'s existing daily routine in ${place} (${year}) with minimal new upkeep?`,
+        },
+      ],
+      { method: "define", eases, scarcity }
+    );
+  }
+
+  const goalText = hmwBrief
+    ? `answer "${clip(hmwBrief, 90)}"`
+    : scarcity
+      ? `ease ${scarcity}`
+      : "relieve the top local bottleneck";
+  const baseAnchor = seedTitle || (techA ? techA.name : "local workflow");
+
   if (method === "sit") {
-    const requested = Array.isArray(opts.lenses) && opts.lenses.length
-      ? opts.lenses.filter((id) => SIT_LENSES.some((l) => l.id === id))
-      : ["subtraction"];
+    const requested =
+      Array.isArray(opts.lenses) && opts.lenses.length
+        ? opts.lenses.filter((id) => SIT_LENSES.some((l) => l.id === id))
+        : ["subtraction"];
     const lenses = requested.length ? requested : ["subtraction"];
     const templates = {
       subtraction: {
@@ -1039,15 +1154,15 @@ export function localWorkbenchLensDrafts(opts = {}) {
       },
       division: {
         title: `Split-stage ${baseAnchor}`,
-        howText: `Divide ${baseAnchor} into small neighborhood units in ${place}: daytime capture stays separate from overnight processing so ${stakeholder} can isolate faults and ${goalText}.`,
+        howText: `Divide ${baseAnchor} into small neighborhood units in ${place}: intake stays separate from dispatch so ${stakeholder} can isolate faults and ${goalText}.`,
       },
       multiplication: {
         title: `Dual-threshold ${baseAnchor}`,
-        howText: `Deploy two paired ${techA ? techA.name.toLowerCase() : "local"} stages inside ${baseAnchor} in ${place} — one tuned for baseline load and a second copy that fires automatically during peak spikes to ${goalText}.`,
+        howText: `Deploy two paired ${techA ? techA.name.toLowerCase() : "local"} stages inside ${baseAnchor} in ${place} — one tuned for baseline load and a second copy that fires automatically during urgent spikes to ${goalText}.`,
       },
       addition: {
         title: `Shared-duty ${baseAnchor}`,
-        howText: `Give ${stakeholder}'s existing daily inspection route a second job inside ${baseAnchor}: each shift logs live readings and swaps cartridges in ${place} with no new external crew needed.`,
+        howText: `Give ${stakeholder}'s existing daily inspection route a second job inside ${baseAnchor}: each shift logs live readings and swaps packs in ${place} with no new external crew needed.`,
       },
     };
     return sanitizeWorkbenchDrafts(
@@ -1065,20 +1180,21 @@ export function localWorkbenchLensDrafts(opts = {}) {
   }
 
   if (method === "scamper") {
-    const requested = Array.isArray(opts.lenses) && opts.lenses.length
-      ? opts.lenses
-          .map((l) => String(l).toUpperCase())
-          .filter((id) => SCAMPER_LENSES.some((l) => l.id === id))
-      : ["S"];
+    const requested =
+      Array.isArray(opts.lenses) && opts.lenses.length
+        ? opts.lenses
+            .map((l) => String(l).toUpperCase())
+            .filter((id) => SCAMPER_LENSES.some((l) => l.id === id))
+        : ["S"];
     const lenses = (requested.length ? requested : ["S"]).slice(0, 3);
     const templates = {
       S: {
         title: `Local-swap ${baseAnchor}`,
-        howText: `Substitute the scarce imported input in ${baseAnchor} with locally recovered materials in ${place}, letting ${stakeholder} keep ${techA ? techA.name.toLowerCase() : "the workflow"} running through ${year} to ${goalText}.`,
+        howText: `Substitute the scarce external dependency in ${baseAnchor} with locally stewarded stock in ${place}, letting ${stakeholder} keep ${techA ? techA.name.toLowerCase() : "the workflow"} running through ${year} to ${goalText}.`,
       },
       C: {
         title: `Combined ${baseAnchor} hub`,
-        howText: `Combine ${baseAnchor} with an existing municipal routine in ${place} so one crew and budget line covers both upkeep and ${scarcity || "crisis relief"}.`,
+        howText: `Combine ${baseAnchor} with an existing civic routine in ${place} so one crew and budget line covers both upkeep and ${scarcity || "crisis relief"}.`,
       },
       A: {
         title: `Adapted ${baseAnchor} safeguard`,
@@ -1086,7 +1202,7 @@ export function localWorkbenchLensDrafts(opts = {}) {
       },
       M: {
         title: `Right-sized ${baseAnchor}`,
-        howText: `Modify ${baseAnchor} to run in continuous low-footprint cycles in ${place} instead of high-risk surges, cutting strain while still easing ${scarcity || "the crisis"}.`,
+        howText: `Modify ${baseAnchor} to run in on-demand micro-dispatches in ${place} instead of wasteful bulk batches, cutting spoilage while easing ${scarcity || "the crisis"}.`,
       },
       P: {
         title: `Dual-use ${baseAnchor}`,
@@ -1094,11 +1210,11 @@ export function localWorkbenchLensDrafts(opts = {}) {
       },
       E: {
         title: `Zero-bottleneck ${baseAnchor}`,
-        howText: `Eliminate the storage and haulage bottleneck inside ${baseAnchor} in ${place} by processing directly at the source, cutting waste and easing ${scarcity || "pressure"}.`,
+        howText: `Eliminate the idle middleman storage stage inside ${baseAnchor} in ${place} by dispatching directly from hub to point-of-use, cutting waste and easing ${scarcity || "pressure"}.`,
       },
       R: {
         title: `Community-led ${baseAnchor}`,
-        howText: `Reverse who verifies ${baseAnchor} in ${place}: give ${stakeholder} and residents live read-access and shutoff authority before payouts release, locking in trust and accountability.`,
+        howText: `Reverse who verifies ${baseAnchor} in ${place}: give ${stakeholder} and residents live read-access and sign-off authority before dispatches close, locking in trust.`,
       },
     };
     return sanitizeWorkbenchDrafts(
@@ -1124,9 +1240,9 @@ export function localWorkbenchLensDrafts(opts = {}) {
       {
         id: `seed-${slug(techName)}-direct`,
         lens: "seed",
-        lensLabel: "💡 Seed · Relief",
-        title: clip(`${techName} field loop`, 64),
-        howText: `${stakeholder} deploys ${techName.toLowerCase()} directly in ${place} (${year})${ucSnippet} to ${goalText} with weekly open checks.`,
+        lensLabel: "💡 Seed · Direct",
+        title: clip(`${techName} on-demand loop`, 64),
+        howText: `${stakeholder} deploys ${techName.toLowerCase()} directly in ${place} (${year})${ucSnippet} to ${goalText} with open delivery checks.`,
         techId: techA?.id || null,
         world: techA?.polarity || "plain",
         eases,
@@ -1134,9 +1250,9 @@ export function localWorkbenchLensDrafts(opts = {}) {
       {
         id: `seed-${slug(techName)}-coop`,
         lens: "seed",
-        lensLabel: "💡 Seed · Co-op",
-        title: clip(`Shared ${techName.toLowerCase()} station`, 64),
-        howText: `Neighbors in ${place} share a maintained ${techName.toLowerCase()} unit overseen by ${stakeholder} to cut cost and ${goalText} without external haul-in.`,
+        lensLabel: "💡 Seed · Shared Hub",
+        title: clip(`Shared ${techName.toLowerCase()} relay`, 64),
+        howText: `Local partners in ${place} share a maintained ${techName.toLowerCase()} relay overseen by ${stakeholder} to cut waste and ${goalText}.`,
         techId: techA?.id || null,
         world: techA?.polarity || "plain",
         eases,
@@ -1146,7 +1262,7 @@ export function localWorkbenchLensDrafts(opts = {}) {
         lens: "seed",
         lensLabel: "💡 Seed · Human Bridge",
         title: clip(`${stakeholder} handoff & ledger`, 64),
-        howText: `${stakeholder} pairs ${techName.toLowerCase()} readings with a public neighborhood schedule in ${place} so residents verify every outcome firsthand.`,
+        howText: `${stakeholder} pairs ${techName.toLowerCase()} dispatches with a signed local log in ${place} so partners verify every unit firsthand.`,
         techId: null,
         world: "plain",
         eases,
