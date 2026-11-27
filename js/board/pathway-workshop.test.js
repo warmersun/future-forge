@@ -2058,4 +2058,44 @@ describe("pathway workshop", () => {
     assert.match(h.root.innerHTML, new RegExp(`<article[^>]*data-pathway-id="${pwFirstId}"`));
     assert.match(h.root.innerHTML, new RegExp(`<article[^>]*data-pathway-id="${pwMiddleId}"`));
   });
+
+  it("renders workbench informational descriptors as plain inline subtitles and marks only the inactive diamond with a switch chevron", () => {
+    const h = harness();
+    h.ws.seedFromMission({
+      id: "wb-affordance-quest",
+      place: "Quillsand",
+      stakeholder: "Selin Varo",
+      pressure: { "Empty Jars": 3 },
+      spotlight: { techId: "drones" },
+    });
+
+    h.ws.openWorkbench();
+    const d1Html = h.root.innerHTML;
+    assert.match(d1Html, /class="wb-head-subtitle">Design Thinking · Double Diamond</);
+    assert.match(d1Html, /class="wb-col-sub">Unpack the problem</);
+    assert.match(d1Html, /class="wb-col-sub">Frame "How Might We…"</);
+    assert.doesNotMatch(d1Html, /wb-head-tag|wb-cost-pill/);
+    assert.match(d1Html, /class="wb-dd-status">No brief yet</);
+    assert.doesNotMatch(d1Html, /Frame problem/);
+
+    // On Diamond 1, only Diamond 2 (inactive) carries the clickable chevron & switch tooltip
+    const d1Btn = d1Html.match(/<button[^>]*data-diamond="problem"[\s\S]*?<\/button>/)?.[0] || "";
+    const d2Btn = d1Html.match(/<button[^>]*data-diamond="solution"[\s\S]*?<\/button>/)?.[0] || "";
+    assert.doesNotMatch(d1Btn, /wb-dd-chevron/);
+    assert.match(d2Btn, /wb-dd-chevron/);
+    assert.match(d2Btn, /title="Switch to Diamond 2: Solution Space"/);
+
+    // Switch to Diamond 2 -> subtitles update and chevron flips to Diamond 1
+    h.ws.setWorkbenchDiamond("solution");
+    const d2Html = h.root.innerHTML;
+    assert.match(d2Html, /class="wb-col-sub">Generate &amp; remix ideas</);
+    assert.match(d2Html, /class="wb-col-sub">Assemble pathways</);
+    assert.doesNotMatch(d2Html, /wb-head-tag|wb-cost-pill/);
+
+    const d1BtnAfter = d2Html.match(/<button[^>]*data-diamond="problem"[\s\S]*?<\/button>/)?.[0] || "";
+    const d2BtnAfter = d2Html.match(/<button[^>]*data-diamond="solution"[\s\S]*?<\/button>/)?.[0] || "";
+    assert.match(d1BtnAfter, /wb-dd-chevron/);
+    assert.match(d1BtnAfter, /title="Switch to Diamond 1: Problem Space"/);
+    assert.doesNotMatch(d2BtnAfter, /wb-dd-chevron/);
+  });
 });

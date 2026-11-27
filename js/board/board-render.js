@@ -2276,11 +2276,11 @@ function renderWorkbenchVisualPathway(
 function renderDoubleDiamondNav(wb, ideaCount, pathwayCount) {
   const isProblem = wb.diamond === "problem";
   const hasBrief = Boolean(String(wb.hmwBrief || "").trim());
-  const d1Status = hasBrief ? "✓ Brief defined" : "Frame problem";
+  const d1Status = hasBrief ? "✓ Brief defined" : "No brief yet";
   const d2Status = `${ideaCount} ${ideaCount === 1 ? "idea" : "ideas"} · ${pathwayCount} ${pathwayCount === 1 ? "pathway" : "pathways"}`;
 
   return `<nav class="wb-dd-nav" aria-label="Design Thinking Double Diamond">
-    <button type="button" class="wb-dd-diamond is-d1${isProblem ? " is-active" : ""}${hasBrief ? " is-done" : ""}" data-action="wb-set-diamond" data-diamond="problem" aria-pressed="${isProblem ? "true" : "false"}">
+    <button type="button" class="wb-dd-diamond is-d1${isProblem ? " is-active" : ""}${hasBrief ? " is-done" : ""}" data-action="wb-set-diamond" data-diamond="problem" aria-pressed="${isProblem ? "true" : "false"}"${!isProblem ? ' title="Switch to Diamond 1: Problem Space"' : ""}>
       <svg class="wb-dd-bg-svg" viewBox="0 0 320 64" preserveAspectRatio="none" aria-hidden="true">
         <polygon points="8,32 160,4 312,32 160,60" />
         <line x1="160" y1="6" x2="160" y2="58" stroke-dasharray="3 3" />
@@ -2288,7 +2288,10 @@ function renderDoubleDiamondNav(wb, ideaCount, pathwayCount) {
       <div class="wb-dd-content">
         <div class="wb-dd-top">
           <span class="wb-dd-kicker">DIAMOND 1 · PROBLEM SPACE</span>
-          <span class="wb-dd-status${hasBrief ? " is-ok" : ""}">${escapeHtml(d1Status)}</span>
+          <span class="wb-dd-top-right">
+            <span class="wb-dd-status${hasBrief ? " is-ok" : ""}">${escapeHtml(d1Status)}</span>
+            ${!isProblem ? `<span class="wb-dd-chevron" aria-hidden="true">›</span>` : ""}
+          </span>
         </div>
         <div class="wb-dd-phases">
           <span class="wb-dd-phase"><strong>◇ 1 · Discover</strong> <em>Unpack tensions</em></span>
@@ -2300,7 +2303,7 @@ function renderDoubleDiamondNav(wb, ideaCount, pathwayCount) {
 
     <div class="wb-dd-waist" aria-hidden="true" title="Defined problem brief anchors ideation">◆→◇</div>
 
-    <button type="button" class="wb-dd-diamond is-d2${!isProblem ? " is-active" : ""}" data-action="wb-set-diamond" data-diamond="solution" aria-pressed="${!isProblem ? "true" : "false"}">
+    <button type="button" class="wb-dd-diamond is-d2${!isProblem ? " is-active" : ""}" data-action="wb-set-diamond" data-diamond="solution" aria-pressed="${!isProblem ? "true" : "false"}"${isProblem ? ' title="Switch to Diamond 2: Solution Space"' : ""}>
       <svg class="wb-dd-bg-svg" viewBox="0 0 320 64" preserveAspectRatio="none" aria-hidden="true">
         <polygon points="8,32 160,4 312,32 160,60" />
         <line x1="160" y1="6" x2="160" y2="58" stroke-dasharray="3 3" />
@@ -2308,7 +2311,10 @@ function renderDoubleDiamondNav(wb, ideaCount, pathwayCount) {
       <div class="wb-dd-content">
         <div class="wb-dd-top">
           <span class="wb-dd-kicker">DIAMOND 2 · SOLUTION SPACE</span>
-          <span class="wb-dd-status">${escapeHtml(d2Status)}</span>
+          <span class="wb-dd-top-right">
+            <span class="wb-dd-status">${escapeHtml(d2Status)}</span>
+            ${isProblem ? `<span class="wb-dd-chevron" aria-hidden="true">›</span>` : ""}
+          </span>
         </div>
         <div class="wb-dd-phases">
           <span class="wb-dd-phase"><strong>◇ 3 · Develop</strong> <em>Ideas</em></span>
@@ -2368,7 +2374,8 @@ function renderWorkbenchDiamond1(wb) {
     <div class="wb-col wb-discover">
       <div class="wb-col-head">
         <span class="wb-col-title">◇ 1 · DISCOVER</span>
-        <span class="wb-cost-pill is-free">Unpack the Problem</span>
+        <span class="wb-col-sep" aria-hidden="true">·</span>
+        <span class="wb-col-sub">Unpack the problem</span>
       </div>
       <p class="wb-stage-lead">Explore what is really happening on the ground before jumping to solutions. Pin the tensions that matter most — or add your own field observation.</p>
       <div class="wb-clue-list">${cluesHtml}</div>
@@ -2389,7 +2396,8 @@ function renderWorkbenchDiamond1(wb) {
     <div class="wb-col wb-define">
       <div class="wb-col-head">
         <span class="wb-col-title">◆ 2 · DEFINE</span>
-        <span class="wb-cost-pill is-define">Frame "How Might We…"</span>
+        <span class="wb-col-sep" aria-hidden="true">·</span>
+        <span class="wb-col-sub">Frame "How Might We…"</span>
       </div>
       <p class="wb-stage-lead">Converge your pinned tensions into one sharp <strong>How Might We…</strong> question (naming who, desired outcome, and key constraint — without locking in a gadget yet).</p>
       <div class="wb-bench-head">
@@ -2521,7 +2529,8 @@ function renderWorkbenchDiamond2(
     <div class="wb-col wb-diverge">
       <div class="wb-col-head">
         <span class="wb-col-title">◇ 3 · DEVELOP</span>
-        <span class="wb-cost-pill is-free">Generate &amp; Remix Ideas</span>
+        <span class="wb-col-sep" aria-hidden="true">·</span>
+        <span class="wb-col-sub">Generate &amp; remix ideas</span>
       </div>
       <div class="wb-method-tabs" role="tablist" aria-label="Ideation methods">${tabsHtml}</div>
       ${methodControlsHtml}
@@ -2549,7 +2558,8 @@ function renderWorkbenchDiamond2(
     <div class="wb-col wb-converge">
       <div class="wb-col-head">
         <span class="wb-col-title">◆ 4 · DELIVER</span>
-        <span class="wb-cost-pill is-commit">Assemble Pathways</span>
+        <span class="wb-col-sep" aria-hidden="true">·</span>
+        <span class="wb-col-sub">Assemble pathways</span>
       </div>
       <div class="wb-assemble-canvas${pathways.length ? " has-items" : ""}" data-drop="wb-assemble-canvas">
         <div class="wb-bench-head">
@@ -2597,7 +2607,8 @@ function renderWorkbenchStudio(
     <header class="wb-head">
       <div class="wb-head-left">
         <h2><span class="ontology-lane-num">3</span> Innovation Workbench</h2>
-        <span class="wb-head-tag">Design Thinking · Double Diamond</span>
+        <span class="wb-head-sep" aria-hidden="true">/</span>
+        <span class="wb-head-subtitle">Design Thinking · Double Diamond</span>
       </div>
       <div class="wb-head-right">
         <button type="button" class="ontology-mini-btn is-accent" id="btn-close-workbench" data-action="toggle-workbench" title="Collapse back to 4-lane circuit view">⤡ Collapse</button>
