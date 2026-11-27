@@ -1351,10 +1351,17 @@ body.ff-accounts .topbar-game {
   opacity: 0.85;
 }
 
-.mp-workshop-bar.is-contrib-locked #btn-mp-pass-device,
+.mp-workshop-bar.is-contrib-locked #btn-mp-workshop-end-turn,
 .mp-workshop-bar.is-contrib-locked .mp-seat-tab:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+#btn-mp-workshop-end-turn.is-moves-empty {
+  border-color: rgba(167, 139, 250, 0.72);
+  background: rgba(167, 139, 250, 0.2);
+  color: #f5f3ff;
+  animation: movesEmptyPulse 2.2s ease-in-out infinite;
 }
 
 /* Challenge: defense locked while AI judges */
@@ -4966,6 +4973,22 @@ body.mp-hotseat .hud-product {
 .hud-will {
   color: #34d399;
   border: 1px solid rgba(52, 211, 153, 0.4);
+}
+
+.hud-ap.is-empty,
+.hud-budget.is-empty,
+.hud-will.is-empty {
+  opacity: 0.78;
+}
+
+@keyframes movesEmptyPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.22);
+  }
 }
 
 /* Pulse resource when an action fails for that currency */
@@ -16204,6 +16227,13 @@ body.ontology-board .ontology-time-btn.is-jump {
 body.ontology-board .ontology-time-btn.is-jump:hover {
   border-color: var(--warn);
   background: rgba(251, 191, 36, 0.14);
+}
+
+body.ontology-board .ontology-time-btn.is-moves-empty {
+  border-color: rgba(167, 139, 250, 0.72);
+  background: rgba(167, 139, 250, 0.2);
+  color: #f5f3ff;
+  animation: movesEmptyPulse 2.2s ease-in-out infinite;
 }
 
 /* Research & Policy dropdown */

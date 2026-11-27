@@ -8,8 +8,8 @@ description: >
   the warmersun repo, only when asked. Portable multi-harness skill — not tied to a
   single agent product. Player-facing prose is a short instance of the global
   problem and what that problem is. The ask may be an invention, or recognizing
-  which emTech, capability, and use case fit. Ships with a validator, a lint
-  for play data, and a difficulty lab (too easy / too hard / challenging).
+  which emTech, capability, and use case fit. Ships with a validator and craft
+  lint (including capacity and clock sanity checks).
 ---
 
 # Future Forge Spotlight Quest author
@@ -25,10 +25,9 @@ You write a **portable Quest tile** so learners can face a **real recent capabil
 ```bash
 # write the tile (references/output-contract.md)
 npm run validate:quest -- <file> --strict                 # OK: + lint: clean
-npm run economy:quest -- <file>                           # quest verdict: challenging
 ```
 
-Write the tile from **`references/output-contract.md`**. New tiles use a spotlight-first shelf, 7-heading `grounding`, brief headings **The place** and **The bigger problem** (**Your job** is optional), and pressure 3↑1 / 2↑1 / 2↑0. Omit `resources` unless the first island cannot buy the spotlight tech.
+Write the tile from **`references/output-contract.md`**. New tiles use a spotlight-first shelf, 7-heading `grounding`, brief headings **The place** and **The bigger problem** (**Your job** is optional), and pressure 3↑1 / 2↑1 / 2↑0. Omit `resources` unless the quest deliberately changes town defaults (3 Moves, 5 reversible Budget, 3 reversible Goodwill).
 
 | Doc | Purpose |
 |-----|---------|
@@ -36,7 +35,6 @@ Write the tile from **`references/output-contract.md`**. New tiles use a spotlig
 | **`references/brief-template.md`** | `briefMd` headings: The place, The bigger problem; optional Your job |
 | **`references/schema.md`** | Field reference, what each field reaches, lint codes |
 | **`references/grounding-template.md`** | Capability truth chain (emTech → product category → … → applications) |
-| **`references/economy.md`** | Difficulty lab: what challenging means, tech cost, two-act meters |
 | **`references/output-contract.md`** | Skeleton, optional extensions, recipes A–G |
 | **`references/learning-and-sponsor.md`** | Tutor lessons, multi-lesson sets, sponsors |
 | **`references/companion.md`** | Optional source stage: one podcast or post, one move, one question, optional assumed premise |
@@ -73,10 +71,10 @@ Write for these surfaces, not for the JSON. Numbers are character clips in the e
 6. **`mission.pressure`** = structured roles `local` / `global` / `support` (omit a role to hide its meter), each `{ label, description, pressure, pressureRise, winMax }`. New tiles: local **3↑1**, global **2↑1**, support **2↑0**, `winMax` 1. Local hotter than global; support rise 0 unless you mean trust to rot with time. `description` is place-specific and shown to players.
 7. **`grounding`** (Markdown) is the capability truth every AI judgement reads: chain from emTech → product category → capabilities → trends/predictions → milestone → use cases → applications → **honest limits**. Keep it inside **3000 characters** or put **Honest limits** early; anything past the window cannot turn a light red. Tutor-only material (debate framings, discourse maps, SEQUENCE) goes in `aiTutorContext`. `research` is citation metadata for humans; nothing in the game reads it.
 8. **The ask is optional, and it is not a policy.** It may be an outcome to invent, or a recognition: which emTech, which capability, which use case fits. No "pass a law / ban / UBI" as the win. A rule may be the **root cause** and may be authored as **`rules`** weather.
-9. **`resources`** only when the **first** island cannot buy the spotlight tech at Budget 5 (frontier techs cost 2–3$). Pathway ease pays +1 Budget per eased role; that funds act two. `startingBudget: 8` is the classic mistake.
+9. **`resources`** (optional, omit by default): town defaults are **3 Moves / year (`apMax: 3`)**, **5 reversible Budget (`startingBudget: 5`, max 10)**, and **3 reversible Goodwill (`startingWill: 3`, max 5)**. Removing a pathway frees 100% of its Budget & Goodwill; easing a crisis expands Budget (+1); Lobby (0 Budget) and clearing roadblocks expand Goodwill (+1). Override `resources` only if a scenario explicitly wants tighter or looser starting capacities.
 10. Sensitive themes: `references/sensitivity.md`. Fictive places only; no real victims.
 11. **Omit** unused optional keys. No `""`, no `[]`, no `false` for optionals.
-12. Ship only at `npm run validate:quest -- <file> --strict` → `OK:` + `lint: clean` (or each remaining `WARN` justified in the hand-off) **and** `npm run economy:quest -- <file>` → quest verdict **challenging** on both solo paths, same year. The hosted catalog also ships only after `npm run pack:quest` succeeds (step 9).
+12. Ship only at `npm run validate:quest -- <file> --strict` → `OK:` + `lint: clean` (or each remaining `WARN` justified in the hand-off). The hosted catalog also ships only after `npm run pack:quest` succeeds (step 9).
 
 ## Procedure
 
@@ -117,14 +115,13 @@ Read `references/scene-prose.md`, then write `mission.scene` and `briefMd` (`ref
 
 `sponsorName` + text `sponsorBanner`. Strong `grounding` (the product may evidence the Milestone). Player text stays an open outcome; naming the product is never a valid solution.
 
-### 8. Validate, lint, evaluate
+### 8. Validate and lint
 
 ```bash
 npm run validate:quest -- <file> --strict
-npm run economy:quest -- <file>
 ```
 
-Fix every `WARN <code>` (codes and meanings: `references/schema.md` → Craft lint). Then read the lab: `too_hard` usually means a frontier spotlight tile costs more than Budget 5 / Will 3 buys, or local is not hotter than global; `too_easy` means one cheap tile clears everything with years to spare. Do not raise `startingBudget` to fund act two.
+Fix every `WARN <code>` (codes and meanings: `references/schema.md` → Craft lint), including spotlight affordability (`resources_spotlight_unaffordable`), capacity bounds (`resources_over_cap`), and clock sanity (`clock_immediate_collapse`).
 
 ### 9. Package the quest
 
@@ -147,7 +144,7 @@ assets/…                                 stills this quest ships (cover, brief
 - Lesson HTML uses page-relative links (`href="01-job.html"`, `src="illustrations/cover.png"`).
 - Quest text that cites a shipped page or image uses a package path (`lessons/<folder>/01-job.html`, `assets/cover.png`). A reading that is not in the zip stays `https://`. Write the package path yourself. `pack` only rewrites `https://warmersun.com/lessons/…` and `https://warmersun.com/future-forge/quests/assets/…`. Any other host, including a placeholder, is left as written and is not checked as a file in the zip.
 
-From the game repo, after each tile is strict-clean and **challenging**:
+From the game repo, after each tile is strict-clean:
 
 ```bash
 npm run pack:quest -- <srcdir> -o <outdir>/<id>.ffquest

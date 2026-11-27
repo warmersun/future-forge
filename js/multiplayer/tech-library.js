@@ -22,7 +22,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { TECHS, DOMAINS, techById } from "../data.js";
-import { techCost } from "../sim/economy.js";
+import { techCost, isHeavyTechCost } from "../sim/economy.js";
 
 /**
  * @param {HTMLElement|null} row
@@ -74,7 +74,6 @@ export function paintTechLibrary(el, opts) {
     budget = null,
     will = null,
   } = opts;
-  const market = opts.market || opts.marketNews || null;
   const selected = new Set(selectedIds);
   const sug = new Set(suggested);
   let list = [...TECHS];
@@ -100,19 +99,19 @@ export function paintTechLibrary(el, opts) {
       const sel = selected.has(t.id);
       const isSug = sug.has(t.id);
       const color = DOMAINS[t.domain]?.color || "#94a3b8";
-      const cost = techCost(t, { market });
+      const cost = techCost(t);
       const unaffordable = !sel && !canAfford(t, cost);
       let costHtml = "";
       if (sel) {
-        costHtml = `<span class="tech-cost-row tech-cost-in-stack"><span class="tech-cost-chip tech-cost-owned">In stack</span></span>`;
-      } else {
-        const bits = [
-          `<span class="tech-cost-chip tech-cost-budget">${cost.budget}$</span>`,
-        ];
-        if (cost.will > 0) {
-          bits.push(`<span class="tech-cost-chip tech-cost-will">Goodwill ${cost.will}</span>`);
+        costHtml = `<span class="tech-cost-row tech-cost-in-stack"><span class="tech-cost-chip tech-cost-owned">On board</span></span>`;
+      } else if (isHeavyTechCost(cost)) {
+        const bits = [];
+        if (cost.budget > 1) {
+          bits.push(`<span class="tech-cost-chip tech-cost-budget">${cost.budget} Budget</span>`);
         }
-        bits.push(`<span class="tech-cost-chip tech-cost-ap">1 AP</span>`);
+        if (cost.will > 0) {
+          bits.push(`<span class="tech-cost-chip tech-cost-will">${cost.will} Goodwill</span>`);
+        }
         costHtml = `<span class="tech-cost-row">${bits.join("")}</span>`;
       }
       // Only stack members get green + ✓

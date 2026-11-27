@@ -777,6 +777,16 @@ export function renderOntologyBoard(view) {
         </section>
       </div>`;
 
+  const isMultiplayer = Boolean(view?.isMultiplayer);
+  const movesEmptySolo = !isMultiplayer && view?.movesLeft === 0;
+  const focusedPathway = pathways.find((p) => p.id === view?.focusedPathwayId) || pathways[0] || null;
+  const focusedHasRd = Boolean(focusedPathway?.rdBoost);
+  const plusOneTitle = isMultiplayer
+    ? "Advance your invent +1 year"
+    : movesEmptySolo
+      ? `Moves used — advance to ${year + 1} to refresh Moves`
+      : "Advance +1 year and refresh Moves";
+
   return `<div class="ontology-topbar">
       <div class="ontology-circuit" role="tablist" aria-label="Lanes">
         <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="tech">1 · Tech <span>${tracks.length}</span></button>
@@ -786,7 +796,7 @@ export function renderOntologyBoard(view) {
       </div>
       <div class="ontology-calendar" role="group" aria-label="Quest timeline">
         <button type="button" class="ontology-year-badge" data-action="open-year-dialog" title="Inspect world foresight for ${year}">📅 <span class="ontology-year-prefix">QUEST YEAR: </span>${year}</button>
-        <button type="button" class="ontology-time-btn" data-action="year-plus" data-years="1" title="End turn: advance +1 year and refill AP">+1 yr</button>
+        <button type="button" class="ontology-time-btn${movesEmptySolo ? " is-moves-empty" : ""}" data-action="year-plus" data-years="1" title="${escapeHtml(plusOneTitle)}">${movesEmptySolo ? "+1 yr →" : "+1 yr"}</button>
         <button type="button" class="ontology-time-btn is-jump" data-action="year-plus" data-years="2" title="Look Ahead: inspect capability curves and jump +2 years">+2 yrs</button>
       </div>
       <div class="ontology-toolbar-right">
@@ -798,7 +808,7 @@ export function renderOntologyBoard(view) {
         <details class="ontology-tools">
           <summary class="ontology-mini-btn">Research &amp; Policy</summary>
           <div class="ontology-tools-menu">
-            <button type="button" data-action="tool-rd">🧪 Roll R&amp;D boost on pathway</button>
+            <button type="button" data-action="tool-rd"${focusedHasRd ? ' disabled title="R&D boost already applied on this pathway"' : ' title="Roll an R&D boost once per pathway"'}>${focusedHasRd ? "✓ R&amp;D boost applied" : "🧪 Roll R&amp;D boost on pathway"}</button>
             <button type="button" data-action="tool-argument">⚖️ File fact-checked argument</button>
             <button type="button" data-action="tool-lobby">🏛️ Lobby local town rule</button>
             <button type="button" data-action="tool-collection">🃏 Collector cards</button>
@@ -1610,7 +1620,7 @@ function renderPicker(catalog, activeDomain) {
       <header class="ontology-modal-head">
         <div>
           <h3>Choose an emerging technology</h3>
-          <p class="ontology-meta">Adding a tech to Lane 1 is free—Budget is spent only when you place an invention in Lane 3.</p>
+          <p class="ontology-meta">Explore any tech freely in Lane 1. Frontier techs use more town Budget or Goodwill when placed in a Pathway.</p>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" data-action="toggle-picker">Close</button>
       </header>
@@ -1654,7 +1664,7 @@ function renderRoadblockModal(ch, isTutorial) {
       </div>
       ${ch.question && ch.question !== ch.speech ? `<p class="ontology-roadblock-question"><strong>Hard question:</strong> ${escapeHtml(ch.question)}</p>` : ""}
       ${ch.answerFeedback ? `<div class="ontology-roadblock-feedback is-${escapeHtml(ch.lamp || "red")}">${escapeHtml(ch.answerFeedback)}</div>` : ""}
-      <p class="ontology-meta">Clear this roadblock <strong>either</strong> by closing this card and upgrading your Pathway in Lane 3 so it fixes the flaw, <strong>or</strong> by answering directly below (1 AP):</p>
+      <p class="ontology-meta">Clear this roadblock <strong>either</strong> by closing this card and upgrading your Pathway in Lane 3 so it fixes the flaw, <strong>or</strong> by answering directly below:</p>
       ${ch.answerPending ? `<div class="ontology-busy-banner is-challenger" role="status"><span class="ontology-spinner" aria-hidden="true"></span> ${escapeHtml(meta.label)} is judging your defense…</div>` : ""}
       ${ch.drafting ? `<div class="ontology-busy-banner" role="status"><span class="ontology-spinner" aria-hidden="true"></span> Co-inventor is drafting a defense reply…</div>` : ""}
       <label class="ontology-how-label">
@@ -1663,7 +1673,7 @@ function renderRoadblockModal(ch, isTutorial) {
       </label>
       <div class="ontology-inline-actions">
         <button type="button" class="btn btn-primary btn-sm${ch.answerPending ? " is-busy" : ""}" data-action="roadblock-submit" data-challenger-id="${escapeHtml(ch.id)}" ${ch.answerPending || ch.drafting ? "disabled" : ""}>${ch.answerPending ? `<span class="ontology-spinner" aria-hidden="true"></span> Judging defense…` : "Submit defense"}</button>
-        <button type="button" class="btn btn-secondary btn-sm${ch.drafting ? " is-busy" : ""}" data-action="roadblock-draft-ai" data-challenger-id="${escapeHtml(ch.id)}" ${ch.answerPending || ch.drafting ? "disabled" : ""}>${ch.drafting ? `<span class="ontology-spinner" aria-hidden="true"></span> Drafting…` : "✨ Draft reply (1 AP)"}</button>
+        <button type="button" class="btn btn-secondary btn-sm${ch.drafting ? " is-busy" : ""}" data-action="roadblock-draft-ai" data-challenger-id="${escapeHtml(ch.id)}" ${ch.answerPending || ch.drafting ? "disabled" : ""}>${ch.drafting ? `<span class="ontology-spinner" aria-hidden="true"></span> Drafting…` : "✨ Draft reply"}</button>
         <button type="button" class="btn btn-secondary btn-sm" data-action="wb-remix-roadblock" data-challenger-id="${escapeHtml(ch.id)}" ${ch.answerPending ? "disabled" : ""} title="Open SCAMPER in the Innovation Workbench preloaded with this roadblock">🔧 Remix in Workbench</button>
         ${isTutorial ? `<button type="button" class="btn btn-secondary btn-sm" data-action="roadblock-suggest" data-challenger-id="${escapeHtml(ch.id)}" ${ch.answerPending ? "disabled" : ""}>Fill tutorial reply →</button>` : ""}
         <button type="button" class="btn btn-ghost btn-sm" data-action="close-roadblock">Close &amp; edit board</button>
@@ -1680,7 +1690,7 @@ function renderArgumentModal(pathways, focusedPathwayId, busy) {
         <h3>⚖️ File a fact-checked argument</h3>
         <button type="button" class="btn btn-ghost btn-sm" data-action="close-argument">Close</button>
       </header>
-      <p class="ontology-meta">Disagree with a timing or capability assessment? State a real-world demonstrated fact (costs 1 AP). An independent fact-check verifies the claim and attaches it to your Pathway.</p>
+      <p class="ontology-meta">Disagree with a timing or capability assessment? State a real-world demonstrated fact. An independent fact-check verifies the claim and attaches it to your Pathway.</p>
       <form data-action="submit-argument">
         <label class="ontology-how-label">
           <span>Attach to Pathway</span>
@@ -1693,7 +1703,7 @@ function renderArgumentModal(pathways, focusedPathwayId, busy) {
           <textarea name="claim" class="ontology-textarea" rows="3" maxlength="400" placeholder="e.g. Quantized 14B open-weight models already run at >15 tokens/sec on 16GB consumer laptops offline."></textarea>
         </label>
         <div class="ontology-inline-actions">
-          <button type="submit" class="btn btn-primary btn-sm" ${busy ? "disabled" : ""}>${busy ? "Fact-checking…" : "Fact-check & attach (1 AP)"}</button>
+          <button type="submit" class="btn btn-primary btn-sm" ${busy ? "disabled" : ""}>${busy ? "Fact-checking…" : "Fact-check & attach"}</button>
           <button type="button" class="btn btn-ghost btn-sm" data-action="close-argument">Cancel</button>
         </div>
       </form>
@@ -1922,7 +1932,6 @@ function renderWorkbenchIdeaCard(idea, wb, pathways = [], collapsed = false) {
       ? `<div class="wb-idea-thumb-shimmer" title="Visualizing idea…"><span>🎨</span></div>`
       : `<div class="wb-idea-thumb-fallback is-${escapeHtml(normalizeWorld(idea.world))}" aria-hidden="true">${worldIconSvg(idea.world)}</div>`;
 
-  const costLabel = idea.mintCostLabel || "0$";
   const metaBadges = [
     idea.hasSynergy ? `<span class="ontology-badge is-conv">⚡ ×1.25</span>` : "",
     idea.earlyForecast ? `<span class="ontology-early-pill">~${idea.earlyForecast}</span>` : "",
@@ -1934,13 +1943,13 @@ function renderWorkbenchIdeaCard(idea, wb, pathways = [], collapsed = false) {
   let actionButtons = "";
   if (pwList.length === 0) {
     actionButtons = `<button type="button" class="wb-mint-idea-btn" data-action="wb-start-pathway" data-idea-id="${escapeHtml(idea.id)}" title="Start a Pathway in Deliver with this idea">
-      → Start Pathway (${escapeHtml(costLabel)})
+      → Start Pathway
     </button>`;
   } else if (pwList.length === 1) {
     const pw = pwList[0];
     actionButtons = `<div class="wb-idea-actions">
       <button type="button" class="wb-mint-idea-btn" data-action="wb-add-to-pathway" data-idea-id="${escapeHtml(idea.id)}" data-pathway-id="${escapeHtml(pw.id)}" title="Add this idea into Pathway #1: ${escapeHtml(pw.title || "Pathway #1")}">
-        + Add to Pathway #1 (${escapeHtml(costLabel)})
+        + Add to Pathway #1
       </button>
       <button type="button" class="wb-new-pw-mini-btn" data-action="wb-start-pathway" data-idea-id="${escapeHtml(idea.id)}" title="Start a separate new Pathway with this idea">
         + New
@@ -1954,7 +1963,6 @@ function renderWorkbenchIdeaCard(idea, wb, pathways = [], collapsed = false) {
       )
       .join("");
     actionButtons = `<div class="wb-idea-actions">
-      <span class="wb-add-cost-tag" title="Incremental Budget cost to place this idea">(${escapeHtml(costLabel)})</span>
       ${pwBtns}
       <button type="button" class="wb-new-pw-mini-btn" data-action="wb-start-pathway" data-idea-id="${escapeHtml(idea.id)}" title="Start a separate new Pathway with this idea">
         + New
@@ -1969,7 +1977,7 @@ function renderWorkbenchIdeaCard(idea, wb, pathways = [], collapsed = false) {
       .join("");
     actionButtons = `<div class="wb-idea-actions">
       <details class="ontology-pop-menu wb-add-pw-menu" data-menu="add-pw">
-        <summary class="wb-mint-idea-btn">+ Add to Pathway (${escapeHtml(costLabel)}) ▾</summary>
+        <summary class="wb-mint-idea-btn">+ Add to Pathway ▾</summary>
         <div class="ontology-pop-list">${items}</div>
       </details>
       <button type="button" class="wb-new-pw-mini-btn" data-action="wb-start-pathway" data-idea-id="${escapeHtml(idea.id)}" title="Start a separate new Pathway with this idea">
@@ -2097,7 +2105,7 @@ function renderWorkbenchVisualPathway(
     pw.bridge && enforceWorlds
       ? `<div class="wb-visual-bridge-warn">
           <span class="ontology-badge is-bridge">⚠️ Missing Bridge</span>
-          <button type="button" class="ontology-mini-btn wb-add-bridge-btn" data-action="wb-add-human-bridge" data-pathway-id="${escapeHtml(pw.id)}">+ Human Bridge (0$)</button>
+          <button type="button" class="ontology-mini-btn wb-add-bridge-btn" data-action="wb-add-human-bridge" data-pathway-id="${escapeHtml(pw.id)}">+ Human Bridge</button>
         </div>`
       : "";
 
@@ -2260,9 +2268,9 @@ function renderDoubleDiamondNav(wb, ideaCount, pathwayCount) {
           <span class="wb-dd-status">${escapeHtml(d2Status)}</span>
         </div>
         <div class="wb-dd-phases">
-          <span class="wb-dd-phase"><strong>◇ 3 · Develop</strong> <em>Ideas (0$)</em></span>
+          <span class="wb-dd-phase"><strong>◇ 3 · Develop</strong> <em>Ideas</em></span>
           <span class="wb-dd-arrow" aria-hidden="true">→</span>
-          <span class="wb-dd-phase"><strong>◆ 4 · Deliver</strong> <em>Pathways ($)</em></span>
+          <span class="wb-dd-phase"><strong>◆ 4 · Deliver</strong> <em>Pathways</em></span>
         </div>
       </div>
     </button>
@@ -2317,7 +2325,7 @@ function renderWorkbenchDiamond1(wb) {
     <div class="wb-col wb-discover">
       <div class="wb-col-head">
         <span class="wb-col-title">◇ 1 · DISCOVER</span>
-        <span class="wb-cost-pill is-free">0$ · Unpack the Problem</span>
+        <span class="wb-cost-pill is-free">Unpack the Problem</span>
       </div>
       <p class="wb-stage-lead">Explore what is really happening on the ground before jumping to solutions. Pin the tensions that matter most — or add your own field observation.</p>
       <div class="wb-clue-list">${cluesHtml}</div>
@@ -2326,7 +2334,7 @@ function renderWorkbenchDiamond1(wb) {
         <label class="wb-field-label" for="wb-discovery-input">What else is scarce, broken, or overlooked in this place?</label>
         <input id="wb-discovery-input" type="text" class="wb-scarcity-input" data-role="wb-discovery-input" maxlength="240" value="${escapeHtml(wb.discoveryInput || "")}" placeholder="e.g. Cargo must cross cut-off terrain where there are no all-season roads…" />
         <div class="wb-prompt-actions">
-          <button type="button" class="btn btn-primary btn-sm" data-action="wb-add-insight">+ Add Insight (0$)</button>
+          <button type="button" class="btn btn-primary btn-sm" data-action="wb-add-insight">+ Add Insight</button>
           <span class="wb-actions-sep"></span>
           <button type="button" class="btn btn-secondary btn-sm${discoverBusy ? " is-busy" : ""}" data-action="wb-deal-discover-ai" ${wb.busy ? "disabled" : ""}>
             ${discoverBusy ? `<span class="ontology-spinner" aria-hidden="true"></span> Unpacking…` : "✨ Unpack Hidden Tensions (AI)"}
@@ -2338,7 +2346,7 @@ function renderWorkbenchDiamond1(wb) {
     <div class="wb-col wb-define">
       <div class="wb-col-head">
         <span class="wb-col-title">◆ 2 · DEFINE</span>
-        <span class="wb-cost-pill is-define">0$ · Frame "How Might We…"</span>
+        <span class="wb-cost-pill is-define">Frame "How Might We…"</span>
       </div>
       <p class="wb-stage-lead">Converge your pinned tensions into one sharp <strong>How Might We…</strong> question (naming who, desired outcome, and key constraint — without locking in a gadget yet).</p>
       <div class="wb-bench-head">
@@ -2415,7 +2423,7 @@ function renderWorkbenchDiamond2(
         )
         .join("")
     : `<div class="wb-empty-bench">
-        <p><strong>0$ Ideas</strong> — Explore freely here. Nothing costs Budget until an Idea enters a Pathway.</p>
+        <p><strong>Ideas</strong> — Explore freely here, then assemble your strongest ideas into a Pathway.</p>
         <p>Write your own idea above, click <strong>✨ Deal AI</strong>, or click <strong>↩ Break apart</strong> on any Pathway to return its ideas here for reuse.</p>
       </div>`;
 
@@ -2470,7 +2478,7 @@ function renderWorkbenchDiamond2(
     <div class="wb-col wb-diverge">
       <div class="wb-col-head">
         <span class="wb-col-title">◇ 3 · DEVELOP</span>
-        <span class="wb-cost-pill is-free">0$ · Generate &amp; Remix Ideas</span>
+        <span class="wb-cost-pill is-free">Generate &amp; Remix Ideas</span>
       </div>
       <div class="wb-method-tabs" role="tablist" aria-label="Ideation methods">${tabsHtml}</div>
       ${methodControlsHtml}
@@ -2478,10 +2486,10 @@ function renderWorkbenchDiamond2(
         <p class="wb-prompt-q">${escapeHtml(wb.prompt?.question || "")}</p>
         ${wb.prompt?.hint ? `<p class="wb-prompt-hint">${escapeHtml(wb.prompt.hint)}</p>` : ""}
         <input type="text" class="wb-draft-title-input" data-role="wb-draft-title" maxlength="72" value="${escapeHtml(wb.draftTitle || "")}" placeholder="Short idea title (optional)" />
-        <textarea class="ontology-textarea wb-draft-textarea" data-role="wb-draft-text" rows="2" maxlength="1200" placeholder="Write your own idea in 1–2 concrete sentences (0$, 0 AP)…">${escapeHtml(wb.draftText || "")}</textarea>
+        <textarea class="ontology-textarea wb-draft-textarea" data-role="wb-draft-text" rows="2" maxlength="1200" placeholder="Write your own idea in 1–2 concrete sentences…">${escapeHtml(wb.draftText || "")}</textarea>
         <div class="wb-prompt-actions">
-          <button type="button" class="btn btn-primary btn-sm" data-action="wb-add-player-draft">+ Save Idea (0$)</button>
-          <button type="button" class="btn btn-ghost btn-sm" data-action="wb-add-human-draft" title="Create a 0$ Human Bridge idea card">+ Human Idea (0$)</button>
+          <button type="button" class="btn btn-primary btn-sm" data-action="wb-add-player-draft">+ Save Idea</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-action="wb-add-human-draft" title="Create a Human Bridge idea card">+ Human Idea</button>
           ${view?.voiceSupported ? `<button type="button" class="btn btn-ghost btn-sm${view?.voiceActive ? " is-voice-live" : ""}" data-action="toggle-voice" title="Talk through this lens with the AI co-inventor">🎙️</button>` : ""}
           <span class="wb-actions-sep"></span>
           ${aiDealBtns}
@@ -2498,7 +2506,7 @@ function renderWorkbenchDiamond2(
     <div class="wb-col wb-converge">
       <div class="wb-col-head">
         <span class="wb-col-title">◆ 4 · DELIVER</span>
-        <span class="wb-cost-pill is-commit">$ · Assemble Pathways</span>
+        <span class="wb-cost-pill is-commit">Assemble Pathways</span>
       </div>
       <div class="wb-assemble-canvas${pathways.length ? " has-items" : ""}" data-drop="wb-assemble-canvas">
         <div class="wb-bench-head">

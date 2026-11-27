@@ -3,11 +3,10 @@
 1. Write UTF-8 JSON (pretty-printed OK).
 2. Instance first: `summary` (short) and `title` (the situation or the place). `spotlight.encourageCopy` is the outcome. Do not name the spotlight tech. Prose: `references/scene-prose.md`.
 3. Brief headings: `references/brief-template.md` — **The place** → **The bigger problem** → **Your job**. Short. One place paragraph is enough. Optional `briefBeats`: `brief-beats.md`.
-4. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`. Difficulty: `references/economy.md`.
+4. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`.
 5. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
-6. Run `npm run validate:quest -- <file> --strict` until `OK:` with **no `WARN` lines** (craft lint; codes in `schema.md`). If a warning must stay, name it and why in the hand-off.
-7. Run `npm run economy:quest -- <file>` until the quest verdict is **challenging** — `too_easy` on either solo path now fails the quest verdict too (solo-AI year should match solo-no-AI).
-8. Hand off local play as the JSON path (`quests/` or Import Quest…). The hosted catalog hand-off is the `.ffquest` from `SKILL.md`. Publish it only when asked, with `gated-deploy-package.sh` in the warmersun repo. Name the UI chips, and multi-lesson order if any.
+6. Run `npm run validate:quest -- <file> --strict` until `OK:` with **no `WARN` lines** (craft lint, spotlight affordability, capacity bounds, and clock sanity; codes in `schema.md`). If a warning must stay, name it and why in the hand-off.
+7. Hand off local play as the JSON path (`quests/` or Import Quest…). The hosted catalog hand-off is the `.ffquest` from `SKILL.md`. Publish it only when asked, with `gated-deploy-package.sh` in the warmersun repo. Name the UI chips, and multi-lesson order if any.
 
 ---
 
@@ -92,7 +91,7 @@ Recommended: always include **`grounding`** (fast-eval reads its first 3000 char
 
 `title` / `summary` / `encourageCopy`: the instance, and an optional ask (see `SKILL.md` §4). Summary is short and shown whole on the banner. The ask may name the emTech, capability, and use case that fit.
 
-`suggested`: spotlight first, then 0–4 supporting emTechs (convergence partners; one aimed at the global meter for act two). Max 5; the economy lab plans with these ids.
+`suggested`: spotlight first, then 0–4 supporting emTechs (convergence partners; one aimed at the global meter for act two). Max 5.
 
 `suggestedWhy`: one entry per suggested id. ≤120 chars, everyday words, **contains the crisis meter label** it eases (the red-hex list ranks on that substring). The tray shows it under each card as **why here**; the family name is fine there, product names are not. Omit an entry rather than pad — the engine falls back to the tech's capability line + hottest meter (lint `suggestedWhy_missing:<id>`).
 
@@ -104,7 +103,7 @@ All of these may appear on **one** tile:
 
 | Feature | Fields | When to use |
 |---------|--------|-------------|
-| **Easier/harder start** | `resources`: `apMax`, `startingBudget`, `startingWill` (integers ≥ 0) | Only if the **first** island cannot pay the tech. A scored pathway that eases a crisis pays +1 Budget per newly eased role — that funds act two. See `economy.md`. Lint: `resources_budget_high` at ≥ 7. |
+| **Adjusted capacities** | `resources`: `apMax` (Moves ≥ 1), `startingBudget` (0–10), `startingWill` (Goodwill 0–5) | Omit by default (3 Moves / 5 Budget / 3 Goodwill). Budget & Goodwill are 100% reversible when pathways are removed; easing a crisis adds +1 Budget, Lobby (0 Budget) & clearing roadblocks add +1 Goodwill. Lint: `resources_over_cap`, `resources_spotlight_unaffordable:<id>`. |
 | **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — chain: emTech → product category → capabilities → trends/predictions → milestone → use cases → applications (+ honest limits). See `grounding-template.md`. **This is where tech hints live.** First 3000 chars reach fast-eval. |
 | **Structured lanes** | `ontology` (array) | Optional. Same chain as objects the board can show with zero model calls. Omit it and grounding still parses. Do not emit `[]`. |
 | **Plottable Wait trends** | `trends` (capability-trend objects), `spotlightTrends` (ids) | Show log-scale charts on Wait; may override/add to warmersun catalog. See schema + skill `future-forge-trends` |
@@ -114,13 +113,13 @@ All of these may appear on **one** tile:
 | **Briefing cards** | `briefBeats` (3–8) | Tighter captions + shipped stills (`imageUrl`) or live `imagePrompt`; omit if `briefMd` already steps well |
 | **Local rules** | `rules` (1–3) | Named regulation / law / policy / ban already on the books. Weather, not the invent. Lobby can write more in play. Side effect: switches off default theme backlash on `automation` / `rogue-si`. |
 
-Details and templates: `learning-and-sponsor.md`, `brief-beats.md`, `economy.md`.
+Details and templates: `learning-and-sponsor.md`, `brief-beats.md`.
 
 ---
 
-## Recipe A — resources (first-island affordability only)
+## Recipe A — resources (optional capacity override)
 
-Omit `resources` unless the **first** island cannot buy the spotlight tech at default Budget 5 (early-curve / 2030+ tiles cost 2–3$). A scored pathway that eases a crisis pays +1 Budget per newly eased role — that is how act two is funded. Do not emit `startingBudget: 8` as a Spotlight default.
+Omit `resources` by default (town starts at 3 Moves / 5 Budget / 3 Goodwill, and removing a pathway returns 100% of its Budget & Goodwill). Override only if a quest intentionally wants tighter or looser starting capacities.
 
 ```json
 "resources": {
@@ -129,7 +128,7 @@ Omit `resources` unless the **first** island cannot buy the spotlight tech at de
 }
 ```
 
-Omit keys you do not want to override. UI chip when non-default: **Start · Budget 6 · Will 4**. See `economy.md`.
+Omit keys you do not want to override. UI chip when non-default: **Start · Budget 6 · Goodwill 4**.
 
 ---
 

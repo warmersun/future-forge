@@ -987,10 +987,17 @@ export function seedCrises(board, crises) {
   return bump(next);
 }
 
+export function countRdPathways(board) {
+  if (!board || typeof board !== "object" || !board.pathways) return 0;
+  return Object.values(board.pathways).filter((p) => p && p.rdBoost).length;
+}
+
 export function attachRd(board, pathwayId, boost = {}) {
   const next = clone(board);
   const pathway = next.pathways[pathwayId];
   if (!pathway) return next;
+  // Strictly once per Pathway — do not allow spam re-rolling.
+  if (pathway.rdBoost && !boost?.force) return next;
   const factor =
     boost?.factor != null && Number.isFinite(Number(boost.factor))
       ? Number(boost.factor)

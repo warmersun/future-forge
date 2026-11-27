@@ -26,7 +26,7 @@ const REQUIRED = [
   "end-turn", "crisis-meter", "local", "global", "support", "challenger", "moloch", "ethicist",
   "stakeholder", "mother-nature", "coverage", "bonds", "timing", "convergence", "budget",
   "support-resource", "ap", "exponential", "log-scale", "doubling", "halving", "cagr", "reached",
-  "predicted", "early-tech-risk", "elegance", "spotlight", "rd", "lobby", "art-of-the-possible", "learn",
+  "predicted", "elegance", "spotlight", "rd", "lobby", "art-of-the-possible", "learn",
 ];
 const DO_NOT_SAY = /\b(developer|JSON|overlay|schema|modal|feature|API|score function|locked until|unlock the card)\b/i;
 

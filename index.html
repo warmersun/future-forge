@@ -435,9 +435,9 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
         <div class="hud-clock">
           <span class="hud-year" id="hs-hud-year">2026</span>
           <span class="hud-turn" id="hs-hud-turn">Round 1</span>
-          <span class="hud-ap" id="hs-hud-ap">AP 3/3</span>
-          <span class="hud-budget" id="hs-hud-budget">Budget 5$</span>
-          <span class="hud-will" id="hs-hud-will">Goodwill 3</span>
+          <span class="hud-ap" id="hs-hud-ap" title="Moves left this turn">Moves ●●●</span>
+          <span class="hud-budget" id="hs-hud-budget" title="Available Budget capacity">Budget 5/5</span>
+          <span class="hud-will" id="hs-hud-will" title="Available Goodwill capacity">Goodwill 3/3</span>
         </div>
         <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
             <img src="assets/brand/ff-by-warmersun-transparent-bg.png" alt="" width="1242" height="347" />
@@ -532,7 +532,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               </div>
             </article>
             <p id="hs-news" class="muted mp-news"></p>
-            <div id="hs-market-news-banner" class="market-news-banner" hidden></div>
             <div id="hs-year-advance-banner" class="year-advance-banner" hidden aria-live="polite"></div>
             <p id="hs-phase-hint" class="friends-status" aria-live="polite"></p>
           </div>
@@ -719,9 +718,9 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
         <div class="hud-clock">
           <span class="hud-year" id="mp-hud-year">2026</span>
           <span class="hud-turn" id="mp-hud-turn">Round 1</span>
-          <span class="hud-ap" id="mp-hud-ap">AP 3/3</span>
-          <span class="hud-budget" id="mp-hud-budget">Budget 5$</span>
-          <span class="hud-will" id="mp-hud-will">Goodwill 3</span>
+          <span class="hud-ap" id="mp-hud-ap" title="Moves left this turn">Moves ●●●</span>
+          <span class="hud-budget" id="mp-hud-budget" title="Available Budget capacity">Budget 5/5</span>
+          <span class="hud-will" id="mp-hud-will" title="Available Goodwill capacity">Goodwill 3/3</span>
         </div>
         <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
             <img src="assets/brand/ff-by-warmersun-transparent-bg.png" alt="" width="1242" height="347" />
@@ -810,7 +809,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             <div id="mp-mission-scene" class="mp-mission-scene"></div>
             <article id="mp-scenario-brief" class="mp-scenario-brief mp-play-problem-brief" hidden></article>
             <p id="mp-news" class="muted mp-news"></p>
-            <div id="mp-market-news-banner" class="market-news-banner" hidden></div>
             <div id="mp-year-advance-banner" class="year-advance-banner" hidden aria-live="polite"></div>
             <p id="mp-phase-hint" class="friends-status" aria-live="polite"></p>
           </div>
@@ -1092,9 +1090,9 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           <button type="button" class="hud-year hud-year-btn" id="hud-year" title="Year foresight">2026</button>
           <span class="hud-turn" id="hud-turn">Turn 0</span>
           <span class="hud-resources" id="hud-resources">
-            <span class="hud-ap" id="hud-ap" hidden title="Action points">AP 3/3</span>
-            <span class="hud-budget" id="hud-budget" hidden title="Budget">Budget 5$</span>
-            <span class="hud-will" id="hud-will" hidden title="Goodwill">Goodwill 3</span>
+            <span class="hud-ap" id="hud-ap" hidden title="Moves left this year">Moves ●●●</span>
+            <span class="hud-budget" id="hud-budget" hidden title="Available Budget capacity">Budget 5/5</span>
+            <span class="hud-will" id="hud-will" hidden title="Available Goodwill capacity">Goodwill 3/3</span>
           </span>
         </div>
         <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
@@ -1122,15 +1120,21 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
         </div>
       </header>
 
-      <!-- Multiplayer chrome: invent tabs (same hotseat + room) + pass device (hotseat only) -->
+      <!-- Multiplayer chrome: invent tabs + unified End turn button (online rooms & hotseat) -->
       <div id="mp-workshop-bar" class="mp-workshop-bar" hidden>
         <div class="mp-workshop-bar-row">
           <div class="room-code-chip sm" data-mp-room-code hidden title="Room code">
             Room <strong>————</strong>
           </div>
           <div id="mp-seat-tabs" class="mp-seat-tabs" aria-label="Players and invents"></div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-pass-device" hidden>
-            Pass device →
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            id="btn-mp-workshop-end-turn"
+            title="End your turn and pass to the next inventor"
+            hidden
+          >
+            End turn →
           </button>
         </div>
         <p id="mp-view-hint" class="mp-view-hint muted" hidden></p>
@@ -1273,7 +1277,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             </details>
             <p id="ws-spotlight-encourage" class="ws-spotlight-encourage muted" hidden></p>
             <div id="wait-report" class="wait-report" hidden></div>
-            <div id="market-news-banner" class="market-news-banner" hidden></div>
             <div id="year-advance-banner" class="year-advance-banner" hidden aria-live="polite"></div>
           </div>
 
@@ -1533,7 +1536,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                   type="button"
                   class="btn btn-ghost btn-sm"
                   id="btn-lobby"
-                  title="Write a local rule — 1 AP + 1 Budget, +1 Support"
+                  title="Write a local rule — uses 1 Move, builds +1 Goodwill"
                 >
                   Lobby
                 </button>
@@ -1749,9 +1752,9 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           <button type="button" class="hud-year hud-year-btn" id="ch-hud-year" title="Year foresight">2026</button>
           <span class="hud-turn" id="ch-hud-turn">Turn 0</span>
           <span class="hud-resources">
-            <span class="hud-ap" id="ch-hud-ap" hidden title="Action points">AP 3/3</span>
-            <span class="hud-budget" id="ch-hud-budget" hidden title="Budget">Budget 5$</span>
-            <span class="hud-will" id="ch-hud-will" hidden title="Goodwill">Goodwill 3</span>
+            <span class="hud-ap" id="ch-hud-ap" hidden title="Moves left this year">Moves ●●●</span>
+            <span class="hud-budget" id="ch-hud-budget" hidden title="Available Budget capacity">Budget 5/5</span>
+            <span class="hud-will" id="ch-hud-will" hidden title="Available Goodwill capacity">Goodwill 3/3</span>
           </span>
         </div>
         <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
@@ -1845,7 +1848,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                   data-mode="defend"
                 >
                   <span class="scrutiny-move-title">1 · Defend in writing</span>
-                  <span class="scrutiny-move-cost">then 1 AP to submit</span>
+                  <span class="scrutiny-move-cost">1 Move to submit</span>
                   <span class="scrutiny-move-blurb">
                     Write a defense that answers their question. You stay on this screen and click
                     <em>Submit defense</em>. Strong answers chip more of their resolve.
@@ -1860,7 +1863,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                   data-mode="fix"
                 >
                   <span class="scrutiny-move-title">2 · Fix the invention</span>
-                  <span class="scrutiny-move-cost">then 1 AP (+ optional ¤1)</span>
+                  <span class="scrutiny-move-cost">1 Move to apply</span>
                   <span class="scrutiny-move-blurb">
                     <strong>You</strong> edit how-it-works here (not the AI alone). Strengthen the design
                     under fire, then click <em>Apply fix</em>. That chips their resolve.
@@ -1875,10 +1878,9 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                   data-mode="sidestep"
                 >
                   <span class="scrutiny-move-title">3 · Sidestep once</span>
-                  <span class="scrutiny-move-cost">cost = remaining ♥ · softens elegance</span>
+                  <span class="scrutiny-move-cost">1 Move · softens elegance</span>
                   <span class="scrutiny-move-blurb">
-                    Skip without winning — once per run. Cost equals remaining resolve hearts
-                    (2♥ → 2 AP · 2 Support; 1♥ → 1 AP · 1 Support). Softens elegance. Confirm below.
+                    Skip without winning — once per run. Softens elegance. Confirm below.
                   </span>
                 </button>
               </div>
@@ -1896,7 +1898,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
               </div>
               <div class="form-actions game-actions challenge-footer-actions">
                 <button type="button" class="btn btn-primary" id="btn-challenge-submit">
-                  Submit defense (1 AP)
+                  Submit defense
                 </button>
               </div>
             </div>
@@ -1910,22 +1912,16 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                 <label for="challenge-how-edit">How it works (editable now)</label>
                 <textarea id="challenge-how-edit" rows="5" placeholder="Revise the mechanism…"></textarea>
               </div>
-              <label class="mode-check">
-                <input type="checkbox" id="challenge-fund-patch" />
-                Funded fix (−1 Budget, chips 2 resolve instead of 1)
-              </label>
               <div class="form-actions game-actions challenge-footer-actions">
                 <button type="button" class="btn btn-primary" id="btn-challenge-apply-fix">
-                  Apply fix to invention (1 AP)
+                  Apply fix to invention
                 </button>
               </div>
             </div>
 
             <div id="mode-panel-sidestep" class="mode-panel" hidden>
               <p class="mode-panel-lead">
-                You dodge this challenger without answering. Cost equals
-                <strong>remaining resolve hearts</strong> (2♥ → 2 AP · 2 Support; after a partial
-                defense 1♥ → 1 AP · 1 Support). Only once per Quest. Lobby if you need more Support.
+                You dodge this challenger without answering. Uses 1 Move and softens elegance. Only once per Quest.
               </p>
               <div class="form-actions game-actions challenge-footer-actions">
                 <button type="button" class="btn btn-secondary" id="btn-challenge-confirm-sidestep">
@@ -1941,7 +1937,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                 class="btn btn-ghost btn-sm"
                 id="btn-challenge-abandon"
                 hidden
-                title="Leave Challenge and unlock invent for rework — helpers can contribute again. Facing again costs AP."
+                title="Leave Challenge and unlock invent for rework — helpers can contribute again."
               >
                 Abandon the challenge
               </button>
@@ -2007,7 +2003,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             <div id="side-challenge-coinventor" class="vision-stack-bottom">
               <div id="ch-co-inventor-root" class="co-inventor-root"></div>
               <div class="challenge-side-hint muted">
-                Coach, draft, or ask — <strong>1 AP each</strong> (same as invent co-inventor). You still choose
+                Coach, draft, or ask freely — thinking with AI never spends a Move. You still choose
                 Defend / Fix / Sidestep on the left.
               </div>
               <div class="challenge-help-actions challenge-side-actions">
@@ -2015,17 +2011,17 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                   type="button"
                   class="btn btn-secondary btn-sm"
                   id="btn-challenge-coach"
-                  title="1 AP — coaching tips for this critic"
+                  title="Coaching tips for this critic"
                 >
-                  Coach me (1 AP)
+                  Coach me
                 </button>
                 <button
                   type="button"
                   class="btn btn-secondary btn-sm"
                   id="btn-challenge-draft"
-                  title="1 AP — draft a defense paragraph you can edit"
+                  title="Draft a defense paragraph you can edit"
                 >
-                  Draft a defense (1 AP)
+                  Draft a defense
                 </button>
               </div>
               <div id="challenge-coach-panel" class="challenge-coach-panel" hidden></div>
@@ -2059,9 +2055,9 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           <button type="button" class="hud-year hud-year-btn" id="dep-hud-year" title="Year foresight">2026</button>
           <span class="hud-turn" id="dep-hud-turn">Turn 0</span>
           <span class="hud-resources">
-            <span class="hud-ap" id="dep-hud-ap" hidden title="Action points">AP 3/3</span>
-            <span class="hud-budget" id="dep-hud-budget" hidden title="Budget">Budget 5$</span>
-            <span class="hud-will" id="dep-hud-will" hidden title="Goodwill">Goodwill 3</span>
+            <span class="hud-ap" id="dep-hud-ap" hidden title="Moves left this year">Moves ●●●</span>
+            <span class="hud-budget" id="dep-hud-budget" hidden title="Available Budget capacity">Budget 5/5</span>
+            <span class="hud-will" id="dep-hud-will" hidden title="Available Goodwill capacity">Goodwill 3/3</span>
           </span>
         </div>
         <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
@@ -2130,7 +2126,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
                 type="button"
                 class="btn btn-ghost btn-sm"
                 id="btn-deploy-abandon"
-                title="Owner only — unlock invent for rework; clears Challenge and Pilot progress. Facing Challenge again costs AP."
+                title="Owner only — unlock invent for rework; clears Challenge and Pilot progress."
               >
                 Abandon deployment
               </button>
@@ -2407,8 +2403,8 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           <div class="modal-actions lobby-read-actions">
             <button type="button" class="btn btn-ghost btn-sm" id="lobby-read-back">Close</button>
             <div class="lobby-remove-wrap">
-              <button type="button" class="btn btn-ghost btn-sm" id="lobby-read-remove" title="1 AP + 1 Budget → +1 Support">Remove</button>
-              <p class="muted sm lobby-read-cost">1 AP + 1$ → +1 Support</p>
+              <button type="button" class="btn btn-ghost btn-sm" id="lobby-read-remove" title="Remove this local rule (1 Move, builds +1 Goodwill)">Remove</button>
+              <p class="muted sm lobby-read-cost">Uses 1 Move · +1 Goodwill</p>
             </div>
           </div>
         </div>
@@ -2431,7 +2427,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             <button type="button" class="btn btn-ghost btn-sm" id="lobby-cancel">Close</button>
             <div class="lobby-remove-wrap">
               <button type="button" class="btn btn-primary btn-sm" id="lobby-write">Write this rule</button>
-              <p class="muted sm lobby-read-cost">1 AP + 1$ → +1 Support</p>
+              <p class="muted sm lobby-read-cost">Uses 1 Move · +1 Goodwill</p>
             </div>
           </div>
         </div>
@@ -2539,29 +2535,35 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
           </section>
 
           <section class="help-block">
-            <h4 class="help-block-title">Clock &amp; resources</h4>
+            <h4 class="help-block-title">Clock &amp; quiet guardrails</h4>
             <div class="help-tiles help-tiles-2">
               <article class="help-tile help-tile-accent">
-                <h5>End turn</h5>
-                <p>Refill AP. Calendar <strong>+1 year</strong>. Crisis meters stay put.</p>
-              </article>
-              <article class="help-tile help-tile-warn">
-                <h5>Look Ahead <span class="help-tile-meta">Wait +2 years</span></h5>
-                <p>Later capability can mature. Crisis meters <strong>rise</strong>. Leftover AP burns, then refills.</p>
-              </article>
-              <article class="help-tile">
-                <h5>AP <span class="help-tile-meta">3 / turn</span></h5>
+                <h5>+1 yr &amp; Look Ahead (+2 yrs)</h5>
                 <p>
-                  Attention: Ask for ideas, minting an argument, first challenger, answers, Lobby, AI chat
-                  (<strong>1 AP</strong> each). Learning modules: tutor chat is free while Tutoring is on.
+                  Advance the calendar so technologies mature while crisis meters rise.
+                  In solo play, advancing the year also refills your <strong>Moves</strong>.
                 </p>
               </article>
               <article class="help-tile">
-                <h5>Budget &amp; Support</h5>
+                <h5>Moves <span class="help-tile-meta">3 / year</span></h5>
                 <p>
-                  Budget starts at 5$ — placing a tech, Lobby, and R&amp;D cost cash.
-                  A docked pathway that <strong>eases a crisis</strong> pays +1$ per meter.
-                  0$ cannot buy. Support starts at 3. Lobby: 1 AP + 1$ → +1 Support.
+                  Thinking, AI ideation, browsing, wiring, and removing pathways are always <strong>free</strong>.
+                  Committing a new emTech, Lobbying, R&amp;D boost, defending a roadblock, or filing an argument uses <strong>1 Move</strong>.
+                </p>
+              </article>
+              <article class="help-tile">
+                <h5>Budget &amp; Goodwill <span class="help-tile-meta">reversible</span></h5>
+                <p>
+                  Budget (5) and Goodwill (3) are town capacity allocated across your active board — never burned.
+                  Removing a pathway frees <strong>100%</strong> of its Budget and Goodwill immediately.
+                  Easing a crisis expands Budget (+1); Lobbying and clearing roadblocks expand Goodwill (+1).
+                </p>
+              </article>
+              <article class="help-tile help-tile-warn">
+                <h5>Multi-user End turn</h5>
+                <p>
+                  In Friends rooms and Hotseat, <strong>+1 yr / +2 yrs</strong> jump your own invention year without ending your turn.
+                  Click <strong>End turn →</strong> to pass to the next inventor and refill Moves.
                 </p>
               </article>
             </div>
@@ -2569,19 +2571,19 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
           <section class="help-block">
             <h4 class="help-block-title">AI co-inventor</h4>
-            <p class="help-note">Usually 1 AP per request. You still choose which tiles to mint, place, and keep.</p>
+            <p class="help-note">Always free — brainstorming, SIT/SCAMPER lenses, drafting, and tutoring never spend a Move.</p>
             <ul class="help-list">
-              <li><strong>Invent with</strong> focuses an emTech so you can Ask for ideas or mint.</li>
-              <li>SIT / SCAMPER remake a minted how-it-works (need a tile on the board first).</li>
-              <li>Learning quests: End tutoring to unlock invent chips; Resume anytime (tutor chat stays free).</li>
+              <li><strong>Invent with</strong> focuses an emTech so you can brainstorm Idea Sparks or remix a pathway.</li>
+              <li>SIT / SCAMPER lenses remix an existing idea on your Workbench.</li>
+              <li>Learning quests: End tutoring to unlock invent chips; Resume anytime.</li>
             </ul>
           </section>
 
           <section class="help-block">
             <h4 class="help-block-title">Hard questions</h4>
             <p class="help-note">
-              Challengers (Mother Nature, Moloch, Ethicist, Stakeholder) land on the board — usually one, sometimes more.
-              Click the hex, write a short answer, submit. Docking without an answer does not turn the light green.
+              Challengers (Mother Nature, Moloch, Ethicist, Stakeholder) test your wired pathways.
+              Summoning them is free; submitting your defense uses 1 Move, and clearing a roadblock grows Goodwill.
             </p>
           </section>
 
@@ -2589,7 +2591,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             <h4 class="help-block-title">Friends</h4>
             <ul class="help-list">
               <li>Each person builds their own invention. You share one crisis — if the place falls, everyone loses.</li>
-              <li>Live room (code) or <strong>Hotseat</strong> (one device). Only the active seat spends AP / Budget / Support.</li>
+              <li>Live room (code) or <strong>Hotseat</strong> (one device). Use <strong>End turn →</strong> in the player bar to pass the turn.</li>
               <li>Host can pick a theme, sponsored Spotlight, learning lesson, or Library tile.</li>
             </ul>
           </section>
@@ -2598,7 +2600,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
             <h4 class="help-block-title">Keep in mind</h4>
             <ul class="help-list">
               <li>Stay local. Honesty is about timing and fit — not unlocking a card.</li>
-              <li>End turn to refill AP; Look Ahead only if later years are worth the crisis cost.</li>
+              <li>Experiment freely: removing or remixing a pathway always frees 100% of its Budget and Goodwill.</li>
               <li>★★★ on the outcome for speed, honesty, elegance.</li>
             </ul>
           </section>

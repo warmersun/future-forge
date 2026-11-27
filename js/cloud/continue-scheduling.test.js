@@ -7,7 +7,7 @@ const mission = (id = 'quest-a', trust = 'official') => ({ id, packageRef: { que
 function harness(initialMission) {
   const source = fs.readFileSync(new URL('../game.js', import.meta.url), 'utf8');
   const starter = source.slice(source.indexOf('function postCloudRunStart(mission)'), source.indexOf('async function syncCloudProgress()'));
-  const scheduler = source.slice(source.indexOf('function scheduleCloudRunState()'), source.indexOf('function applyRestoredPlay(play)'));
+  const scheduler = source.slice(source.indexOf('function scheduleCloudRunState()'), source.indexOf('function applyRestoredPlay('));
   const post = source.slice(source.indexOf('function postCloudRun(run,'), source.indexOf('function postCloudRunStart(mission)'));
   const state = { mission: initialMission, cloudRunId: null, progress: 'initial' };
   const pending = [], puts = [], notices = [], timers = new Map(); let nextTimer = 0;

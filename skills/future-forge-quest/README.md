@@ -11,7 +11,6 @@ It does **not** relicense the Future Forge app. The app is GNU GPL version 3 or 
 ```bash
 # write the tile from references/output-contract.md
 npm run validate:quest -- path/to/quest.json --strict   # OK: + lint: clean
-npm run economy:quest  -- path/to/quest.json            # quest verdict: challenging
 ```
 
 Then copy into the game's `quests/` folder (Library) or use **Import Quest…** on the title screen.
@@ -26,12 +25,12 @@ Follow **`SKILL.md`**. It opens with the table of what each field actually reach
 | **Crisis meters** | Structured `mission.pressure`: `local` / `global` / `support` with a place-specific `description` each. Defaults: local 3↑1, global 2↑1, support 2↑0. |
 | **Grounding** | Markdown capability truth every AI judgement reads (first 3000 chars in fast paths): emTech → product category → capabilities → trends → milestone → use cases → applications → honest limits. |
 | **Rules** | 1–3 named local locks already on the books (law / regulation / policy / ban). Weather and honesty gates, never the invent. |
-| **Resources** | Optional starting AP / Budget / Will — only when the first tile is unaffordable. Pathway ease pays +1 Budget per eased role. |
+| **Resources** | Optional starting Moves (`apMax`), Budget (`startingBudget`), Goodwill (`startingWill`) — omit by default (3 / 5 / 3). Budget & Goodwill are 100% reversible town capacity. |
 | **Plottable trends** | Optional `trends` / `spotlightTrends` for Look Ahead charts (see the `future-forge-trends` skill). |
 | **Learning modules** | Tutor mode with hidden `aiTutorContext`; the tutor names the real advance after the learner has the story. Progress `Module · Lesson X/Y`; `kind: "module"` wrapper for multi-lesson paths. |
 | **Sponsors** | Text-only `sponsorName` / `sponsorBanner`; invent still required; product may evidence the grounding Milestone. |
 | **Briefing walkthrough** | The invent screen steps `briefMd` one paragraph per card (max 8); optional `briefBeats` for tighter captions and shipped stills. |
-| **Validator + lint + lab** | `validate:quest` checks shape, then prints craft `WARN` codes (`--strict` fails on any). `economy:quest` simulates four players; target verdict **challenging**. |
+| **Validator + lint** | `validate:quest` checks shape, craft lint, spotlight affordability, capacity bounds, and clock sanity (`--strict` fails on any `WARN`). |
 
 | Doc | Purpose |
 |-----|---------|
@@ -40,7 +39,6 @@ Follow **`SKILL.md`**. It opens with the table of what each field actually reach
 | **`references/brief-template.md`** | `briefMd` headings and card arithmetic |
 | **`references/schema.md`** | Field reference, what reaches whom, lint codes |
 | **`references/grounding-template.md`** | Capability truth chain and the 3000-char window |
-| **`references/economy.md`** | Difficulty lab, tech cost, two-act meters |
 | **`references/output-contract.md`** | Skeleton, optional extensions, recipes A–G |
 | **`references/learning-and-sponsor.md`** | Tutor sequences, multi-lesson sets, sponsors |
 | **`references/brief-beats.md`** | Walkthrough derivation; authored beats |

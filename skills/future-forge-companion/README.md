@@ -20,7 +20,6 @@ Follow **`SKILL.md`**. Then:
 ```bash
 npm run validate:predictions -- <bank>                 # only when the premise is assumed
 npm run validate:quest -- quests/<id>.json --strict    # OK: + lint: clean
-npm run economy:quest -- quests/<id>.json              # quest verdict: challenging
 npm run pack:quest -- <source-directory> -o <id>.ffquest
 npm run verify:quest-package -- <id>.ffquest
 ./scripts/sideload-local-package.sh <id>.ffquest       # v2 includes its complete bank

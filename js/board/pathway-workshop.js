@@ -38,7 +38,7 @@ import {
 import { localPose } from "../challenge-pose.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { appendCaptainLog } from "../captain-log.js?v=crisis-role-3";
-import { techCost } from "../sim/economy.js";
+import { techCost, formatHeavyTechCost } from "../sim/economy.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
 import {
   seedCrisisTiles,
@@ -85,6 +85,7 @@ import {
   unplugWire,
   setPinnedRules,
   attachRd,
+  countRdPathways,
   rollRdFactor,
   formatRdFactor,
   attachArgument,
@@ -945,6 +946,8 @@ export function createPathwayWorkshop(api) {
     return {
       year: y,
       isTutorial: Boolean(api.isTutorial?.()),
+      isMultiplayer: Boolean(api.isMultiplayer?.()),
+      movesLeft: api.getMovesLeft ? api.getMovesLeft() : null,
       focusedTechId: activeFocus,
       focusedPathwayId,
       trace: traceSelection,
@@ -973,10 +976,9 @@ export function createPathwayWorkshop(api) {
       selectedUseCaseIds,
       enforceWorlds: enforceWorlds(),
       catalog: TECHS.map((tech) => {
-        const c = api.budgetWillEnabled?.() ? techCost(tech) : null;
-        const costBits = [];
-        if (c?.budget) costBits.push(`${c.budget}$`);
-        if (c?.will) costBits.push(`Goodwill ${c.will}`);
+        const costLabel = api.budgetWillEnabled?.()
+          ? formatHeavyTechCost(techCost(tech))
+          : "";
         return {
           id: tech.id,
           name: tech.name,
@@ -986,7 +988,7 @@ export function createPathwayWorkshop(api) {
           onBoard: onBoardSet.has(tech.id),
           recommended: suggested.has(tech.id) || tech.id === mission.spotlight?.techId,
           why: why[tech.id] || tech.summary || "",
-          costLabel: costBits.join(" · "),
+          costLabel,
         };
       }).sort((a, b) => Number(b.recommended) - Number(a.recommended)),
       openChallenger: open
@@ -1120,6 +1122,7 @@ export function createPathwayWorkshop(api) {
     next.questYear = year();
     const prev = board();
     const prevEcon = placedTechEconomy(prev);
+    const prevRdCount = countRdPathways(prev);
     const projected = projectToTiles(next);
     projected.questYear = year();
     if (opts.bill) {
@@ -1140,6 +1143,10 @@ export function createPathwayWorkshop(api) {
         paint();
         return false;
       }
+    }
+    const nextRdCount = countRdPathways(projected);
+    if (nextRdCount !== prevRdCount) {
+      api.syncRdCount?.(nextRdCount);
     }
     const display = refreshed.displayPressure || {};
     if (Object.keys(display).length) api.setPressure?.(display);
@@ -1514,11 +1521,6 @@ export function createPathwayWorkshop(api) {
     focusedTechId = activeTech;
     const tech = techById(activeTech);
     if (!tech) return;
-    const pay = api.spendIdeaAp?.();
-    if (pay && pay.ok === false) {
-      api.flashToast?.(pay.reason || "Not enough AP");
-      return;
-    }
     const isRefresh = Boolean(opts.refresh);
     const prevTitles = sparkBatches.get(activeTech)?.titles || [];
     createBusy = true;
@@ -2327,11 +2329,6 @@ export function createPathwayWorkshop(api) {
 
   async function summonRoadblock(wireId, angle = "stakeholder") {
     if (summonBusy) return;
-    const pay = api.spendFirstSummonAp?.();
-    if (pay && pay.ok === false) {
-      api.flashToast?.(pay.reason || "Not enough AP to summon a challenger.");
-      return;
-    }
     summonBusy = true;
     const startWire = board()?.wires?.[wireId];
     if (startWire?.crisisId) expandCard("crisis", startWire.crisisId);
@@ -2401,7 +2398,6 @@ export function createPathwayWorkshop(api) {
         question: posed.question,
       });
       if (!result.ok) {
-        api.refundFirstSummonAp?.();
         return;
       }
       const roster = Array.isArray(result.board.concernRoster)
@@ -2431,11 +2427,6 @@ export function createPathwayWorkshop(api) {
     const ch = current?.challengers?.[id];
     const pathway = ch ? current?.pathways?.[ch.pathwayId] : null;
     if (!ch || !pathway) return;
-    const pay = api.spendIdeaAp?.();
-    if (pay && pay.ok === false) {
-      api.flashToast?.(pay.reason || "Not enough AP");
-      return;
-    }
     if (api.coInvent) {
       draftingRoadblockId = id;
       api.setAiBusy?.(true);
@@ -2478,7 +2469,7 @@ export function createPathwayWorkshop(api) {
     if (!opts.freeAp) {
       const pay = api.spendChallengeAp?.();
       if (pay && pay.ok === false) {
-        api.flashToast?.(pay.reason || "Not enough AP");
+        api.flashToast?.(pay.reason || "No Moves left — advance the year or end your turn.");
         return;
       }
     }
@@ -2547,11 +2538,6 @@ export function createPathwayWorkshop(api) {
     const current = board();
     const pathway = current?.pathways?.[pathwayId];
     if (!pathway) return;
-    const pay = api.spendIdeaAp?.();
-    if (pay && pay.ok === false) {
-      api.flashToast?.(pay.reason || "Not enough AP");
-      return;
-    }
     const baseHow =
       editingPathwayId === pathwayId && editHowBuffer.trim()
         ? editHowBuffer.trim()
@@ -2605,9 +2591,13 @@ export function createPathwayWorkshop(api) {
       api.flashToast?.("Create an invention or pathway in Lane 3 first.");
       return;
     }
+    if (current.pathways[pathwayId].rdBoost) {
+      api.flashToast?.("R&D boost is already active on this pathway.");
+      return;
+    }
     const pay = api.spendRdMint?.();
     if (pay && pay.ok === false) {
-      api.flashToast?.(pay.reason || "Not enough Budget for R&D.");
+      api.flashToast?.(pay.reason || "Not enough Budget or Moves for R&D.");
       return;
     }
     const factor = rollRdFactor();
@@ -2651,7 +2641,7 @@ export function createPathwayWorkshop(api) {
     }
     const pay = api.spendArgumentAp?.();
     if (pay && pay.ok === false) {
-      api.flashToast?.(pay.reason || "Not enough AP (1 AP required).");
+      api.flashToast?.(pay.reason || "No Moves left — advance the year or end your turn.");
       return null;
     }
     argumentBusy = true;
@@ -2989,11 +2979,6 @@ export function createPathwayWorkshop(api) {
     if (wbLensBusy) return [];
     const current = board();
     if (!isPathwayBoard(current)) return [];
-    const pay = api.spendIdeaAp?.();
-    if (pay && pay.ok === false) {
-      api.flashToast?.(pay.reason || "Not enough AP");
-      return [];
-    }
     const mission = api.getMission?.() || {};
     const place = api.getPlace?.() || mission.place || "";
     const y = year();
@@ -3109,11 +3094,6 @@ export function createPathwayWorkshop(api) {
     if (wbLensBusy) return [];
     const current = board();
     if (!isPathwayBoard(current)) return [];
-    const pay = api.spendIdeaAp?.();
-    if (pay && pay.ok === false) {
-      api.flashToast?.(pay.reason || "Not enough AP");
-      return [];
-    }
     const mission = api.getMission?.() || {};
     const place = api.getPlace?.() || mission.place || "";
     const y = year();
@@ -3547,12 +3527,6 @@ export function createPathwayWorkshop(api) {
       howText: composePathwayHow(pw),
     }));
     const useCases = Object.values(current.useCases || {});
-
-    const pay = api.spendIdeaAp?.();
-    if (pay && pay.ok === false) {
-      api.flashToast?.(pay.reason || "Not enough AP");
-      return [];
-    }
 
     const activeFocus = focusedTechId || Object.keys(current.techTracks || {})[0] || null;
     const selectedUcs = selectedIds()
@@ -4191,7 +4165,12 @@ export function createPathwayWorkshop(api) {
   }
 
   function jumpYear(years) {
-    const id = Number(years) === 2 ? "#btn-wait" : "#btn-end-turn";
+    const n = Number(years) === 2 ? 2 : 1;
+    if (typeof api.advanceYear === "function") {
+      api.advanceYear(n);
+      return;
+    }
+    const id = n === 2 ? "#btn-wait" : "#btn-end-turn";
     const btn = api.$?.(id) || (typeof document !== "undefined" ? document.querySelector(id) : null);
     btn?.click?.();
   }
@@ -4981,7 +4960,7 @@ export function createPathwayWorkshop(api) {
     });
   }
 
-  function afterYearPressureRise(rise, years = 1, frontierRisk = null) {
+  function afterYearPressureRise(rise, years = 1) {
     const current = board();
     if (!isPathwayBoard(current)) return;
     const next = structuredClone(current);
@@ -4989,10 +4968,6 @@ export function createPathwayWorkshop(api) {
       next.pressureBase = { ...(api.getPressure?.() || {}) };
     }
     next.pressureBase = applyPressureRiseYears(next.pressureBase, rise || {}, years);
-    if (frontierRisk?.meter && next.pressureBase[frontierRisk.meter] != null) {
-      const n = Math.round(Number(next.pressureBase[frontierRisk.meter]) || 0) + 1;
-      next.pressureBase[frontierRisk.meter] = Math.max(0, Math.min(5, n));
-    }
     commit(next, { bill: false });
   }
 
@@ -5064,8 +5039,7 @@ export function createPathwayWorkshop(api) {
         .catch((e) => console.warn(e));
     },
     afterYearPressureRise,
-    afterWaitPressureRise: (rise, frontierRisk = null) =>
-      afterYearPressureRise(rise, 2, frontierRisk),
+    afterWaitPressureRise: (rise) => afterYearPressureRise(rise, 2),
     boardHolds: () => boardHoldsNow(board()),
     getFocusedTechId: () => focusedTechId,
     revealTile: () => paint(),

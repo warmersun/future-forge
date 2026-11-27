@@ -46,7 +46,6 @@ import {
   paintTechLibrary,
   paintSelectedStack,
 } from "./tech-library.js";
-import { describeMarketEffects } from "../sim/market-news.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { attachReadAloud, formatHeadingForSpeech } from "../read-aloud.js";
 import { paintQuestBriefing, paintQuestJob } from "../briefing-ui.js?v=calm-stage-2";
@@ -67,7 +66,6 @@ import { isRemoteJoinUrl, resolveRoomJoinUrls } from "../join-origin.js";
  *   beginMissionPick?: Function,
  *   clearMissionPickSession?: Function,
  *   openWaitConfirm?: Function,
- *   queueMarketNewsModal?: Function,
  * }} api
  */
 export function initFriendsUi(api) {
@@ -83,7 +81,6 @@ export function initFriendsUi(api) {
     leaveHotseat,
     enterRoomPlay,
     leaveRoomPlay,
-    queueMarketNewsModal,
     openWaitConfirm,
   } = api;
   const client = new RoomClient();
@@ -105,8 +102,6 @@ export function initFriendsUi(api) {
   let hsDomainFilter = "all";
   let mpDomainFilter = "all";
   let hsVisionFingerprint = "";
-  /** Last market news id shown (modal + banner) for MP surfaces */
-  let lastMarketNewsId = null;
 
   function setHubStatus(msg) {
     const el = $("#friends-hub-status");
@@ -177,134 +172,11 @@ export function initFriendsUi(api) {
     }
   }
 
-  const dismissedMarketBannerKeys = new Set();
-
-  function clearMpBannerTimers(host) {
-    if (!host) return;
-    clearTimeout(host._autoFadeT);
-    clearTimeout(host._autoHideT);
-    host._autoFadeT = null;
-    host._autoHideT = null;
-  }
-
-  function dismissMpMarketBanner(host, key) {
-    if (!host) return;
-    clearMpBannerTimers(host);
-    host._dismissing = true;
-    if (key) dismissedMarketBannerKeys.add(key);
-    if (host.hidden) {
-      host._dismissing = false;
-      return;
-    }
-    host.classList.add("is-fading");
-    host._autoHideT = setTimeout(() => {
-      host._dismissing = false;
-      host.hidden = true;
-      host.innerHTML = "";
-      host.classList.remove("is-fading");
-      delete host.dataset.bannerKey;
-    }, 450);
-  }
-
-  function armMpMarketBannerTimeout(host, key, delayMs = 7000) {
-    if (!host || host.hidden || host._dismissing) return;
-    clearMpBannerTimers(host);
-    host.classList.remove("is-fading");
-    host._autoFadeT = setTimeout(() => {
-      host._autoFadeT = null;
-      dismissMpMarketBanner(host, key);
-    }, delayMs);
-  }
-
-  /**
-   * Compact auto-dismissing market banner + optional modal when a full seat-round rolls new prices.
-   * @param {string} bannerId
-   * @param {object|null|undefined} news
-   * @param {number} [round]
-   */
-  function paintMarketBanner(bannerId, news, round) {
-    const host = $(bannerId);
-    if (!host) return;
-    const key = news ? `${news.id || news.headline || ""}@r${news.round ?? round ?? 1}` : "";
-    if (!news || dismissedMarketBannerKeys.has(key)) {
-      if (host._dismissing) return;
-      clearMpBannerTimers(host);
-      host._dismissing = false;
-      host.hidden = true;
-      host.innerHTML = "";
-      host.classList.remove("is-fading");
-      delete host.dataset.bannerKey;
-      return;
-    }
-    if (host._dismissing) return;
-    if (host.dataset.bannerKey === key && !host.hidden) {
-      return;
-    }
-    const desc = describeMarketEffects(news, {
-      techName: (id) => techById(id)?.name || id,
-    });
-    clearMpBannerTimers(host);
-    host._dismissing = false;
-    host.classList.remove("is-fading");
-    host.hidden = false;
-    host.dataset.tone = news.tone || "mixed";
-    host.dataset.bannerKey = key;
-    host._hovered = false;
-    host._activeNews = news;
-    host.innerHTML = `
-      <button type="button" class="market-news-banner-btn" data-market-open="1" title="Open market bulletin">
-        <span class="market-news-banner-thumb" aria-hidden="true">
-          <span class="market-news-banner-icon">${escapeHtml(news.icon || "📰")}</span>
-        </span>
-        <span class="market-news-banner-text">
-          <span class="market-news-banner-kicker">Market · Round ${escapeHtml(
-            String(news.round ?? round ?? 1)
-          )}</span>
-          <strong>${escapeHtml(news.headline || "Market shift")}</strong>
-          <span class="market-news-banner-effects">
-            ${escapeHtml(desc.scope)} · ${desc.effects.map(escapeHtml).join(" · ")}
-          </span>
-        </span>
-      </button>
-      <button type="button" class="info-banner-close" data-dismiss-market-banner="1" aria-label="Dismiss market banner" title="Dismiss">×</button>`;
-    if (!host._bannerWired) {
-      host._bannerWired = true;
-      host.addEventListener("click", (ev) => {
-        if (ev.target?.closest?.("[data-dismiss-market-banner]")) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          dismissMpMarketBanner(host, host.dataset.bannerKey || "");
-          return;
-        }
-        if (ev.target?.closest?.("[data-market-open]") && host._activeNews) {
-          clearMpBannerTimers(host);
-          if (typeof queueMarketNewsModal === "function") {
-            queueMarketNewsModal(host._activeNews, { force: true });
-          }
-        }
-      });
-      host.addEventListener("mouseenter", () => {
-        if (host._dismissing) return;
-        host._hovered = true;
-        clearMpBannerTimers(host);
-        host.classList.remove("is-fading");
-      });
-      host.addEventListener("mouseleave", () => {
-        host._hovered = false;
-        if (host._dismissing) return;
-        const activeKey = host.dataset.bannerKey;
-        if (!host.hidden && activeKey) {
-          armMpMarketBannerTimeout(host, activeKey, 2500);
-        }
-      });
-    }
-    armMpMarketBannerTimeout(host, key, 7000);
-    if (news.id && news.id !== lastMarketNewsId) {
-      lastMarketNewsId = news.id;
-      if (typeof queueMarketNewsModal === "function") {
-        queueMarketNewsModal(news, { force: true });
-      }
-    }
+  function formatMpMoves(ap, apMax) {
+    const max = Math.max(1, Math.floor(Number(apMax) || 3));
+    const have = Math.max(0, Math.min(max, Math.floor(Number(ap) || 0)));
+    if (max > 6) return `${have}/${max}`;
+    return `${"●".repeat(have)}${"○".repeat(max - have)}`;
   }
 
   function setLobbyStatus(msg) {
@@ -586,7 +458,6 @@ export function initFriendsUi(api) {
     beginMissionPick({
       onSelect: (mission, global) => {
         if (typeof enterHotseatPlay === "function") {
-          lastMarketNewsId = null;
           const ok = enterHotseatPlay(seatNames, mission, global);
           if (!ok) showScreen("friends");
           return;
@@ -704,13 +575,17 @@ export function initFriendsUi(api) {
     }
     $("#mp-hud-turn").textContent = `Round ${mp?.round || 1}`;
     if (invent) {
-      $("#mp-hud-ap").textContent = `AP ${invent.ap}/${invent.apMax}`;
-      $("#mp-hud-budget").textContent = `Budget ${invent.budget}$`;
-      $("#mp-hud-will").textContent = `Goodwill ${invent.will}`;
+      const bCap = Math.max(invent.budget ?? 0, invent.budgetCap ?? 5);
+      const wCap = Math.max(invent.will ?? 0, invent.willCap ?? 3);
+      $("#mp-hud-ap").textContent = `Moves ${formatMpMoves(invent.ap, invent.apMax)}`;
+      $("#mp-hud-budget").textContent = `Budget ${invent.budget}/${bCap}`;
+      $("#mp-hud-will").textContent = `Goodwill ${invent.will}/${wCap}`;
     } else if (snap?.sim) {
-      $("#mp-hud-ap").textContent = `AP ${snap.sim.ap}/${snap.sim.apMax}`;
-      $("#mp-hud-budget").textContent = `Budget ${snap.sim.budget}$`;
-      $("#mp-hud-will").textContent = `Goodwill ${snap.sim.will}`;
+      const bCap = Math.max(snap.sim.budget ?? 0, snap.sim.budgetCap ?? 5);
+      const wCap = Math.max(snap.sim.will ?? 0, snap.sim.willCap ?? 3);
+      $("#mp-hud-ap").textContent = `Moves ${formatMpMoves(snap.sim.ap, snap.sim.apMax)}`;
+      $("#mp-hud-budget").textContent = `Budget ${snap.sim.budget}/${bCap}`;
+      $("#mp-hud-will").textContent = `Goodwill ${snap.sim.will}/${wCap}`;
     }
 
     const badge = $("#mp-active-badge");
@@ -745,11 +620,6 @@ export function initFriendsUi(api) {
         : "Friends";
     }
     $("#mp-news").textContent = place?.lastNews || snap?.sim?.lastNews || "";
-    paintMarketBanner(
-      "#mp-market-news-banner",
-      place?.marketNews || null,
-      mp?.round
-    );
 
     const box = $("#mp-pressure");
     if (box) {
@@ -1159,7 +1029,6 @@ export function initFriendsUi(api) {
       suggested: place?.mission?.suggested || [],
       domainFilter: mpDomainFilter,
       disabled: !canEdit,
-      market: place?.marketNews || null,
       ap: invent?.ap,
       budget: invent?.budget,
       will: invent?.will,
@@ -1175,17 +1044,17 @@ export function initFriendsUi(api) {
           });
         } else {
           // Client-side afford gate — never paint selected on deny (server still re-checks)
-          const cost = techCost(tech, { market: place?.marketNews || null });
+          const cost = techCost(tech);
           if ((invent?.ap ?? 0) < 1) {
-            flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
+            flashToast("No Moves left this turn — click End turn → to pass.", { resource: "ap" });
             return;
           }
           if ((invent?.budget ?? 0) < (cost.budget || 0)) {
-            flashToast(`Not enough Budget (need ${cost.budget}$).`, { resource: "budget" });
+            flashToast(`Not enough Budget capacity (need ${cost.budget}).`, { resource: "budget" });
             return;
           }
           if ((invent?.will ?? 0) < (cost.will || 0)) {
-            flashToast(`Not enough Will (need ${cost.will}).`, { resource: "will" });
+            flashToast(`Not enough Goodwill capacity (need ${cost.will}).`, { resource: "will" });
             return;
           }
           if (targetSeatId === myId) {
@@ -1294,7 +1163,6 @@ export function initFriendsUi(api) {
     }
     if (evt.type === "next_quest_started" || evt.type === "quest_started") {
       roomPlayEnteredFor = "";
-      lastMarketNewsId = null;
       tryEnterRoomPlayOnce(evt.type);
     }
     // Soft locks + settings must refresh labels even when no sim patch arrives
@@ -1334,7 +1202,7 @@ export function initFriendsUi(api) {
     }
     if (evt.type === "ai_pending") {
       setAiPending(true, `${evt.displayName || "Someone"} asked the co-inventor…`);
-      setPlayStatus("AI pending — AP reserved.");
+      setPlayStatus("Co-inventor working…");
       renderPlay();
     }
     if (evt.type === "ai_result") {
@@ -1348,7 +1216,7 @@ export function initFriendsUi(api) {
         return;
       }
       if (evt.ok === false) {
-        flashToast(evt.error || "AI failed (AP refunded if reserved)");
+        flashToast(evt.error || "AI request failed");
         setPlayStatus(evt.error || "AI failed");
         appendAiLog(`✗ ${evt.error || "failed"}`);
       } else {
@@ -1378,7 +1246,7 @@ export function initFriendsUi(api) {
                 : err === "pose_judge_busy"
                   ? "Another pose/judge is in flight"
                   : err === "no_ap"
-                    ? "No AP for that action"
+                    ? "No Moves left this turn"
                     : err === "field_locked"
                       ? "Someone else is editing that field"
                       : err === "pilot_required"
@@ -1672,9 +1540,9 @@ export function initFriendsUi(api) {
         challenge_required: "Face the challenge first",
         pilot_required: "Pilot successfully before Scale",
         abandoned: "You abandoned this invention",
-        no_ap: "Not enough AP",
-        no_budget: "Not enough Budget",
-        end_turn_noop: "Do something first (write, tech, or attempt)",
+        no_ap: "No Moves left this turn",
+        no_budget: "Not enough Budget capacity",
+        no_will: "Not enough Goodwill capacity",
         race_over: "Race is over — the place is solved",
         run_over: "Run is over",
       }[err] || err;
@@ -1765,7 +1633,7 @@ export function initFriendsUi(api) {
         hotseat = r.session;
         const amt = (r.events || []).find((e) => e.type === "pay_ap")?.amount ?? 0;
         const f = activeInvent(hotseat);
-        if (f) $("#hs-hud-ap").textContent = `AP ${f.ap}/${f.apMax}`;
+        if (f) $("#hs-hud-ap").textContent = `Moves ${formatMpMoves(f.ap, f.apMax)}`;
         return { ok: true, amount: amt };
       },
       refundAp: (amount) => {
@@ -1777,7 +1645,7 @@ export function initFriendsUi(api) {
         if (r.ok) {
           hotseat = r.session;
           const f = activeInvent(hotseat);
-          if (f) $("#hs-hud-ap").textContent = `AP ${f.ap}/${f.apMax}`;
+          if (f) $("#hs-hud-ap").textContent = `Moves ${formatMpMoves(f.ap, f.apMax)}`;
         }
       },
     });
@@ -1875,9 +1743,11 @@ export function initFriendsUi(api) {
     }
     $("#hs-hud-turn").textContent = `Round ${hotseat.round || 1}`;
     if (invent) {
-      $("#hs-hud-ap").textContent = `AP ${invent.ap}/${invent.apMax}`;
-      $("#hs-hud-budget").textContent = `Budget ${invent.budget}$`;
-      $("#hs-hud-will").textContent = `Goodwill ${invent.will}`;
+      const bCap = Math.max(invent.budget ?? 0, invent.budgetCap ?? 5);
+      const wCap = Math.max(invent.will ?? 0, invent.willCap ?? 3);
+      $("#hs-hud-ap").textContent = `Moves ${formatMpMoves(invent.ap, invent.apMax)}`;
+      $("#hs-hud-budget").textContent = `Budget ${invent.budget}/${bCap}`;
+      $("#hs-hud-will").textContent = `Goodwill ${invent.will}/${wCap}`;
     }
 
     const m = place.mission;
@@ -1915,11 +1785,6 @@ export function initFriendsUi(api) {
       m?.stakeholder ? `Stakeholder: ${m.stakeholder}` : ""
     );
     setText("hs-news", place.lastNews || "");
-    paintMarketBanner(
-      "#hs-market-news-banner",
-      place.marketNews || null,
-      hotseat?.round
-    );
 
     // Theme-level problem brief (same content as solo mission-pick screen)
     const briefRoot = $("#hs-play-problem-brief");
@@ -2058,7 +1923,6 @@ export function initFriendsUi(api) {
       suggested: place.mission?.suggested || [],
       domainFilter: hsDomainFilter,
       disabled: !canEdit,
-      market: place?.marketNews || null,
       ap: invent?.ap,
       budget: invent?.budget,
       will: invent?.will,
@@ -2069,17 +1933,17 @@ export function initFriendsUi(api) {
           hsAct({ type: "deselect_tech", payload: { techId, targetSeatId: targetId } });
         } else {
           const tech = techById(techId);
-          const cost = techCost(tech, { market: place?.marketNews || null });
+          const cost = techCost(tech);
           if ((invent?.ap ?? 0) < 1) {
-            flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
+            flashToast("No Moves left this turn — click End turn → to pass.", { resource: "ap" });
             return;
           }
           if ((invent?.budget ?? 0) < (cost.budget || 0)) {
-            flashToast(`Not enough Budget (need ${cost.budget}$).`, { resource: "budget" });
+            flashToast(`Not enough Budget capacity (need ${cost.budget}).`, { resource: "budget" });
             return;
           }
           if ((invent?.will ?? 0) < (cost.will || 0)) {
-            flashToast(`Not enough Will (need ${cost.will}).`, { resource: "will" });
+            flashToast(`Not enough Goodwill capacity (need ${cost.will}).`, { resource: "will" });
             return;
           }
           if (targetId === invent.seatId) {
@@ -2154,7 +2018,7 @@ export function initFriendsUi(api) {
       else if (invent.deployStage === "pilot_ok")
         phase.textContent = "Pilot ok — Scale to update the shared crisis!";
       else if (invent.deployStage === "scaled" || invent.deployStage === "new_normal")
-        phase.textContent = "This invent is fielded. Help another invent or End turn / Pass device.";
+        phase.textContent = "This invent is fielded. Help another invent or click End turn →.";
       else phase.textContent = "";
     }
 

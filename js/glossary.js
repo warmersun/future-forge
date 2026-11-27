@@ -126,15 +126,15 @@ export const GLOSSARY = {
   },
   budget: {
     term: "Budget",
-    plain: "Cash to place technologies on the board. A pathway that eases a crisis pays some back.",
+    plain: "Town capacity across your active pathways and R&D. Removing a pathway frees 100% immediately; easing a crisis adds +1.",
   },
   "support-resource": {
     term: "Goodwill",
-    plain: "Backing from the public and officials. Some technologies need it to be adopted. Lobby raises it.",
+    plain: "Backing allocated to early or frontier tech. Removing a pathway frees 100% immediately; Lobby or clearing roadblocks adds +1.",
   },
   ap: {
-    term: "AP",
-    plain: "Attention points: how many moves you can make this turn. End turn refills them.",
+    term: "Moves",
+    plain: "Big commitments you can make this year or turn (new emTech, Lobby, R&D, defense, argument). Thinking and AI are always free.",
   },
   exponential: {
     term: "Exponential",
@@ -165,10 +165,6 @@ export const GLOSSARY = {
     term: "Predicted",
     plain: "A milestone someone forecasts. A labelled guess, not a promise, and never a free pass for your idea.",
   },
-  "early-tech-risk": {
-    term: "Early-tech risk",
-    plain: "Newer technology can spike a crisis meter when hype outruns what works. Riskier picks carry a higher number.",
-  },
   elegance: {
     term: "Elegance",
     plain: "Did your ideas span more than one family and fit together, rather than piling on tools?",
@@ -179,11 +175,11 @@ export const GLOSSARY = {
   },
   rd: {
     term: "R&D",
-    plain: "A research gamble tile. Dock it against a pathway to multiply its honesty chance, up or down.",
+    plain: "A one-time research boost on a pathway (1 Move, 1 reversible Budget). Multiplies its feasibility odds up or down.",
   },
   lobby: {
     term: "Lobby",
-    plain: "Write a local rule to raise Support. It changes the conditions here; it does not ease a crisis meter by itself.",
+    plain: "Write or remove a local rule (1 Move, 0 Budget) to shape local conditions and grow Goodwill (+1). It does not ease a crisis meter by itself.",
   },
   "art-of-the-possible": {
     term: "Art of the possible",

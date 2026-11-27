@@ -311,13 +311,6 @@ export function createRoomBridge() {
         ? state.rules
         : [];
     state.lastNews = place.lastNews || "";
-    state.marketNews = place.marketNews
-      ? {
-          ...place.marketNews,
-          techIds: place.marketNews.techIds ? [...place.marketNews.techIds] : undefined,
-          domains: place.marketNews.domains ? [...place.marketNews.domains] : undefined,
-        }
-      : null;
     if (place.lastYearBulletin) state.lastYearBulletin = place.lastYearBulletin;
 
     state.inventionName = view.inventionName || "";
@@ -399,11 +392,11 @@ export function createRoomBridge() {
     state.apMax = me.apMax;
     state.budget = me.budget;
     state.will = me.will;
+    if (me.budgetCap != null) state.budgetCap = me.budgetCap;
+    if (me.willCap != null) state.willCap = me.willCap;
+    if (me.rdCount != null) state.rdCount = me.rdCount;
     state.pathwayEasePaid = { ...(me.pathwayEasePaid || {}) };
     state.apSpentThisTurn = me.apSpentThisTurn || 0;
-    state.aiTaxThisTurn = Boolean(me.aiTaxThisTurn);
-    state.writeCommitsThisTurn = me.writeCommitsThisTurn || 0;
-    state.techAddedThisTurn = { ...(me.techAddedThisTurn || {}) };
 
     if (
       view.challengePassed ||

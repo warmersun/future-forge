@@ -19,10 +19,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Pure deploy-drop calculation (DOM-free).
- * Matches attemptDeploy drop formula (game.js ~L1655–1665) + optional G2 will deltas.
  */
-
-import { applyG2DeployDeltas } from "./economy.js";
 
 /**
  * @param {object} opts
@@ -34,8 +31,6 @@ import { applyG2DeployDeltas } from "./economy.js";
  * @param {string[]} [opts.suggested] — mission.suggested tech ids
  * @param {Array<[string,string]>} [opts.pairs] — synergy pairs
  * @param {string[]} [opts.domains] — domain ids in stack
- * @param {number} [opts.will] — political will (G2)
- * @param {boolean} [opts.budgetWill] — feature flag
  */
 export function computeDeployDrop(opts) {
   const techs = opts.techs || [];
@@ -80,12 +75,6 @@ export function computeDeployDrop(opts) {
   if (techs.filter((t) => suggested.has(t.id)).length >= 2) {
     drop += 1;
     parts.push({ id: "suggested", label: "≥2 mission-suggested techs", amount: 1 });
-  }
-
-  if (opts.budgetWill) {
-    const g2 = applyG2DeployDeltas(drop, Number(opts.will) || 0);
-    drop = g2.drop;
-    parts.push(...g2.parts);
   }
 
   return { drop, parts };
@@ -271,12 +260,9 @@ export function scaleDropAmount(remaining) {
 }
 
 /**
- * New normal is a win-check step. Optional +1 only if will ≥ 4 and original pool ≥ 4.
- * @param {number} will
- * @param {number} pool
+ * New normal is a win-check step (no hidden Goodwill threshold bonus).
  */
-export function newNormalExtraDrop(will, pool) {
-  if ((Number(will) || 0) >= 4 && (Number(pool) || 0) >= 4) return 1;
+export function newNormalExtraDrop() {
   return 0;
 }
 
@@ -284,9 +270,8 @@ export function newNormalExtraDrop(will, pool) {
  * Apply one stage to a frozen pool snapshot (pure).
  * @param {"pilot"|"scale"|"new_normal"} stage
  * @param {{ stagedDropPool: number, stagedDropRemaining: number, dropPilotApplied?: number, dropScaleApplied?: number, dropNewNormalApplied?: number }} frozen
- * @param {{ will?: number }} [opts]
  */
-export function applyStagedDropStep(stage, frozen, opts = {}) {
+export function applyStagedDropStep(stage, frozen) {
   const next = {
     stagedDropPool: frozen.stagedDropPool ?? 0,
     stagedDropRemaining: frozen.stagedDropRemaining ?? 0,
@@ -311,10 +296,10 @@ export function applyStagedDropStep(stage, frozen, opts = {}) {
     partId = "scale";
     label = "Scale rollout";
   } else if (stage === "new_normal") {
-    drop = newNormalExtraDrop(opts.will ?? 0, next.stagedDropPool);
-    next.dropNewNormalApplied = drop;
-    partId = "new_normal_mandate";
-    label = drop ? "New normal mandate (Will ≥ 4)" : "New normal (no extra drop)";
+    drop = 0;
+    next.dropNewNormalApplied = 0;
+    partId = "new_normal";
+    label = "New normal";
   } else {
     return { ok: false, error: "unknown_stage", frozen: next, drop: 0, parts: [] };
   }

@@ -193,7 +193,7 @@ Három készlet ül a válságmérők mellett. A válságmérők a helyé. Ez a 
 | **Budget** | `state.budget` | Tőke. Ez egy készlet: a kör vége az Attentiont tölti újra, nem a Budgetet. |
 | **Support** | `state.will` | Politikai akarat — jóakarat, amelyet elkölthetsz. A régebbi tervjegyzetek „political will”-t mondanak. A HUD Supportot mond. Egy válságmérőt is hívhatnak Trustnak; az a mérő a helyé, nem ez az erőforrás. |
 
-**Kétfelvonásos gazdaság.** Egy idei helyi szigetmegoldás ne fejezze be a gyökérok-mérőt is. Később, őszintébb képességek — miután a naptár mozdult — a második felvonás. Amikor egy pontozott útvonal enyhít egy válságszerepet, **+1 Budgetet fizet minden újonnan enyhített szerepért**, szerepenként egyszer ebben a Questben. Ez a fizetség finanszírozza a második felvonást. A szerzők a gazdaságlaborral hangolják a kezdő mérőket és a pénztárcát, hogy egy Quest **challenging** legyen: megoldható, mielőtt a mérők pirosra váltanak, de nem triviális az első évben. Lásd: [quest-economy-lab.md](quest-economy-lab.md).
+**Csendes korlátok és kapacitásnövekedés.** Egy idei helyi szigetmegoldás ne fejezze be a gyökérok-mérőt is. Később, őszintébb képességek — miután a naptár mozdult — a második felvonás. Amikor egy pontozott útvonal enyhít egy válságszerepet, **+1 Budget kapacitást** ad minden újonnan enyhített szerepért, szerepenként egyszer ebben a Questben (legfeljebb `10`). A szerzők a `resources` mezőt opcionálisan hagyják (a város alapértékei maguktól érvényesek), és a `validate:quest --strict` könnyű ellenőrzésére hagyatkoznak.
 
 ### SI-társfeltaláló
 
@@ -321,11 +321,10 @@ Egy tanulási Quest, amely leckeoldalakat tartalmaz, egy **`.ffquest`** fájlké
 
 ```bash
 npm run validate:quest -- path/to/quest.json --strict
-npm run economy:quest -- path/to/quest.json
 npm run pack:quest -- <srcdir> -o <id>.ffquest
 ```
 
-A `--strict` a mesterségbeli figyelmeztetéseken bukik el (technológia megnevezve a tanulói szövegben, vékony grounding, sablonmaradék, és a többi). A gazdaságlabor célzott ítélete a **challenging**. A fejlesztői mód (`npm run start:developer` vagy `FF_DEVELOPER=1`) feloldja az inspect felületet és a labort a `/tools/quest-economy` címen. A produkciós `npm start` a fejlesztői módot kikapcsolva hagyja. A kliens a zászlót a `/api/health`-ből olvassa; nincs URL-felülírás.
+A `--strict` a mesterségbeli és a könnyű erőforrás/óra figyelmeztetéseken bukik el (technológia megnevezve a tanulói szövegben, vékony grounding, sablonmaradék, tartományon kívüli kezdő kapacitás, vagy azonnali óraösszeomlás). A fejlesztői mód (`npm run start:developer` vagy `FF_DEVELOPER=1`) feloldja az inspect felületet. A produkciós `npm start` a fejlesztői módot kikapcsolva hagyja. A kliens a zászlót a `/api/health`-ből olvassa; nincs URL-felülírás.
 
 ### Gyűjtőkártyák
 
@@ -395,13 +394,13 @@ Ebben a checkoutban a quest, a predictions, a companion és a gyűjtőkártyák 
 
 | Készség | Amit írsz | Amit hajt | Ellenőrzés |
 |---------|----------------|-----------|------------|
-| [future-forge-quest](../skills/future-forge-quest/) | Egy Spotlight Quest-csempe. Egy oldalakat tartalmazó tanulási Quest egy `.ffquest` fájlba is csomagolódik | Library, External Questek, Sponsored és Learning katalógusok, a briefing, a grounding minden SI-ítélethez, tutor mód | `npm run validate:quest -- <file> --strict` és `npm run economy:quest -- <file>` (ítélet: **challenging**) |
+| [future-forge-quest](../skills/future-forge-quest/) | Egy Spotlight Quest-csempe. Egy oldalakat tartalmazó tanulási Quest egy `.ffquest` fájlba is csomagolódik | Library, External Questek, Sponsored és Learning katalógusok, a briefing, a grounding minden SI-ítélethez, tutor mód | `npm run validate:quest -- <file> --strict` |
 | [future-forge-predictions](../skills/future-forge-predictions/) | Egy `future-forge.predictions/v1` bank dátumozott mérföldkövekből, trendekből és előrejelzésekből, forrásmegjelöléssel | Capability outlook, év párbeszédablak, kimenetel-előretekintő kártyák, az SI-világóra | `npm run validate:predictions -- <file>`, aztán `FF_PREDICTIONS_FILE=<file> npm start` |
 | [future-forge-companion](../skills/future-forge-companion/) | Egy kísérő Quest egy YouTube-videóból, podcastból, blogból vagy X-bejegyzésből, plusz a felhatalmazási sorok, amikor a premisszát feltételezik | A forrás-szakasz a menet előtt, és a bank, amelyet az a Quest rögzít | A fenti Quest- és előrejelzés-ellenőrzések. Eljárás: az a készség |
 | [future-forge-trends](../skills/future-forge-trends/) | Egy mért képességsorozat (`future-forge.capability-trend/v1`): összetett kamat, horgony, mérföldkövek. Nincsenek kitalált statisztikák | Inline Capability outlook és Look Ahead grafikonok; opcionális beágyazás egy Questen | `npm run validate:trend -- <file>` |
 | [future-forge-collector-cards](../skills/future-forge-collector-cards/) | Egy képességkártya plusz egy testvér oldalkép | Nyilvános `/card/<id>` oldal; begyűjtés után ingyenes, újrafelhasználható feltalálási csempe | `npm run validate:collector-card -- cards/<slug>.json` |
 
-Quest kemény szabályok, amelyeket érdemes ismerni, mielőtt csempét szerkesztesz: a Spotlight-azonosító a `mission.suggested` 0. indexe, 2–4 támogató azonosítóval; a tanulóknak szóló próza soha nem nevezi meg ezeket a technológiákat vagy egy terméket válaszként; a `briefMd` így fut: The place → The bigger problem → Your job (csak kimenetel); a `grounding` tartja azt az igazságot, amelyet a modellnek tiszteletben kell tartania; az új mérők alapból local 3↑1, global 2↑1, support 2↑0. A készség `references/` mappája a karakterklipeket, a próza mesterségét, a lint-kódokat és a gazdaságot írja le.
+Quest kemény szabályok, amelyeket érdemes ismerni, mielőtt csempét szerkesztesz: a Spotlight-azonosító a `mission.suggested` 0. indexe, 2–4 támogató azonosítóval; a tanulóknak szóló próza soha nem nevezi meg ezeket a technológiákat vagy egy terméket válaszként; a `briefMd` így fut: The place → The bigger problem → Your job (csak kimenetel); a `grounding` tartja azt az igazságot, amelyet a modellnek tiszteletben kell tartania; az új mérők alapból local 3↑1, global 2↑1, support 2↑0. A készség `references/` mappája a karakterklipeket, a próza mesterségét és a lint-kódokat írja le.
 
 Az előrejelzések azt változtatják, milyen keményen ítélik meg az időzítést. Az éveket őszintén helyezd el. Az esedékes sorok „már valóságossá” válnak. A még előttünk álló sorok előrejelzések maradnak. A kiszállított alapértelmezés forrásmegjelölés nélküli sorokat is kever; a `predictions/examples/musk-abundance.json` a forrásmegjelölt példa.
 
@@ -470,7 +469,6 @@ Az öt szerzői készség MIT-es, és önmagában is újrafelhasználható. Az S
 | [workshop-hex-invent-surface.md](workshop-hex-invent-surface.md) | A hex-tábla vizuális nyelve. Változási javaslatként írva; a tábla, amelyet leír, az, ami száll |
 | [quest-tile-schema.md](quest-tile-schema.md) | Quest JSON: mezők, ki látja őket, karakterklipek |
 | [quest-package.md](quest-package.md) | `.ffquest` zip egy Questhez plusz leckeoldalak |
-| [quest-economy-lab.md](quest-economy-lab.md) | Nehézségszimulátor; célzott ítélet: **challenging** |
 | [predictions-bank.md](predictions-bank.md) | Év párbeszédablak és az SI-világóra |
 | [capability-trend-schema.md](capability-trend-schema.md) | Egy mért görbe fájlonként |
 | [capability-trends-remote.md](capability-trends-remote.md) | Honnan töltődnek a Wait grafikonok |

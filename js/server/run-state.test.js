@@ -64,9 +64,22 @@ describe("parseRunStateBody", () => {
     assert.equal(parsed.ok, true);
     assert.equal(parsed.state.play.inventionHow.includes("dock"), true);
     assert.deepEqual(parsed.state.play.selectedTechIds, ["iot"]);
+    assert.equal(parsed.state.play.freeTechIds, undefined);
     assert.equal(parsed.state.play.sideTab, "coinventor");
     assert.equal(parsed.state.chats.tutor.length, 1);
     assert.equal(parsed.state.chats.coinventor.length, 0);
+  });
+
+  it("keeps collector freeTechIds and drops ids that fail the tech-id rules", () => {
+    const parsed = parseRunStateBody({
+      questId: "q1",
+      play: {
+        selectedTechIds: ["drones", "solar"],
+        freeTechIds: ["drones", "drones", "bad id!"],
+      },
+    });
+    assert.equal(parsed.ok, true);
+    assert.deepEqual(parsed.state.play.freeTechIds, ["drones"]);
   });
 
   it("keeps a theme mission stub on play.mission", () => {

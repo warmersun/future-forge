@@ -533,7 +533,7 @@ Respond only in English. Vary phrasing; do not repeat the same sentence twice.
 If their speech is empty, garbled, or incomplete, ask a short clarification instead of guessing.
 
 ## CRITICAL INSTRUCTIONS
-You lead nothing on the board. NEVER claim you added a tile, changed a meter, or spent AP.
+You lead nothing on the board. NEVER claim you added a tile, changed a meter, or spent a Move.
 ALWAYS call a tool when you propose specific emTechs or a how-it-works draft — speech alone does not apply.
 NEVER invent technology ids. NEVER call tools that are not in your tool list.
 `.trim();

@@ -19,7 +19,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { createHotseatBridge } from "../multiplayer/hotseat-bridge.js";
 import { clearCaptainLog, listCaptainLog } from "../captain-log.js?v=crisis-role-3";
 import {
@@ -296,8 +295,8 @@ describe("hex-workshop stale response isolation", () => {
         await tick();
         assert.equal(JSON.stringify(board), before);
         assert.equal(awards, 0);
-        assert.equal(spent, mode === "pose-challenge" ? 1 : 0);
-        assert.equal(refunds, mode === "pose-challenge" && change === "year" ? 1 : 0);
+        assert.equal(spent, 0);
+        assert.equal(refunds, 0);
         ws.seedFromMission(mission); // cancel outstanding debounce timers
       });
     }
@@ -459,7 +458,7 @@ describe("hex-workshop summonNextChallenger", () => {
   before(() => stubDom());
 
   for (const outcome of ["success", "failure", "clone", "seat", "seat-return", "turn", "run", "replacement"]) {
-    it(`uses real hotseat AP and hydration with ${outcome}`, async () => {
+    it(`summons roadblocks free (0 Moves) and isolates hotseat hydration with ${outcome}`, async () => {
       const bridge = createHotseatBridge();
       const mission = { id: "same", title: "Test", place: "Port", globalId: "climate",
         startYear: 2026, collapseYear: 2036, yearsPerTurn: 2,
@@ -472,15 +471,6 @@ describe("hex-workshop summonNextChallenger", () => {
       bridge.getSession().invents[payer].ap = 2;
       bridge.getSession().invents[payer].apSpentThisTurn = 1;
       bridge.hydrateSoloState(state);
-      const originalMission = state.mission, originalWorld = state.runWorld;
-      const source = readFileSync(new URL("../game.js", import.meta.url), "utf8");
-      const start = source.indexOf("function spendFirstSummonAp() {");
-      const end = source.indexOf("\n/**\n * Spend 1 AP for co-invent", start);
-      assert.ok(start >= 0 && end > start);
-      const { spendFirstSummonAp, refundFirstSummonAp } = new Function(
-        "state", "hotseatBridge", "roomBridge", "apEnabled", "getSpendableAp", "renderHud", "mpFriendlyError",
-        `${source.slice(start, end)}\nreturn { spendFirstSummonAp, refundFirstSummonAp };`
-      )(state, bridge, { isRoom: () => false }, () => true, () => state.ap, () => {}, () => "");
       const pending = deferred();
       let called = false;
       const busy = [];
@@ -488,16 +478,14 @@ describe("hex-workshop summonNextChallenger", () => {
         getBoard: () => state.hexBoard, setBoard: (b) => { state.hexBoard = b; },
         getYear: () => state.year, getMission: () => state.mission, getRunWorld: () => state.runWorld,
         getRunId: () => state.runWorld, getRequestIdentity: () => bridge.isHotseat() ? bridge.getRequestIdentity() : null,
-        apEnabled: () => true, spendFirstSummonAp, refundFirstSummonAp,
+        apEnabled: () => true,
         setAiBusy: (value) => busy.push(value),
         coInvent: async () => { called = true; return pending.promise; },
         ...(outcome === "failure" ? { playChallengerReel: async () => { throw new Error("reel failed"); } } : {}),
       });
       bridge.onRequestIdentityChange(() => ws.cancelSummon());
       const done = ws.summonNextChallenger();
-      assert.notEqual(state.mission, originalMission);
-      assert.notEqual(state.runWorld, originalWorld);
-      assert.equal(state.ap, 1);
+      assert.equal(state.ap, 2, "summoning roadblocks spends 0 Moves");
       if (outcome === "failure") {
         await assert.rejects(done, /reel failed/);
         assert.equal(state.ap, 2);
@@ -550,7 +538,7 @@ describe("hex-workshop summonNextChallenger", () => {
       await done;
       if (outcome === "success" || outcome === "clone") {
         assert.equal(Object.values(state.hexBoard.tiles).filter((t) => t.kind === TILE_KIND.concern).length, 1);
-        assert.equal(state.ap, 1);
+        assert.equal(state.ap, 2);
         assert.deepEqual(busy, [true, false]);
       } else {
         assert.equal(JSON.stringify(state.hexBoard), before);
@@ -569,13 +557,6 @@ describe("hex-workshop summonNextChallenger", () => {
     bridge.startFromPick(["Alex", "Bea"], mission, "climate");
     const state = { global: { id: "climate" }, selectedTechIds: [], hexBoard: seededBoard(), aiBusy: false };
     bridge.hydrateSoloState(state);
-    const source = readFileSync(new URL("../game.js", import.meta.url), "utf8");
-    const start = source.indexOf("function spendFirstSummonAp() {");
-    const end = source.indexOf("\n/**\n * Spend 1 AP for co-invent", start);
-    const { spendFirstSummonAp, refundFirstSummonAp } = new Function(
-      "state", "hotseatBridge", "roomBridge", "apEnabled", "getSpendableAp", "renderHud", "mpFriendlyError",
-      `${source.slice(start, end)}\nreturn { spendFirstSummonAp, refundFirstSummonAp };`
-    )(state, bridge, { isRoom: () => false }, () => true, () => state.ap, () => {}, () => "");
     const payer = bridge.getActiveId();
     const first = deferred(), second = deferred();
     let calls = 0;
@@ -583,7 +564,7 @@ describe("hex-workshop summonNextChallenger", () => {
       getBoard: () => state.hexBoard, setBoard: (b) => { state.hexBoard = b; },
       getYear: () => state.year, getMission: () => state.mission, getRunWorld: () => state.runWorld,
       getRequestIdentity: () => bridge.getRequestIdentity(),
-      apEnabled: () => true, spendFirstSummonAp, refundFirstSummonAp,
+      apEnabled: () => true,
       setAiBusy: (value) => { state.aiBusy = value; state.hexSummonPending = value; },
       coInvent: () => (++calls === 1 ? first.promise : second.promise),
     });
@@ -602,24 +583,24 @@ describe("hex-workshop summonNextChallenger", () => {
     state.hexBoard = seededBoard();
     const newer = ws.summonNextChallenger();
     await untilCalled(() => calls === 2);
-    assert.equal(bridge.getSession().invents[payer].ap, 2);
+    assert.equal(bridge.getSession().invents[payer].ap, 3);
     first.resolve({ challengeSpeech: "Old", challengeQuestion: "Old?" });
     await old;
-    assert.equal(bridge.getSession().invents[payer].ap, 2);
+    assert.equal(bridge.getSession().invents[payer].ap, 3);
     assert.equal(state.aiBusy, true);
     assert.equal(state.hexSummonPending, true);
     assert.equal(ws.isSummonBusy(), true);
     assert.equal(document.querySelector("#hex-board-pending").hidden, false);
     second.resolve({ challengeSpeech: "New", challengeQuestion: "New?" });
     await newer;
-    assert.equal(bridge.getSession().invents[payer].ap, 2);
+    assert.equal(bridge.getSession().invents[payer].ap, 3);
     assert.equal(state.aiBusy, false);
     assert.equal(state.hexSummonPending, false);
     assert.equal(ws.isSummonBusy(), false);
     assert.equal(document.querySelector("#hex-board-pending").hidden, true);
   });
 
-  it("places a challenger without referencing a removed prose object", async () => {
+  it("places a challenger free (0 Moves) without referencing a removed prose object", async () => {
     let board = seededBoard();
     let spent = 0;
     let refunded = 0;
@@ -645,7 +626,7 @@ describe("hex-workshop summonNextChallenger", () => {
     });
     const out = await ws.summonNextChallenger();
     assert.ok(out);
-    assert.equal(spent, 1);
+    assert.equal(spent, 0);
     assert.equal(refunded, 0);
     const concerns = Object.values(board.tiles).filter(
       (t) => t.kind === TILE_KIND.concern
@@ -654,7 +635,7 @@ describe("hex-workshop summonNextChallenger", () => {
     assert.match(String(concerns[0].imagePrompt || ""), /ai|pathway/i);
   });
 
-  it("refunds first-summon AP when the reel throws after pay", async () => {
+  it("leaves Moves untouched when the challenger reel throws", async () => {
     let board = seededBoard();
     let spent = 0;
     let refunded = 0;
@@ -678,8 +659,8 @@ describe("hex-workshop summonNextChallenger", () => {
       },
     });
     await assert.rejects(() => ws.summonNextChallenger(), /reel failed/);
-    assert.equal(spent, 1);
-    assert.equal(refunded, 1);
+    assert.equal(spent, 0);
+    assert.equal(refunded, 0);
     assert.equal(
       Object.values(board.tiles).filter((t) => t.kind === TILE_KIND.concern)
         .length,
@@ -704,8 +685,8 @@ describe("canMintArgument", () => {
     assert.equal(canMintPlain({}), false);
   });
 
-  it("labels the button with a 1 AP cost when Attention is on", () => {
-    assert.equal(mintArgumentButtonLabel(true), "Mint argument · 1 AP");
+  it("labels the button cleanly without inline AP clutter", () => {
+    assert.equal(mintArgumentButtonLabel(true), "Mint argument");
     assert.equal(mintArgumentButtonLabel(false), "Mint argument");
   });
 });
@@ -799,7 +780,7 @@ describe("continue restores argument mint", () => {
     // Continue restores a focused emTech after the case box opens.
     ws.focusTech("energy");
     assert.equal(btn.disabled, false);
-    assert.equal(btn.textContent, "Mint argument · 1 AP");
+    assert.equal(btn.textContent, "Mint argument");
     const plain = document.querySelector("#btn-mint-plain");
     assert.equal(plain.disabled, false);
     assert.equal(plain.textContent, "Mint non-emTech invention");

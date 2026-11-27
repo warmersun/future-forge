@@ -144,38 +144,51 @@ describe("mp-session turns", () => {
     assert.equal(s.invents["seat-1"].ap, 3);
   });
 
-  it("wait advances only the waiter invent year and ends turn", () => {
+  it("wait advances only the active invent year without ending the turn or refilling Moves", () => {
     let s = started();
     s = applyMpAction(s, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "pump" },
+      type: "select_tech",
+      payload: { techId: "solar" },
     }).session;
+    const apBefore = s.invents["seat-0"].ap;
     const year0 = s.place.year;
     const pressure0 = s.place.pressure.Floods;
     const alexY0 = s.invents["seat-0"].year;
     const beaY0 = s.invents["seat-1"].year;
     assert.equal(alexY0, year0);
     assert.equal(beaY0, year0);
-    const r = applyMpAction(s, { type: "wait" });
+    const r = applyMpAction(s, { type: "wait", payload: { years: 2 } });
     assert.equal(r.ok, true, r.error);
     s = r.session;
-    // Shared place baseline stays present; only waiter invent calendar advances
+    // Shared place baseline stays present; only active seat's invent calendar advances
     assert.equal(s.place.year, year0);
     assert.equal(s.invents["seat-0"].year, alexY0 + 2);
     assert.equal(s.invents["seat-0"].waits, 1);
+    assert.equal(s.invents["seat-0"].ap, apBefore, "time jump does not refill Moves");
     assert.equal(s.invents["seat-1"].year, beaY0);
     assert.equal(s.invents["seat-1"].waits, 0);
-    // Personal Wait must not raise shared meters (one seat cannot Wait-spam collapse)
+    // Personal Wait must not raise shared meters or pass the turn
     assert.equal(s.place.pressure.Floods, pressure0);
-    assert.equal(activeSeatId(s), "seat-1");
-    // Clients need these to refresh turn chrome (was missing → frozen UI after Wait)
+    assert.equal(activeSeatId(s), "seat-0");
     const waitEv = r.events.find((e) => e.type === "wait");
     assert.ok(waitEv);
     assert.equal(waitEv.year, alexY0 + 2);
     assert.equal(waitEv.seatId, "seat-0");
-    assert.ok(r.events.some((e) => e.type === "end_turn"));
-    assert.ok(r.events.some((e) => e.type === "seat_turn_start" && e.seatId === "seat-1"));
-    assert.equal(s.invents["seat-1"].ap, s.invents["seat-1"].apMax);
+    assert.ok(!r.events.some((e) => e.type === "end_turn"));
+
+    // Multiple time jumps in the same turn are allowed (+1 yr on top of +2 yrs)
+    const r2 = applyMpAction(s, { type: "wait", payload: { years: 1 } });
+    assert.equal(r2.ok, true, r2.error);
+    assert.equal(r2.session.invents["seat-0"].year, alexY0 + 3);
+    assert.equal(activeSeatId(r2.session), "seat-0");
+
+    // Explicit end_turn passes turn and refills next seat's Moves
+    const end = applyMpAction(r2.session, { type: "end_turn" });
+    assert.equal(end.ok, true, end.error);
+    assert.equal(activeSeatId(end.session), "seat-1");
+    assert.ok(end.events.some((e) => e.type === "end_turn"));
+    assert.ok(end.events.some((e) => e.type === "seat_turn_start" && e.seatId === "seat-1"));
+    assert.equal(end.session.invents["seat-1"].ap, end.session.invents["seat-1"].apMax);
   });
 
   it("table wrap raises shared meters once; Wait does not", () => {
@@ -213,33 +226,22 @@ describe("mp-session turns", () => {
     );
     s = startMpQuest(s).session;
 
-    // Alex wait → invent +2 (2028), pass to Bea
-    s = applyMpAction(s, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "pump" },
-    }).session;
+    // Alex wait → invent +2 (2028), then explicitly end turn to pass to Bea
     let r = applyMpAction(s, { type: "wait" });
     assert.equal(r.ok, true, r.error);
     s = r.session;
     assert.notEqual(s.place.status, "collapsed");
     assert.equal(s.invents["seat-0"].year, 2028);
+    s = applyMpAction(s, { type: "end_turn" }).session;
 
     // Bea ends turn → wrap +1 only invents that did not Wait this round (Alex waited)
-    s = applyMpAction(s, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "dike" },
-    }).session;
     s = applyMpAction(s, { type: "end_turn" }).session;
     assert.equal(activeSeatId(s), "seat-0");
-    assert.equal(s.invents["seat-0"].year, 2028); // Wait already applied yearsPerTurn — no wrap stack
+    assert.equal(s.invents["seat-0"].year, 2028); // Wait already jumped — no wrap stack
     assert.equal(s.invents["seat-1"].year, 2027); // Bea end-turn only → wrap +1
     assert.equal(s.place.year, 2027); // shared place clock still ticks on wrap
 
     // Alex second wait → +2 invent only (2030); partner stays earlier
-    s = applyMpAction(s, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "pump v2" },
-    }).session;
     r = applyMpAction(s, { type: "wait" });
     assert.equal(r.ok, true, r.error);
     s = r.session;
@@ -267,13 +269,9 @@ describe("mp-session turns", () => {
     );
     s = startMpQuest(s).session;
 
-    // Each seat waits until both invent calendars reach fail year (wrap year-ticks accelerate)
+    // Each seat jumps +2 and ends turn until both invent calendars reach fail year
     for (let i = 0; i < 8; i++) {
       const id = activeSeatId(s);
-      s = applyMpAction(s, {
-        type: "buffer_write",
-        payload: { field: "inventionHow", value: `w${i}` },
-      }).session;
       const r = applyMpAction(s, { type: "wait" });
       assert.equal(r.ok, true, r.error);
       s = r.session;
@@ -281,6 +279,15 @@ describe("mp-session turns", () => {
         assert.ok(s.invents["seat-0"].year >= 2030);
         assert.ok(s.invents["seat-1"].year >= 2030);
         assert.ok(r.events.some((e) => e.type === "collapsed" && e.reason === "all_invent_years"));
+        return;
+      }
+      const end = applyMpAction(s, { type: "end_turn" });
+      assert.equal(end.ok, true, end.error);
+      s = end.session;
+      if (s.place.status === "collapsed") {
+        assert.ok(s.invents["seat-0"].year >= 2030);
+        assert.ok(s.invents["seat-1"].year >= 2030);
+        assert.ok(end.events.some((e) => e.type === "collapsed" && e.reason === "all_invent_years"));
         return;
       }
       assert.ok(id);
@@ -301,10 +308,6 @@ describe("mp-session turns", () => {
       "climate"
     );
     s = startMpQuest(s).session;
-    s = applyMpAction(s, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "x" },
-    }).session;
     const r = applyMpAction(s, { type: "wait" });
     assert.equal(r.ok, true, r.error);
     s = r.session;
@@ -327,28 +330,17 @@ describe("mp-session turns", () => {
       "climate"
     );
     s = startMpQuest(s).session;
-    // Alex: two waits → invent 2030
+    // Alex: two waits across two rounds → invent 2030
     for (let i = 0; i < 2; i++) {
-      s = applyMpAction(s, {
-        type: "buffer_write",
-        payload: { field: "inventionHow", value: `a${i}` },
-      }).session;
       const r = applyMpAction(s, { type: "wait" });
       assert.equal(r.ok, true, r.error);
       s = r.session;
       assert.notEqual(s.place.status, "collapsed", `collapse after Alex wait #${i + 1}`);
+      s = applyMpAction(s, { type: "end_turn" }).session;
       // Bea's turn — end without waiting so Alex can wait again
-      if (activeSeatId(s) === "seat-1") {
-        s = applyMpAction(s, {
-          type: "buffer_write",
-          payload: { field: "inventionHow", value: `b${i}` },
-        }).session;
-        s = applyMpAction(s, { type: "end_turn" }).session;
-      }
+      assert.equal(activeSeatId(s), "seat-1");
+      s = applyMpAction(s, { type: "end_turn" }).session;
     }
-    // Alex waited +2 twice (→ +4). Wrap no longer double-counts Wait invents, so Bea
-    // (end-turn only) gets the two wrap +1 ticks; Alex stays at Wait totals only.
-    // (Alex wait→Bea end wrap #1, Alex wait→Bea end wrap #2)
     assert.equal(s.invents["seat-0"].year, 2030);
     assert.equal(s.invents["seat-1"].year, 2028); // two wrap ticks only (no personal Wait)
     assert.equal(s.place.status, "playing");
@@ -356,9 +348,7 @@ describe("mp-session turns", () => {
     assert.equal(s.place.pressure.Floods, 4);
   });
 
-  it("last seat Wait does not stack yearsPerTurn + wrap into +3 invent years", () => {
-    // Regression: Wait (+2) then table-wrap (+1 all invents) stacked for the last seat
-    // in a round → unfair +3 in one action vs mid-round seats who only saw +2.
+  it("last seat Wait + end_turn does not stack yearsPerTurn + wrap into +3 invent years", () => {
     let s = createMpLobby(["Alex", "Bea"]);
     s = setMpQuest(
       s,
@@ -379,50 +369,36 @@ describe("mp-session turns", () => {
     assert.equal(y1, 2026);
 
     // Alex ends without Wait → Bea is last seat of the round
-    s = applyMpAction(s, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "a" },
-    }).session;
     s = applyMpAction(s, { type: "end_turn" }).session;
     assert.equal(activeSeatId(s), "seat-1");
     assert.equal(s.round, 1);
-    assert.equal(s.invents["seat-0"].year, y0);
-    assert.equal(s.invents["seat-1"].year, y1);
 
-    // Bea Wait should advance her invent by yearsPerTurn only (not +3 with wrap)
-    s = applyMpAction(s, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "b" },
-    }).session;
-    const r = applyMpAction(s, { type: "wait" });
+    // Bea jumps +2 then explicitly ends turn → wrap must not add another +1 to Bea
+    s = applyMpAction(s, { type: "wait" }).session;
+    assert.equal(activeSeatId(s), "seat-1");
+    assert.equal(s.invents["seat-1"].year, y1 + 2);
+    const r = applyMpAction(s, { type: "end_turn" });
     assert.equal(r.ok, true, r.error);
     s = r.session;
-    assert.equal(s.round, 2, "last seat Wait wraps the table");
+    assert.equal(s.round, 2, "last seat end_turn wraps the table");
     assert.ok(r.events.some((e) => e.type === "year_tick"));
     assert.equal(s.place.year, 2027, "shared place year still +1 on wrap");
     // Bea: Wait +2 only (wrap must not also +1 her invent calendar)
     assert.equal(s.invents["seat-1"].year, y1 + 2);
     // Alex: did not Wait this round → receives wrap invent +1
     assert.equal(s.invents["seat-0"].year, y0 + 1);
-    // Same-round Waits stay fair: if both Waited, both get +yearsPerTurn and neither wrap stack
   });
 
-  it("both seats Wait once per round advance invent calendars equally (no last-seat bonus)", () => {
+  it("both seats Wait once per round + end_turn advance invent calendars equally", () => {
     let s = started();
-    // Alex Wait → +2
-    s = applyMpAction(s, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "a" },
-    }).session;
+    // Alex Wait → +2, then End turn
     s = applyMpAction(s, { type: "wait" }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
     assert.equal(s.invents["seat-0"].year, 2028);
     assert.equal(s.invents["seat-1"].year, 2026);
-    // Bea Wait → +2 and wrap; neither invent gets wrap +1 (both waited this round)
-    s = applyMpAction(s, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "b" },
-    }).session;
+    // Bea Wait → +2, then End turn wraps; neither invent gets wrap +1 (both jumped this round)
     s = applyMpAction(s, { type: "wait" }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
     assert.equal(s.round, 2);
     assert.equal(s.place.year, 2027);
     assert.equal(s.invents["seat-0"].year, 2028);
@@ -598,9 +574,10 @@ describe("mp-session hex board help", () => {
     assert.equal(r.session.invents["seat-0"].stack.length, 0);
   });
 
-  it("lifting a same-turn placed tile refunds half Budget, not AP", () => {
+  it("lifting a placed tile frees 100% of allocated Budget & Goodwill, not Moves", () => {
     let s = started();
     const budget0 = s.invents["seat-0"].budget;
+    const will0 = s.invents["seat-0"].will;
     const placed = applyMpAction(s, {
       type: "board_commit",
       payload: { hexBoard: withPlacedIdeaTile(s.invents["seat-0"].hexBoard) },
@@ -608,8 +585,6 @@ describe("mp-session hex board help", () => {
     assert.equal(placed.ok, true, placed.error);
     const afterPlace = placed.session.invents["seat-0"];
     const apAfter = afterPlace.ap;
-    const budgetAfter = afterPlace.budget;
-    const expectedRefund = Math.floor((budget0 - budgetAfter) / 2);
     const lifted = JSON.parse(JSON.stringify(afterPlace.hexBoard));
     delete lifted.tiles["inv-placed"];
     const r = applyMpAction(placed.session, {
@@ -618,8 +593,9 @@ describe("mp-session hex board help", () => {
     });
     assert.equal(r.ok, true, r.error);
     const f = r.session.invents["seat-0"];
-    assert.equal(f.ap, apAfter, "AP is not refunded");
-    assert.equal(f.budget, budgetAfter + expectedRefund);
+    assert.equal(f.ap, apAfter, "Moves are not refunded");
+    assert.equal(f.budget, budget0, "100% Budget freed immediately");
+    assert.equal(f.will, will0, "100% Goodwill freed immediately");
     assert.equal(f.stack.length, 0);
   });
 
@@ -758,7 +734,9 @@ describe("mp-session hex board help", () => {
     const seat = s.invents["seat-0"];
     seat.ap = 0;
     seat.budget = 0;
+    seat.budgetCap = 0;
     seat.will = 0;
+    seat.willCap = 0;
     const board = JSON.parse(JSON.stringify(seat.hexBoard));
     board.tiles["inv-col"] = {
       id: "inv-col",
@@ -1217,9 +1195,9 @@ describe("mp-session challenge pilot scale", () => {
     s = rPilot.session;
     assert.equal(s.invents["seat-0"].deployStage, "pilot_ok");
     assert.equal(s.invents["seat-1"].deployStage, "none"); // Bea's invent untouched
-    assert.ok(s.invents["seat-1"].budget < beaBudget);
-    // Helper pays Budget for Pilot; Pilot is free attention (0 AP) but marks engagement
-    assert.equal(s.invents["seat-1"].ap, beaAp, "pilot should not spend AP");
+    assert.equal(s.invents["seat-1"].budget, beaBudget, "pilot does not burn extra Budget");
+    // Helper pays 1 Move for Pilot
+    assert.equal(s.invents["seat-1"].ap, beaAp - 1, "pilot spends 1 Move");
     assert.ok((s.invents["seat-1"].apSpentThisTurn || 0) >= 1);
 
     // Scale without pilot on *target* still fails if we wipe pilot stage
@@ -1406,36 +1384,36 @@ describe("mp-session challenge pilot scale", () => {
     s = prepForPilot(s);
     const apBefore = s.invents["seat-0"].ap;
     s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
-    assert.equal(s.invents["seat-0"].ap, apBefore, "pilot does not spend AP");
+    assert.equal(s.invents["seat-0"].ap, apBefore - 1, "pilot spends 1 Move");
     const apAfterPilot = s.invents["seat-0"].ap;
     s = applyMpAction(s, { type: "attempt_scale" }, null, { rng: alwaysOk }).session;
-    assert.ok(s.invents["seat-0"].ap < apAfterPilot, "scale spends AP");
+    assert.equal(s.invents["seat-0"].ap, apAfterPilot - 1, "scale spends 1 Move");
     assert.equal(s.place.status, "won");
     assert.ok(s.ranking?.rows?.length >= 2);
     assert.equal(s.invents["seat-0"].landedSolvingScale, true);
     assert.equal(s.place.solverSeatId, "seat-0");
   });
 
-  it("pilot is 0 AP; scale spends 1 AP", () => {
+  it("pilot and scale each spend 1 Move and 0 Budget", () => {
     let s = prepForPilot(started());
     const ap0 = s.invents["seat-0"].ap;
+    const budget0 = s.invents["seat-0"].budget;
     s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
-    assert.equal(s.invents["seat-0"].ap, ap0);
-    assert.ok((s.invents["seat-0"].apSpentThisTurn || 0) >= 1, "pilot marks engagement");
+    assert.equal(s.invents["seat-0"].ap, ap0 - 1);
+    assert.equal(s.invents["seat-0"].budget, budget0);
     const ap1 = s.invents["seat-0"].ap;
     s = applyMpAction(s, { type: "attempt_scale" }, null, { rng: alwaysOk }).session;
     assert.equal(s.invents["seat-0"].ap, ap1 - 1);
+    assert.equal(s.invents["seat-0"].budget, budget0);
   });
 
-  it("end_turn allowed after 0-AP pilot success alone", () => {
+  it("end_turn is always allowed even with 0 Moves spent", () => {
     let s = prepForPilot(started());
-    // Fresh AP bar with no prior spends this seat-turn
     s.invents["seat-0"].ap = s.invents["seat-0"].apMax;
     s.invents["seat-0"].apSpentThisTurn = 0;
-    s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
-    assert.equal(s.invents["seat-0"].ap, s.invents["seat-0"].apMax);
     const r = applyMpAction(s, { type: "end_turn" });
     assert.equal(r.ok, true, r.error);
+    assert.equal(activeSeatId(r.session), "seat-1");
   });
 });
 
@@ -1550,29 +1528,55 @@ describe("mp-session end_turn skip offline", () => {
   });
 });
 
-describe("mp-session pay_will", () => {
-  it("pays and refunds Will for sidestep-scale spends", () => {
+describe("mp-session mint_rd / reversible R&D", () => {
+  it("mint_rd allocates 1 Move + 1 Budget; sync_rd_count / remove_rd frees 100% Budget", () => {
     let s = started();
     const a = activeSeatId(s);
-    const before = s.invents[a].will;
-    s = applyMpAction(s, { type: "pay_will", payload: { amount: 2 } }).session;
-    assert.equal(s.invents[a].will, before - 2);
-    s = applyMpAction(s, { type: "refund_will", payload: { amount: 2 } }).session;
-    assert.equal(s.invents[a].will, before);
+    const ap0 = s.invents[a].ap;
+    const budget0 = s.invents[a].budget;
+    const minted = applyMpAction(s, { type: "mint_rd" });
+    assert.equal(minted.ok, true, minted.error);
+    s = minted.session;
+    assert.equal(s.invents[a].ap, ap0 - 1);
+    assert.equal(s.invents[a].budget, budget0 - 1);
+    assert.equal(s.invents[a].rdCount, 1);
+
+    const freed = applyMpAction(s, { type: "sync_rd_count", payload: { rdCount: 0 } });
+    assert.equal(freed.ok, true, freed.error);
+    assert.equal(freed.session.invents[a].budget, budget0);
+    assert.equal(freed.session.invents[a].rdCount, 0);
+
+    let twice = started();
+    const seat = activeSeatId(twice);
+    const startBudget = twice.invents[seat].budget;
+    twice = applyMpAction(twice, { type: "mint_rd" }).session;
+    twice = applyMpAction(twice, { type: "mint_rd" }).session;
+    assert.equal(twice.invents[seat].rdCount, 2);
+    const partial = applyMpAction(twice, { type: "sync_rd_count", payload: { count: 1 } });
+    assert.equal(partial.ok, true, partial.error);
+    assert.equal(partial.session.invents[seat].rdCount, 1);
+    assert.equal(partial.session.invents[seat].budget, startBudget - 1);
   });
 
-  it("rejects pay_will when short", () => {
+  it("rejects mint_rd when Moves or Budget capacity are empty", () => {
     let s = started();
     const a = activeSeatId(s);
-    s.invents[a].will = 1;
-    const r = applyMpAction(s, { type: "pay_will", payload: { amount: 2 } });
-    assert.equal(r.ok, false);
-    assert.equal(r.error, "no_will");
+    s.invents[a].ap = 0;
+    const noAp = applyMpAction(s, { type: "mint_rd" });
+    assert.equal(noAp.ok, false);
+    assert.equal(noAp.error, "no_ap");
+
+    s = started();
+    s.invents[a].budget = 0;
+    s.invents[a].budgetCap = 0;
+    const noBudget = applyMpAction(s, { type: "mint_rd" });
+    assert.equal(noBudget.ok, false);
+    assert.equal(noBudget.error, "no_budget");
   });
 });
 
 describe("mp-session pay_ap", () => {
-  it("pays and refunds AP for co-inventor", () => {
+  it("pays and refunds Moves cleanly", () => {
     let s = started();
     const ap0 = s.invents["seat-0"].ap;
     const spent0 = s.invents["seat-0"].apSpentThisTurn || 0;
@@ -1593,88 +1597,44 @@ describe("mp-session pay_ap", () => {
     assert.equal(r.events.find((e) => e.type === "pay_ap")?.amount, 0);
   });
 
-  it("first thinking ask costs 1 AP; further thinking is free; judge still 1", () => {
+  it("thinking AI modes cost 0 Moves; commitment modes cost 1 Move", () => {
     let s = started();
     const ap0 = s.invents["seat-0"].ap;
     s = applyMpAction(s, {
       type: "pay_ap",
       payload: { amount: 1, mode: "chat" },
     }).session;
-    assert.equal(s.invents["seat-0"].ap, ap0 - 1);
-    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
+    assert.equal(s.invents["seat-0"].ap, ap0);
     s = applyMpAction(s, {
       type: "pay_ap",
       payload: { amount: 1, mode: "idea-sparks" },
     }).session;
-    assert.equal(s.invents["seat-0"].ap, ap0 - 1);
-    s = applyMpAction(s, {
-      type: "pay_ap",
-      payload: { amount: 1, mode: "judge-challenge" },
-    }).session;
-    assert.equal(s.invents["seat-0"].ap, ap0 - 2);
-    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
-  });
-
-  it("minting an argument costs 1 AP even after the season tax is paid", () => {
-    let s = started();
-    const ap0 = s.invents["seat-0"].ap;
-    s = applyMpAction(s, {
-      type: "pay_ap",
-      payload: { amount: 1, mode: "chat" },
-    }).session;
-    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
-    s = applyMpAction(s, {
-      type: "pay_ap",
-      payload: { amount: 1, mode: "fact-check-argument" },
-    }).session;
-    assert.equal(s.invents["seat-0"].ap, ap0 - 2);
-    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
-    s = applyMpAction(s, {
-      type: "pay_ap",
-      payload: { amount: 1, mode: "fact-check-argument" },
-    }).session;
-    assert.equal(s.invents["seat-0"].ap, ap0 - 3);
-  });
-
-  it("judge then chat still costs 1 AP for the first thinking ask", () => {
-    let s = started();
-    const ap0 = s.invents["seat-0"].ap;
+    assert.equal(s.invents["seat-0"].ap, ap0);
     s = applyMpAction(s, {
       type: "pay_ap",
       payload: { amount: 1, mode: "judge-challenge" },
     }).session;
     assert.equal(s.invents["seat-0"].ap, ap0 - 1);
-    assert.equal(s.invents["seat-0"].aiTaxThisTurn, false);
-    s = applyMpAction(s, {
-      type: "pay_ap",
-      payload: { amount: 1, mode: "chat" },
-    }).session;
-    assert.equal(s.invents["seat-0"].ap, ap0 - 2);
-    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
   });
 
-  it("thinking pay_ap ignores client amount 0", () => {
+  it("fact-check-argument always costs 1 Move", () => {
     let s = started();
     const ap0 = s.invents["seat-0"].ap;
-    const r = applyMpAction(s, {
-      type: "pay_ap",
-      payload: { amount: 0, mode: "chat" },
-    });
-    assert.equal(r.ok, true);
-    s = r.session;
-    assert.equal(s.invents["seat-0"].ap, ap0 - 1);
-    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
-  });
-
-  it("refund_ap after a thinking ask clears the season tax", () => {
-    let s = started();
     s = applyMpAction(s, {
       type: "pay_ap",
       payload: { amount: 1, mode: "chat" },
     }).session;
-    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
-    s = applyMpAction(s, { type: "refund_ap", payload: { amount: 1 } }).session;
-    assert.equal(s.invents["seat-0"].aiTaxThisTurn, false);
+    assert.equal(s.invents["seat-0"].ap, ap0);
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "fact-check-argument" },
+    }).session;
+    assert.equal(s.invents["seat-0"].ap, ap0 - 1);
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "fact-check-argument" },
+    }).session;
+    assert.equal(s.invents["seat-0"].ap, ap0 - 2);
   });
 });
 
@@ -1705,7 +1665,7 @@ describe("mp-session wrap hex pressureBase", () => {
 });
 
 describe("mp-session pay_budget", () => {
-  it("pays Budget on the active seat", () => {
+  it("allocates Budget capacity on the active seat", () => {
     let s = started();
     const budget0 = s.invents["seat-0"].budget;
     const r = applyMpAction(s, { type: "pay_budget", payload: { amount: 1 } });
@@ -1713,6 +1673,7 @@ describe("mp-session pay_budget", () => {
     s = r.session;
     assert.equal(s.invents["seat-0"].budget, budget0 - 1);
     s.invents["seat-0"].budget = 0;
+    s.invents["seat-0"].budgetCap = s.invents["seat-0"].rdCount;
     const broke = applyMpAction(s, { type: "pay_budget", payload: { amount: 1 } });
     assert.equal(broke.ok, false);
     assert.equal(broke.error, "no_budget");
@@ -1720,7 +1681,7 @@ describe("mp-session pay_budget", () => {
 });
 
 describe("mp-session lobby", () => {
-  it("trades 1 AP + 1 Budget for +1 Will on active seat", () => {
+  it("spends 1 Move and 0 Budget for +1 Goodwill capacity on active seat", () => {
     let s = started();
     const f0 = s.invents["seat-0"];
     const ap0 = f0.ap;
@@ -1730,14 +1691,15 @@ describe("mp-session lobby", () => {
     assert.equal(r.ok, true, r.error);
     s = r.session;
     assert.equal(s.invents["seat-0"].ap, ap0 - 1);
-    assert.equal(s.invents["seat-0"].budget, budget0 - 1);
+    assert.equal(s.invents["seat-0"].budget, budget0, "Lobby costs 0 Budget");
     assert.equal(s.invents["seat-0"].will, will0 + 1);
+    assert.equal(s.invents["seat-0"].willCap, will0 + 1);
     assert.ok(r.events.some((e) => e.type === "lobby"));
     // Shared place unchanged
     assert.deepEqual(s.place.pressure, started().place.pressure);
   });
 
-  it("rejects lobby without AP or Budget; non-active cannot lobby", () => {
+  it("rejects lobby without Moves; works with 0 Budget; non-active cannot lobby", () => {
     let s = started();
     s.invents["seat-0"].ap = 0;
     let r = applyMpAction(s, { type: "lobby" });
@@ -1746,9 +1708,9 @@ describe("mp-session lobby", () => {
 
     s = started();
     s.invents["seat-0"].budget = 0;
+    s.invents["seat-0"].budgetCap = 0;
     r = applyMpAction(s, { type: "lobby" });
-    assert.equal(r.ok, false);
-    assert.equal(r.error, "no_budget");
+    assert.equal(r.ok, true, "Lobby works even when Budget is 0");
 
     s = started();
     r = applyMpAction(s, { type: "lobby" }, "seat-1");
@@ -1756,12 +1718,14 @@ describe("mp-session lobby", () => {
     assert.equal(r.error, "not_active_seat");
   });
 
-  it("caps Will at max", () => {
+  it("caps Goodwill at max", () => {
     let s = started();
     s.invents["seat-0"].will = 5;
+    s.invents["seat-0"].willCap = 5;
     const r = applyMpAction(s, { type: "lobby" });
     assert.equal(r.ok, true, r.error);
     assert.equal(r.session.invents["seat-0"].will, 5);
+    assert.equal(r.session.invents["seat-0"].willCap, 5);
   });
 
   it("writes a shared local rule onto place without dropping pressure", () => {

@@ -81,16 +81,7 @@ Optional `exploration` (version integer `1`) adds `focus`, `bridge`, `premise` (
 
 ### Craft lint
 
-`npm run validate:quest -- <file>` prints `WARN <code>` lines after `OK:` for craft rules the schema cannot enforce (tech named in player text, legacy brief headings, word counts, pressure defaults, `startingBudget` ≥ 7, missing grounding, template placeholders, …). `--strict` turns warnings into a failing exit. Library tiles should be `--strict` clean.
-
-Tune `resources` and `mission.pressure*` with the **Quest economy lab** so a Quest is challenging but solvable before meters go red. Full guide: [`docs/quest-economy-lab.md`](quest-economy-lab.md).
-
-```bash
-npm run economy:quest -- path/to/quest.json
-npm run economy:quest -- --all
-```
-
-Developer UI (server `--developer`): `/tools/quest-economy`. Writes only those knobs (local `quests/` / `output/quests/` only), then `validate:quest`.
+`npm run validate:quest -- <file>` prints `WARN <code>` lines after `OK:` for craft rules the schema cannot enforce (tech named in player text, legacy brief headings, word counts, pressure defaults, spotlight affordability, capacity bounds, immediate clock collapse, missing grounding, template placeholders, …). `--strict` turns warnings into a failing exit. Library tiles should be `--strict` clean.
 
 ### Optional `briefBeats` (authored walkthrough)
 
@@ -146,7 +137,7 @@ When `isLearningModule` is true:
 - `aiTutorContext` is injected into the AI payload as authoritative teaching notes (with `grounding` still used for capability truth when present).
 - Tutor chat bubbles render safe Markdown: **clickable https links** and **inline https images** (`[title](url)`, `![alt](url)`). Authors stock readings/diagrams in `aiTutorContext`. The tutor **answers first**, then offers at most one matching lesson page when the next SEQUENCE idea or a misconception needs the textbook (not a first-turn dump, not a URL with no spoken answer).
 - Progress fields, when present, drive a **module title + segment bar** on the invent screen and Learning catalog (one segment per lesson; filled segments = completed on this device). Selection chips show **Learn · {module title}**.
-- Learning quests start on the **visual briefing** (Future Vision walk). A free-AP **tutor session** is ready when they open Co-Inventor (Tutoring badge). Learner can **End tutoring** / **Resume tutoring**; the AI may set `endTutoring: true` when the invent gate is met.
+- Learning quests start on the **visual briefing** (Future Vision walk). A **tutor session** is ready when they open Co-Inventor (Tutoring badge). Learner can **End tutoring** / **Resume tutoring**; the AI may set `endTutoring: true` when the invent gate is met.
 
 When `isLearningModule` is absent or false, Co-Inventor stays in normal invention-assistant mode (assistant chat still supports the same Markdown rendering).
 
@@ -280,7 +271,7 @@ Each active entry:
 | `pressureRise` | Rise **per calendar year** (0–3). End turn applies it once; Wait applies it `yearsPerTurn` times. **New tiles:** local **1**, global **1**, support **0**. |
 | `winMax` | Goal: hold at or under this after deploy (0–5; typically **1**) |
 
-Local is more urgent than global. Support rise 0: time does not grind trust. Untreated local 3↑1 hits 5 in 2028. Tune with [`docs/quest-economy-lab.md`](quest-economy-lab.md).
+Local is more urgent than global. Support rise 0: time does not grind trust. Untreated local 3↑1 hits 5 in 2028.
 
 ```json
 "pressure": {
@@ -306,17 +297,17 @@ When the structured form uses a **subset** of the three roles, selection UI show
 
 Internal scenario seeds still store ordered `pressureKeys` labels (`[local, global, support]`); `buildLocalScenarioVariants` maps them into this structured shape at runtime.
 
-### Optional `resources` (starting player resources)
+### Optional `resources` (starting Moves, Budget, and Goodwill)
 
-Override solo (and Friends invent) starting resources for this Quest only. Omitted fields keep the global defaults from `js/data.js` `GAME` (`apMax: 3`, `startingBudget: 5`, `startingWill: 3`).
+Override solo (and Friends invent) starting guardrails for this Quest only (omit by default). Omitted fields keep the global defaults from `js/data.js` `GAME` (`apMax: 3` Moves, `startingBudget: 5`, `startingWill: 3` Goodwill).
 
-Budget is a stock (End turn does not refill it). A scored pathway that eases a crisis role pays **+1 Budget per newly eased role**, once per role. Raise `startingBudget` only when the first tile cannot be bought; two-act tiles should not need 8$ just to afford the second island. See [`docs/quest-economy-lab.md`](quest-economy-lab.md).
+Budget and Goodwill are **100% reversible town capacities** allocated across active pathways and R&D boosts (removing a pathway returns 100% immediately). A scored pathway that eases a crisis role expands Budget capacity (+1, max 10); Lobby (1 Move, 0 Budget) and clearing roadblocks expand Goodwill capacity (+1, max 5). Thinking and AI brainstorming are always free (0 Moves).
 
 | Field | Notes |
 |-------|--------|
-| `apMax` | Action points per turn (integer ≥ 0) |
-| `startingBudget` | Starting budget (integer ≥ 0) |
-| `startingWill` | Starting political will / goodwill (integer ≥ 0) |
+| `apMax` | Moves per year/turn (integer ≥ 1; default 3) |
+| `startingBudget` | Starting Budget capacity (integer 0–10; default 5) |
+| `startingWill` | Starting Goodwill capacity (integer 0–5; default 3) |
 
 All three fields are optional. Only present keys override. Negative values, non-numbers, and non-integers are rejected by validation.
 

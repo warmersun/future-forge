@@ -58,7 +58,6 @@ Open **http://127.0.0.1:8765**
 | `npm start -- --usage` | game with AI/session usage metrics writing to `data/usage/` |
 | `npm run check:briefs` | Verify problem-brief coverage for all themes |
 | `npm run validate:quest -- path.json` | Validate a Spotlight Quest tile JSON |
-| `npm run economy:quest -- path.json` | Simulate four players; say if the Quest is too easy / too hard / tight ([docs/quest-economy-lab.md](docs/quest-economy-lab.md)) |
 | `npm run validate:predictions -- path.json` | Validate a predictions bank (no args: default + examples) |
 
 ### Predictions bank (year dialog + AI world clock)
@@ -67,7 +66,7 @@ One JSON file of dated milestones, trends, and predictions drives the year dialo
 
 ### Spotlight / External Quest tiles
 
-AI agents (any harness) can research a recent emTech advance and author a portable **Quest tile** JSON. See `docs/quest-tile-schema.md`, the MIT skill package `skills/future-forge-quest/`, and the difficulty simulator in [`docs/quest-economy-lab.md`](docs/quest-economy-lab.md).
+AI agents (any harness) can research a recent emTech advance and author a portable **Quest tile** JSON. See `docs/quest-tile-schema.md` and the MIT skill package `skills/future-forge-quest/`.
 
 **Server folder (recommended for classrooms / Friends):**
 
@@ -206,15 +205,15 @@ The process only serves **allowlisted public assets** (`index.html`, `css/`, cli
 | `FF_CO_INVENT_STREAM=1` | Stream conversational co-invent answers as server-sent events when the request `Accept` header asks for `text/event-stream`. The reasoning trace is one full-width Thinking block. It collapses as a whole when the answer starts, and the thoughts stay inside it. They are not sent back to the model. Feasibility, scoring, scenarios, and other judges stay one JSON body. Voice is unchanged. Off by default |
 | `FF_CO_INVENT_PROMPT_COMPACT=1` | Shorter conversational co-invent and tutor prompt. Still includes the world-clock line and the tutor send-to-read illustration. Off by default. Separate from `FF_CO_INVENT_STREAM` |
 
-Solo AI routes (`/api/co-invent`, `/api/co-invent-voice/session`, `/api/vision`, `/api/market-image`, `/api/tts`) share per-IP rate limits. Friends rooms also enforce action and AI flood limits on the WebSocket.
+Solo AI routes (`/api/co-invent`, `/api/co-invent-voice/session`, `/api/vision`, `/api/tts`) share per-IP rate limits. Friends rooms also enforce action and AI flood limits on the WebSocket.
 
-**Voice:** tap the waveform next to Send on any AI co-inventor panel. Needs a live SuperGrok session or `FF_XAI_API_KEY`, a microphone, and a secure context (`http://127.0.0.1` or HTTPS). First ask of a turn still costs 1 AP (free while tutoring); the call itself is not billed per utterance. The co-inventor never writes the board — Apply buttons still confirm stack/how drafts. A backgrounded tab with no audio frames hangs up after 90 seconds; an open mic keeps the call until the 10-minute cap. Portal (`npm run portal`) does not serve voice.
+**Voice:** tap the waveform next to Send on any AI co-inventor panel. Needs a live SuperGrok session or `FF_XAI_API_KEY`, a microphone, and a secure context (`http://127.0.0.1` or HTTPS). Talking with the co-inventor is always free (0 Moves). The co-inventor never writes the board — Apply buttons still confirm stack/how drafts. A backgrounded tab with no audio frames hangs up after 90 seconds; an open mic keeps the call until the 10-minute cap. Portal (`npm run portal`) does not serve voice.
 
 ### Developer mode (quest / trend inspect)
 
 **Off by default.** When on, the browser unlocks developer chrome (not automatic dump of all tiles). Production `npm start` must leave this off.
 
-- **Quests:** **Developer** on catalog cards → inspect modal (markdown + JSON). **Economy lab** at `/tools/quest-economy` pretends four players and charts crisis vs calendar ([docs/quest-economy-lab.md](docs/quest-economy-lab.md)).
+- **Quests:** **Developer** on catalog cards → inspect modal (markdown + JSON).
 - **Trends:** Look Ahead stays stack-only until you click **Developer view** (then all catalog tiles; per-card **Developer** opens player chart + JSON). **Player view** returns to the normal stack charts.
 
 ```bash

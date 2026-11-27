@@ -98,7 +98,7 @@ npm run validate:predictions -- <bank>
 
 ### 4. Write the quest
 
-Follow `skills/future-forge-quest/SKILL.md` for the fictive place, pressures, grounding, shelf, prose, and economy. Then add `companion` and `exploration` from companion.md.
+Follow `skills/future-forge-quest/SKILL.md` for the fictive place, pressures, grounding, shelf, and prose. Then add `companion` and `exploration` from companion.md.
 
 - `research.sources` includes the exact `source.url`.
 - The invitation sentence also appears in `spotlight.encourageCopy` or `briefMd`.
@@ -113,10 +113,9 @@ Follow `skills/future-forge-quest/SKILL.md` for the fictive place, pressures, gr
 ```bash
 npm run validate:predictions -- <bank>          # assumed only
 npm run validate:quest -- quests/<id>.json --strict
-npm run economy:quest -- quests/<id>.json
 ```
 
-The quest line reports `OK:` and `lint: clean`, or you name each remaining `WARN` in the hand-off. The economy verdict is **challenging**.
+The quest line reports `OK:` and `lint: clean`, or you name each remaining `WARN` in the hand-off.
 
 ### 6. Hand off local play
 

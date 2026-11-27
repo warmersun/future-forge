@@ -60,8 +60,8 @@ describe("staged deploy pool", () => {
     assert.equal(scaleDropAmount(0), 0);
   });
 
-  it("new normal extra only with will≥4 and pool≥4", () => {
-    assert.equal(newNormalExtraDrop(4, 4), 1);
+  it("new normal extra has no hidden Goodwill threshold bonus", () => {
+    assert.equal(newNormalExtraDrop(4, 4), 0);
     assert.equal(newNormalExtraDrop(3, 4), 0);
     assert.equal(newNormalExtraDrop(5, 3), 0);
   });
@@ -79,7 +79,7 @@ describe("staged deploy pool", () => {
     }
   });
 
-  it("applies stages in sequence with optional mandate", () => {
+  it("applies pilot and scale stages in sequence without hidden Goodwill extra drop", () => {
     let f = freezeStagedDropPool(4);
     const p = applyStagedDropStep("pilot", f);
     assert.equal(p.drop, 2);
@@ -88,8 +88,9 @@ describe("staged deploy pool", () => {
     assert.equal(s.drop, 2);
     f = s.frozen;
     const n = applyStagedDropStep("new_normal", f, { will: 4 });
-    assert.equal(n.drop, 1);
-    assert.equal(n.parts[0].id, "new_normal_mandate");
+    assert.equal(n.drop, 0);
+    assert.equal(n.parts[0].id, "new_normal");
+    assert.equal(n.parts[0].amount, 0);
   });
 
   it("maps deploy stage to vision stage", () => {

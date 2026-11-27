@@ -291,7 +291,7 @@ export function resolveTourStep(raw) {
     return step(
       "B1",
       "Not your turn",
-      "Browse freely. Only the active seat spends AP, places costs, and summons challengers.",
+      "Browse freely. Only the active seat spends Moves, commits pathways, and answers challengers.",
       sel("#mp-seat-tabs")
     );
   }
@@ -306,9 +306,9 @@ export function resolveTourStep(raw) {
   if (s.mp.hotseat && s.mp.needPassDevice) {
     return step(
       "B3",
-      "Pass the device",
-      "This seat is done. Pass the device so the next inventor can play.",
-      sel("#btn-mp-pass-device")
+      "End your turn",
+      "When you're ready, click End turn → to pass to the next inventor and refill Moves.",
+      sel("#btn-mp-workshop-end-turn")
     );
   }
 
@@ -335,7 +335,7 @@ export function resolveTourStep(raw) {
     return step(
       "D2",
       "Talk to the tutor",
-      "Ask about the idea of this lesson, one beat at a time. End tutoring when you want invent tools (Ask for ideas costs AP after that).",
+      "Ask about the idea of this lesson, one beat at a time. End tutoring when you want invent tools — brainstorming stays free.",
       sel("#co-inventor-root")
     );
   }
@@ -517,8 +517,8 @@ export function resolveTourStep(raw) {
   ) {
     return step(
       "G7",
-      "Budget is empty",
-      "Budget is empty — you cannot buy more techs or lobby. A docked pathway that eases a crisis pays some back.",
+      "Budget capacity full",
+      "All Budget capacity is allocated on your board. Remove a pathway to free 100% of its Budget, or ease a crisis to expand capacity (+1).",
       sel("#hud-budget")
     );
   }
@@ -532,8 +532,8 @@ export function resolveTourStep(raw) {
     if (outOfAp(s)) {
       return step(
         "G6",
-        "Refill AP",
-        "You're out of AP. End turn to refill — the year advances and crises get worse. Inventing is what eases them.",
+        "Out of Moves",
+        "You've used your Moves for this year. Advance the year (+1 yr →) or end your turn to refill Moves.",
         sel("#btn-end-turn")
       );
     }
@@ -567,11 +567,11 @@ export function resolveTourStep(raw) {
 
   // I — idle extras. Board actions outrank the always-visible co-inventor,
   // so a paused tutor or unused chat cannot hide Lobby, Learn, or Look Ahead.
-  if (s.lobbyVisible && s.will < 4 && !outOfAp(s) && s.budget >= 1) {
+  if (s.lobbyVisible && s.will < 4 && !outOfAp(s)) {
     return step(
       "I2",
-      "Lobby for support",
-      "Lobby sits on Local rules. Spend 1 AP and 1$ to write a rule — or click a pill to read it, × to remove.",
+      "Lobby for Goodwill",
+      "Lobby sits on Local rules. Use 1 Move (0 Budget) to write a rule and grow Goodwill (+1) — or click a pill to read or remove it.",
       sel("#btn-lobby")
     );
   }
@@ -603,7 +603,7 @@ export function resolveTourStep(raw) {
     return step(
       "I1",
       "Tutor is paused",
-      "Resume tutoring anytime (free AP), or keep inventing — co-inventor chat costs 1 AP.",
+      "Resume tutoring anytime, or keep inventing — co-inventor brainstorming is always free.",
       sel("#co-resume-tutor")
     );
   }
@@ -611,7 +611,7 @@ export function resolveTourStep(raw) {
     return step(
       "I5",
       "AI co-inventor",
-      "Stuck on the idea? The co-inventor can suggest a stack or check timing — first ask this turn costs 1 AP, then more help is free.",
+      "Stuck on the idea? The co-inventor can suggest pathways or check timing — brainstorming is always free.",
       sel("#co-inventor-root")
     );
   }

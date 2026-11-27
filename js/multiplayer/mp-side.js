@@ -84,14 +84,14 @@ export class MpSidePanel {
         techById,
         subtitle:
           this.opts.mode === "room"
-            ? "Room co-inventor — your turn only · first ask 1 AP"
-            : "Hotseat co-inventor — active seat · first ask 1 AP",
+            ? "Room co-inventor — your turn only"
+            : "Hotseat co-inventor — active seat",
         placeholder: "Brainstorm your invention for this place…",
         getContext: () => this.buildContext(),
         applyProposals: (p) => this.applyProposals(p),
         beforeRequest: async (mode) => {
           if (!this.opts.canAct()) {
-            this.opts.toast?.("Not your turn — pass the device / wait");
+            this.opts.toast?.("Not your turn — wait for the active seat to end their turn");
             return false;
           }
           if (this.opts.payAp) {
@@ -100,7 +100,7 @@ export class MpSidePanel {
             const amount = typeof paid === "object" && paid ? Number(paid.amount) || 0 : ok ? 1 : 0;
             this._lastAiCharge = ok ? amount : 0;
             if (!ok) {
-              this.opts.toast?.("Not enough AP for co-inventor");
+              this.opts.toast?.("Out of Moves — end your turn to refresh");
               return false;
             }
           }

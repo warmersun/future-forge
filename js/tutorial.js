@@ -597,10 +597,6 @@ export function createTutorial(opts = {}) {
   /** Step id that last played the ring entrance animation. */
   let lastRingStep = "";
   let briefingSeen = false;
-  let marketSeen = false;
-  let marketGaveUp = false;
-  /** @type {ReturnType<typeof setTimeout>|null} */
-  let marketGrace = null;
   /** @type {object|null} */
   let current = null;
   /** Materialized card the speaker reads. Updated before each paint. */
@@ -749,17 +745,7 @@ export function createTutorial(opts = {}) {
   function latch(snap) {
     const next = { ...(snap || {}) };
     if (next.briefing?.active) briefingSeen = true;
-    if (next.marketNewsOpen) {
-      marketSeen = true;
-      marketGaveUp = false;
-      if (marketGrace) {
-        clearTimeout(marketGrace);
-        marketGrace = null;
-      }
-    }
     next.briefingSeen = Boolean(next.briefingSeen || briefingSeen);
-    next.marketNewsSeen = Boolean(next.marketNewsSeen || marketSeen);
-    next.marketNewsGaveUp = Boolean(next.marketNewsGaveUp || marketGaveUp);
     return next;
   }
 
@@ -790,16 +776,6 @@ export function createTutorial(opts = {}) {
     void refreshNow();
   }
 
-  function armMarketGrace(step, snap) {
-    if (step?.id !== "market-news") return;
-    if (snap.marketNewsOpen || marketSeen || marketGaveUp || marketGrace) return;
-    marketGrace = setTimeout(() => {
-      marketGrace = null;
-      if (!marketSeen) marketGaveUp = true;
-      void refreshNow();
-    }, 700);
-  }
-
   function isOpen() {
     return open;
   }
@@ -810,13 +786,7 @@ export function createTutorial(opts = {}) {
     lastGeomKey = "";
     lastRingStep = "";
     briefingSeen = false;
-    marketSeen = false;
-    marketGaveUp = false;
     visionLatch = { id: "", baseline: "", settled: false };
-    if (marketGrace) {
-      clearTimeout(marketGrace);
-      marketGrace = null;
-    }
     open = true;
     silenceVoice();
     ensureRoot();
@@ -840,10 +810,6 @@ export function createTutorial(opts = {}) {
     paintedId = "";
     lastGeomKey = "";
     lastRingStep = "";
-    if (marketGrace) {
-      clearTimeout(marketGrace);
-      marketGrace = null;
-    }
     document.body.classList.remove("tutorial-open", "tutorial-popup-front");
     root?.classList.remove("is-open");
     document.querySelectorAll(".tutorial-target").forEach((el) => {
@@ -866,7 +832,6 @@ export function createTutorial(opts = {}) {
         close();
         return;
       }
-      armMarketGrace(resolved.step, snap);
       current = resolved.step;
       ensuring = true;
       try {

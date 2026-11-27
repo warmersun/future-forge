@@ -310,11 +310,11 @@ describe("quest-tile", () => {
     );
     assert.equal(
       resourceOverrideLabel({ startingBudget: 9, startingWill: 5 }),
-      "Budget 9 · Will 5"
+      "Budget 9 · Goodwill 5"
     );
     assert.equal(
       resourceOverrideLabel({ apMax: 4, startingBudget: 8, startingWill: 5 }),
-      "AP 4 · Budget 8 · Will 5"
+      "Moves 4 · Budget 8 · Goodwill 5"
     );
   });
 

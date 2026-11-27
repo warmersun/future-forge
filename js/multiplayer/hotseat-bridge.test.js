@@ -116,21 +116,26 @@ describe("hotseat-bridge", () => {
     assert.deepEqual(other.rules, []);
   });
 
-  it("wait advances only active invent year; other invent keeps present for feasibility", () => {
+  it("wait advances only active invent year without ending turn; passDevice rotates seat", () => {
     const b = createHotseatBridge();
     b.startFromPick(["Alex", "Bea"], mission, "climate");
     const alex = b.getActiveId();
     const bea = b.getSession().seatOrder[1];
     b.layerTechOnView("iot", { id: "iot", curve: "mature", readyYear: 2026 });
+    const apBeforeWait = b.getSession().invents[alex].ap;
     const r = b.waitShared({});
     assert.equal(r.ok, true, r.error);
     const s = b.getSession();
     assert.equal(s.place.year, 2026);
     assert.equal(s.invents[alex].year, 2028);
     assert.equal(s.invents[alex].waits, 1);
+    assert.equal(s.invents[alex].ap, apBeforeWait, "time jump does not refill Moves");
     assert.equal(s.invents[bea].year, 2026);
     assert.equal(s.invents[bea].waits, 0);
-    // Next seat hydrates with their own invent year (present)
+    // Active seat remains Alex until explicit End turn (passDevice)
+    assert.equal(b.getActiveId(), alex);
+    const pass = b.passDevice();
+    assert.equal(pass.ok, true, pass.error);
     assert.equal(b.getActiveId(), bea);
     const state = { global: { id: "climate" }, selectedTechIds: [] };
     b.hydrateSoloState(state, { global: state.global });

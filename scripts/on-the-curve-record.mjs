@@ -477,8 +477,6 @@ async function recordClip(cdp, shot, action, opts = {}) {
 
 async function dismissPop(cdp) {
   await cdp.eval(`(() => {
-    const news = document.querySelector('#market-news-ok');
-    if (news) { news.click(); return 'news'; }
     const ok = document.querySelector('#year-bulletin-ok');
     const modal = document.querySelector('#year-bulletin-modal');
     if (ok && modal && !modal.hidden) { ok.click(); return 'year'; }
@@ -1235,7 +1233,7 @@ async function retakeMain() {
     await recordClip(cdp, byId["05-wait-vs-end-turn"], async () => {
       const swat = async () => {
         for (let i = 0; i < 40; i++) {
-          await cdp.eval(`document.querySelector('#market-news-ok')?.click(); document.querySelector('#year-bulletin-ok')?.click();`);
+          await cdp.eval(`document.querySelector('#year-bulletin-ok')?.click();`);
           await sleep(250);
         }
       };

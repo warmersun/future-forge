@@ -46,8 +46,8 @@ export const DOUBLE_DIAMOND_STAGES = Object.freeze([
     id: "solution",
     num: 2,
     title: "Diamond 2 · Solution Space",
-    diverge: { step: "3 · Develop", symbol: "◇", sub: "Generate Ideas (0$)" },
-    converge: { step: "4 · Deliver", symbol: "◆", sub: "Assemble Pathways ($)" },
+    diverge: { step: "3 · Develop", symbol: "◇", sub: "Generate Ideas" },
+    converge: { step: "4 · Deliver", symbol: "◆", sub: "Assemble Pathways" },
   },
 ]);
 
@@ -792,7 +792,7 @@ export function evaluateStagedDrafts(drafts, board, questYear = 2026, opts = {})
   const missingBridge = needsBridgeWarning({ ingredients }, enforceWorlds);
 
   let worldStatus = "empty";
-  let worldSummary = "Add 1 or more ideas to a Pathway to inspect handoff, horizon, and cost.";
+  let worldSummary = "Add 1 or more ideas to a Pathway to inspect handoff and horizon.";
   if (ingredients.length > 0) {
     if (missingBridge) {
       worldStatus = "missing-bridge";
@@ -805,7 +805,7 @@ export function evaluateStagedDrafts(drafts, board, questYear = 2026, opts = {})
       worldSummary = "Bridge technology naturally connects digital and physical worlds.";
     } else if (hasHuman && !hasBits && !hasAtoms) {
       worldStatus = "complete";
-      worldSummary = "Human workflow step (0$ Budget — bridges any world).";
+      worldSummary = "Human workflow step — bridges any world.";
     } else {
       worldStatus = "single-world";
       worldSummary = hasBits
@@ -906,13 +906,9 @@ export function evaluateStagedDrafts(drafts, board, questYear = 2026, opts = {})
   }
 
   const costParts = [];
-  if (budget > 0) costParts.push(`${budget}$`);
-  if (will > 0) costParts.push(`Goodwill ${will}`);
-  const costLabel = !ingredients.length
-    ? "0$"
-    : costParts.length
-      ? costParts.join(" · ")
-      : "0$";
+  if (budget > 0) costParts.push(`${budget} Budget`);
+  if (will > 0) costParts.push(`${will} Goodwill`);
+  const costLabel = costParts.join(" · ");
 
   return {
     count: list.length,

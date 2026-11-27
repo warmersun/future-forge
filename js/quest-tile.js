@@ -558,7 +558,7 @@ export function resourceOverrideLabel(resources, defaults = GAME) {
     Number.isFinite(resources.apMax) &&
     resources.apMax !== (defaults.apMax ?? 3)
   ) {
-    parts.push(`AP ${resources.apMax}`);
+    parts.push(`Moves ${resources.apMax}`);
   }
   if (
     resources.startingBudget != null &&
@@ -572,7 +572,7 @@ export function resourceOverrideLabel(resources, defaults = GAME) {
     Number.isFinite(resources.startingWill) &&
     resources.startingWill !== (defaults.startingWill ?? 3)
   ) {
-    parts.push(`Will ${resources.startingWill}`);
+    parts.push(`Goodwill ${resources.startingWill}`);
   }
   return parts.length ? parts.join(" · ") : null;
 }
