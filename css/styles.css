@@ -15631,6 +15631,7 @@ body.is-quest-briefing .vision-dock-edge {
 body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed,
 body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-tech-collapsed.is-vision-collapsed,
 body.ontology-board:not(.is-quest-briefing) #screen-workshop[data-workshop-stage="crises"] .workshop-layout.is-vision-collapsed {
+  --vision-dock-width: min(max(36vw, 28rem), calc(100% - 2.5rem));
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: "invent";
   overflow-x: clip;
@@ -15649,8 +15650,8 @@ body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed
   bottom: 0;
   right: 0;
   left: auto;
-  width: min(25rem, 38vw);
-  max-width: 25rem;
+  width: var(--vision-dock-width);
+  max-width: none;
   height: auto;
   max-height: 100%;
   z-index: 50;
@@ -15723,7 +15724,7 @@ body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed
 }
 
 body.ontology-board:not(.is-quest-briefing) .workshop-layout.is-vision-collapsed.is-vision-peek > .vision-dock-handle {
-  right: min(25rem, 38vw);
+  right: var(--vision-dock-width);
 }
 
 .vision-dock-handle-chevron {
