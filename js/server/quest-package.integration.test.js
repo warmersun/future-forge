@@ -88,6 +88,9 @@ it("two local packages with identical bank ids keep separate worlds through the 
       FF_QUESTS_REMOTE_URL: "off",
       FF_TRENDS_REMOTE_URL: "off",
       FF_USAGE_ENABLED: "0",
+      // One call per mode for two packages, plus the missing-package check,
+      // is more than the default 40 co-invent hits per minute.
+      FF_RATE_CO_INVENT: "80",
       FF_GROK_HOME: path.join(work, "grok"),
       FF_TTS_CACHE_DIR: path.join(work, "tts"),
     },
