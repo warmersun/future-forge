@@ -1892,4 +1892,170 @@ describe("pathway workshop", () => {
     });
     assert.equal(h.ws.isCardCollapsed("tech", "drones"), false);
   });
+
+  it("assesses feasibility for placed sparks and always displays the rationale (AI, fallback, and restored boards)", async () => {
+    const assessCalls = [];
+    let nextResponse = {
+      source: "ai",
+      timing: {
+        level: "green",
+        reason:
+          "Partner hospital sequencing and DNA synthesis for targeted phage pilots are already demonstrated in 2026.",
+      },
+    };
+    const h = harness({
+      api: {
+        coInvent: async (mode) => {
+          if (mode === "idea-sparks") {
+            return {
+              ideas: [
+                {
+                  id: "spark-1",
+                  title: "Partner lab design round for the ward isolate",
+                  howText:
+                    "Dr Ilen Marsh sends three isolates to the teaching hospital lab to sequence and test phage mixes.",
+                },
+                {
+                  id: "spark-2",
+                  title: "Backup ward triage kit",
+                  howText:
+                    "Hospital team runs a local pilot assay on ward samples before prescribing.",
+                },
+              ],
+            };
+          }
+          if (mode === "assess-feasibility" || mode === "assess-plain") {
+            assessCalls.push(mode);
+            return nextResponse;
+          }
+          return {};
+        },
+      },
+    });
+    h.ws.seedFromMission({
+      place: "Harbor Ward",
+      pressure: { "Ward Outbreak": 3 },
+      spotlight: { techId: "drones" },
+    });
+    const drones = resolveTechTrack("drones");
+    const reached = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    h.ws.dealMilestone("drones", reached.id);
+    await h.ws.askForIdeas();
+
+    assert.equal(h.ws.placeSpark("spark-1"), true);
+    assert.match(h.root.innerHTML, /Checking year honesty…/);
+    await new Promise((r) => setTimeout(r, 15));
+
+    assert.equal(assessCalls.length, 1);
+    assert.equal(assessCalls[0], "assess-feasibility");
+    assert.match(h.root.innerHTML, /<span class="ontology-timing-label">Honest for this year \(85%\)<\/span>/);
+    assert.match(
+      h.root.innerHTML,
+      /<p class="ontology-timing-reason">Partner hospital sequencing and DNA synthesis for targeted phage pilots are already demonstrated in 2026\.<\/p>/
+    );
+
+    // Even if the model omits a reason or errors out, a non-empty rationale still renders
+    nextResponse = { source: "ai", timing: { level: "green", reason: "" } };
+    assert.equal(h.ws.placeSpark("spark-2"), true);
+    await new Promise((r) => setTimeout(r, 15));
+    const pw2Id = Object.keys(h.board.pathways)[1];
+    assert.ok(
+      String(h.board.pathways[pw2Id].ingredients[0].timingReason || "").trim().length > 10,
+      "empty AI reason falls back to a visible rationale"
+    );
+
+    // Restoring a legacy board with an unexplained 84% spark backfills its rationale
+    const legacy = structuredClone(h.board);
+    const pw1Id = Object.keys(legacy.pathways)[0];
+    legacy.pathways[pw1Id].ingredients[0].timingLevel = "green";
+    legacy.pathways[pw1Id].ingredients[0].timingPct = 84;
+    legacy.pathways[pw1Id].ingredients[0].timingReason = "";
+    legacy.pathways[pw1Id].ingredients[0].timingPending = false;
+    nextResponse = {
+      source: "ai",
+      timing: {
+        level: "green",
+        reason: "Restored card rationale confirmed for 2026.",
+      },
+    };
+    const prevCalls = assessCalls.length;
+    h.ws.restoreFromBoard(legacy, { focusedTechId: "drones" });
+    await new Promise((r) => setTimeout(r, 15));
+    assert.equal(assessCalls.length, prevCalls + 1);
+    assert.match(
+      h.root.innerHTML,
+      /<p class="ontology-timing-reason">Restored card rationale confirmed for 2026\.<\/p>/
+    );
+  });
+
+  it("keeps a spark panel in place in Lane 3 when clicking + Add instead of jumping to the bottom", async () => {
+    const h = harness({
+      api: {
+        coInvent: async (mode) => {
+          if (mode === "idea-sparks") {
+            return {
+              ideas: [
+                { id: "s1", title: "First Idea", howText: "Pilot drone surveys the ridge each morning." },
+                { id: "s2", title: "Middle Idea", howText: "Partner lab sequences ward samples locally." },
+                { id: "s3", title: "Third Idea", howText: "Solar cold box holds vaccines at the clinic." },
+              ],
+            };
+          }
+          if (mode === "assess-feasibility") {
+            return { timing: { level: "green", reason: "Demonstrated in 2026." } };
+          }
+          return {};
+        },
+      },
+    });
+    h.ws.seedFromMission({
+      place: "Harbor Ward",
+      pressure: { "Ward Outbreak": 3 },
+      spotlight: { techId: "drones" },
+    });
+    const drones = resolveTechTrack("drones");
+    const reached = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    h.ws.dealMilestone("drones", reached.id);
+    await h.ws.askForIdeas();
+
+    const seen = [
+      ...h.root.innerHTML.matchAll(/data-action="place-spark" data-idea-id="([^"]+)"/g),
+    ].map((m) => m[1]);
+    assert.equal(seen.length, 3);
+
+    // Click + Add on the MIDDLE spark -> its Pathway card stays right between First Idea and Third Idea!
+    assert.equal(h.ws.placeSpark(seen[1]), true);
+    const pwMiddleId = Object.keys(h.board.pathways)[0];
+    const htmlAfterMiddle = h.root.innerHTML;
+    const idxS1 = htmlAfterMiddle.indexOf(`data-idea-id="${seen[0]}"`);
+    const idxPwMiddle = htmlAfterMiddle.indexOf(`<article class="ontology-card ontology-pathway`);
+    const idxS3 = htmlAfterMiddle.indexOf(`data-idea-id="${seen[2]}"`);
+    assert.ok(
+      idxS1 > 0 && idxPwMiddle > idxS1 && idxS3 > idxPwMiddle,
+      "added middle spark stays between First Idea and Third Idea"
+    );
+    assert.equal(
+      (htmlAfterMiddle.match(new RegExp(`<article[^>]*data-pathway-id="${pwMiddleId}"`, "g")) || []).length,
+      1,
+      "pathway card is rendered exactly once (not duplicated below sparks)"
+    );
+
+    // Click + Add on the FIRST spark -> stays above Middle Idea and Third Idea!
+    assert.equal(h.ws.placeSpark(seen[0]), true);
+    const pwFirstId = Object.keys(h.board.pathways).find((id) => id !== pwMiddleId);
+    const htmlAfterFirst = h.root.innerHTML;
+    const idxPwFirst = htmlAfterFirst.search(new RegExp(`<article[^>]*data-pathway-id="${pwFirstId}"`));
+    const idxPwMiddle2 = htmlAfterFirst.search(new RegExp(`<article[^>]*data-pathway-id="${pwMiddleId}"`));
+    const idxS3AfterFirst = htmlAfterFirst.indexOf(`data-idea-id="${seen[2]}"`);
+    assert.ok(
+      idxPwFirst > 0 && idxPwMiddle2 > idxPwFirst && idxS3AfterFirst > idxPwMiddle2,
+      "added first spark stays in slot 1 above middle pathway and third spark"
+    );
+
+    // Clearing the remaining spark hides #ontology-sparks and keeps both pathways visible
+    assert.equal(h.ws.clearSparks(), true);
+    assert.match(h.root.innerHTML, /id="ontology-sparks" class="ontology-sparks" hidden/);
+    assert.match(h.root.innerHTML, new RegExp(`<article[^>]*data-pathway-id="${pwFirstId}"`));
+    assert.match(h.root.innerHTML, new RegExp(`<article[^>]*data-pathway-id="${pwMiddleId}"`));
+  });
 });

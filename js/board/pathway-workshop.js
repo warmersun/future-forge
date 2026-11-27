@@ -139,6 +139,26 @@ function mapConcernAnswerQuality(data) {
   return null;
 }
 
+function fallbackTimingReason(level, fallbackText, techId, questYear) {
+  const y = Number.isFinite(Number(questYear)) ? Number(questYear) : GAME.startYear;
+  if (!techId) {
+    const plain = localPlainTiming(fallbackText);
+    if (plain?.level === level && plain.reason) return plain.reason;
+  } else {
+    const techObj = TECHS.find((row) => row.id === techId);
+    const stretch = detectClaimStretch(fallbackText || "", techObj ? [techObj] : [], y);
+    const localReason = String(stretch?.reason || stretch?.note || "").trim();
+    if (stretch?.level === level && localReason) return localReason;
+  }
+  if (level === "red") {
+    return `Claims stretch beyond capabilities demonstrated by ${y}.`;
+  }
+  if (level === "yellow") {
+    return `Claims look partly stretched or under-specified for ${y}.`;
+  }
+  return `Claims fit capabilities demonstrated by ${y}.`;
+}
+
 function parseFeasibilityResult(data, fallbackText, techId, questYear) {
   if (data && typeof data === "object" && !data.error) {
     const t = data.timing && typeof data.timing === "object" ? data.timing : data;
@@ -165,15 +185,22 @@ function parseFeasibilityResult(data, fallbackText, techId, questYear) {
         ? Math.max(5, Math.min(98, Math.round(rawPct)))
         : timingLevelToPct(level);
       if (!level) level = pct >= 68 ? "green" : pct >= 40 ? "yellow" : "red";
-      const reason = String(
+      const rawReason = String(
         t.timingReason ||
           t.reason ||
+          t.rationale ||
+          t.explanation ||
           t.timingNote ||
           t.note ||
           data.timingReason ||
           data.reason ||
+          data.rationale ||
+          data.timingNote ||
           ""
-      ).slice(0, 280);
+      ).trim();
+      const reason = (
+        rawReason || fallbackTimingReason(level, fallbackText, techId, questYear)
+      ).slice(0, 400);
       return { timingLevel: level, timingPct: pct, timingReason: reason };
     }
   }
@@ -183,19 +210,24 @@ function parseFeasibilityResult(data, fallbackText, techId, questYear) {
     return {
       timingLevel: level,
       timingPct: timingLevelToPct(level),
-      timingReason: String(plain?.reason || ""),
+      timingReason: String(
+        plain?.reason || fallbackTimingReason(level, fallbackText, null, questYear)
+      ).slice(0, 400),
     };
   }
   const techObj = TECHS.find((row) => row.id === techId);
   const stretch = detectClaimStretch(fallbackText || "", techObj ? [techObj] : [], questYear);
-  if (stretch?.level === "red" || stretch?.level === "yellow") {
-    return {
-      timingLevel: stretch.level,
-      timingPct: timingLevelToPct(stretch.level),
-      timingReason: String(stretch.note || stretch.reason || ""),
-    };
-  }
-  return { timingLevel: "green", timingPct: 82, timingReason: "" };
+  const level = stretch?.level === "red" || stretch?.level === "yellow" ? stretch.level : "green";
+  const reason = String(
+    stretch?.reason || stretch?.note || fallbackTimingReason(level, fallbackText, techId, questYear)
+  )
+    .trim()
+    .slice(0, 400);
+  return {
+    timingLevel: level,
+    timingPct: timingLevelToPct(level),
+    timingReason: reason,
+  };
 }
 
 export function createPathwayWorkshop(api) {
@@ -931,7 +963,13 @@ export function createPathwayWorkshop(api) {
 
     const wires = currentWiresView(current, y);
     const open = openChallengerId ? current?.challengers?.[openChallengerId] : null;
-    const sparks = activeFocus ? sparkBatches.get(activeFocus)?.ideas || [] : [];
+    const activeBatch = activeFocus ? sparkBatches.get(activeFocus) : null;
+    const sparks = activeBatch?.ideas || [];
+    const sparkSlots = sparks.length
+      ? Array.isArray(activeBatch?.slots) && activeBatch.slots.length
+        ? activeBatch.slots
+        : sparks.map((idea) => ({ kind: "spark", ideaId: idea.id }))
+      : [];
     const unused = unusedSummaryFor(current, activeFocus);
     const workbench = workbenchViewFor(
       current,
@@ -960,6 +998,7 @@ export function createPathwayWorkshop(api) {
       wires,
       rules: current?.rules || [],
       sparks,
+      sparkSlots,
       unused,
       workbench,
       createBusy,
@@ -1388,6 +1427,35 @@ export function createPathwayWorkshop(api) {
         }
       }
     }
+
+    if (isPathwayBoard(current)) {
+      const y = year();
+      const needsAssess = [];
+      for (const pw of Object.values(current.pathways || {})) {
+        for (const ing of pw.ingredients || []) {
+          if (!ing || !String(ing.howText || "").trim()) continue;
+          const early = (ing.useCaseIds || []).some((id) =>
+            isUseCaseEarly(current.useCases?.[id], y)
+          );
+          if (early) continue;
+          const missingReason = !String(ing.timingReason || "").trim();
+          if (ing.timingPending || missingReason) {
+            needsAssess.push([pw.id, ing.id]);
+          }
+        }
+      }
+      if (needsAssess.length) {
+        void (async () => {
+          for (const [pwId, ingId] of needsAssess) {
+            try {
+              await assessIngredientFeasibility(pwId, ingId, { skipScore: true });
+            } catch (e) {
+              console.warn("[assess-feasibility]", e);
+            }
+          }
+        })();
+      }
+    }
   }
 
   function focusTech(id) {
@@ -1455,6 +1523,7 @@ export function createPathwayWorkshop(api) {
     const pw = current?.pathways?.[pathwayId];
     const ing = pw?.ingredients?.find((row) => row.id === ingredientId);
     if (!ing) return;
+    const assessedHow = String(ing.howText || "");
     const y = year();
     const earlyUc = (ing.useCaseIds || []).some((id) =>
       isUseCaseEarly(current.useCases?.[id], y)
@@ -1482,12 +1551,12 @@ export function createPathwayWorkshop(api) {
           plain ? "[Filter nonsense]" : "[Assess tile timing]",
           plain
             ? {
-                inventionHow: ing.howText || "",
+                inventionHow: assessedHow,
                 year: y,
                 place: api.getPlace?.() || "",
               }
             : {
-                inventionHow: ing.howText || "",
+                inventionHow: assessedHow,
                 selectedTechIds: [ing.techId],
                 year: y,
                 place: api.getPlace?.() || "",
@@ -1495,23 +1564,38 @@ export function createPathwayWorkshop(api) {
                 ...(cases.length ? { acceptedArguments: cases } : {}),
               }
         );
-        result = parseFeasibilityResult(data, ing.howText, ing.techId, y);
+        result = parseFeasibilityResult(data, assessedHow, ing.techId, y);
       } catch {
-        result = parseFeasibilityResult(null, ing.howText, ing.techId, y);
+        result = parseFeasibilityResult(null, assessedHow, ing.techId, y);
       }
     } else {
-      result = parseFeasibilityResult(null, ing.howText, ing.techId, y);
+      result = parseFeasibilityResult(null, assessedHow, ing.techId, y);
     }
 
     const latest = board();
-    if (!isPathwayBoard(latest) || !latest.pathways?.[pathwayId]) return;
-    const updated = setIngredientTiming(latest, pathwayId, ingredientId, {
+    if (!isPathwayBoard(latest)) return;
+    const livePathwayId = latest.pathways?.[pathwayId]?.ingredients?.some((r) => r.id === ingredientId)
+      ? pathwayId
+      : Object.keys(latest.pathways || {}).find((pid) =>
+          (latest.pathways[pid]?.ingredients || []).some((r) => r.id === ingredientId)
+        );
+    if (!livePathwayId) return;
+    const liveIng = latest.pathways[livePathwayId].ingredients.find((r) => r.id === ingredientId);
+    if (!liveIng || String(liveIng.howText || "") !== assessedHow) return;
+    const prevLevel = liveIng.timingLevel;
+    const updated = setIngredientTiming(latest, livePathwayId, ingredientId, {
       ...result,
       timingPending: false,
     });
-    const isWired = Object.values(updated.wires || {}).some((w) => w.pathwayId === pathwayId);
+    const isWired = Object.values(updated.wires || {}).some((w) => w.pathwayId === livePathwayId);
     if (!commit(updated, { bill: false })) return;
-    if (isWired && !opts.skipScore) commit(await scoreWired(board()), { bill: false });
+    if (
+      isWired &&
+      !opts.skipScore &&
+      !(prevLevel === result.timingLevel && isScoringPathway(livePathwayId))
+    ) {
+      commit(await scoreWired(board()), { bill: false });
+    }
   }
 
   async function askForIdeas(opts = {}) {
@@ -1596,6 +1680,7 @@ export function createPathwayWorkshop(api) {
         ids: ideas.map((idea) => idea.id),
         titles: seenTitles,
         ideas,
+        slots: ideas.map((idea) => ({ kind: "spark", ideaId: idea.id })),
       });
       api.onHowInput?.();
     } finally {
@@ -1614,10 +1699,14 @@ export function createPathwayWorkshop(api) {
     if (!batch?.ideas?.length) return false;
     const nextIdeas = batch.ideas.filter((row) => row.id !== ideaId);
     if (nextIdeas.length === batch.ideas.length) return false;
+    const nextSlots = (batch.slots || []).filter(
+      (s) => !(s.kind === "spark" && s.ideaId === ideaId)
+    );
     sparkBatches.set(activeTech, {
       ids: nextIdeas.map((row) => row.id),
       titles: batch.titles || [],
       ideas: nextIdeas,
+      slots: nextIdeas.length ? nextSlots : [],
     });
     paint();
     return true;
@@ -1633,6 +1722,7 @@ export function createPathwayWorkshop(api) {
       ids: [],
       titles: batch.titles || [],
       ideas: [],
+      slots: [],
     });
     paint();
     return true;
@@ -1660,13 +1750,18 @@ export function createPathwayWorkshop(api) {
     }
     const y = year();
     const place = api.getPlace?.() || "";
+    const howText = idea.howText || idea.insertText || idea.blurb || "";
+    const early = useCaseIds.some((id) => isUseCaseEarly(current.useCases?.[id], y));
+    const provisional = early
+      ? { timingLevel: "red", timingPct: 20, timingReason: "" }
+      : parseFeasibilityResult(null, howText, activeTech, y);
     const artId = idea.artId || ideaImageId({ techId: activeTech, ideaId: idea.id, place, year: y });
     const imagePrompt = idea.imagePrompt || idea.title;
     const needArt = Boolean(api.fetchIdeaImage && !idea.artUrl);
     const created = createPathway(current, {
       techId: activeTech,
       title: idea.title,
-      howText: idea.howText || idea.insertText || idea.blurb || "",
+      howText,
       useCaseIds,
       world: first?.world || techById(activeTech)?.polarity || "bits",
       collectorCardId: cardId,
@@ -1674,23 +1769,41 @@ export function createPathwayWorkshop(api) {
       artId,
       imagePrompt,
       artPending: needArt,
-      timingLevel: "green",
-      timingPct: 84,
-      timingReason: "",
+      timingLevel: provisional.timingLevel,
+      timingPct: provisional.timingPct,
+      timingPending: !early,
+      timingReason: provisional.timingReason,
     });
+    if (early) {
+      const ing = created.board.pathways[created.pathwayId]?.ingredients?.[0];
+      if (ing) ing.needsTimingAssess = true;
+    }
     const prevBatch = batch
       ? {
           ids: [...(batch.ids || [])],
           titles: [...(batch.titles || [])],
           ideas: [...(batch.ideas || [])],
+          slots: (batch.slots || []).map((s) => ({ ...s })),
         }
       : null;
     if (batch) {
       const remaining = (batch.ideas || []).filter((row) => row.id !== idea.id);
+      const prevSlots =
+        Array.isArray(batch.slots) && batch.slots.length
+          ? batch.slots
+          : (batch.ideas || []).map((row) => ({ kind: "spark", ideaId: row.id }));
+      const nextSlots = remaining.length
+        ? prevSlots.map((s) =>
+            s.kind === "spark" && s.ideaId === idea.id
+              ? { kind: "pathway", pathwayId: created.pathwayId }
+              : s
+          )
+        : [];
       sparkBatches.set(activeTech, {
         ids: remaining.map((row) => row.id),
         titles: batch.titles || [],
         ideas: remaining,
+        slots: nextSlots,
       });
     }
     focusedPathwayId = created.pathwayId;
@@ -1703,15 +1816,22 @@ export function createPathwayWorkshop(api) {
       paint();
       return false;
     }
-    if (ok && needArt) {
-      fetchArtForIngredient(created.pathwayId, created.ingredientId, {
-        techId: activeTech,
-        ideaId: idea.id,
-        artId,
-        place,
-        year: y,
-        imagePrompt,
-      });
+    if (ok) {
+      if (!early) {
+        assessIngredientFeasibility(created.pathwayId, created.ingredientId).catch((e) =>
+          console.warn("[assess-feasibility]", e)
+        );
+      }
+      if (needArt) {
+        fetchArtForIngredient(created.pathwayId, created.ingredientId, {
+          techId: activeTech,
+          ideaId: idea.id,
+          artId,
+          place,
+          year: y,
+          imagePrompt,
+        });
+      }
     }
     return ok;
   }
@@ -1815,6 +1935,7 @@ export function createPathwayWorkshop(api) {
       timingLevel: provided ? "yellow" : "green",
       timingPct: provided ? 75 : 88,
       timingPending: Boolean(provided),
+      timingReason: provided ? "" : localPlainTiming(how).reason,
     });
     draftHow = "";
     writeOpen = false;
@@ -2575,6 +2696,15 @@ export function createPathwayWorkshop(api) {
     editHowBuffer = "";
     const live = board() || current;
     const next = setPathwayHow(live, pathwayId, text);
+    const pw = next.pathways?.[pathwayId];
+    if (pw?.ingredients?.length === 1 && !pw.customHow) {
+      const pendingNext = setIngredientTiming(next, pathwayId, pw.ingredients[0].id, {
+        timingPending: true,
+      });
+      if (!commit(pendingNext, { bill: false })) return;
+      await assessIngredientFeasibility(pathwayId, pw.ingredients[0].id);
+      return;
+    }
     const isWired = Object.values(next.wires || {}).some((w) => w.pathwayId === pathwayId);
     if (!commit(next, { bill: false })) return;
     if (isWired) {
@@ -3475,6 +3605,7 @@ export function createPathwayWorkshop(api) {
         timingLevel: "green",
         timingPct: 88,
         timingPending: false,
+        timingReason: "Ordinary human verification and handoff step — ready to run today.",
       },
     ]);
     if (!fused.ok) return false;
@@ -3678,7 +3809,8 @@ export function createPathwayWorkshop(api) {
       );
       const alreadySettled =
         !early &&
-        (p.timingLevel === "green" || p.timingLevel === "yellow" || p.timingLevel === "red");
+        (p.timingLevel === "green" || p.timingLevel === "yellow" || p.timingLevel === "red") &&
+        Boolean(String(p.timingReason || "").trim());
       return {
         ...p,
         artPending: Boolean(api.fetchIdeaImage && !p.artUrl),
@@ -4205,7 +4337,7 @@ export function createPathwayWorkshop(api) {
       }
       if (
         target?.closest?.(
-          "button, a, input, textarea, select, label, summary, details, canvas, .ontology-modal-scrim, .ontology-composer, .ontology-workbench, .ontology-rules, .ontology-topbar, .ontology-trace-bar"
+          "button, a, input, textarea, select, label, summary, details, canvas, .ontology-modal-scrim, .ontology-composer, .ontology-spark-card, .ontology-sparks-head, .ontology-workbench, .ontology-rules, .ontology-topbar, .ontology-trace-bar"
         )
       ) {
         return;

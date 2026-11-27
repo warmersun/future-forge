@@ -681,7 +681,7 @@ export function ingredientToWorkbenchIdea(ing, opts = {}) {
     artPending: false,
     timingLevel: settledTiming ? ing.timingLevel : null,
     timingPct: settledTiming && ing.timingPct != null ? Number(ing.timingPct) : null,
-    timingReason: settledTiming ? String(ing.timingReason || "").slice(0, 280) : "",
+    timingReason: settledTiming ? String(ing.timingReason || "").slice(0, 400) : "",
     collectorCardId: ing.collectorCardId || null,
     seedLabel: "",
   };

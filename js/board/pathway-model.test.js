@@ -554,4 +554,31 @@ describe("pathway board", () => {
     assert.doesNotMatch(keptHow, /Rapid battery swaps/);
     assert.doesNotMatch(keptHow, /Woven/);
   });
+
+  it("prioritizes the worst-severity ingredient rationale in effectiveTiming", () => {
+    const start = addTechTrack(createPathwayBoard(), "drones");
+    const minted = mintStagedDraftsToPathway(start, [
+      {
+        techId: "drones",
+        title: "Scout drone",
+        howText: "Standard quadcopter maps ward roof.",
+        timingLevel: "green",
+        timingPct: 85,
+        timingReason: "Commercial quadcopters are widely demonstrated in 2026.",
+        world: "atoms",
+      },
+      {
+        techId: "battery",
+        title: "Fusion microcell",
+        howText: "Pocket fusion cell runs for a decade.",
+        timingLevel: "red",
+        timingPct: 20,
+        timingReason: "Pocket fusion cells are not demonstrated in 2026.",
+        world: "atoms",
+      },
+    ]);
+    const timing = effectiveTiming(minted.board.pathways[minted.pathwayId], minted.board.useCases, 2026);
+    assert.equal(timing.timingLevel, "red");
+    assert.equal(timing.timingReason, "Pocket fusion cells are not demonstrated in 2026.");
+  });
 });

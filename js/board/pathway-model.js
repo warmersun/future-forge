@@ -184,7 +184,10 @@ export function effectiveTiming(pathway, useCases, questYear) {
     }
   }
 
-  const reasons = (pathway?.ingredients || [])
+  const sortedBySeverity = [...(pathway?.ingredients || [])].sort(
+    (a, b) => (rank[a.timingLevel] ?? 1) - (rank[b.timingLevel] ?? 1)
+  );
+  const reasons = sortedBySeverity
     .map((ing) => String(ing.timingReason || "").trim())
     .filter(Boolean);
 
@@ -867,7 +870,7 @@ export function setIngredientTiming(board, pathwayId, ingredientId, patch = {}) 
   if (!ing) return next;
   if (patch.timingLevel !== undefined) ing.timingLevel = patch.timingLevel;
   if (patch.timingPct !== undefined) ing.timingPct = patch.timingPct;
-  if (patch.timingReason !== undefined) ing.timingReason = String(patch.timingReason || "").slice(0, 320);
+  if (patch.timingReason !== undefined) ing.timingReason = String(patch.timingReason || "").slice(0, 400);
   if (patch.timingPending !== undefined) ing.timingPending = Boolean(patch.timingPending);
   return bump(next);
 }

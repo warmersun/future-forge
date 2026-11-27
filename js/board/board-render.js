@@ -660,7 +660,6 @@ export function renderOntologyBoard(view) {
     focusedTechId,
     focusedTechName,
     selectedCount: selected.size,
-    sparks,
     createBusy: Boolean(view?.createBusy),
     writeOpen: Boolean(view?.writeOpen),
     draftHow: view?.draftHow || "",
@@ -668,20 +667,38 @@ export function renderOntologyBoard(view) {
     voiceSupported: Boolean(view?.voiceSupported),
   });
 
+  const renderPathwayCardForLane = (pw) =>
+    renderPathwayCard(pw, crises, wires, {
+      enforceWorlds: view?.enforceWorlds !== false,
+      editing: view?.editingPathwayId === pw.id,
+      focused: view?.focusedPathwayId === pw.id,
+      collapsed: collapsedSet.has(`pathway:${pw.id}`),
+      highlight,
+      ucById,
+    });
+
+  const pathwayById = new Map(pathways.map((pw) => [pw.id, pw]));
+  const renderedInSparks = new Set();
+  const sparksHtml = renderSparksSection({
+    sparks,
+    sparkSlots: Array.isArray(view?.sparkSlots) ? view.sparkSlots : null,
+    createBusy: Boolean(view?.createBusy),
+    pathwayById,
+    renderedInSparks,
+    renderPathway: renderPathwayCardForLane,
+  });
+
   const pathCardsHtml = pathways
-    .map((pw) =>
-      renderPathwayCard(pw, crises, wires, {
-        enforceWorlds: view?.enforceWorlds !== false,
-        editing: view?.editingPathwayId === pw.id,
-        focused: view?.focusedPathwayId === pw.id,
-        collapsed: collapsedSet.has(`pathway:${pw.id}`),
-        highlight,
-        ucById,
-      })
-    )
+    .filter((pw) => !renderedInSparks.has(pw.id))
+    .reverse()
+    .map(renderPathwayCardForLane)
     .join("");
 
-  const pathLane = `${composerHtml}${pathCardsHtml || `<p class="ontology-empty ontology-lane-hint">Ask for ideas on a selected use case—or write your own—then fuse pieces together here.</p>`}`;
+  const emptyHint =
+    !pathways.length && !sparks.length
+      ? `<p class="ontology-empty ontology-lane-hint">Ask for ideas on a selected use case—or write your own—then fuse pieces together here.</p>`
+      : "";
+  const pathLane = `${composerHtml}${sparksHtml}${pathCardsHtml}${emptyHint}`;
 
   const ruleChips = rules.length
     ? rules
@@ -1147,6 +1164,63 @@ function renderUseCase(uc, year, isSelected, highlight = null) {
   </article>`;
 }
 
+function renderSparkCard(idea) {
+  return `<div class="ontology-spark-card${idea.artUrl ? " has-art" : ""}" data-idea-id="${escapeHtml(idea.id)}">
+    <button type="button" class="ontology-spark-dismiss" data-action="dismiss-spark" data-idea-id="${escapeHtml(idea.id)}" aria-label="Remove ${escapeHtml(idea.title)}" title="Remove idea">×</button>
+    <div class="ontology-spark-main">
+      ${idea.artUrl ? `<img class="ontology-spark-art" src="${escapeHtml(idea.artUrl)}" alt="" loading="lazy" draggable="false" />` : ""}
+      <div class="ontology-spark-body">
+        <strong>${escapeHtml(idea.title)}</strong>
+        <p>${escapeHtml(idea.blurb || idea.howText || idea.insertText || "")}</p>
+      </div>
+    </div>
+    <div class="ontology-spark-foot">
+      ${idea.eases ? `<span class="ontology-eases-tag">Aims at: ${escapeHtml(idea.eases)}</span>` : `<span></span>`}
+      <button type="button" class="ontology-spark-btn" data-action="place-spark" data-idea-id="${escapeHtml(idea.id)}">+ Add</button>
+    </div>
+  </div>`;
+}
+
+function renderSparksSection(opts) {
+  const sparks = Array.isArray(opts.sparks) ? opts.sparks : [];
+  if (!sparks.length) {
+    return `<div id="ontology-sparks" class="ontology-sparks" hidden></div>`;
+  }
+  const sparkById = new Map(sparks.map((idea) => [idea.id, idea]));
+  const slots =
+    Array.isArray(opts.sparkSlots) && opts.sparkSlots.length
+      ? opts.sparkSlots
+      : sparks.map((idea) => ({ kind: "spark", ideaId: idea.id }));
+  const seenSparks = new Set();
+  const items = [];
+  for (const slot of slots) {
+    if (slot?.kind === "pathway" && slot.pathwayId && opts.pathwayById?.has(slot.pathwayId)) {
+      if (!opts.renderedInSparks?.has(slot.pathwayId)) {
+        opts.renderedInSparks?.add(slot.pathwayId);
+        items.push(opts.renderPathway(opts.pathwayById.get(slot.pathwayId)));
+      }
+    } else if (slot?.kind === "spark" && slot.ideaId && sparkById.has(slot.ideaId)) {
+      seenSparks.add(slot.ideaId);
+      items.push(renderSparkCard(sparkById.get(slot.ideaId)));
+    }
+  }
+  for (const idea of sparks) {
+    if (!seenSparks.has(idea.id)) {
+      items.push(renderSparkCard(idea));
+    }
+  }
+  return `<div id="ontology-sparks" class="ontology-sparks" aria-label="Generated local invention ideas">
+    <div class="ontology-sparks-head">
+      <span>Pick an idea for this place:</span>
+      <div class="ontology-sparks-actions">
+        <button type="button" class="ontology-link-btn" data-action="refresh-ideas" ${opts.createBusy ? "disabled" : ""}>↻ Refresh</button>
+        <button type="button" class="ontology-link-btn is-dismiss" data-action="clear-sparks" title="Remove all unused ideas">Clear</button>
+      </div>
+    </div>
+    ${items.join("")}
+  </div>`;
+}
+
 function renderPathwayComposer(opts) {
   const techOptions = (opts.tracks || [])
     .map(
@@ -1154,36 +1228,6 @@ function renderPathwayComposer(opts) {
         `<button type="button" class="ontology-focus-chip${t.techId === opts.focusedTechId ? " is-on" : ""}" data-action="focus-tech" data-tech-id="${escapeHtml(t.techId)}">${escapeHtml(t.icon ? `${t.icon} ` : "")}${escapeHtml(t.name)}</button>`
     )
     .join("");
-
-  const sparksHtml = opts.sparks?.length
-    ? `<div id="ontology-sparks" class="ontology-sparks" aria-label="Generated local invention ideas">
-        <div class="ontology-sparks-head">
-          <span>Pick an idea for this place:</span>
-          <div class="ontology-sparks-actions">
-            <button type="button" class="ontology-link-btn" data-action="refresh-ideas" ${opts.createBusy ? "disabled" : ""}>↻ Refresh</button>
-            <button type="button" class="ontology-link-btn is-dismiss" data-action="clear-sparks" title="Remove all unused ideas">Clear</button>
-          </div>
-        </div>
-        ${opts.sparks
-          .map(
-            (idea) => `<div class="ontology-spark-card${idea.artUrl ? " has-art" : ""}" data-idea-id="${escapeHtml(idea.id)}">
-              <button type="button" class="ontology-spark-dismiss" data-action="dismiss-spark" data-idea-id="${escapeHtml(idea.id)}" aria-label="Remove ${escapeHtml(idea.title)}" title="Remove idea">×</button>
-              <div class="ontology-spark-main">
-                ${idea.artUrl ? `<img class="ontology-spark-art" src="${escapeHtml(idea.artUrl)}" alt="" loading="lazy" draggable="false" />` : ""}
-                <div class="ontology-spark-body">
-                  <strong>${escapeHtml(idea.title)}</strong>
-                  <p>${escapeHtml(idea.blurb || idea.howText || idea.insertText || "")}</p>
-                </div>
-              </div>
-              <div class="ontology-spark-foot">
-                ${idea.eases ? `<span class="ontology-eases-tag">Aims at: ${escapeHtml(idea.eases)}</span>` : `<span></span>`}
-                <button type="button" class="ontology-spark-btn" data-action="place-spark" data-idea-id="${escapeHtml(idea.id)}">+ Add</button>
-              </div>
-            </div>`
-          )
-          .join("")}
-      </div>`
-    : `<div id="ontology-sparks" class="ontology-sparks" hidden></div>`;
 
   const writeBox = opts.writeOpen
     ? `<div class="ontology-write-box">
@@ -1209,7 +1253,6 @@ function renderPathwayComposer(opts) {
     </div>
     ${opts.createBusy ? `<div class="ontology-busy-banner" role="status"><span class="ontology-spinner" aria-hidden="true"></span> Drafting 3 local ideas &amp; card art…</div>` : ""}
     ${opts.selectedCount ? `<p class="ontology-selected-hint">✓ ${opts.selectedCount} use case${opts.selectedCount === 1 ? "" : "s"} linked into your next invention</p>` : ""}
-    ${sparksHtml}
     ${writeBox}
   </div>`;
 }

@@ -17173,6 +17173,10 @@ body.ontology-board .ontology-sparks[hidden] {
   display: none !important;
 }
 
+body.ontology-board .ontology-sparks > .ontology-pathway {
+  margin: 0 calc(-0.5rem - 1px);
+}
+
 body.ontology-board .ontology-sparks-head {
   display: flex;
   align-items: center;
