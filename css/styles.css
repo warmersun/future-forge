@@ -5490,7 +5490,7 @@ body.challenge-pose-pending #challenge-help-form {
 #tour-root {
   position: fixed;
   inset: 0;
-  z-index: 125;
+  z-index: 10200;
   pointer-events: none;
 }
 
@@ -5502,25 +5502,9 @@ body.challenge-pose-pending #challenge-help-form {
   display: block;
 }
 
-.tour-panes {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.tour-panes[hidden] {
-  display: none !important;
-}
-
-.tour-pane {
-  position: absolute;
-  background: rgba(2, 6, 14, 0.52);
-  pointer-events: auto;
-}
-
 .tour-ring {
   position: fixed;
-  z-index: 126;
+  z-index: 10201;
   pointer-events: none;
   border: 2px solid var(--accent);
   border-radius: 12px;
@@ -5528,6 +5512,13 @@ body.challenge-pose-pending #challenge-help-form {
     0 0 0 1px rgba(56, 189, 248, 0.35),
     0 0 24px rgba(56, 189, 248, 0.35);
   animation: tour-ring-in 0.22s var(--ease);
+}
+
+.tour-ring.has-dimmer {
+  box-shadow:
+    0 0 0 9999px rgba(2, 6, 14, 0.52),
+    0 0 0 1px rgba(56, 189, 248, 0.35),
+    0 0 24px rgba(56, 189, 248, 0.35);
 }
 
 .tour-ring[hidden] {
@@ -5547,7 +5538,7 @@ body.challenge-pose-pending #challenge-help-form {
 
 .tour-card {
   position: fixed;
-  z-index: 126;
+  z-index: 10201;
   pointer-events: auto;
   width: min(340px, calc(100vw - 24px));
   background: var(--bg-2);
@@ -5725,7 +5716,7 @@ body:not(.tutorial-open) > .tour-card.is-tutorial {
 }
 
 #help-backdrop {
-  z-index: 140;
+  z-index: 10220;
 }
 
 /* Help modal — stacked blocks + equal tile grids (panel size: .modal.help-modal) */
@@ -14135,73 +14126,6 @@ dfn.term:focus-visible {
   text-overflow: clip;
   display: block;
   -webkit-line-clamp: unset;
-}
-
-/* ---- Friend's-seven concept cards on the coach-mark card ---- */
-.tour-card.is-concept .tour-kicker {
-  color: var(--warn);
-}
-
-.tour-foot {
-  margin-top: 0.7rem;
-  padding-top: 0.55rem;
-  border-top: 1px dashed var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  font-size: 0.74rem;
-}
-
-.tour-mute {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--text-dim);
-  cursor: pointer;
-}
-
-.tour-mute[hidden] {
-  display: none;
-}
-
-.tour-mute input {
-  margin: 0;
-}
-
-.tour-concepts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.tour-concepts-label {
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-mute);
-  margin-right: 0.15rem;
-}
-
-.tour-concept-chip {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-dim);
-  border-radius: 999px;
-  padding: 0.12rem 0.5rem;
-  font: inherit;
-  font-size: 0.68rem;
-  cursor: pointer;
-}
-
-.tour-concept-chip:hover {
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-
-.tour-concept-chip.is-active {
-  border-color: var(--warn);
-  color: var(--warn);
 }
 
 .idea-card-eases {

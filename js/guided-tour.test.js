@@ -20,55 +20,77 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  snapOf,
   resolveTourStep,
   queryTourTarget,
   createGuidedTour,
 } from "./guided-tour.js";
-import { conceptById } from "./concept-cards.js";
 
 function base(over = {}) {
   const briefing = { active: false, index: 0, beatCount: 4, ...(over.briefing || {}) };
-  const pathway = {
-    overall: "red",
-    bonds: "red",
-    coverage: "red",
-    timingLevel: "red",
-    timingPending: false,
-    ...(over.pathway || {}),
+  const mp = {
+    spectator: false,
+    viewingOther: false,
+    hotseat: false,
+    needPassDevice: false,
+    ...(over.mp || {}),
   };
   const ui = { ...(over.ui || {}) };
-  const mp = { spectator: false, viewingOther: false, ...(over.mp || {}) };
+  const wb = {
+    open: false,
+    diamond: "solution",
+    busy: false,
+    hasHmwBrief: false,
+    hmwLocked: false,
+    ideaCount: 0,
+    ...(over.wb || {}),
+  };
   return {
     screen: "workshop",
     place: "Tideglass",
     spotlightTechId: "gene-sequencing",
     spotlightName: "Gene sequencing",
     spotlightEncourage: "Invent on-site sequencing so clinics don't wait on a lab.",
+    hasRecommended: true,
     suggestedIds: ["gene-sequencing"],
-    focusedTechId: null,
-    focusedTechName: "",
     isLearning: false,
     tutorOn: false,
     sideTab: "vision",
-    unplacedInventionCount: 0,
-    placedInventionCount: 0,
-    howTextLength: 0,
-    hasSparkBatch: false,
+    tracks: 0,
+    focusedTechId: null,
+    focusedTechName: "",
+    useCaseCount: 0,
+    sparksCount: 0,
+    writeOpen: false,
+    draftHowLength: 0,
+    pathwayCount: 0,
+    primaryPathwayId: null,
+    unpluggedCrisisId: null,
+    unpluggedCrisisName: "",
+    unpluggedCount: 0,
+    redChallengerId: null,
+    redChallengerCrisisId: null,
+    challengerAnswerPending: false,
+    timingLevel: "green",
+    redPathwayId: null,
+    hasEarlyForecastWire: false,
+    redCrisisId: null,
+    redCrisisName: "",
+    redCrisisCount: 0,
     concernsOnBoard: 0,
     remainingConcerns: 1,
     concernsSummoned: false,
     boardHolds: false,
     ap: 3,
     apEnabled: true,
+    isMultiplayer: false,
     budget: 5,
     budgetWillEnabled: true,
-    will: 3,
-    lobbyVisible: true,
     ...over,
     briefing,
-    pathway,
-    ui,
     mp,
+    ui,
+    wb,
   };
 }
 
@@ -76,460 +98,506 @@ function idOf(snap) {
   return resolveTourStep(snap).id;
 }
 
-describe("resolveTourStep", () => {
-  it("A1 wait confirm beats everything else", () => {
-    assert.equal(
-      idOf(
-        base({
-          ui: { waitConfirmOpen: true },
-          briefing: { active: true, index: 0, beatCount: 4 },
-        })
-      ),
-      "A1"
-    );
+describe("snapOf", () => {
+  it("normalizes missing fields and supports legacy pathway aliases", () => {
+    const s = snapOf({
+      suggestedIds: ["ai"],
+      pathway: { timingLevel: "red", timingPending: true },
+      workbench: { open: true, diamond: "problem", hmwBrief: "How might we?" },
+    });
+    assert.equal(s.hasRecommended, true);
+    assert.equal(s.timingLevel, "red");
+    assert.equal(s.ui.timingPending, true);
+    assert.equal(s.wb.open, true);
+    assert.equal(s.wb.diamond, "problem");
+    assert.equal(s.wb.hasHmwBrief, true);
   });
+});
 
-  it("A2 / H2 / H3 target the popup card and skip the dimmer", () => {
-    const a2 = resolveTourStep(base({ ui: { tilePopupOpen: true } }));
-    assert.equal(a2.id, "A2");
-    assert.equal(a2.target.selector, ".hex-tile-popup-card");
-    assert.equal(a2.skipDimmer, true);
-
-    const h2 = resolveTourStep(
+describe("resolveTourStep", () => {
+  it("M1 wait confirm beats everything else and skips dimmer", () => {
+    const step = resolveTourStep(
       base({
-        ui: { tilePopupOpen: true },
-        unansweredConcernId: "concern-nature",
+        ui: { waitConfirmOpen: true, openChallengerId: "ch-1", pickerOpen: true },
+        briefing: { active: true, index: 0, beatCount: 4 },
       })
     );
-    assert.equal(h2.id, "H2");
-    assert.equal(h2.target.selector, ".hex-tile-popup-card");
-    assert.equal(h2.skipDimmer, true);
-
-    const h3 = resolveTourStep(base({ concernAnswerPending: true }));
-    assert.equal(h3.id, "H3");
-    assert.equal(h3.target.selector, ".hex-tile-popup-card");
-    assert.equal(h3.skipDimmer, true);
+    assert.equal(step.id, "M1");
+    assert.equal(step.target.selector, "#wait-confirm-ok");
+    assert.equal(step.skipDimmer, true);
   });
 
-  it("E0 selector is scoped to the workshop screen", () => {
-    const step = resolveTourStep(base({ ui: { techCatalogHidden: true } }));
-    assert.equal(step.id, "E0");
-    assert.equal(step.target.selector, "#screen-workshop #btn-add-tech");
-  });
+  it("M2 roadblock modal distinguishes judging vs defend/remix", () => {
+    const defend = resolveTourStep(base({ ui: { openChallengerId: "ch-1" } }));
+    assert.equal(defend.id, "M2");
+    assert.equal(defend.title, "Defend or remix");
+    assert.equal(defend.target.selector, "#ontology-roadblock");
+    assert.equal(defend.skipDimmer, true);
 
-  it("C1 points at briefing Next, C2 at Start inventing on last beat", () => {
-    assert.equal(
-      idOf(base({ briefing: { active: true, index: 0, beatCount: 4 } })),
-      "C1"
+    const judging = resolveTourStep(
+      base({ ui: { openChallengerId: "ch-1" }, challengerAnswerPending: true })
     );
+    assert.equal(judging.id, "M2");
+    assert.equal(judging.title, "Judging defense…");
+    assert.equal(judging.skipDimmer, true);
+  });
+
+  it("M3 argument modal targets scrim form and skips dimmer", () => {
+    const step = resolveTourStep(base({ ui: { argumentModalOpen: true } }));
+    assert.equal(step.id, "M3");
+    assert.equal(step.target.selector, ".ontology-modal-scrim form");
+    assert.deepEqual(step.target.selectors, [
+      ".ontology-modal-scrim form",
+      ".ontology-modal-scrim",
+    ]);
+    assert.equal(step.skipDimmer, true);
+  });
+
+  it("M4 tech picker targets spotlight, recommended, or picker", () => {
+    const spot = resolveTourStep(base({ ui: { pickerOpen: true } }));
+    assert.equal(spot.id, "M4");
+    assert.equal(spot.skipDimmer, true);
+    assert.match(spot.title, /Gene sequencing/);
+    assert.deepEqual(spot.target.selectors, [
+      '#ontology-tech-picker [data-tech-id="gene-sequencing"]',
+      "#ontology-tech-picker .tech-card.recommended",
+      "#ontology-tech-picker",
+    ]);
+
+    const rec = resolveTourStep(
+      base({ ui: { pickerOpen: true }, spotlightTechId: null, hasRecommended: true })
+    );
+    assert.equal(rec.id, "M4");
+    assert.equal(rec.target.selector, "#ontology-tech-picker .tech-card.recommended");
+
+    const any = resolveTourStep(
+      base({
+        ui: { pickerOpen: true },
+        spotlightTechId: null,
+        hasRecommended: false,
+        suggestedIds: [],
+      })
+    );
+    assert.equal(any.id, "M4");
+    assert.equal(any.target.selector, "#ontology-tech-picker");
+  });
+
+  it("M5 covers summonBusy, challengerDrawOpen, createBusy, scoringPending, timingPending, wb.busy", () => {
+    assert.equal(
+      resolveTourStep(base({ ui: { summonBusy: true } })).target.selector,
+      "#hex-challenger-draw"
+    );
+    assert.equal(
+      resolveTourStep(base({ ui: { challengerDrawOpen: true } })).id,
+      "M5"
+    );
+    assert.equal(
+      resolveTourStep(base({ ui: { createBusy: true } })).target.selector,
+      "#ontology-lane-pathway"
+    );
+    assert.equal(
+      resolveTourStep(base({ wb: { open: true, busy: true } })).id,
+      "M5"
+    );
+    assert.equal(
+      resolveTourStep(base({ ui: { scoringPending: true } })).target.selector,
+      "#ontology-lane-problem"
+    );
+    assert.equal(
+      resolveTourStep(base({ ui: { timingPending: true } })).id,
+      "M5"
+    );
+  });
+
+  it("B1–B3 handle multiplayer spectator, viewingOther, and hotseat pass-device", () => {
+    const b1 = resolveTourStep(base({ mp: { spectator: true } }));
+    assert.equal(b1.id, "B1");
+    assert.equal(b1.target.selector, "#mp-seat-tabs");
+
+    const b2 = resolveTourStep(base({ mp: { viewingOther: true } }));
+    assert.equal(b2.id, "B2");
+    assert.equal(b2.target.selector, "#mp-seat-tabs");
+
+    const b3 = resolveTourStep(
+      base({ mp: { hotseat: true, needPassDevice: true } })
+    );
+    assert.equal(b3.id, "B3");
+    assert.equal(b3.target.selector, "#btn-mp-workshop-end-turn");
+  });
+
+  it("C1 points at briefing Next, C2 at Start inventing on final beat", () => {
+    const c1 = resolveTourStep(
+      base({ briefing: { active: true, index: 0, beatCount: 4 } })
+    );
+    assert.equal(c1.id, "C1");
+    assert.equal(c1.target.selector, '[data-brief="next"]');
+
     const c2 = resolveTourStep(
       base({ briefing: { active: true, index: 3, beatCount: 4 } })
     );
     assert.equal(c2.id, "C2");
     assert.equal(c2.target.selector, ".quest-briefing-invent");
-    const c1 = resolveTourStep(
-      base({ briefing: { active: true, index: 0, beatCount: 4 } })
-    );
-    assert.match(c1.body, /this card on the right/i);
   });
 
-  it("E1 names the spotlight tech after briefing", () => {
-    const step = resolveTourStep(base());
-    assert.equal(step.id, "E1");
-    assert.equal(step.target.kind, "tech");
-    assert.equal(step.target.id, "gene-sequencing");
-    assert.match(step.body, /Gene sequencing/);
-  });
-
-  it("E2 uses a recommended card when there is no spotlight", () => {
-    const step = resolveTourStep(
-      base({
-        spotlightTechId: null,
-        spotlightName: "",
-        suggestedIds: ["ai", "iot"],
-      })
-    );
-    assert.equal(step.id, "E2");
-    assert.equal(step.target.selector, "#ontology-tech-picker .tech-card.recommended");
-  });
-
-  it("E0 opens the catalog when it is tucked", () => {
-    assert.equal(
-      idOf(base({ ui: { techCatalogHidden: true } })),
-      "E0"
-    );
-  });
-
-  it("D2 points at the tutor after briefing on a learning quest", () => {
-    const step = resolveTourStep(
-      base({ isLearning: true, tutorOn: true, sideTab: "vision" })
-    );
-    assert.equal(step.id, "D2");
+  it("D1 targets learning tutor with openSideTab coinventor when board is empty", () => {
+    const step = resolveTourStep(base({ isLearning: true, tutorOn: true }));
+    assert.equal(step.id, "D1");
     assert.equal(step.target.selector, "#co-inventor-root");
-  });
+    assert.equal(step.openSideTab, "coinventor");
 
-  it("D2 stays on the tutor once the panel is in view", () => {
-    assert.equal(
-      idOf(base({ isLearning: true, tutorOn: true, sideTab: "coinventor" })),
-      "D2"
-    );
-  });
-
-  it("a paused tutor does not hide lobby, Look Ahead, or the generic hint", () => {
-    const mid = {
-      focusedTechId: "ai",
-      focusedTechName: "AI",
-      placedInventionCount: 1,
-      hasSparkBatch: true,
-      spotlightTechId: "",
-      suggestedIds: [],
-      pathway: { overall: "red", bonds: "yellow", coverage: "yellow", timingLevel: "yellow" },
-    };
-    assert.equal(
-      idOf(base({ ...mid, isLearning: true, tutorOn: false })),
-      "I2"
-    );
+    // Once a tech track is added, move on to L2
     assert.equal(
       idOf(
         base({
-          ...mid,
           isLearning: true,
-          tutorOn: false,
-          lobbyVisible: false,
-          learnOpenedThisTurn: true,
-          coinventorUsed: false,
+          tutorOn: true,
+          tracks: 1,
+          focusedTechId: "ai",
         })
       ),
-      "I3"
+      "L2"
     );
-    assert.equal(
-      idOf(
-        base({
-          ...mid,
-          isLearning: true,
-          tutorOn: false,
-          lobbyVisible: false,
-          learnOpenedThisTurn: true,
-          waitUsed: true,
-          coinventorUsed: true,
-        })
-      ),
-      "I1"
+  });
+
+  it("W1–W4 guide Double-Diamond Workbench stages in place", () => {
+    const w1 = resolveTourStep(
+      base({ wb: { open: true, diamond: "problem" } })
     );
-    const co = resolveTourStep(
+    assert.equal(w1.id, "W1");
+    assert.equal(w1.target.selector, '[data-action="wb-lock-hmw"]');
+
+    const w2 = resolveTourStep(
+      base({ wb: { open: true, diamond: "solution", ideaCount: 0 } })
+    );
+    assert.equal(w2.id, "W2");
+    assert.equal(w2.target.selector, '[data-action="wb-deal-ai"]');
+
+    const w3 = resolveTourStep(
+      base({ wb: { open: true, diamond: "solution", ideaCount: 3 } })
+    );
+    assert.equal(w3.id, "W3");
+    assert.equal(w3.target.selector, '[data-drop="wb-assemble-canvas"]');
+
+    const w4Plug = resolveTourStep(
       base({
-        ...mid,
-        lobbyVisible: false,
-        learnOpenedThisTurn: true,
-        waitUsed: true,
-        coinventorUsed: false,
+        wb: { open: true, diamond: "solution", ideaCount: 1 },
+        pathwayCount: 1,
+        unpluggedCount: 2,
       })
     );
-    assert.equal(co.id, "I5");
-    assert.equal(co.target.selector, "#co-inventor-root");
-  });
+    assert.equal(w4Plug.id, "W4");
+    assert.equal(w4Plug.target.selector, ".wb-dock-right");
 
-  it("briefing beats the learning tutor hint", () => {
-    assert.equal(
-      idOf(
-        base({
-          isLearning: true,
-          tutorOn: true,
-          briefing: { active: true, index: 0, beatCount: 3 },
-        })
-      ),
-      "C1"
-    );
-  });
-
-  it("a focused tech skips the tutor tab hint", () => {
-    assert.equal(
-      idOf(
-        base({
-          isLearning: true,
-          tutorOn: true,
-          focusedTechId: "ai",
-          focusedTechName: "AI",
-        })
-      ),
-      "F1"
-    );
-  });
-
-  it("F1 Ask for ideas after a tech is focused", () => {
-    const step = resolveTourStep(
+    const w4Collapse = resolveTourStep(
       base({
+        wb: { open: true, diamond: "solution", ideaCount: 1 },
+        pathwayCount: 1,
+        unpluggedCount: 0,
+      })
+    );
+    assert.equal(w4Collapse.id, "W4");
+    assert.equal(w4Collapse.target.selector, "#btn-close-workbench");
+  });
+
+  it("L1–L5 walk the 4-lane causal chain", () => {
+    const l1 = resolveTourStep(base());
+    assert.equal(l1.id, "L1");
+    assert.equal(l1.target.selector, "#btn-add-tech");
+
+    const l2 = resolveTourStep(
+      base({
+        tracks: 1,
         focusedTechId: "gene-sequencing",
         focusedTechName: "Gene sequencing",
       })
     );
-    assert.equal(step.id, "F1");
-    assert.equal(step.target.selector, "#btn-ask-ideas");
-    assert.match(step.body, /3 tiles/);
-  });
-
-  it("F2 mint when how-it-works is filled", () => {
+    assert.equal(l2.id, "L2");
     assert.equal(
-      idOf(
-        base({
-          focusedTechId: "ai",
-          focusedTechName: "AI",
-          howTextLength: 40,
-        })
-      ),
-      "F2"
+      l2.target.selector,
+      '#ontology-lane-tech [data-action="deal-milestone"].is-latest-reached'
     );
-  });
+    assert.deepEqual(l2.expandCard, { kind: "tech", id: "gene-sequencing" });
 
-  it("F3 drag when unplaced idea cards exist", () => {
-    const step = resolveTourStep(
+    const l3 = resolveTourStep(
+      base({ tracks: 1, useCaseCount: 2, sparksCount: 3 })
+    );
+    assert.equal(l3.id, "L3");
+    assert.equal(l3.target.selector, "#ontology-sparks");
+
+    const l4Write = resolveTourStep(
       base({
-        focusedTechId: "ai",
-        unplacedInventionCount: 3,
+        tracks: 1,
+        useCaseCount: 2,
+        writeOpen: true,
+        draftHowLength: 20,
       })
     );
-    assert.equal(step.id, "F3");
-    assert.equal(step.target.selector, "#ontology-sparks");
-  });
+    assert.equal(l4Write.id, "L4");
+    assert.equal(l4Write.title, "Form Pathway");
+    assert.equal(l4Write.target.selector, '[data-action="write-pathway"]');
 
-  it("F5 refresh after a spark batch was discarded", () => {
+    const l4Ap = resolveTourStep(
+      base({ tracks: 1, useCaseCount: 2, apEnabled: true, ap: 0 })
+    );
+    assert.equal(l4Ap.id, "L4");
+    assert.equal(l4Ap.title, "Out of Moves");
     assert.equal(
-      idOf(
-        base({
-          focusedTechId: "ai",
-          focusedTechName: "AI",
-          hasSparkBatch: true,
-        })
-      ),
-      "F5"
+      l4Ap.target.selector,
+      '#ontology-board [data-action="year-plus"][data-years="1"]'
     );
-  });
 
-  it("G2 dock when placed tiles do not touch crisis hexes", () => {
-    const step = resolveTourStep(
+    const l4ApMp = resolveTourStep(
       base({
-        focusedTechId: "ai",
-        placedInventionCount: 1,
-        uncoveredGivenId: "crisis-local",
-        uncoveredGivenName: "Grade Fear",
-        uncoveredCount: 1,
-        pathway: { overall: "red", bonds: "red", coverage: "yellow", timingLevel: "green" },
+        tracks: 1,
+        useCaseCount: 2,
+        apEnabled: true,
+        ap: 0,
+        isMultiplayer: true,
       })
     );
-    assert.equal(step.id, "G2");
-    assert.equal(step.target.kind, "hex-tile");
-    assert.equal(step.target.id, "crisis-local");
-    assert.match(step.body, /Grade Fear/);
-    assert.match(step.body, /crisis tiles move/i);
-    assert.match(step.body, /don't need more invention tiles/i);
-  });
+    assert.equal(l4ApMp.id, "L4");
+    assert.equal(l4ApMp.target.selector, "#btn-mp-workshop-end-turn");
 
-  it("G2 beats leftover idea cards in the tray", () => {
-    const step = resolveTourStep(
+    const l4Budget = resolveTourStep(
       base({
-        focusedTechId: "ai",
-        placedInventionCount: 1,
-        unplacedInventionCount: 2,
-        uncoveredGivenId: "crisis-support",
-        uncoveredGivenName: "Grade Fear",
-        uncoveredCount: 1,
-        pathway: { overall: "red", bonds: "red", coverage: "yellow", timingLevel: "green" },
+        tracks: 1,
+        useCaseCount: 2,
+        budgetWillEnabled: true,
+        budget: 0,
       })
     );
-    assert.equal(step.id, "G2");
-    assert.equal(step.target.id, "crisis-support");
-  });
+    assert.equal(l4Budget.id, "L4");
+    assert.equal(l4Budget.target.selector, "#hud-budget");
 
-  it("G4 timing red after the island is docked", () => {
+    const l4Ask = resolveTourStep(
+      base({
+        tracks: 1,
+        useCaseCount: 2,
+        focusedTechId: "gene-sequencing",
+        focusedTechName: "Gene sequencing",
+      })
+    );
+    assert.equal(l4Ask.id, "L4");
+    assert.equal(l4Ask.target.selector, "#btn-ask-ideas");
+
+    const l5 = resolveTourStep(
+      base({
+        tracks: 1,
+        useCaseCount: 2,
+        pathwayCount: 1,
+        primaryPathwayId: "pw-1",
+        unpluggedCount: 1,
+        unpluggedCrisisId: "cr-1",
+        unpluggedCrisisName: "Grade Fear",
+      })
+    );
+    assert.equal(l5.id, "L5");
+    assert.match(l5.body, /Grade Fear/);
     assert.equal(
-      idOf(
-        base({
-          focusedTechId: "ai",
-          placedInventionCount: 1,
-          pathway: {
-            overall: "red",
-            bonds: "green",
-            coverage: "green",
-            timingLevel: "red",
-          },
-        })
-      ),
-      "G4"
+      l5.target.selector,
+      '#ontology-lane-pathway [data-pathway-id="pw-1"] [data-menu="plug"]'
     );
+    assert.deepEqual(l5.expandCard, { kind: "pathway", id: "pw-1" });
   });
 
-  it("G5 summon when the pathway is honest and AP remains", () => {
-    const step = resolveTourStep(
+  it("R1–R3 handle red roadblocks, timing, and crisis lights", () => {
+    const r1 = resolveTourStep(
       base({
-        focusedTechId: "ai",
-        placedInventionCount: 2,
-        pathway: {
-          overall: "yellow",
-          bonds: "green",
-          coverage: "yellow",
-          timingLevel: "yellow",
-        },
+        tracks: 1,
+        useCaseCount: 2,
+        pathwayCount: 1,
+        unpluggedCount: 0,
+        redChallengerId: "ch-nature",
+        redChallengerCrisisId: "cr-local",
       })
     );
-    assert.equal(step.id, "G5");
-    assert.equal(step.target.selector, "#btn-to-challenge");
-  });
-
-  it("G6 End turn when ready to summon but AP is 0", () => {
+    assert.equal(r1.id, "R1");
     assert.equal(
-      idOf(
-        base({
-          focusedTechId: "ai",
-          placedInventionCount: 2,
-          ap: 0,
-          pathway: {
-            overall: "yellow",
-            bonds: "green",
-            coverage: "yellow",
-            timingLevel: "yellow",
-          },
-        })
-      ),
-      "G6"
+      r1.target.selector,
+      '.ontology-wire-token.is-red[data-challenger-id="ch-nature"]'
     );
-  });
+    assert.deepEqual(r1.target.selectors, [
+      '.ontology-wire-token.is-red[data-challenger-id="ch-nature"]',
+      '.ontology-roadblock-pill.is-red[data-challenger-id="ch-nature"]',
+      "#ontology-lane-problem",
+    ]);
+    assert.deepEqual(r1.expandCard, { kind: "crisis", id: "cr-local" });
 
-  it("H2 unanswered challenger before hold", () => {
-    const step = resolveTourStep(
+    const r2 = resolveTourStep(
       base({
-        focusedTechId: "ai",
-        placedInventionCount: 2,
-        unansweredConcernId: "concern-nature",
-        concernsOnBoard: 1,
-        remainingConcerns: 0,
-        concernsSummoned: true,
-        pathway: {
-          overall: "yellow",
-          bonds: "green",
-          coverage: "yellow",
-          timingLevel: "yellow",
-        },
+        tracks: 1,
+        useCaseCount: 2,
+        pathwayCount: 1,
+        unpluggedCount: 0,
+        timingLevel: "red",
       })
     );
-    assert.equal(step.id, "H2");
-    assert.equal(step.target.id, "concern-nature");
+    assert.equal(r2.id, "R2");
+    assert.equal(
+      r2.target.selector,
+      '#ontology-board [data-action="year-plus"][data-years="2"]'
+    );
+
+    const r3 = resolveTourStep(
+      base({
+        tracks: 1,
+        useCaseCount: 2,
+        pathwayCount: 1,
+        unpluggedCount: 0,
+        redCrisisCount: 1,
+        redCrisisId: "cr-local",
+        redCrisisName: "Grade Fear",
+      })
+    );
+    assert.equal(r3.id, "R3");
+    assert.match(r3.body, /Grade Fear/);
+    assert.equal(
+      r3.target.selector,
+      '#ontology-lane-problem [data-crisis-id="cr-local"]'
+    );
+    assert.deepEqual(r3.target.selectors, [
+      '#ontology-lane-problem [data-crisis-id="cr-local"]',
+      "#ontology-lane-problem",
+    ]);
+    assert.deepEqual(r3.expandCard, { kind: "crisis", id: "cr-local" });
   });
 
-  it("H4 mid-summon uses remaining count", () => {
-    const step = resolveTourStep(
+  it("H1 summons challengers and H2 declares hold", () => {
+    const h1 = resolveTourStep(
       base({
-        focusedTechId: "ai",
-        placedInventionCount: 2,
-        concernsOnBoard: 1,
-        remainingConcerns: 2,
+        tracks: 1,
+        useCaseCount: 2,
+        pathwayCount: 1,
+        unpluggedCount: 0,
         concernsSummoned: false,
-        pathway: {
-          overall: "yellow",
-          bonds: "green",
-          coverage: "yellow",
-          timingLevel: "yellow",
-        },
+        remainingConcerns: 2,
       })
     );
-    assert.equal(step.id, "H4");
-    assert.match(step.body, /2 hard questions/);
-  });
+    assert.equal(h1.id, "H1");
+    assert.equal(h1.target.selector, "#btn-to-challenge");
 
-  it("H6 pathway holds", () => {
-    const step = resolveTourStep(
+    const h2 = resolveTourStep(
       base({
-        focusedTechId: "ai",
-        placedInventionCount: 2,
-        concernsOnBoard: 1,
-        remainingConcerns: 0,
+        tracks: 1,
+        useCaseCount: 2,
+        pathwayCount: 1,
+        unpluggedCount: 0,
         concernsSummoned: true,
+        remainingConcerns: 0,
         boardHolds: true,
-        pathway: {
-          overall: "green",
-          bonds: "green",
-          coverage: "green",
-          timingLevel: "green",
-        },
       })
     );
-    assert.equal(step.id, "H6");
-    assert.equal(step.target.selector, "#btn-to-challenge");
+    assert.equal(h2.id, "H2");
+    assert.equal(h2.target.selector, "#btn-to-challenge");
   });
 
-  it("G3 explains coverage red after the island is docked", () => {
-    const step = resolveTourStep(
+  it("falls back cleanly when board does not hold and no reds remain", () => {
+    const fb = resolveTourStep(
       base({
-        focusedTechId: "ai",
-        placedInventionCount: 2,
+        tracks: 1,
+        useCaseCount: 2,
+        pathwayCount: 1,
+        unpluggedCount: 0,
         concernsSummoned: true,
-        concernsOnBoard: 1,
         remainingConcerns: 0,
-        redGivenId: "crisis-local",
-        coverageReds: 1,
-        coverageNote: "1 light(s) still red",
-        pathway: {
-          overall: "red",
-          bonds: "green",
-          coverage: "red",
-          timingLevel: "yellow",
-        },
+        boardHolds: false,
       })
     );
-    assert.equal(step.id, "G3");
-    assert.match(step.body, /still red/);
-  });
-
-  it("B1 spectator", () => {
-    assert.equal(idOf(base({ mp: { spectator: true } })), "B1");
-  });
-
-  it("A4 create busy", () => {
-    assert.equal(idOf(base({ ui: { createBusy: true } })), "A4");
-  });
-
-  it("A5 timing pending", () => {
-    assert.equal(
-      idOf(base({ pathway: { timingPending: true, overall: "yellow" } })),
-      "A5"
-    );
+    assert.equal(fb.id, "H0");
+    assert.equal(fb.target.selector, "#hud-crisis-wrap");
   });
 });
 
 describe("queryTourTarget", () => {
   it("returns null without a document", () => {
-    assert.equal(queryTourTarget({ target: selDummy() }, null), null);
+    assert.equal(
+      queryTourTarget({ target: { kind: "selector", selector: "#nope" } }, null),
+      null
+    );
   });
 
-  it("uses the given root so a hidden catalog does not win", () => {
-    const ws = { id: "workshop-ai" };
+  it("never queries #ontology-lane-crisis and resolves #ontology-lane-problem", () => {
+    const problemLane = { id: "ontology-lane-problem" };
+    const seen = [];
     const root = {
       querySelector(sel) {
-        if (String(sel).includes('data-id="ai"')) return ws;
-        return { id: "hotseat-ai" };
-      },
-    };
-    const el = queryTourTarget({ target: { kind: "tech", id: "ai" } }, root);
-    assert.equal(el, ws);
-  });
-
-  it("C2 hits Start inventing, not the pager arrow", () => {
-    const invent = { id: "start-inventing" };
-    const arrow = { id: "pager-arrow" };
-    const root = {
-      querySelector(sel) {
-        if (sel === ".quest-briefing-invent") return invent;
-        if (String(sel).includes("data-brief")) return arrow;
+        seen.push(sel);
+        if (sel === "#ontology-lane-problem") return problemLane;
         return null;
       },
     };
-    const step = resolveTourStep(
-      base({ briefing: { active: true, index: 3, beatCount: 4 } })
+    const r3 = resolveTourStep(
+      base({
+        tracks: 1,
+        useCaseCount: 1,
+        pathwayCount: 1,
+        redCrisisCount: 1,
+        redCrisisId: "cr-9",
+      })
     );
-    assert.equal(queryTourTarget(step, root), invent);
+    const el = queryTourTarget(r3, root);
+    assert.equal(el, problemLane);
+    assert.equal(
+      seen.some((s) => s.includes("ontology-lane-crisis")),
+      false
+    );
+  });
+
+  it("resolves roadblock tokens with fallback to pill and #ontology-lane-problem", () => {
+    const pill = { id: "pill" };
+    const root = {
+      querySelector(sel) {
+        if (sel === '.ontology-roadblock-pill.is-red[data-challenger-id="ch-1"]') {
+          return pill;
+        }
+        return null;
+      },
+    };
+    const r1 = resolveTourStep(
+      base({
+        tracks: 1,
+        useCaseCount: 1,
+        pathwayCount: 1,
+        redChallengerId: "ch-1",
+      })
+    );
+    assert.equal(queryTourTarget(r1, root), pill);
+  });
+
+  it("resolves Workbench targets", () => {
+    const dockRight = { id: "dock-right" };
+    const root = {
+      querySelector(sel) {
+        if (sel === ".wb-dock-right") return dockRight;
+        return null;
+      },
+    };
+    const w4 = resolveTourStep(
+      base({
+        wb: { open: true, diamond: "solution", ideaCount: 1 },
+        pathwayCount: 1,
+        unpluggedCount: 1,
+      })
+    );
+    assert.equal(queryTourTarget(w4, root), dockRight);
+  });
+
+  it("preserves { kind: 'tech', id } lookup for ensureTourTargetVisible compatibility", () => {
+    const pickerCard = { id: "picker-ai" };
+    const root = {
+      querySelector(sel) {
+        if (sel === '#ontology-tech-picker [data-tech-id="ai"]') return pickerCard;
+        return null;
+      },
+    };
+    assert.equal(
+      queryTourTarget({ target: { kind: "tech", id: "ai" } }, root),
+      pickerCard
+    );
   });
 });
 
-describe("guided tour overlay", () => {
+describe("createGuidedTour overlay", () => {
   let prevDoc;
   let prevWin;
   let prevRaf;
@@ -538,11 +606,11 @@ describe("guided tour overlay", () => {
     prevDoc = globalThis.document;
     prevWin = globalThis.window;
     prevRaf = globalThis.requestAnimationFrame;
-    const { document: doc, window: win } = fakeDom();
-    globalThis.document = doc;
-    globalThis.window = win;
+    const dom = fakeDom();
+    globalThis.document = dom.document;
+    globalThis.window = dom.window;
     globalThis.requestAnimationFrame = (cb) => setTimeout(cb, 0);
-    return doc;
+    return dom;
   }
 
   function restoreDom() {
@@ -550,6 +618,31 @@ describe("guided tour overlay", () => {
     globalThis.window = prevWin;
     globalThis.requestAnimationFrame = prevRaf;
   }
+
+  it("builds .tour-ring and .tour-card with #tour-rules and #tour-dismiss and no .tour-panes", async () => {
+    installFakeDom();
+    try {
+      const addTechBtn = fakeEl("button", "btn-add-tech");
+      addTechBtn.rect = { top: 100, left: 20, width: 90, height: 30, bottom: 130, right: 110 };
+      globalThis.document.getElementById("screen-workshop").appendChild(addTechBtn);
+
+      const tour = createGuidedTour();
+      await tour.open(base());
+      const root = globalThis.document.getElementById("tour-root");
+      assert.equal(root.querySelector(".tour-panes"), null);
+      assert.equal(Boolean(root.querySelector("#tour-rules")), true);
+      assert.equal(Boolean(root.querySelector("#tour-dismiss")), true);
+      const ring = root.querySelector(".tour-ring");
+      assert.equal(ring.hidden, false);
+      assert.equal(ring.classList.contains("has-dimmer"), true);
+
+      // Modal steps with skipDimmer remove .has-dimmer
+      await tour.refresh(base({ ui: { waitConfirmOpen: true } }));
+      assert.equal(ring.classList.contains("has-dimmer"), false);
+    } finally {
+      restoreDom();
+    }
+  });
 
   it("cancel during ensureTargetVisible does not resurrect the tour", async () => {
     installFakeDom();
@@ -572,114 +665,137 @@ describe("guided tour overlay", () => {
     }
   });
 
-  it("refresh does not steal focus from the card", async () => {
-    installFakeDom();
+  it("one-shot pointerdown outside .tour-card closes without preventDefault or stopPropagation", async () => {
+    const dom = installFakeDom();
     try {
-      const tour = createGuidedTour();
-      await tour.open(base());
-      const card = globalThis.document.getElementById("tour-root").querySelector(".tour-card");
-      assert.equal(card.didFocus, true);
-      card.didFocus = false;
-      await tour.refresh(base());
+      const opener = fakeEl("button", "btn-help");
+      const plugBtn = fakeEl("button", "plug-btn");
+      dom.workshop.appendChild(opener);
+      dom.workshop.appendChild(plugBtn);
+
+      const tour = createGuidedTour({ restoreFocusEl: () => opener });
+      await tour.open(base(), { opener });
       assert.equal(tour.isOpen(), true);
-      assert.equal(card.didFocus, false);
+
+      let prevented = false;
+      let stopped = false;
+      dom.dispatchDoc("pointerdown", {
+        target: plugBtn,
+        preventDefault: () => {
+          prevented = true;
+        },
+        stopPropagation: () => {
+          stopped = true;
+        },
+      });
+
+      assert.equal(tour.isOpen(), false);
+      assert.equal(prevented, false);
+      assert.equal(stopped, false);
+      assert.equal(opener.didFocus, false);
     } finally {
       restoreDom();
     }
   });
 
-  it("close restores focus to the opener", async () => {
-    installFakeDom();
+  it("pointerdown inside .tour-card does not close; #tour-dismiss click closes", async () => {
+    const dom = installFakeDom();
     try {
       const opener = fakeEl("button", "btn-help");
-      const tour = createGuidedTour();
+      dom.workshop.appendChild(opener);
+      const tour = createGuidedTour({ restoreFocusEl: () => opener });
       await tour.open(base(), { opener });
-      tour.close();
+
+      const dismiss = globalThis.document.getElementById("tour-root").querySelector("#tour-dismiss");
+      dom.dispatchDoc("pointerdown", {
+        target: dismiss,
+        preventDefault() {},
+        stopPropagation() {},
+      });
+      assert.equal(tour.isOpen(), true);
+
+      dismiss.trigger("click");
+      assert.equal(tour.isOpen(), false);
       assert.equal(opener.didFocus, true);
     } finally {
       restoreDom();
     }
   });
-});
 
-describe("createGuidedTour concept cards", () => {
-  let prevDoc;
-  let prevWin;
-  let prevRaf;
-  function installFakeDom() {
-    prevDoc = globalThis.document;
-    prevWin = globalThis.window;
-    prevRaf = globalThis.requestAnimationFrame;
-    const { document: doc, window: win } = fakeDom();
-    globalThis.document = doc;
-    globalThis.window = win;
-    globalThis.requestAnimationFrame = (cb) => setTimeout(cb, 0);
-    return doc;
-  }
-  function restoreDom() {
-    globalThis.document = prevDoc;
-    globalThis.window = prevWin;
-    globalThis.requestAnimationFrame = prevRaf;
-  }
-
-  it("openConcept shows the card in concept mode with the Concept kicker and mute row", async () => {
-    installFakeDom();
+  it("clicking #btn-help while open toggles closed and suppresses the following opener click", async () => {
+    const dom = installFakeDom();
     try {
-      const muted = new Set(["learn"]);
-      const tour = createGuidedTour({ isConceptMuted: (id) => muted.has(id) });
-      await tour.openConcept(conceptById("learn"), base());
+      const opener = fakeEl("button", "btn-help");
+      const openerIcon = fakeEl("span");
+      opener.appendChild(openerIcon);
+      dom.workshop.appendChild(opener);
+      dom.byId.set("btn-help", opener);
+
+      const tour = createGuidedTour({ restoreFocusEl: () => opener });
+      let clickHandlerCalls = 0;
+      opener.addEventListener("click", () => {
+        clickHandlerCalls += 1;
+        void tour.open(base(), { opener });
+      });
+
+      // Open via normal click when closed
+      dom.dispatchDoc("pointerdown", { target: openerIcon, preventDefault() {}, stopPropagation() {} });
+      dom.dispatchClickOn(openerIcon, opener);
+      await new Promise((r) => setTimeout(r, 0));
       assert.equal(tour.isOpen(), true);
-      assert.equal(tour.mode(), "concept");
-      assert.equal(tour.currentStep().id, "learn");
-      const root = globalThis.document.getElementById("tour-root");
-      const card = root.querySelector(".tour-card");
-      assert.equal(card.classList.contains("is-concept"), true);
-      assert.equal(root.querySelector("#tour-card-kicker").textContent, "Concept");
-      assert.equal(root.querySelector("#tour-mute-row").hidden, false);
-      assert.equal(root.querySelector("#tour-mute").checked, true);
-      assert.equal(card.didFocus, true);
+      assert.equal(clickHandlerCalls, 1);
+
+      // Re-click #btn-help while open: closes on pointerdown and suppresses click reopen
+      let prevented = false;
+      dom.dispatchDoc("pointerdown", {
+        target: openerIcon,
+        preventDefault: () => {
+          prevented = true;
+        },
+        stopPropagation() {},
+      });
+      assert.equal(prevented, true);
+      assert.equal(tour.isOpen(), false);
+
+      dom.dispatchClickOn(openerIcon, opener);
+      await new Promise((r) => setTimeout(r, 0));
+      assert.equal(tour.isOpen(), false);
+      assert.equal(clickHandlerCalls, 1);
     } finally {
       restoreDom();
     }
   });
 
-  it("refresh keeps a concept card instead of swapping to a next step; close resets to step mode", async () => {
-    installFakeDom();
+  it("Escape closes the tour unless #help-backdrop is open", async () => {
+    const dom = installFakeDom();
     try {
       const tour = createGuidedTour();
-      await tour.openConcept(conceptById("look-ahead"), base());
-      await tour.refresh(base({ ui: { waitConfirmOpen: true } }));
-      assert.equal(tour.currentStep().id, "look-ahead");
-      assert.equal(tour.mode(), "concept");
-      tour.close();
-      assert.equal(tour.isOpen(), false);
-      assert.equal(tour.mode(), "step");
       await tour.open(base());
-      assert.equal(tour.mode(), "step");
-      const root = globalThis.document.getElementById("tour-root");
-      assert.equal(root.querySelector("#tour-card-kicker").textContent, "Next step");
-      assert.equal(root.querySelector("#tour-mute-row").hidden, true);
-      assert.equal(root.querySelector(".tour-card").classList.contains("is-concept"), false);
-    } finally {
-      restoreDom();
-    }
-  });
+      assert.equal(tour.isOpen(), true);
 
-  it("openConcept with a null card is a no-op", async () => {
-    installFakeDom();
-    try {
-      const tour = createGuidedTour();
-      await tour.openConcept(null, base());
+      const helpBackdrop = fakeEl("div", "help-backdrop");
+      helpBackdrop.classList.add("open");
+      dom.byId.set("help-backdrop", helpBackdrop);
+      dom.body.appendChild(helpBackdrop);
+
+      dom.dispatchDoc("keydown", { key: "Escape", stopPropagation() {} });
+      assert.equal(tour.isOpen(), true);
+
+      helpBackdrop.classList.remove("open");
+      let stopped = false;
+      dom.dispatchDoc("keydown", {
+        key: "Escape",
+        stopPropagation: () => {
+          stopped = true;
+        },
+      });
       assert.equal(tour.isOpen(), false);
+      assert.equal(stopped, true);
     } finally {
       restoreDom();
     }
   });
 });
-
-function selDummy() {
-  return { kind: "selector", selector: "#nope" };
-}
 
 function fakeClassList(on = new Set()) {
   return {
@@ -705,6 +821,7 @@ function fakeClassList(on = new Set()) {
 function fakeEl(tag, id = "") {
   const children = [];
   const classSet = new Set();
+  const listeners = new Map();
   const node = {
     tagName: String(tag).toUpperCase(),
     id,
@@ -715,6 +832,7 @@ function fakeEl(tag, id = "") {
     children,
     parentNode: null,
     didFocus: false,
+    rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
     classList: fakeClassList(classSet),
     querySelector(sel) {
       return findDesc(node, sel);
@@ -726,7 +844,13 @@ function fakeEl(tag, id = "") {
       });
       return out;
     },
-    addEventListener() {},
+    addEventListener(type, fn) {
+      if (!listeners.has(type)) listeners.set(type, []);
+      listeners.get(type).push(fn);
+    },
+    trigger(type, ev = {}) {
+      for (const fn of listeners.get(type) || []) fn(ev);
+    },
     appendChild(c) {
       children.push(c);
       c.parentNode = node;
@@ -744,7 +868,7 @@ function fakeEl(tag, id = "") {
       node.didFocus = true;
     },
     getBoundingClientRect() {
-      return { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 };
+      return node.rect;
     },
   };
   Object.defineProperty(node, "isConnected", { get: () => true });
@@ -752,15 +876,6 @@ function fakeEl(tag, id = "") {
     get: () => "",
     set() {
       children.length = 0;
-      const panes = fakeEl("div");
-      panes.classList.add("tour-panes");
-      for (const edge of ["n", "s", "w", "e"]) {
-        const p = fakeEl("div");
-        p.classList.add("tour-pane");
-        p.dataset.edge = edge;
-        panes.appendChild(p);
-      }
-      node.appendChild(panes);
       const ring = fakeEl("div");
       ring.classList.add("tour-ring");
       node.appendChild(ring);
@@ -774,17 +889,7 @@ function fakeEl(tag, id = "") {
       card.appendChild(title);
       card.appendChild(body);
       card.appendChild(fakeEl("button", "tour-rules"));
-      card.appendChild(fakeEl("button", "tour-got-it"));
-      const muteRow = fakeEl("label", "tour-mute-row");
-      muteRow.classList.add("tour-mute");
-      muteRow.appendChild(fakeEl("input", "tour-mute"));
-      card.appendChild(muteRow);
-      for (const id of ["look-ahead", "honesty-bar", "convergence", "pathway", "wait-vs-end-turn", "art-of-the-possible", "learn"]) {
-        const chip = fakeEl("button");
-        chip.classList.add("tour-concept-chip");
-        chip.dataset.concept = id;
-        card.appendChild(chip);
-      }
+      card.appendChild(fakeEl("button", "tour-dismiss"));
       node.appendChild(card);
     },
   });
@@ -800,8 +905,6 @@ function matchSel(node, sel) {
   const s = String(sel).trim();
   if (s.startsWith("#")) return node.id === s.slice(1);
   if (s.startsWith(".")) return node.classList.contains(s.slice(1).split(/[\s.\[]/)[0]);
-  const edge = s.match(/\[data-edge="(\w)"\]/);
-  if (edge) return node.dataset.edge === edge[1];
   return false;
 }
 
@@ -823,6 +926,7 @@ function fakeDom() {
   const workshop = fakeEl("section", "screen-workshop");
   byId.set("screen-workshop", workshop);
   body.appendChild(workshop);
+  const docListeners = new Map();
   const doc = {
     body,
     getElementById: (id) => byId.get(id) || null,
@@ -831,12 +935,33 @@ function fakeDom() {
       if (sel === "#screen-workshop") return workshop;
       return findDesc(body, sel) || (matchSel(body, sel) ? body : null);
     },
-    addEventListener() {},
+    addEventListener(type, fn) {
+      if (!docListeners.has(type)) docListeners.set(type, []);
+      docListeners.get(type).push(fn);
+    },
   };
   const win = {
     innerWidth: 1024,
     innerHeight: 768,
     addEventListener() {},
   };
-  return { document: doc, window: win };
+  function dispatchDoc(type, ev = {}) {
+    for (const fn of docListeners.get(type) || []) fn(ev);
+  }
+  function dispatchClickOn(target, bubbleEl) {
+    let stopped = false;
+    const ev = {
+      target,
+      preventDefault() {},
+      stopPropagation() {
+        stopped = true;
+      },
+      stopImmediatePropagation() {
+        stopped = true;
+      },
+    };
+    dispatchDoc("click", ev);
+    if (!stopped && bubbleEl) bubbleEl.trigger("click", ev);
+  }
+  return { document: doc, window: win, body, workshop, byId, dispatchDoc, dispatchClickOn };
 }

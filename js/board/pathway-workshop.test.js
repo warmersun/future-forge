@@ -2098,4 +2098,132 @@ describe("pathway workshop", () => {
     assert.match(d1BtnAfter, /title="Switch to Diamond 1: Problem Space"/);
     assert.doesNotMatch(d2BtnAfter, /wb-dd-chevron/);
   });
+
+  it("exposes getTourUiState() and expandCard() with repainting for guided tour targets", async () => {
+    let resolveSparks;
+    const h = harness({
+      api: {
+        coInvent: async (mode) => {
+          if (mode === "idea-sparks") {
+            return await new Promise((resolve) => {
+              resolveSparks = resolve;
+            });
+          }
+          if (mode === "assess-feasibility") {
+            return { timing: { level: "green", reason: "Ready now." } };
+          }
+          return {};
+        },
+      },
+    });
+    const initial = h.ws.getTourUiState();
+    assert.deepEqual(initial, {
+      pickerOpen: false,
+      openChallengerId: null,
+      argumentModalOpen: false,
+      argumentBusy: false,
+      createBusy: false,
+      summonBusy: false,
+      scoringPending: false,
+      sparksCount: 0,
+      writeOpen: false,
+      draftHowLength: 0,
+      focusedTechId: null,
+      focusedPathwayId: null,
+      workbench: {
+        open: false,
+        diamond: "problem",
+        busy: false,
+        hmwBrief: "",
+        hmwLocked: false,
+        ideaCount: 0,
+      },
+    });
+
+    h.ws.seedFromMission({
+      id: "tour-ui-state-quest",
+      place: "Quillsand",
+      pressure: { "Empty Jars": 3 },
+      spotlight: { techId: "drones" },
+    });
+    assert.equal(h.ws.getTourUiState().focusedTechId, "drones");
+
+    // Adding a tech when no focus is set falls back to first techTrack
+    const hNoFocus = harness();
+    hNoFocus.ws.seedFromMission({
+      id: "tour-ui-nofocus",
+      place: "Quillsand",
+      pressure: { "Empty Jars": 3 },
+    });
+    assert.equal(hNoFocus.ws.getTourUiState().focusedTechId, null);
+    const drones = resolveTechTrack("drones");
+    const reached = drones.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+    assert.equal(hNoFocus.ws.dealMilestone("drones", reached.id), true);
+    assert.equal(hNoFocus.ws.getTourUiState().focusedTechId, "drones");
+
+    assert.equal(h.ws.dealMilestone("drones", reached.id), true);
+    assert.equal(h.ws.getTourUiState().focusedTechId, "drones");
+
+    // In-flight askForIdeas sets createBusy, then populates sparksCount
+    const askPromise = h.ws.askForIdeas();
+    assert.equal(h.ws.getTourUiState().createBusy, true);
+    resolveSparks({
+      ideas: [
+        { id: "s-tour-1", title: "Tour Spark 1", howText: "Local clinic drone drops sample boxes." },
+        { id: "s-tour-2", title: "Tour Spark 2", howText: "Clinic fridge logs bottle temps." },
+        { id: "s-tour-3", title: "Tour Spark 3", howText: "Courier relays morning ice packs." },
+      ],
+    });
+    await askPromise;
+    assert.equal(h.ws.getTourUiState().createBusy, false);
+    assert.equal(h.ws.getTourUiState().sparksCount, 3);
+
+    // Placing a spark updates sparksCount and focusedPathwayId
+    assert.equal(h.ws.placeSpark("s-tour-1"), true);
+    const afterPlace = h.ws.getTourUiState();
+    const pwId = Object.keys(h.board.pathways)[0];
+    assert.equal(afterPlace.sparksCount, 2);
+    assert.equal(afterPlace.focusedPathwayId, pwId);
+
+    // Write draft state
+    assert.equal(h.ws.fillMintHow("  Community clinic schedules evening drone shuttle.  "), true);
+    assert.equal(h.ws.getTourUiState().writeOpen, true);
+    assert.equal(
+      h.ws.getTourUiState().draftHowLength,
+      "Community clinic schedules evening drone shuttle.".length
+    );
+    h.ws.resetCreateMode();
+    assert.equal(h.ws.getTourUiState().writeOpen, false);
+    assert.equal(h.ws.getTourUiState().draftHowLength, 0);
+
+    // Workbench UI state
+    h.ws.openWorkbench({ diamond: "problem" });
+    h.ws.pickHmwCandidate("How might we deliver cooled vials before dusk?");
+    h.ws.lockHmwAndIdeate();
+    h.ws.addPlayerWorkbenchDraft({
+      title: "Solar Cooler Pod",
+      howText: "Clinic packs insulated pods on routine drone flights.",
+    });
+    assert.deepEqual(h.ws.getTourUiState().workbench, {
+      open: true,
+      diamond: "solution",
+      busy: false,
+      hmwBrief: "How might we deliver cooled vials before dusk?",
+      hmwLocked: true,
+      ideaCount: 1,
+    });
+    h.ws.closeWorkbench();
+    assert.equal(h.ws.getTourUiState().workbench.open, false);
+
+    // expandCard() returns false when not collapsed, true + repaints when collapsed
+    assert.equal(h.ws.expandCard("tech", "drones"), false);
+    assert.equal(h.ws.toggleCardCollapse("tech:drones"), true);
+    assert.equal(h.ws.isCardCollapsed("tech", "drones"), true);
+    assert.match(h.root.innerHTML, /class="ontology-card ontology-tech is-collapsed/);
+
+    assert.equal(h.ws.expandCard("tech", "drones"), true);
+    assert.equal(h.ws.isCardCollapsed("tech", "drones"), false);
+    assert.doesNotMatch(h.root.innerHTML, /class="ontology-card ontology-tech is-collapsed/);
+    assert.equal(h.ws.expandCard("tech", "drones"), false);
+  });
 });

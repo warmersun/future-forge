@@ -174,7 +174,15 @@ import {
 import { localPose } from "./challenge-pose.js";
 import { createHexWorkshop } from "./hex/hex-workshop.js?v=calm-stage-2";
 import { createPathwayWorkshop } from "./board/pathway-workshop.js?v=ontology-2";
-import { isPathwayBoard, migrateToPathwayBoard, projectToTiles } from "./board/pathway-model.js";
+import {
+  isPathwayBoard,
+  migrateToPathwayBoard,
+  projectToTiles,
+  effectiveTiming,
+  boardHolds as pathwayBoardHolds,
+  isImpactRolePending,
+  pathwayContentFingerprint,
+} from "./board/pathway-model.js";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=calm-stage-1";
 import {
   boardHolds,
@@ -414,11 +422,6 @@ import { deriveInventPhase } from "./sim/invent-phase.js";
 import { featuresForPlayMode, forgetLegacySparkKey } from "./sim/play-mode.js";
 import { splitTray, whyHere, capabilityLine, pickTechsForCrisis, spotlightAdvanceForAi } from "./tech-why.js";
 import { termHtml, bindGlossaryTaps } from "./glossary.js";
-import {
-  conceptById,
-  readMutedConcepts,
-  setConceptMuted,
-} from "./concept-cards.js";
 
 /** Hotseat session bridged into solo workshop / challenge / deploy */
 const hotseatBridge = createHotseatBridge();
@@ -22530,85 +22533,143 @@ function tourWorkshopLayout() {
   return workshopLayoutFor($("#screen-workshop") || document.body);
 }
 
-function isTechCatalogHidden() {
-  const layout = tourWorkshopLayout();
-  if (!layout) return false;
-  if (isTechDrawerMode()) return !isTechDrawerOpen(layout);
-  return isTechRailCollapsed(layout) && !isTechRailPeek(layout);
-}
-
 function tourSnapshot() {
   const board = state.hexBoard || {};
-  const tiles = Object.values(board.tiles || {});
-  const inventions = tiles.filter((t) => t && t.kind === "invention");
-  const unplaced = inventions.filter((t) => t.q == null || t.r == null);
-  const placed = inventions.filter((t) => t.q != null && t.r != null);
-  const panel = hexPathwayPanel(board);
   const brief = lastBriefingPaint() || {};
   const mission = state.mission || {};
   const spotlightId = mission.spotlight?.techId || null;
   const spotlightTech = spotlightId ? techById(spotlightId) : null;
-  const focusId =
-    focusedTechId || hexWorkshop?.getFocusedTechId?.() || null;
-  const focusTech = focusId ? techById(focusId) : null;
-  const concerns = tiles.filter((t) => t && t.kind === "concern");
-  const unanswered = concerns.find(
-    (t) => !String(t.playerAnswer || "").trim() && !t.answerPending
-  );
-  const pendingAnswer = concerns.some((t) => t.answerPending);
-  const redGiven =
-    (panel.givens || []).find((t) => t && t.lamp === "red") ||
-    tiles.find(
-      (t) =>
-        (t.kind === "crisis" || t.kind === "concern") &&
-        t.lamp === "red" &&
-        t.q != null
-    );
-  const redInvention = placed.find((t) => t.timingLevel === "red");
-  const uncoveredIds = Array.isArray(panel.bonds?.uncoveredIds)
-    ? panel.bonds.uncoveredIds
+  const suggestedIds = Array.isArray(mission.suggested)
+    ? mission.suggested.filter(Boolean)
     : [];
-  const uncoveredTile = uncoveredIds[0]
-    ? tiles.find((t) => t && t.id === uncoveredIds[0]) ||
-      board.tiles?.[uncoveredIds[0]]
-    : null;
-  const howHost = $("#hex-island-how");
-  const howBoxes = howHost ? [...howHost.querySelectorAll("textarea")] : [];
-  const islandHowEmpty = Boolean(
-    howHost &&
-      !howHost.hidden &&
-      howBoxes.length &&
-      !howBoxes.some((ta) => String(ta.value || "").trim())
-  );
-  const co = state.coInventor;
-  const coinventorUsed = Boolean(
-    (Array.isArray(co?.messages) && co.messages.length) ||
-      (Array.isArray(co?.histories?.coinventor) && co.histories.coinventor.length)
-  );
-  const popup = $("#hex-tile-popup");
-  const ontPopup = $("#ontology-roadblock");
-  const conv = $("#hex-convergence-dialog");
-  const draw = $("#hex-challenger-draw");
-  const waitBd = $("#wait-confirm-backdrop");
-  const mpEndBtn = $("#btn-mp-workshop-end-turn");
-  const lobbyBtn = $("#btn-lobby");
-  const mp = mpBridge();
   let hex = null;
   try {
     hex = hexWorkshop || ensureHexWorkshop();
   } catch {
     hex = hexWorkshop;
   }
+  const uiState = hex?.getTourUiState?.() || {};
+  const wbState = uiState.workbench || hex?.getWorkbenchState?.() || {};
+
+  const techTracks = board.techTracks || {};
+  const trackIds = Object.keys(techTracks);
+  const focusId =
+    uiState.focusedTechId ||
+    focusedTechId ||
+    hex?.getFocusedTechId?.() ||
+    trackIds[0] ||
+    null;
+  const focusTech = focusId ? techById(focusId) : null;
+
+  const useCases = board.useCases || {};
+  const pathways = Object.values(board.pathways || {}).filter(Boolean);
+  pathways.sort(
+    (a, b) => (Number(a.createdOrder) || 0) - (Number(b.createdOrder) || 0)
+  );
+  const wires = Object.values(board.wires || {}).filter(Boolean);
+  const crises = Object.values(board.crises || {}).filter(Boolean);
+  const challengers = Object.values(board.challengers || {}).filter(Boolean);
+
+  const questYear = Number(state.year) || Number(board.questYear) || 2026;
+  const primaryPathway =
+    (uiState.focusedPathwayId && board.pathways?.[uiState.focusedPathwayId]) ||
+    pathways[pathways.length - 1] ||
+    null;
+
+  const wiredCrisisIds = new Set(
+    wires.filter((w) => board.pathways?.[w.pathwayId]).map((w) => w.crisisId)
+  );
+  const unpluggedCrises = crises.filter((c) => !wiredCrisisIds.has(c.id));
+  const firstUnplugged = unpluggedCrises[0] || null;
+
+  const liveWireIds = new Set(
+    wires
+      .filter((w) => board.pathways?.[w.pathwayId] && board.crises?.[w.crisisId])
+      .map((w) => w.id)
+  );
+  const redChallenger =
+    challengers.find((ch) => liveWireIds.has(ch.wireId) && ch.lamp === "red") ||
+    challengers.find((ch) => ch.lamp === "red") ||
+    null;
+  const redChallengerWire = redChallenger
+    ? wires.find((w) => w.id === redChallenger.wireId)
+    : null;
+  const challengerAnswerPending = challengers.some((ch) =>
+    Boolean(ch.answerPending)
+  );
+
+  let timingPending = false;
+  let timingLevel = "green";
+  let redPathwayId = null;
+  let hasEarlyForecastWire = false;
+  const rank = { red: 0, yellow: 1, green: 2 };
+  const timingByPathwayId = new Map();
+  for (const pw of pathways) {
+    const t = effectiveTiming(pw, useCases, questYear);
+    timingByPathwayId.set(pw.id, t);
+    if (t.pending) timingPending = true;
+    const lvl = t.early ? "red" : t.timingLevel || "yellow";
+    if (t.early && wires.some((w) => w.pathwayId === pw.id)) {
+      hasEarlyForecastWire = true;
+    }
+    if ((rank[lvl] ?? 1) < (rank[timingLevel] ?? 1)) {
+      timingLevel = lvl;
+    }
+    if (lvl === "red" && !redPathwayId) redPathwayId = pw.id;
+  }
+
+  let impactPending = false;
+  for (const w of wires) {
+    const pw = board.pathways?.[w.pathwayId];
+    const cr = board.crises?.[w.crisisId];
+    if (!pw || !cr) continue;
+    if (timingByPathwayId.get(pw.id)?.early) continue;
+    const fp = pathwayContentFingerprint(pw, board);
+    const impact = board.pathwayImpacts?.[fp];
+    if (isImpactRolePending(impact, cr.role || "local")) {
+      impactPending = true;
+      break;
+    }
+  }
+  const scoringPending = Boolean(uiState.scoringPending || impactPending);
+
+  const wiredRedCrises = crises.filter(
+    (c) => wiredCrisisIds.has(c.id) && c.lamp === "red"
+  );
+  const firstRedCrisis = wiredRedCrises[0] || null;
+
+  const onBoardAngles = new Set(
+    challengers.map((ch) => ch.angle).filter(Boolean)
+  );
+  const roster = Array.isArray(board.concernRoster)
+    ? board.concernRoster.filter(Boolean)
+    : [];
+  const remainingConcernsCount = roster.length
+    ? roster.filter((a) => !onBoardAngles.has(a)).length
+    : remainingConcernAngles(board).length;
+  const concernsOnBoardCount =
+    challengers.length || concernAnglesOnBoard(board).length;
+
+  const popup = $("#hex-tile-popup");
+  const ontPopup = $("#ontology-roadblock");
+  const conv = $("#hex-convergence-dialog");
+  const draw = $("#hex-challenger-draw");
+  const waitBd = $("#wait-confirm-backdrop");
+  const mpEndBtn = $("#btn-mp-workshop-end-turn");
+  const mp = mpBridge();
   const beatCount = Array.isArray(brief.beats) ? brief.beats.length : 0;
+  const holds = isPathwayBoard(board)
+    ? pathwayBoardHolds(board, questYear)
+    : boardHolds(board);
+
   return {
     screen: state.screen,
     place: mission.place || "",
     spotlightTechId: spotlightId,
     spotlightName: spotlightTech?.name || "",
     spotlightEncourage: String(mission.spotlight?.encourageCopy || "").trim(),
-    suggestedIds: Array.isArray(mission.suggested) ? mission.suggested : [],
-    focusedTechId: focusId,
-    focusedTechName: focusTech?.name || "",
+    hasRecommended: suggestedIds.length > 0,
+    suggestedIds,
     isLearning: Boolean(mission.isLearningModule),
     tutorOn: isLearningTutorSessionActive(),
     sideTab: state.sideTab || "vision",
@@ -22618,44 +22679,6 @@ function tourSnapshot() {
       index: Number(brief.index) || 0,
       beatCount,
     },
-    crisisIntroductionPending: crisisIntroduction.count(),
-    firstPlacedTileId: placed[0]?.id || null,
-    convergedTileId: placed.find((t) => Number(t.convergenceFactor) > 1)?.id || null,
-    unplacedInventionCount: unplaced.length,
-    placedInventionCount: placed.length,
-    howTextLength:
-      hexWorkshop?.effectiveHowLength?.() ??
-      String($("#hex-how-text")?.value || "").trim().length,
-    hasSparkBatch: Boolean(focusId && hex?.hasSparkBatch?.(focusId)),
-    pathway: {
-      overall: panel.overall,
-      bonds: panel.bonds?.level || "red",
-      coverage: panel.coverage?.level || "red",
-      timingLevel: panel.timingLevel || panel.timing?.level || "red",
-      timingPending: Boolean(
-        panel.timing?.pending || boardPathwayReevaluating(board)
-      ),
-    },
-    concernsOnBoard: concernAnglesOnBoard(board).length,
-    remainingConcerns: remainingConcernAngles(board).length,
-    concernsSummoned: Boolean(board.concernsSummoned),
-    boardHolds: boardHolds(board),
-    unansweredConcernId: unanswered?.id || null,
-    concernAnswerPending: pendingAnswer,
-    redGivenId: redGiven?.id || null,
-    redInventionId: redInvention?.id || null,
-    uncoveredGivenId: uncoveredTile?.id || uncoveredIds[0] || null,
-    uncoveredGivenName: String(uncoveredTile?.name || "").trim(),
-    uncoveredCount: Number(panel.bonds?.uncovered) || uncoveredIds.length,
-    bondsNote: String(panel.bonds?.note || "").trim(),
-    coverageNote: String(panel.coverage?.note || "").trim(),
-    coverageReds: Number(panel.reds) || 0,
-    ap: getSpendableAp(),
-    apEnabled: apEnabled(),
-    budget: Number(state.budget) || 0,
-    budgetWillEnabled: budgetWillEnabled(),
-    will: Number(state.will) || 0,
-    lobbyVisible: Boolean(lobbyBtn && !lobbyBtn.hidden),
     mp: {
       spectator: isMpInventSpectator(),
       viewingOther: Boolean(mp?.viewingOther?.()),
@@ -22663,18 +22686,63 @@ function tourSnapshot() {
       needPassDevice: Boolean(mpEndBtn && !mpEndBtn.hidden),
     },
     ui: {
-      techCatalogHidden: isTechCatalogHidden(),
       waitConfirmOpen: Boolean(waitBd?.classList.contains("open")),
-      tilePopupOpen: Boolean((popup && !popup.hidden) || ontPopup),
-      convergenceOpen: Boolean(conv && !conv.hidden),
-      createBusy: Boolean(hex?.isCreateBusy?.()),
-      summonBusy: Boolean(hex?.isSummonBusy?.()),
+      pickerOpen: Boolean(uiState.pickerOpen),
+      openChallengerId: uiState.openChallengerId || null,
+      argumentModalOpen: Boolean(uiState.argumentModalOpen),
+      argumentBusy: Boolean(uiState.argumentBusy),
+      createBusy: Boolean(uiState.createBusy ?? hex?.isCreateBusy?.()),
+      summonBusy: Boolean(uiState.summonBusy ?? hex?.isSummonBusy?.()),
       challengerDrawOpen: Boolean(draw && !draw.hidden),
+      scoringPending,
+      timingPending,
+      tilePopupOpen: Boolean(
+        (popup && !popup.hidden) || ontPopup || uiState.openChallengerId
+      ),
+      convergenceOpen: Boolean(conv && !conv.hidden),
     },
-    islandHowEmpty,
-    coinventorUsed,
-    learnOpenedThisTurn: Boolean(state.learnOpenedThisTurn),
-    waitUsed: (Number(state.waits) || 0) > 0,
+    wb: {
+      open: Boolean(wbState.open),
+      diamond: wbState.diamond || "solution",
+      busy: Boolean(wbState.busy),
+      hasHmwBrief: Boolean(String(wbState.hmwBrief || "").trim()),
+      hmwLocked: Boolean(wbState.hmwLocked),
+      ideaCount: Number(wbState.ideaCount) || 0,
+    },
+    tracks: trackIds.length,
+    focusedTechId: focusId,
+    focusedTechName: focusTech?.name || "",
+    useCaseCount: Object.keys(useCases).length,
+    sparksCount: Number(uiState.sparksCount) || 0,
+    writeOpen: Boolean(uiState.writeOpen),
+    draftHowLength: Number(uiState.draftHowLength) || 0,
+    pathwayCount: pathways.length,
+    primaryPathwayId: primaryPathway?.id || null,
+    unpluggedCrisisId: firstUnplugged?.id || null,
+    unpluggedCrisisName: String(firstUnplugged?.name || "").trim(),
+    unpluggedCount: unpluggedCrises.length,
+    redChallengerId: redChallenger?.id || null,
+    redChallengerCrisisId: redChallengerWire?.crisisId || null,
+    challengerAnswerPending,
+    timingLevel,
+    redPathwayId,
+    hasEarlyForecastWire,
+    redCrisisId: firstRedCrisis?.id || null,
+    redCrisisName: String(firstRedCrisis?.name || "").trim(),
+    redCrisisCount: wiredRedCrises.length,
+    concernsOnBoard: concernsOnBoardCount,
+    remainingConcerns: remainingConcernsCount,
+    concernsSummoned: Boolean(board.concernsSummoned),
+    boardHolds: Boolean(holds),
+    pathway: {
+      timingLevel,
+      timingPending,
+    },
+    ap: getSpendableAp(),
+    apEnabled: apEnabled(),
+    isMultiplayer: Boolean(mpBridge() || state.mp),
+    budget: Number(state.budget) || 0,
+    budgetWillEnabled: budgetWillEnabled(),
   };
 }
 
@@ -22973,31 +23041,44 @@ function finishTutorial() {
 }
 
 async function ensureTourTargetVisible(step) {
-  if (step?.openSideTab) {
+  if (step?.openSideTab || step?.id === "D1") {
     try {
       revealVisionPanel(workshopLayoutFor(null));
-      setSideTab(step.openSideTab);
+      setSideTab(step.openSideTab || "coinventor");
     } catch {
       /* ignore */
-    }
-  }
-  const needsCatalog =
-    step?.target?.kind === "tech" ||
-    Boolean(step?.openTray) ||
-    step?.id === "E0" ||
-    step?.id === "E1" ||
-    step?.id === "E2" ||
-    step?.id === "E3";
-  const layout = tourWorkshopLayout();
-  if (layout && needsCatalog) {
-    if (isTechDrawerMode()) {
-      setTechDrawerOpen(layout, true, { focus: false });
-    } else if (isTechRailCollapsed(layout)) {
-      setTechRailPeek(layout, true);
     }
     await new Promise((r) => {
       requestAnimationFrame(() => requestAnimationFrame(r));
     });
+  }
+  if (step?.expandCard?.kind && step?.expandCard?.id) {
+    try {
+      const hex = hexWorkshop || ensureHexWorkshop();
+      const { kind, id } = step.expandCard;
+      const expanded = hex?.expandCard?.(kind, id);
+      if (!expanded && hex?.isCardCollapsed?.(kind, id)) {
+        hex.toggleCardCollapse?.(`${kind}:${id}`);
+      }
+    } catch {
+      /* ignore */
+    }
+    await new Promise((r) => {
+      requestAnimationFrame(r);
+    });
+  }
+  if (step?.target?.kind === "tech") {
+    const layout = tourWorkshopLayout();
+    if (layout) {
+      if (isTechDrawerMode()) {
+        setTechDrawerOpen(layout, true, { focus: false });
+      } else if (isTechRailCollapsed(layout)) {
+        setTechRailPeek(layout, true);
+      }
+      await new Promise((r) => {
+        requestAnimationFrame(() => requestAnimationFrame(r));
+      });
+    }
   }
   const el = queryTourTarget(step);
   try {
@@ -23012,16 +23093,6 @@ const guidedTour = createGuidedTour({
   restoreFocusEl: () => $("#btn-help"),
   ensureTargetVisible: ensureTourTargetVisible,
   snapshot: () => tourSnapshot(),
-  onOpenConcept: (id) => {
-    const card = conceptById(id);
-    if (!card) return;
-    void guidedTour.openConcept(card, tourSnapshot(), { opener: $("#btn-help") });
-  },
-  onMuteConcept: (id, on) => {
-    setConceptMuted(id, on);
-    flashToast(on ? "Okay — this concept stays in ? but won't pop up." : "This concept will pop up again in new Quests.");
-  },
-  isConceptMuted: (id) => readMutedConcepts().has(id),
 });
 
 const tutorialCtl = createTutorial({
@@ -23048,7 +23119,7 @@ function helpModalOpen() {
 }
 
 /**
- * Follow an open tour. Concept cards stay inside ? and do not open on their own.
+ * Follow an active tutorial or guided tour spotlight.
  */
 function refreshCoachMarks() {
   if (state.tutorialRun && tutorialCtl?.isOpen?.()) {
@@ -23056,18 +23127,10 @@ function refreshCoachMarks() {
     return;
   }
   if (guidedTour.isOpen()) {
-    if (guidedTour.mode?.() === "concept") {
-      // A concept card whose anchor vanished (dialog closed) should not float.
-      const cur = guidedTour.currentStep();
-      if (cur && !queryTourTarget(cur)) guidedTour.close();
-      else void guidedTour.refresh(tourSnapshot());
-      return;
-    }
     void guidedTour.refresh(tourSnapshot());
     return;
   }
   if (helpModalOpen()) return;
-  // Concept cards stay inside ?. Gameplay does not open them on its own.
 }
 
 function openRulesHelp() {
@@ -23078,6 +23141,10 @@ function openRulesHelp() {
 function openGuidedTour(ev) {
   if (state.tutorialRun && tutorialCtl?.isOpen?.()) {
     tutorialCtl.nudge();
+    return;
+  }
+  if (guidedTour.isOpen()) {
+    guidedTour.close();
     return;
   }
   const opener =

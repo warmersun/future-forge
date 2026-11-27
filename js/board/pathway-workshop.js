@@ -5123,6 +5123,13 @@ export function createPathwayWorkshop(api) {
     getTrace: () => traceSelection,
     toggleCardCollapse,
     isCardCollapsed,
+    expandCard: (kind, id) => {
+      if (expandCard(kind, id)) {
+        paint();
+        return true;
+      }
+      return false;
+    },
     paint,
     wireDom,
     dealMilestone,
@@ -5293,5 +5300,35 @@ export function createPathwayWorkshop(api) {
       stagedIds: [...wbStagedIds],
       remixSeed: wbRemixSeed ? { ...wbRemixSeed } : null,
     }),
+    getTourUiState: () => {
+      const current = board();
+      const activeFocus =
+        focusedTechId || Object.keys(current?.techTracks || {})[0] || null;
+      const activeBatch = activeFocus ? sparkBatches.get(activeFocus) : null;
+      const sparksList = activeBatch?.ideas || [];
+      return {
+        pickerOpen: Boolean(pickerOpen),
+        openChallengerId: openChallengerId || null,
+        argumentModalOpen: Boolean(argumentModalOpen),
+        argumentBusy: Boolean(argumentBusy),
+        createBusy: Boolean(createBusy),
+        summonBusy: Boolean(summonBusy),
+        scoringPending:
+          scoringPathwayRoles.size > 0 || polishingPathwayIds.size > 0,
+        sparksCount: Array.isArray(sparksList) ? sparksList.length : 0,
+        writeOpen: Boolean(writeOpen),
+        draftHowLength: String(draftHow || "").trim().length,
+        focusedTechId: activeFocus,
+        focusedPathwayId: focusedPathwayId || null,
+        workbench: {
+          open: Boolean(workbenchOpen),
+          diamond: wbDiamond || "solution",
+          busy: Boolean(wbLensBusy),
+          hmwBrief: String(wbHmwBrief || "").trim(),
+          hmwLocked: Boolean(wbHmwLocked),
+          ideaCount: Array.isArray(wbDrafts) ? wbDrafts.length : 0,
+        },
+      };
+    },
   };
 }
