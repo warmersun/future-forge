@@ -8,7 +8,7 @@ These files power **both** Lane 1–2 ontology cards and player-facing charts. I
 - Include quantitative curve fields (`unit`, `compounding`, `anchor`, numeric `milestone.value`) **only** when a consistent, strictly positive multi-year series exists in one unit.
 - Omit all curve fields cleanly when a capability is real and milestone-backed, yet stepwise or without a comparable multi-year numeric series.
 - Mark uncertain future points `status: "predicted"`.
-- Attach concrete, general `useCases` to the threshold milestones that make them practical (`title`, `blurb`, `world`).
+- Attach concrete, general `useCases` to the threshold milestones that make them practical (`title`, `blurb`, `world`). When a use case requires multiple capabilities (within or across emTechs), attach it to the **last / trickiest gating capability milestone** — the bottleneck that must be reached to unlock it, not the easy prerequisites.
 - Use `https://` URLs in `sources`.
 
 ## Do not

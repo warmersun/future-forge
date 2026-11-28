@@ -38,7 +38,7 @@ One JSON file conforming to `future-forge.capability-trend/v2`:
 1. **`techId`** = one valid Future Forge tech id (`js/data.js` `TECHS`).
 2. **One Capability per file.** Break each emTech into distinct operational capabilities (price, speed, capacity, range, scale, quality) instead of one generic summary.
 3. **`trendSummary`** (≤180 chars) is required: one crisp plain-language sentence describing the trajectory.
-4. **Unlocked `useCases`**: every file must include at least one valid `{ title, blurb, world? }` on key threshold milestone(s) (and/or top-level fallback `useCases[]`). Attach `useCases` to the specific threshold milestones that unlock them rather than repeating identical uses on every dot.
+4. **Unlocked `useCases`**: every file must include at least one valid `{ title, blurb, world? }` on key threshold milestone(s) (and/or top-level fallback `useCases[]`). Attach `useCases` to the specific threshold milestones that unlock them rather than repeating identical uses on every dot. **Gating-capability rule:** a real use case often requires several capabilities (even across multiple emTechs) — associate the use case with the **last / trickiest gating capability milestone** (the bottleneck threshold that finally unlocks it once easier prerequisites are already in place).
 5. **All-or-nothing quantitative curve**: either include **all** of `unit`, `compounding`, `anchor` (`value > 0`), and `value > 0` on every milestone (`hasCurve: true`), or omit **all** of them (`hasCurve: false`). Never mix partial curve fields or invent numbers just to draw a chart.
 6. Milestones use **`status`**: `"reached"` | `"predicted"`. Never claim a prediction as `"reached"`.
 7. **`sources`**: `https://` only; no fake paper titles or DOI links.
@@ -58,7 +58,7 @@ One JSON file conforming to `future-forge.capability-trend/v2`:
 - Decide whether a single stable, strictly positive unit captures the trajectory across years:
   - **Yes (`hasCurve: true`):** pick an `anchor` `{ date, value }`, collect milestone `value`s in the **same unit**, and fit `doubling`, `halving`, or `cagr`.
   - **No (`hasCurve: false`):** keep the milestone-only timeline (`label`, `date`, `status`, optional `detail`/`attribution`, and `useCases`).
-- For each threshold milestone, define concrete, general **`useCases`** (`title`, `blurb`, optional `world`: `"bits"|"atoms"|"split"`) that become practical once that milestone is reached.
+- For each threshold milestone, define concrete, general **`useCases`** (`title`, `blurb`, optional `world`: `"bits"|"atoms"|"split"`) that become practical once that milestone is reached. When a use case depends on multiple capabilities, attach it to the **last and trickiest bottleneck milestone** that actually unlocks it rather than attaching it to an already-solved prerequisite.
 
 ### 3. Write Player Copy
 
