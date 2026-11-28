@@ -2307,4 +2307,29 @@ describe("pathway workshop", () => {
     assert.match(customRoot.innerHTML, /Generate physical randomness from quantum photon fluctuations/);
     assert.match(customRoot.innerHTML, /Commercial quantum entropy cards ship/);
   });
+
+  it("omits the Learn book button from the emTech selector modal", () => {
+    const html = renderOntologyBoard({
+      year: 2026,
+      tracks: [],
+      useCases: [],
+      pathways: [],
+      crises: [],
+      wires: [],
+      rules: [],
+      pickerOpen: true,
+      pickerDomain: "all",
+      catalog: [
+        { id: "drones", name: "Drones", domain: "mover", world: "atoms", recommended: true, why: "Helps map storms." },
+        { id: "networks", name: "Networks", domain: "mover", world: "bits", recommended: false, why: "Connects sensors." },
+      ],
+    });
+    const pickerStart = html.indexOf('id="ontology-tech-picker"');
+    assert.ok(pickerStart >= 0, "expected emTech picker modal to render");
+    const pickerHtml = html.slice(pickerStart);
+    assert.match(pickerHtml, /data-action="pick-tech" data-tech-id="drones"/);
+    assert.match(pickerHtml, /data-action="pick-tech" data-tech-id="networks"/);
+    assert.doesNotMatch(pickerHtml, /data-action="learn-tech"/);
+    assert.doesNotMatch(pickerHtml, /📖/);
+  });
 });

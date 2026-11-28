@@ -1684,7 +1684,6 @@ function renderPicker(catalog, activeDomain) {
       </span>
       <span class="ontology-picker-why">${escapeHtml(tech.why || "")}</span>
     </button>
-    <button type="button" class="ontology-icon-btn" data-action="learn-tech" data-tech-id="${escapeHtml(tech.id)}" title="Read primer on ${escapeHtml(tech.name)}">📖</button>
   </div>`;
 
   return `<div class="ontology-modal-scrim" data-action="close-picker">
