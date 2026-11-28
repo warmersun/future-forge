@@ -108,6 +108,9 @@ export function trendValueInDomain(trend, year) {
  * use chart.scales.x and chart.chartArea for external rail alignment.
  */
 export function buildTrendChartConfig(trend, opts = {}) {
+  if (!trend || trend.hasCurve === false || !trend.compounding || !trend.anchor) {
+    return null;
+  }
   const css = defaultCss(opts.css);
   const yearNow = Number(opts.yearNow);
   const yearNext = Number(opts.yearNext);
@@ -429,6 +432,7 @@ export function mountTrendChart(canvas, trend, opts = {}) {
   const Chart = typeof globalThis !== "undefined" ? globalThis.Chart : null;
   if (!Chart || !canvas) return null;
   const config = buildTrendChartConfig(trend, opts);
+  if (!config) return null;
   return new Chart(canvas, config);
 }
 

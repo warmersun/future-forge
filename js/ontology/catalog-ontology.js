@@ -687,7 +687,10 @@ export function trendRateSummary(trend) {
     const pct = Math.round(Number(trend.compounding.annualRate) * 100);
     return `${name} compounds ~${pct}% per year`;
   }
-  return String(trend?.summary || "").replace(/\s+/g, " ").trim().slice(0, 160);
+  return String(trend?.trendSummary || trend?.summary || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 180);
 }
 
 /**
@@ -913,30 +916,53 @@ export function mergeExternalMilestones(track, predictions = [], trends = []) {
 
   for (const trend of trends || []) {
     if (!trend || trend.techId !== track.techId) continue;
+    const topUses = Array.isArray(trend.useCases) ? trend.useCases : [];
     for (const m of trend.milestones || []) {
       const year = Math.round(Number(m.year ?? String(m.date || "").slice(0, 4)));
       const label = String(m.label || "").trim();
       if (!Number.isFinite(year) || !label) continue;
-      const key = `${year}|${label.toLowerCase()}`;
+      const key = `${year}|${trend.id || ""}|${label.toLowerCase()}`;
       if (seen.has(key)) continue;
       seen.add(key);
       const status = m.status === "reached" ? "reached" : "predicted";
-      const slug = `trend-${m.id || year}`;
+      const slug = `trend-${trend.id}-${m.id || year}`;
+      const authoredUses =
+        Array.isArray(m.useCases) && m.useCases.length ? m.useCases : topUses;
+      const hasAuthoredUseCases = authoredUses.length > 0;
+      const useCases = hasAuthoredUseCases
+        ? authoredUses.map((u, i) => ({
+            id: u.id || `uc-${track.techId}-${slug}-${i + 1}`,
+            title: String(u.title || "Unlocked use case").slice(0, 80),
+            blurb: String(u.blurb || u.title || "").slice(0, 280),
+            world: u.world || track.world,
+            origin: "trend",
+          }))
+        : deriveExternalUseCases({
+            techId: track.techId,
+            world: track.world,
+            idSlug: slug,
+            headline: label,
+            detail: m.detail || m.note || trend.capability || "",
+            fallback: fallbackUses(status),
+          });
+      const detailText =
+        m.detail ||
+        (trend.capability
+          ? `${trend.capability} (${m.value != null ? `${m.value} ${trend.unit || ""}`.trim() : year})`
+          : undefined);
       milestones.push({
         id: `ms-${track.techId}-${slug}`,
         year,
         label,
-        detail: trend.capability ? `${trend.capability} (${m.value != null ? `${m.value} ${trend.unit || ""}`.trim() : year})` : undefined,
+        detail: detailText ? String(detailText).slice(0, 280) : undefined,
+        attribution: m.attribution ? String(m.attribution).slice(0, 160) : undefined,
         status,
+        value: m.value,
+        capabilityId: trend.id,
+        capabilityName: trend.name,
+        hasAuthoredUseCases,
         origin: "trend",
-        useCases: deriveExternalUseCases({
-          techId: track.techId,
-          world: track.world,
-          idSlug: slug,
-          headline: label,
-          detail: m.note || trend.capability || "",
-          fallback: fallbackUses(status),
-        }),
+        useCases,
       });
     }
   }

@@ -47,7 +47,12 @@ import { parseGrounding, parseGroundingTechId } from "./grounding-parser.js";
  * @param {Set<string>} [dealtIds]
  * @returns {object[]}
  */
-export function selectPlayableMilestones(milestones, questYear = 2026, dealtIds = new Set()) {
+export function selectPlayableMilestones(
+  milestones,
+  questYear = 2026,
+  dealtIds = new Set(),
+  opts = {}
+) {
   const list = Array.isArray(milestones) ? milestones : [];
   if (!list.length) return [];
 
@@ -62,6 +67,80 @@ export function selectPlayableMilestones(milestones, questYear = 2026, dealtIds 
   // Always preserve any already-dealt or collector milestones
   for (const m of list) {
     if (m.origin === "collector" || dealtIds.has(m.id)) add(m);
+  }
+
+  const activeCapabilityId = opts?.activeCapabilityId
+    ? String(opts.activeCapabilityId)
+    : null;
+  const capTrendRows = activeCapabilityId
+    ? list.filter(
+        (m) => m.origin === "trend" && m.capabilityId === activeCapabilityId
+      )
+    : [];
+
+  if (capTrendRows.length) {
+    const nonTrend = list.filter((m) => m.origin !== "trend");
+    for (const qm of nonTrend
+      .filter((m) => m.origin === "quest" && m.status === "reached")
+      .slice(0, 1)) {
+      add(qm);
+    }
+
+    const capReachedAll = capTrendRows.filter((m) => m.status === "reached");
+    const capReachedUse = capReachedAll.filter((m) => m.hasAuthoredUseCases);
+    const capReached = capReachedUse.length ? capReachedUse : capReachedAll;
+    if (capReached.length > 2) {
+      add(capReached[0]);
+      add(capReached.at(-1));
+    } else if (capReached.length) {
+      for (const m of capReached) add(m);
+    } else {
+      const catReached = nonTrend.filter(
+        (m) => m.status === "reached" && !m.isHistoryAnchor
+      );
+      if (catReached.length) add(catReached.at(-1));
+    }
+
+    for (const qm of nonTrend
+      .filter((m) => m.origin === "quest" && m.status === "predicted")
+      .slice(0, 1)) {
+      add(qm);
+    }
+
+    const capPredAll = capTrendRows.filter((m) => m.status === "predicted");
+    const capPredUse = capPredAll.filter((m) => m.hasAuthoredUseCases);
+    const capPred = capPredUse.length ? capPredUse : capPredAll;
+    if (capPred.length) {
+      for (const m of capPred.slice(0, 2)) add(m);
+    } else {
+      const catPred = nonTrend.filter(
+        (m) => m.origin === "catalog" && m.status === "predicted"
+      );
+      if (catPred.length) add(catPred[0]);
+      const existingPredYears = new Set(
+        chosen
+          .filter((m) => m.status === "predicted")
+          .map((m) => Number(m.year))
+      );
+      const bankPred = nonTrend.filter(
+        (m) =>
+          m.origin === "bank" &&
+          m.status === "predicted" &&
+          !existingPredYears.has(Number(m.year))
+      );
+      if (
+        bankPred.length &&
+        chosen.filter((m) => m.status === "predicted").length < 2
+      ) {
+        add(bankPred[0]);
+      }
+    }
+
+    if (!chosen.length) add(capTrendRows.at(-1) || list.at(-1));
+    return chosen.sort(
+      (a, b) =>
+        Number(a.year) - Number(b.year) || String(a.id).localeCompare(String(b.id))
+    );
   }
 
   // Reached capability milestones (excluding raw trend survey dots and history anchors)
@@ -210,7 +289,7 @@ export function resolveTechTrack(techId, ctx = {}) {
   const byKey = new Map();
   for (const m of questMilestones) byKey.set(`${m.year}|${m.label.toLowerCase()}`, copyMilestone(m, "quest"));
   for (const m of merged?.milestones || []) {
-    const key = `${m.year}|${m.label.toLowerCase()}`;
+    const key = `${m.year}|${m.capabilityId || ""}|${m.label.toLowerCase()}`;
     if (!byKey.has(key)) byKey.set(key, copyMilestone(m, m.origin || "catalog"));
   }
   for (const m of collectorMilestonesForTech(ctx.collectorCards, id, { world })) {
@@ -222,8 +301,20 @@ export function resolveTechTrack(techId, ctx = {}) {
     (a, b) => a.year - b.year || String(mOriginOrder(a)).localeCompare(String(mOriginOrder(b)))
   );
 
-  const rate = trendRows.map(trendRateSummary).find(Boolean);
-  if (rate) trendSummary = rate;
+  const hasQuestOverride = Boolean(entry || questMilestones.length > 0);
+  const activeTrend =
+    (ctx.activeCapabilityId &&
+      trendRows.find((t) => t.id === ctx.activeCapabilityId)) ||
+    trendRows[0] ||
+    null;
+  if (!hasQuestOverride && activeTrend) {
+    if (activeTrend.capability) capability = activeTrend.capability;
+    const rate = activeTrend.trendSummary || trendRateSummary(activeTrend);
+    if (rate) trendSummary = rate;
+  } else {
+    const rate = trendRows.map((t) => t.trendSummary || trendRateSummary(t)).find(Boolean);
+    if (rate) trendSummary = rate;
+  }
 
   return {
     techId: id,
@@ -234,6 +325,7 @@ export function resolveTechTrack(techId, ctx = {}) {
     world,
     capability,
     trendSummary,
+    hasQuestOverride,
     applicationHints,
     limits,
     trends: trendRows,

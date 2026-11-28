@@ -45,11 +45,14 @@
   "grounding": "## Technology\n- **emTech:** gene-sequencing\n- **Product category:** Portable / clinic-rugged same-shift pathogen sequencers\n\n## Capabilities\nSame-shift or next-morning provisional pathogen reads when workflow, power, reagents, and trained staff exist — not sequencing as a capital-lab monopoly only.\n\n## Trends & predictions\nTime-to-read and ruggedness improve; reagent kits get cheaper; software turns raw reads into provisional signals for non-specialist posts. **Forecast (not lock):** same-shift reads become more routine at border and rural clinics through the late 2020s where power and training hold.\n\n## Milestone\nCheaper, more field-rugged sequencers and software (through ~2026) make on-site clinic reads realistic for small posts.\n\n## Honest limits\nPower and cold chain after dusk; no full bioinformatics team; public trust fragile — pilot language only for 2026.\n## Unlocks Use Case(s)\nLocal sample-to-read workflows; triage and isolation decisions without waiting on a distant lab truck.\n\n## Applications\nClinic sample-to-isolation protocols; shift-handoff pathogen boards; trust-preserving result counseling workflows — invent the local system.\n",
   "trends": [
     {
+      "schema": "future-forge.capability-trend/v2",
       "id": "gene-seq-cost-per-genome",
       "techId": "gene-sequencing",
+      "axis": "price",
       "name": "Cost per human genome",
       "summary": "It used to cost tens of thousands of dollars to read one person’s full DNA. After public labs were no longer the only buyers, that price has been dropping by about half every 18 months. The chart is US dollars per genome — lower means cheaper.",
       "capability": "Affordable whole-genome sequencing",
+      "trendSummary": "Whole-genome sequencing cost dropped from tens of thousands of dollars toward clinical affordability.",
       "unit": "USD / genome",
       "compounding": {
         "kind": "halving",
@@ -69,14 +72,28 @@
           "label": "$1,000 genome",
           "date": "2014",
           "value": 1000,
-          "status": "reached"
+          "status": "reached",
+          "useCases": [
+            {
+              "title": "Outbreak pathogen tracing",
+              "blurb": "Sequence clinical samples to trace transmission chains and identify variants.",
+              "world": "atoms"
+            }
+          ]
         },
         {
           "id": "hundred-dollar",
           "label": "$100 genome",
           "date": "2027",
           "value": 100,
-          "status": "predicted"
+          "status": "predicted",
+          "useCases": [
+            {
+              "title": "Routine bedside genomics",
+              "blurb": "Include whole-genome reads in everyday primary care and infectious triage.",
+              "world": "atoms"
+            }
+          ]
         }
       ],
       "sources": [

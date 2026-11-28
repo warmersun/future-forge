@@ -736,6 +736,7 @@ describe("quest-tile", () => {
     name: "Cost per human genome",
     summary: "Halving curve for sequencing cost.",
     capability: "Affordable WGS",
+    trendSummary: "Sequencing cost fell toward clinical affordability.",
     unit: "USD / genome",
     compounding: { kind: "halving", periodYears: 1.5 },
     anchor: { date: "2015-01-01", value: 4000 },
@@ -745,6 +746,13 @@ describe("quest-tile", () => {
         date: "2014",
         value: 1000,
         status: "reached",
+        useCases: [
+          {
+            title: "Clinic pathogen read",
+            blurb: "Sequence clinic samples locally.",
+            world: "atoms",
+          },
+        ],
       },
     ],
   };

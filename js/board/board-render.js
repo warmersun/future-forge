@@ -996,57 +996,73 @@ function renderTrack(
     </div>`;
   };
 
+  const allTrends = Array.isArray(track.trends) ? track.trends : [];
+  const activeTrend = track.activeTrend || allTrends[0] || null;
+  const activeHasCurve = Boolean(
+    activeTrend && activeTrend.hasCurve !== false && activeTrend.compounding
+  );
+
+  const renderCapabilityInfo = (trendObj) => {
+    if (!trendObj || !track.descExpanded) return "";
+    const desc = String(trendObj.summary || "").trim();
+    const sources = Array.isArray(trendObj.sources)
+      ? trendObj.sources.filter((s) => s?.label)
+      : [];
+    if (!desc && !sources.length) return "";
+    return `<div class="ontology-chart-info">
+      ${desc ? `<p class="ontology-chart-desc is-expanded">${escapeHtml(desc)}</p>` : ""}
+      ${
+        sources.length
+          ? `<div class="ontology-chart-sources">${sources
+              .slice(0, 3)
+              .map((s) =>
+                s.url
+                  ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.label)}</a>`
+                  : `<span>${escapeHtml(s.label)}</span>`
+              )
+              .join(" · ")}</div>`
+          : ""
+      }
+    </div>`;
+  };
+
   let chartBlock = "";
   if (track.chartOpen) {
-    const activeTrend = track.activeTrend;
-    const allTrends = Array.isArray(track.trends) ? track.trends : [];
-    if (activeTrend) {
+    if (activeTrend && activeHasCurve) {
       const desc = String(activeTrend.summary || "").trim();
-      const sources = Array.isArray(activeTrend.sources) ? activeTrend.sources.filter((s) => s?.label) : [];
-      const titleControl =
-        allTrends.length > 1
-          ? `<select class="ontology-trend-select" data-action="select-trend" data-tech-id="${escapeHtml(track.techId)}" aria-label="Choose trend metric for ${escapeHtml(track.name)}">
-              ${allTrends
-                .map(
-                  (t) =>
-                    `<option value="${escapeHtml(t.id)}"${t.id === activeTrend.id ? " selected" : ""}>${escapeHtml(t.name || t.capability || t.id)}</option>`
-                )
-                .join("")}
-            </select>`
-          : `<strong class="ontology-chart-title">${escapeHtml(activeTrend.name || activeTrend.capability || "Capability curve")}</strong>`;
-
-      const infoBlock = track.descExpanded
-        ? `<div class="ontology-chart-info">
-            ${desc ? `<p class="ontology-chart-desc is-expanded">${escapeHtml(desc)}</p>` : ""}
-            ${
-              sources.length
-                ? `<div class="ontology-chart-sources">${sources
-                    .slice(0, 3)
-                    .map((s) =>
-                      s.url
-                        ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.label)}</a>`
-                        : `<span>${escapeHtml(s.label)}</span>`
-                    )
-                    .join(" · ")}</div>`
-                : ""
-            }
-          </div>`
-        : "";
-
+      const sources = Array.isArray(activeTrend.sources)
+        ? activeTrend.sources.filter((s) => s?.label)
+        : [];
       chartBlock = `<div class="ontology-chart-panel">
         <div class="ontology-chart-meta">
-          ${titleControl}
+          <strong class="ontology-chart-title">${escapeHtml(activeTrend.name || activeTrend.capability || "Capability curve")}</strong>
           <div class="ontology-chart-meta-right">
             ${activeTrend.unit ? `<span class="ontology-chart-unit">${escapeHtml(activeTrend.unit)}</span>` : ""}
-            ${desc || sources.length ? `<button type="button" class="ontology-icon-btn${track.descExpanded ? " is-on" : ""}" data-action="toggle-trend-desc" data-tech-id="${escapeHtml(track.techId)}" title="About this trend & sources" aria-label="About this trend">ⓘ</button>` : ""}
+            ${desc || sources.length ? `<button type="button" class="ontology-icon-btn${track.descExpanded ? " is-on" : ""}" data-action="toggle-trend-desc" data-tech-id="${escapeHtml(track.techId)}" title="About this capability & sources" aria-label="About this capability">ⓘ</button>` : ""}
           </div>
         </div>
-        ${infoBlock}
+        ${renderCapabilityInfo(activeTrend)}
         <div class="ontology-chart-canvas"><canvas data-trend-tech="${escapeHtml(track.techId)}"></canvas></div>
         <div class="ontology-chart-foot">
           <span>● Reached · ◌ Forecast</span>
           <span>Click dot or pill to deal</span>
         </div>
+      </div>`;
+    } else if (activeTrend) {
+      const desc = String(activeTrend.summary || "").trim();
+      const sources = Array.isArray(activeTrend.sources)
+        ? activeTrend.sources.filter((s) => s?.label)
+        : [];
+      chartBlock = `<div class="ontology-chart-panel is-qual">
+        <div class="ontology-chart-meta">
+          <strong class="ontology-chart-title">${escapeHtml(activeTrend.name || activeTrend.capability || "Capability milestones")}</strong>
+          <div class="ontology-chart-meta-right">
+            <span class="ontology-chart-unit">Milestone timeline</span>
+            ${desc || sources.length ? `<button type="button" class="ontology-icon-btn${track.descExpanded ? " is-on" : ""}" data-action="toggle-trend-desc" data-tech-id="${escapeHtml(track.techId)}" title="About this capability & sources" aria-label="About this capability">ⓘ</button>` : ""}
+          </div>
+        </div>
+        ${renderCapabilityInfo(activeTrend)}
+        ${renderQualitativeTimeline(track, milestones, year)}
       </div>`;
     } else {
       chartBlock = renderQualitativeTimeline(track, milestones, year);
@@ -1095,6 +1111,18 @@ function renderTrack(
     </article>`;
   }
 
+  const capSelect =
+    allTrends.length > 1
+      ? `<select class="ontology-trend-select" data-action="select-trend" data-tech-id="${escapeHtml(track.techId)}" aria-label="Choose capability for ${escapeHtml(track.name)}">
+          ${allTrends
+            .map(
+              (t) =>
+                `<option value="${escapeHtml(t.id)}"${activeTrend && t.id === activeTrend.id ? " selected" : ""}>${escapeHtml(`${t.name || t.capability || t.id}${t.hasCurve !== false && t.compounding ? " 📈" : ""}`)}</option>`
+            )
+            .join("")}
+        </select>`
+      : "";
+
   return `<article class="ontology-card ontology-tech${isFocused ? " is-focused" : " is-compact"}${trackChainCls}" data-tech-id="${escapeHtml(track.techId)}">
     <span class="ontology-port is-out is-tech-port${techPortActive ? " is-lit" : ""}${techPortLit ? " is-chain-lit" : ""}" data-port-tech="${escapeHtml(track.techId)}" aria-hidden="true"></span>
     <header class="ontology-card-head">
@@ -1106,10 +1134,11 @@ function renderTrack(
       ${worldBadge(track.world)}
       <div class="ontology-head-actions">
         <button type="button" class="ontology-icon-btn" data-action="learn-tech" data-tech-id="${escapeHtml(track.techId)}" title="Learn about ${escapeHtml(track.name)}">📖</button>
-        <button type="button" class="ontology-icon-btn${track.chartOpen ? " is-on" : ""}" data-action="toggle-chart" data-tech-id="${escapeHtml(track.techId)}" title="${track.chartOpen ? "Collapse capability curve" : "Show capability curve"}">📈</button>
+        <button type="button" class="ontology-icon-btn${track.chartOpen ? " is-on" : ""}" data-action="toggle-chart" data-tech-id="${escapeHtml(track.techId)}" title="${track.chartOpen ? "Collapse capability timeline" : activeHasCurve ? "Show capability curve" : "Show capability timeline"}">${activeHasCurve ? "📈" : "📉"}</button>
         <button type="button" class="ontology-icon-btn is-remove" data-action="remove-tech" data-tech-id="${escapeHtml(track.techId)}" aria-label="Remove ${escapeHtml(track.name)}" title="Remove from board">×</button>
       </div>
     </header>
+    ${capSelect}
     <p class="ontology-cap" title="${escapeHtml(track.capability || "")}">${escapeHtml(track.capability || "")}</p>
     ${!track.chartOpen && track.trendSummary ? `<p class="ontology-trend-line">📉 ${escapeHtml(track.trendSummary)}</p>` : ""}
     ${chartBlock}

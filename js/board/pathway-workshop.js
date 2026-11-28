@@ -26,7 +26,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { TECHS, GAME, detectClaimStretch } from "../data.js";
-import { resolveTechTrack, selectPlayableMilestones } from "../ontology/index.js";
+import { resolveTechTrack, selectPlayableMilestones, trendRateSummary } from "../ontology/index.js";
 import { collectorMilestonesForTech } from "../ontology/collector-ontology.js";
 import {
   ideaImageId,
@@ -891,17 +891,34 @@ export function createPathwayWorkshop(api) {
           ...m,
           dealt: dealt.has(m.id),
         }));
-        const playableMilestones = selectPlayableMilestones(allMilestones, y, dealt);
+        const playableMilestones = selectPlayableMilestones(
+          allMilestones,
+          y,
+          dealt,
+          { activeCapabilityId: activeTrend?.id }
+        );
         const chartVisible = chartOverride.has(row.techId)
           ? chartOverride.get(row.techId)
           : row.techId === activeFocus;
+        const capabilityText =
+          (resolved?.hasQuestOverride
+            ? resolved?.capability
+            : activeTrend?.capability) ||
+          resolved?.capability ||
+          "";
+        const trendSummaryText =
+          (resolved?.hasQuestOverride
+            ? resolved?.trendSummary
+            : activeTrend?.trendSummary || trendRateSummary(activeTrend)) ||
+          resolved?.trendSummary ||
+          "";
         return {
           techId: row.techId,
           name: resolved?.name || row.techId,
           icon: resolved?.icon || techById(row.techId)?.icon || "",
           world: resolved?.world || "bits",
-          capability: resolved?.capability || "",
-          trendSummary: resolved?.trendSummary || "",
+          capability: capabilityText,
+          trendSummary: trendSummaryText,
           chartOpen: Boolean(chartVisible),
           trends: allTrends,
           activeTrend,
@@ -1119,7 +1136,9 @@ export function createPathwayWorkshop(api) {
         (trackFor(techId)?.trends || [])[0] ||
         trendsForTech(techId)[0] ||
         null;
-      if (!trend) continue;
+      if (!trend || trend.hasCurve === false || !trend.compounding || !trend.anchor) {
+        continue;
+      }
       const chart = mountTrendChart(canvas, trend, {
         yearNow: y,
         nowLabel: `NOW ${y}`,

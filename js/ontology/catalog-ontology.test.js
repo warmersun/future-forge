@@ -122,4 +122,56 @@ describe("catalog ontology", () => {
       ["q-2026", "c-2029", "b-2031"]
     );
   });
+
+  it("uses v2 authored milestone useCases and filters playable milestones by activeCapabilityId", () => {
+    const base = catalogTrack("quantum-internet");
+    const qrng = {
+      id: "quantum-random-number-generation",
+      techId: "quantum-internet",
+      name: "Hardware quantum random numbers",
+      capability: "Physical randomness from quantum photons.",
+      trendSummary: "Commercial quantum entropy cards ship for hardware key seeding.",
+      hasCurve: false,
+      milestones: [
+        {
+          id: "qrng-2026",
+          label: "Commercial entropy cards ship",
+          date: "2026",
+          year: 2026,
+          status: "reached",
+          useCases: [
+            { title: "Clinic key seeding", blurb: "Seed local medical record keys from quantum entropy.", world: "bits" },
+          ],
+        },
+      ],
+    };
+    const qkd = {
+      id: "qkd-fiber-distance-km",
+      techId: "quantum-internet",
+      name: "Fiber quantum key distance",
+      capability: "Exchange tamper-evident encryption keys over optical fiber.",
+      trendSummary: "Twin-field fiber quantum key distribution reached 1,002 km.",
+      hasCurve: true,
+      milestones: [
+        {
+          id: "qkd-2023",
+          label: "1,002 km twin-field fiber link",
+          date: "2023",
+          year: 2023,
+          status: "reached",
+          useCases: [
+            { title: "Metro hospital ring", blurb: "Link regional hospitals over tamper-evident fiber.", world: "bits" },
+          ],
+        },
+      ],
+    };
+    const merged = mergeExternalMilestones(base, [], [qrng, qkd]);
+    const activeQrng = selectPlayableMilestones(merged.milestones, 2026, new Set(), {
+      activeCapabilityId: "quantum-random-number-generation",
+    });
+    const qrngMs = activeQrng.find((m) => m.capabilityId === "quantum-random-number-generation");
+    assert.ok(qrngMs);
+    assert.equal(qrngMs.useCases[0].title, "Clinic key seeding");
+    assert.equal(activeQrng.some((m) => m.capabilityId === "qkd-fiber-distance-km"), false);
+  });
 });

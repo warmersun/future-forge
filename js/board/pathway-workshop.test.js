@@ -2226,4 +2226,85 @@ describe("pathway workshop", () => {
     assert.doesNotMatch(h.root.innerHTML, /class="ontology-card ontology-tech is-collapsed/);
     assert.equal(h.ws.expandCard("tech", "drones"), false);
   });
+
+  it("renders always-visible v2 capability selector and switches between curve and milestone-only capabilities", () => {
+    const qkd = {
+      id: "qkd-fiber-distance-km",
+      techId: "quantum-internet",
+      name: "Fiber quantum key distance",
+      capability: "Exchange tamper-evident encryption keys over optical fiber.",
+      trendSummary: "Twin-field fiber quantum key links reached 1,002 kilometers.",
+      hasCurve: true,
+      unit: "km",
+      compounding: { kind: "cagr", annualRate: 0.17 },
+      anchor: { date: "2018", value: 421 },
+      domain: { start: 2014, end: 2030 },
+      milestones: [
+        {
+          id: "qkd-1002",
+          label: "1,002 km twin-field fiber QKD",
+          date: "2023",
+          year: 2023,
+          value: 1002,
+          status: "reached",
+          useCases: [
+            { title: "Metro hospital key ring", blurb: "Protect clinical links between regional hospitals.", world: "bits" },
+          ],
+        },
+      ],
+    };
+    const qrng = {
+      id: "quantum-random-number-generation",
+      techId: "quantum-internet",
+      name: "Hardware quantum random numbers",
+      capability: "Generate physical randomness from quantum photon fluctuations.",
+      trendSummary: "Commercial quantum entropy cards ship for data center and telecom key seeding.",
+      hasCurve: false,
+      domain: { start: 2024, end: 2029 },
+      milestones: [
+        {
+          id: "qrng-2026",
+          label: "Commercial quantum entropy cards ship",
+          date: "2026",
+          year: 2026,
+          status: "reached",
+          useCases: [
+            { title: "Hardware key seeding", blurb: "Seed municipal encryption keys from quantum photons.", world: "bits" },
+          ],
+        },
+      ],
+    };
+    const listeners = {};
+    const customRoot = {
+      innerHTML: "",
+      addEventListener(ev, fn) {
+        listeners[ev] = fn;
+      },
+      querySelector() { return null; },
+      querySelectorAll() { return []; },
+      contains() { return true; },
+    };
+    const h = harness({
+      api: {
+        $: (sel) => (sel === "#ontology-board" ? customRoot : null),
+        getTrends: (techId) => (techId === "quantum-internet" ? [qkd, qrng] : []),
+      },
+    });
+    h.ws.seedFromMission({ place: "Test Town", pressure: { Security: 3 } });
+    h.ws.focusTech("quantum-internet");
+    assert.match(customRoot.innerHTML, /data-action="select-trend"/);
+    assert.match(customRoot.innerHTML, /Fiber quantum key distance 📈/);
+    assert.match(customRoot.innerHTML, /Hardware quantum random numbers/);
+    assert.match(customRoot.innerHTML, /1,002 km twin-field fiber QKD/);
+
+    // Switch capability via select-trend change event
+    const select = {
+      closest: (sel) => (sel === "select[data-action='select-trend']" ? select : null),
+      getAttribute: (k) => (k === "data-tech-id" ? "quantum-internet" : null),
+      value: "quantum-random-number-generation",
+    };
+    listeners.change({ target: select });
+    assert.match(customRoot.innerHTML, /Generate physical randomness from quantum photon fluctuations/);
+    assert.match(customRoot.innerHTML, /Commercial quantum entropy cards ship/);
+  });
 });

@@ -62,10 +62,18 @@ if (!r.ok) {
   process.exit(1);
 }
 const t = r.trend;
+const useCaseCount =
+  (t.useCases?.length || 0) +
+  t.milestones.reduce((sum, m) => sum + (m.useCases?.length || 0), 0);
 console.log(`OK: ${t.id}`);
 console.log(`  techId: ${t.techId}`);
 console.log(`  name: ${t.name}`);
-console.log(`  unit: ${t.unit}`);
-console.log(`  compounding: ${JSON.stringify(t.compounding)}`);
+console.log(`  trendSummary: ${t.trendSummary}`);
+console.log(`  hasCurve: ${t.hasCurve}`);
+if (t.hasCurve) {
+  console.log(`  unit: ${t.unit}`);
+  console.log(`  compounding: ${JSON.stringify(t.compounding)}`);
+  console.log(`  domain: ${t.domain.start}–${t.domain.end}`);
+}
 console.log(`  milestones: ${t.milestones.length}`);
-console.log(`  domain: ${t.domain.start}–${t.domain.end}`);
+console.log(`  useCases: ${useCaseCount}`);

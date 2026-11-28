@@ -1,10 +1,12 @@
 {
-  "schema": "future-forge.capability-trend/v1",
+  "schema": "future-forge.capability-trend/v2",
   "id": "li-ion-pack-cost",
   "techId": "battery",
+  "axis": "price",
   "name": "Lithium-ion pack cost",
   "summary": "Lithium-ion packs are the battery packs in electric cars and grid storage. Their price per kilowatt-hour has fallen steeply for more than a decade — roughly halving every few years, with bumps when raw materials spike. Cheaper packs make EVs and storage easier to afford. The chart is US dollars per kilowatt-hour — lower means cheaper storage.",
   "capability": "Affordable energy storage packs",
+  "trendSummary": "Lithium-ion pack prices fell roughly fourfold over the last decade toward $100 per kilowatt-hour.",
   "unit": "USD / kWh",
   "compounding": { "kind": "halving", "periodYears": 4 },
   "anchor": { "date": "2015-01-01", "value": 350 },
@@ -29,14 +31,28 @@
       "label": "~$100/kWh class",
       "date": "2024",
       "value": 100,
-      "status": "reached"
+      "status": "reached",
+      "useCases": [
+        {
+          "title": "Evening solar shift microgrids",
+          "blurb": "Store midday solar power to run clinics, refrigeration, and pumps overnight.",
+          "world": "atoms"
+        }
+      ]
     },
     {
       "id": "pack-60-pred",
       "label": "~$60/kWh class (forecast)",
       "date": "2030",
       "value": 60,
-      "status": "predicted"
+      "status": "predicted",
+      "useCases": [
+        {
+          "title": "Multi-day community backup storage",
+          "blurb": "Buffer entire neighborhoods through multi-day storm or grid outages without diesel.",
+          "world": "atoms"
+        }
+      ]
     }
   ],
   "sources": [

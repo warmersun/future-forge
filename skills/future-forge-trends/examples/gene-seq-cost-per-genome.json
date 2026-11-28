@@ -1,10 +1,12 @@
 {
-  "schema": "future-forge.capability-trend/v1",
+  "schema": "future-forge.capability-trend/v2",
   "id": "gene-seq-cost-per-genome",
   "techId": "gene-sequencing",
+  "axis": "price",
   "name": "Cost per human genome",
   "summary": "It used to cost tens of thousands of dollars to read one person’s full DNA. After public labs were no longer the only buyers, that price has been dropping by about half every 18 months. The chart is US dollars per genome — lower means cheaper.",
   "capability": "Affordable whole-genome sequencing",
+  "trendSummary": "Whole-genome sequencing costs dropped from tens of thousands of dollars toward clinical affordability.",
   "unit": "USD / genome",
   "compounding": { "kind": "halving", "periodYears": 1.5 },
   "anchor": { "date": "2015-01-01", "value": 4000 },
@@ -15,21 +17,42 @@
       "label": "$1,000 genome",
       "date": "2014",
       "value": 1000,
-      "status": "reached"
+      "status": "reached",
+      "useCases": [
+        {
+          "title": "Hospital rare-disease sequencing",
+          "blurb": "Run whole-genome reads for undiagnosed patients in tertiary clinics.",
+          "world": "atoms"
+        }
+      ]
     },
     {
       "id": "hundred-dollar",
       "label": "$100 genome",
       "date": "2027",
       "value": 100,
-      "status": "predicted"
+      "status": "predicted",
+      "useCases": [
+        {
+          "title": "Routine bedside genomics",
+          "blurb": "Include whole-genome screening in everyday primary care and preventive medicine.",
+          "world": "atoms"
+        }
+      ]
     },
     {
       "id": "clinic-desktop",
       "label": "Clinic desktop reagents in reach",
       "date": "2026",
       "value": 200,
-      "status": "reached"
+      "status": "reached",
+      "useCases": [
+        {
+          "title": "Regional lab cancer panels",
+          "blurb": "Process local oncology and infectious-disease samples without shipping abroad.",
+          "world": "atoms"
+        }
+      ]
     }
   ],
   "sources": [

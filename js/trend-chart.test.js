@@ -168,4 +168,26 @@ describe("trend-chart", () => {
     destroyTrendChart(null);
     destroyTrendChart({ destroy() {} });
   });
+
+  it("returns null config for milestone-only capabilities without a curve", () => {
+    const noCurve = validateCapabilityTrend({
+      schema: "future-forge.capability-trend/v2",
+      id: "quantum-random-number-generation",
+      techId: "quantum-internet",
+      name: "Hardware quantum random numbers",
+      summary: "Quantum photon fluctuations generate verifiable encryption randomness.",
+      capability: "Generate physical randomness from quantum photon fluctuations.",
+      trendSummary: "Commercial quantum entropy cards ship for key seeding.",
+      milestones: [
+        {
+          id: "qrng-2026",
+          label: "Commercial entropy cards ship",
+          date: "2026",
+          status: "reached",
+          useCases: [{ title: "Hardware key seeding", blurb: "Seed encryption keys locally." }],
+        },
+      ],
+    }).trend;
+    assert.equal(buildTrendChartConfig(noCurve, { yearNow: 2026 }), null);
+  });
 });

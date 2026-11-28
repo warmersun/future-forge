@@ -153,8 +153,8 @@ describe("trends-remote", () => {
   it("force HTTP fetch cache-busts request URLs", async () => {
     const tileRaw = fs.readFileSync(path.join(tmp, "gene.json"), "utf8");
     const catalogBody = JSON.stringify({
-      schema: "future-forge.capability-trend-catalog/v1",
-      updated: "2026-08-21",
+      schema: "future-forge.capability-trend-catalog/v2",
+      updated: "2026-11-27",
       trends: [{ id: trendId, techId: "gene-sequencing", file: "gene.json" }],
     });
     /** @type {string[]} */
@@ -182,5 +182,39 @@ describe("trends-remote", () => {
     for (const u of requested) {
       assert.match(u, /[?&]_=\d+/);
     }
+  });
+
+  it("loads catalog bundle.json in a single bundle request when advertised", async () => {
+    const tileRaw = JSON.parse(fs.readFileSync(path.join(tmp, "gene.json"), "utf8"));
+    const catalogBody = JSON.stringify({
+      schema: "future-forge.capability-trend-catalog/v2",
+      updated: "2026-11-27",
+      bundle: "bundle.json",
+      trends: [{ id: trendId, techId: "gene-sequencing", file: "gene.json", hasCurve: true }],
+    });
+    const bundleBody = JSON.stringify({
+      schema: "future-forge.capability-trend-bundle/v2",
+      updated: "2026-11-27",
+      trends: [tileRaw],
+    });
+    /** @type {string[]} */
+    const requested = [];
+    /** @type {typeof fetch} */
+    const fetchImpl = async (input) => {
+      const u = String(input);
+      requested.push(u);
+      const body = u.includes("bundle.json") ? bundleBody : catalogBody;
+      return { ok: true, status: 200, text: async () => body };
+    };
+    const r = await fetchRemoteTrendCatalog("https://example.com/trends/catalog.json", {
+      force: true,
+      tryFallbacks: false,
+      fetchImpl,
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.trends.length, 1);
+    assert.equal(r.trends[0].id, trendId);
+    assert.equal(requested.length, 2);
+    assert.ok(requested[1].includes("bundle.json"));
   });
 });

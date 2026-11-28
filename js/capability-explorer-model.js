@@ -109,7 +109,8 @@ export function buildCapabilityExplorerModel(snapshot = {}, selection = null) {
   const selectedTrend = selectedChoice?.type === "trend" ? trends.find((trend) => trend.id === selectedChoice.trendId) : null;
   const evidence = selectedTrend ? selectRelatedEvidence(rows, [selectedTrend.techId], snapshot.year) : scopeEvidence;
   const year = Number(snapshot.year);
-  const inDomain = !!selectedTrend && Number.isFinite(year) && year >= selectedTrend.domain.start && year <= selectedTrend.domain.end;
+  const hasCurve = Boolean(selectedTrend && selectedTrend.hasCurve !== false && selectedTrend.compounding);
+  const inDomain = hasCurve && Number.isFinite(year) && year >= selectedTrend.domain.start && year <= selectedTrend.domain.end;
   return {
     scope, trends, choices, selectedChoice, selectedTrend, bank, evidence,
     description: selectedTrend?.summary || "",

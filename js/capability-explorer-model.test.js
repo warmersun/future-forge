@@ -144,4 +144,34 @@ describe("capability explorer model", () => {
     assert.equal(outside.currentYear.inDomain, false);
     assert.equal(outside.currentYear.value, null);
   });
+
+  it("handles milestone-only v2 capabilities without curves cleanly", () => {
+    const noCurve = validateCapabilityTrend({
+      schema: "future-forge.capability-trend/v2",
+      id: "quantum-random-number-generation",
+      techId: "quantum-internet",
+      name: "Hardware quantum random numbers",
+      summary: "Quantum photon fluctuations generate verifiable encryption randomness.",
+      capability: "Generate physical randomness from quantum photon fluctuations.",
+      trendSummary: "Commercial quantum entropy cards ship for key seeding.",
+      milestones: [
+        {
+          id: "qrng-2026",
+          label: "Commercial entropy cards ship",
+          date: "2026",
+          status: "reached",
+          useCases: [{ title: "Hardware key seeding", blurb: "Seed encryption keys locally." }],
+        },
+      ],
+    }).trend;
+    const m = buildCapabilityExplorerModel({
+      ...base,
+      focusedTechId: "quantum-internet",
+      catalogTrends: [noCurve],
+      year: 2026,
+    });
+    assert.equal(m.selectedTrend.id, "quantum-random-number-generation");
+    assert.equal(m.currentYear.inDomain, false);
+    assert.equal(m.currentYear.value, null);
+  });
 });

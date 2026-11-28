@@ -174,5 +174,82 @@ describe("capability-trend", () => {
       limit: 8,
     });
     assert.equal(allUncapped.length, 12);
+
+    const noCurve = validateCapabilityTrend({
+      schema: CAPABILITY_TREND_SCHEMA,
+      id: "quantum-random-number-generation",
+      techId: "quantum-internet",
+      axis: "speed",
+      name: "Hardware quantum random numbers",
+      summary:
+        "Quantum random number generators turn single-photon detection into unpredictable encryption keys.",
+      capability: "Generate physical randomness from quantum photon fluctuations.",
+      trendSummary:
+        "Commercial quantum entropy cards now ship for data centers and telecom key seeding.",
+      milestones: [
+        {
+          id: "qrng-2026",
+          label: "Commercial entropy cards ship",
+          date: "2026",
+          status: "reached",
+          useCases: [
+            {
+              title: "Hardware key seeding",
+              blurb: "Seed municipal and clinic encryption keys from quantum photon entropy.",
+              world: "bits",
+            },
+          ],
+        },
+      ],
+    });
+    assert.equal(noCurve.ok, true);
+    assert.equal(noCurve.trend.hasCurve, false);
+    assert.equal(valueAtYear(noCurve.trend, 2026), null);
+    assert.deepEqual(sampleCurve(noCurve.trend, 10), []);
+
+    const curvesOnly = mergeTrendsForStack({
+      catalog: [gene, noCurve.trend],
+      selectedTechIds: ["gene-sequencing", "quantum-internet"],
+      curvesOnly: true,
+    });
+    assert.deepEqual(
+      curvesOnly.map((t) => t.id),
+      [gene.id]
+    );
+  });
+
+  it("rejects partial curve fields, missing trendSummary, and missing useCases", () => {
+    const raw = JSON.parse(fs.readFileSync(FIXTURE, "utf8"));
+    const partial = validateCapabilityTrend({
+      id: "partial-curve",
+      techId: "ai",
+      name: "Partial",
+      summary: "Summary text.",
+      capability: "Partial curve.",
+      trendSummary: "Short trajectory.",
+      unit: "units",
+      milestones: [
+        {
+          label: "Step one",
+          date: "2026",
+          status: "reached",
+          useCases: [{ title: "Use", blurb: "Blurb" }],
+        },
+      ],
+    });
+    assert.equal(partial.ok, false);
+    assert.ok(partial.details.includes("partial_curve_fields"));
+
+    const noSummary = validateCapabilityTrend({ ...raw, trendSummary: "" });
+    assert.equal(noSummary.ok, false);
+    assert.ok(noSummary.details.includes("missing_trendSummary"));
+
+    const noUses = validateCapabilityTrend({
+      ...raw,
+      useCases: undefined,
+      milestones: raw.milestones.map(({ useCases: _u, ...m }) => m),
+    });
+    assert.equal(noUses.ok, false);
+    assert.ok(noUses.details.includes("missing_use_cases"));
   });
 });

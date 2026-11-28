@@ -19,31 +19,42 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Capability trend schema: parse, validate, compound curve, merge for stack.
- * Schema: future-forge.capability-trend/v1
+ * Schema: future-forge.capability-trend/v2
  */
 
 import { allTechIds } from "./data.js";
 
-export const CAPABILITY_TREND_SCHEMA = "future-forge.capability-trend/v1";
+export const CAPABILITY_TREND_SCHEMA = "future-forge.capability-trend/v2";
 export const CAPABILITY_TREND_CATALOG_SCHEMA =
-  "future-forge.capability-trend-catalog/v1";
+  "future-forge.capability-trend-catalog/v2";
+export const CAPABILITY_TREND_BUNDLE_SCHEMA =
+  "future-forge.capability-trend-bundle/v2";
 
 export const TREND_CAPS = {
   id: 80,
   name: 80,
   summary: 900,
   capability: 160,
+  trendSummary: 180,
   unit: 80,
   milestoneLabel: 80,
+  milestoneDetail: 280,
+  milestoneAttribution: 160,
+  useCaseTitle: 80,
+  useCaseBlurb: 280,
   sourceLabel: 120,
   maxMilestones: 24,
+  maxUseCases: 8,
   maxSources: 12,
   maxQuestTrends: 8,
   mergeLimit: 8,
+  maxStackLimit: 32,
 };
 
 const COMPOUNDING_KINDS = new Set(["doubling", "halving", "cagr"]);
 const MILESTONE_STATUSES = new Set(["reached", "predicted"]);
+const AXIS_KINDS = new Set(["price", "speed", "capacity", "range", "scale", "quality"]);
+const USE_CASE_WORLDS = new Set(["bits", "atoms", "split"]);
 
 /**
  * @param {string} raw
@@ -111,6 +122,9 @@ export function compoundValue(compounding, deltaYears, v0) {
  * @param {number} year
  */
 export function valueAtYear(trend, year) {
+  if (!trend || trend.hasCurve === false || !trend.compounding || !trend.anchor) {
+    return null;
+  }
   const y = Number(year);
   const anchorY = yearFromDate(trend?.anchor?.date);
   const v0 = Number(trend?.anchor?.value);
@@ -126,6 +140,9 @@ export function valueAtYear(trend, year) {
  * @returns {{ x: number, y: number }[]}
  */
 export function sampleCurve(trend, steps = 40) {
+  if (!trend || trend.hasCurve === false || !trend.compounding || !trend.anchor) {
+    return [];
+  }
   const n = Math.max(2, Math.min(200, Math.round(Number(steps) || 40)));
   const start = Number(trend?.domain?.start);
   const end = Number(trend?.domain?.end);
@@ -138,6 +155,54 @@ export function sampleCurve(trend, steps = 40) {
     const x = start + ((end - start) * i) / (n - 1);
     const y = valueAtYear(trend, x);
     if (y != null && y > 0) out.push({ x, y });
+  }
+  return out;
+}
+
+function parseUseCaseList(rawList, prefix, details) {
+  if (rawList === undefined || rawList === null) return [];
+  if (!Array.isArray(rawList)) {
+    details.push(`${prefix}_not_array`);
+    return [];
+  }
+  if (rawList.length > TREND_CAPS.maxUseCases) {
+    details.push(`${prefix}_too_many`);
+  }
+  /** @type {object[]} */
+  const out = [];
+  for (let i = 0; i < Math.min(rawList.length, TREND_CAPS.maxUseCases); i++) {
+    const u = rawList[i];
+    if (!u || typeof u !== "object" || Array.isArray(u)) {
+      details.push(`${prefix}_${i}_not_object`);
+      continue;
+    }
+    const title = String(u.title || "").trim();
+    const blurb = String(u.blurb || "").trim();
+    const worldRaw = u.world != null ? String(u.world).trim() : "";
+    const uid = u.id != null ? String(u.id).trim() : "";
+    if (!title) details.push(`${prefix}_${i}_missing_title`);
+    if (title.length > TREND_CAPS.useCaseTitle) {
+      details.push(`${prefix}_${i}_title_too_long`);
+    }
+    if (!blurb) details.push(`${prefix}_${i}_missing_blurb`);
+    if (blurb.length > TREND_CAPS.useCaseBlurb) {
+      details.push(`${prefix}_${i}_blurb_too_long`);
+    }
+    if (worldRaw && !USE_CASE_WORLDS.has(worldRaw)) {
+      details.push(`${prefix}_${i}_bad_world:${worldRaw}`);
+    }
+    if (
+      title &&
+      title.length <= TREND_CAPS.useCaseTitle &&
+      blurb &&
+      blurb.length <= TREND_CAPS.useCaseBlurb &&
+      (!worldRaw || USE_CASE_WORLDS.has(worldRaw))
+    ) {
+      const row = { title, blurb };
+      if (uid) row.id = uid.slice(0, TREND_CAPS.id);
+      if (worldRaw) row.world = worldRaw;
+      out.push(row);
+    }
   }
   return out;
 }
@@ -179,59 +244,87 @@ export function validateCapabilityTrend(raw, opts = {}) {
   const name = String(raw.name || "").trim();
   const summary = String(raw.summary || "").trim();
   const capability = String(raw.capability || "").trim();
-  const unit = String(raw.unit || "").trim();
+  const trendSummary = String(raw.trendSummary || "").trim();
+  const axis = raw.axis != null ? String(raw.axis).trim() : "";
   if (!name) details.push("missing_name");
   if (name.length > TREND_CAPS.name) details.push("name_too_long");
   if (!summary) details.push("missing_summary");
   if (summary.length > TREND_CAPS.summary) details.push("summary_too_long");
   if (!capability) details.push("missing_capability");
   if (capability.length > TREND_CAPS.capability) details.push("capability_too_long");
-  if (!unit) details.push("missing_unit");
-  if (unit.length > TREND_CAPS.unit) details.push("unit_too_long");
+  if (!trendSummary) details.push("missing_trendSummary");
+  if (trendSummary.length > TREND_CAPS.trendSummary) {
+    details.push("trendSummary_too_long");
+  }
+  if (axis && !AXIS_KINDS.has(axis)) {
+    details.push(`bad_axis:${axis}`);
+  }
 
-  const compoundingIn = raw.compounding;
+  const unit = raw.unit != null ? String(raw.unit).trim() : "";
+  const hasUnit = Boolean(unit);
+  const hasCompounding = raw.compounding != null;
+  const hasAnchor = raw.anchor != null;
+  const milestonesIn = Array.isArray(raw.milestones) ? raw.milestones : null;
+  const anyMilestoneValue = Boolean(
+    milestonesIn &&
+      milestonesIn.some((m) => m && m.value !== undefined && m.value !== null)
+  );
+  const hasCurve = hasUnit || hasCompounding || hasAnchor || anyMilestoneValue;
+
   /** @type {{ kind: string, periodYears?: number, annualRate?: number } | null} */
   let compounding = null;
-  if (!compoundingIn || typeof compoundingIn !== "object") {
-    details.push("missing_compounding");
-  } else {
-    const kind = String(compoundingIn.kind || "").trim();
-    if (!COMPOUNDING_KINDS.has(kind)) {
-      details.push(`bad_compounding_kind:${kind || "(empty)"}`);
-    } else if (kind === "cagr") {
-      const annualRate = Number(compoundingIn.annualRate);
-      if (!Number.isFinite(annualRate) || annualRate <= -1) {
-        details.push("bad_annualRate");
-      } else {
-        compounding = { kind, annualRate };
-      }
-    } else {
-      const periodYears = Number(compoundingIn.periodYears);
-      if (!Number.isFinite(periodYears) || periodYears <= 0) {
-        details.push("bad_periodYears");
-      } else {
-        compounding = { kind, periodYears };
-      }
-    }
-  }
-
-  const anchorIn = raw.anchor;
   /** @type {{ date: string, value: number, year: number } | null} */
   let anchor = null;
-  if (!anchorIn || typeof anchorIn !== "object") {
-    details.push("missing_anchor");
-  } else {
-    const date = String(anchorIn.date || "").trim();
-    const value = Number(anchorIn.value);
-    const year = yearFromDate(date);
-    if (!date || year == null) details.push("bad_anchor_date");
-    if (!(value > 0) || !Number.isFinite(value)) details.push("bad_anchor_value");
-    if (date && year != null && value > 0) {
-      anchor = { date, value, year };
+
+  if (hasCurve) {
+    if (!hasUnit || !hasCompounding || !hasAnchor) {
+      details.push("partial_curve_fields");
+    }
+    if (!unit) details.push("missing_unit");
+    if (unit.length > TREND_CAPS.unit) details.push("unit_too_long");
+
+    const compoundingIn = raw.compounding;
+    if (!compoundingIn || typeof compoundingIn !== "object") {
+      details.push("missing_compounding");
+    } else {
+      const kind = String(compoundingIn.kind || "").trim();
+      if (!COMPOUNDING_KINDS.has(kind)) {
+        details.push(`bad_compounding_kind:${kind || "(empty)"}`);
+      } else if (kind === "cagr") {
+        const annualRate = Number(compoundingIn.annualRate);
+        if (!Number.isFinite(annualRate) || annualRate <= -1) {
+          details.push("bad_annualRate");
+        } else {
+          compounding = { kind, annualRate };
+        }
+      } else {
+        const periodYears = Number(compoundingIn.periodYears);
+        if (!Number.isFinite(periodYears) || periodYears <= 0) {
+          details.push("bad_periodYears");
+        } else {
+          compounding = { kind, periodYears };
+        }
+      }
+    }
+
+    const anchorIn = raw.anchor;
+    if (!anchorIn || typeof anchorIn !== "object") {
+      details.push("missing_anchor");
+    } else {
+      const date = String(anchorIn.date || "").trim();
+      const value = Number(anchorIn.value);
+      const year = yearFromDate(date);
+      if (!date || year == null) details.push("bad_anchor_date");
+      if (!(value > 0) || !Number.isFinite(value)) details.push("bad_anchor_value");
+      if (date && year != null && value > 0) {
+        anchor = { date, value, year };
+      }
     }
   }
 
-  const milestonesIn = Array.isArray(raw.milestones) ? raw.milestones : null;
+  const topUseCases = parseUseCaseList(raw.useCases, "useCases", details);
+  let totalUseCases = topUseCases.length;
+
   if (!milestonesIn || !milestonesIn.length) {
     details.push("missing_milestones");
   }
@@ -243,45 +336,77 @@ export function validateCapabilityTrend(raw, opts = {}) {
     }
     for (let i = 0; i < Math.min(milestonesIn.length, TREND_CAPS.maxMilestones); i++) {
       const m = milestonesIn[i];
-      if (!m || typeof m !== "object") {
+      if (!m || typeof m !== "object" || Array.isArray(m)) {
         details.push(`milestone_${i}_not_object`);
         continue;
       }
       const label = String(m.label || "").trim();
       const date = String(m.date || "").trim();
-      const value = Number(m.value);
       const status = String(m.status || "").trim();
       const year = yearFromDate(date);
+      const detail = m.detail != null ? String(m.detail).trim() : "";
+      const attribution = m.attribution != null ? String(m.attribution).trim() : "";
+      const mUseCases = parseUseCaseList(
+        m.useCases,
+        `milestone_${i}_useCases`,
+        details
+      );
+      totalUseCases += mUseCases.length;
+
       if (!label) details.push(`milestone_${i}_missing_label`);
       if (label.length > TREND_CAPS.milestoneLabel) {
         details.push(`milestone_${i}_label_too_long`);
       }
-      if (!date || year == null) details.push(`milestone_${i}_bad_date`);
-      if (!(value > 0) || !Number.isFinite(value)) {
-        details.push(`milestone_${i}_bad_value`);
+      if (detail.length > TREND_CAPS.milestoneDetail) {
+        details.push(`milestone_${i}_detail_too_long`);
       }
+      if (attribution.length > TREND_CAPS.milestoneAttribution) {
+        details.push(`milestone_${i}_attribution_too_long`);
+      }
+      if (!date || year == null) details.push(`milestone_${i}_bad_date`);
       if (!MILESTONE_STATUSES.has(status)) {
         details.push(`milestone_${i}_bad_status`);
       }
+
+      let valueOk = true;
+      let value;
+      if (hasCurve) {
+        value = Number(m.value);
+        if (m.value === undefined || m.value === null || !(value > 0) || !Number.isFinite(value)) {
+          details.push(`milestone_${i}_bad_value`);
+          valueOk = false;
+        }
+      }
+
       if (
         label &&
+        label.length <= TREND_CAPS.milestoneLabel &&
+        detail.length <= TREND_CAPS.milestoneDetail &&
+        attribution.length <= TREND_CAPS.milestoneAttribution &&
         date &&
         year != null &&
-        value > 0 &&
+        valueOk &&
         MILESTONE_STATUSES.has(status)
       ) {
         const row = {
-          label: label.slice(0, TREND_CAPS.milestoneLabel),
+          label,
           date,
-          value,
           status,
           year,
         };
+        if (hasCurve) row.value = value;
         const mid = String(m.id || "").trim();
         if (mid) row.id = mid.slice(0, TREND_CAPS.id);
+        if (detail) row.detail = detail;
+        if (attribution) row.attribution = attribution;
+        if (mUseCases.length) row.useCases = mUseCases;
         milestones.push(row);
       }
     }
+  }
+
+  if (totalUseCases === 0) {
+    details.push("missing_use_cases");
   }
 
   /** @type {{ label: string, url: string }[]} */
@@ -351,12 +476,18 @@ export function validateCapabilityTrend(raw, opts = {}) {
     name: name.slice(0, TREND_CAPS.name),
     summary: summary.slice(0, TREND_CAPS.summary),
     capability: capability.slice(0, TREND_CAPS.capability),
-    unit: unit.slice(0, TREND_CAPS.unit),
-    compounding,
-    anchor: { date: anchor.date, value: anchor.value },
+    trendSummary: trendSummary.slice(0, TREND_CAPS.trendSummary),
+    hasCurve,
     domain: { start: domainStart, end: domainEnd },
     milestones,
   };
+  if (axis) trend.axis = axis;
+  if (hasCurve) {
+    trend.unit = unit.slice(0, TREND_CAPS.unit);
+    trend.compounding = compounding;
+    trend.anchor = { date: anchor.date, value: anchor.value };
+  }
+  if (topUseCases.length) trend.useCases = topUseCases;
   if (sources.length) trend.sources = sources;
 
   return { ok: true, trend };
@@ -381,11 +512,13 @@ export function normalizeTrend(raw, opts = {}) {
  * @param {string[]} [opts.selectedTechIds]
  * @param {string|null} [opts.spotlightTechId]
  * @param {number} [opts.limit]
+ * @param {boolean} [opts.curvesOnly] — filter to capabilities with quantitative curves
  * @param {boolean} [opts.includeAll] — ignore stack filter and merge cap (developer mode)
  * @returns {object[]}
  */
 export function mergeTrendsForStack(opts = {}) {
   const includeAll = Boolean(opts.includeAll);
+  const curvesOnly = Boolean(opts.curvesOnly);
   const selected = new Set(
     (opts.selectedTechIds || []).map(String).filter(Boolean)
   );
@@ -395,7 +528,7 @@ export function mergeTrendsForStack(opts = {}) {
     ? Number.POSITIVE_INFINITY
     : Math.max(
         1,
-        Math.min(TREND_CAPS.mergeLimit, opts.limit ?? TREND_CAPS.mergeLimit)
+        Math.min(TREND_CAPS.maxStackLimit, opts.limit ?? TREND_CAPS.mergeLimit)
       );
   const spotlightIds = new Set(
     (opts.spotlightTrendIds || []).map(String).filter(Boolean)
@@ -423,10 +556,12 @@ export function mergeTrendsForStack(opts = {}) {
     });
   }
 
-  const rows = [...byId.values()].map((t) => ({
-    ...t,
-    spotlight: spotlightIds.has(t.id),
-  }));
+  const rows = [...byId.values()]
+    .filter((t) => !curvesOnly || (t.hasCurve !== false && Boolean(t.compounding)))
+    .map((t) => ({
+      ...t,
+      spotlight: spotlightIds.has(t.id),
+    }));
 
   rows.sort((a, b) => {
     if (a.spotlight !== b.spotlight) return a.spotlight ? -1 : 1;

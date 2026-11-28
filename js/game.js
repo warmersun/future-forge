@@ -1924,6 +1924,7 @@ function ensureHexWorkshop() {
           ? [String(techId)]
           : state.selectedTechIds || [],
         spotlightTechId: state.mission?.spotlight?.techId || null,
+        limit: techId ? 32 : 16,
       }),
     openLearnTech: (techId) => {
       if (techId) openTechModal(String(techId));
@@ -11737,6 +11738,7 @@ function trendsForWaitConfirm(ctx = {}) {
     spotlightTrendIds: m?.spotlightTrends || [],
     selectedTechIds: techIds,
     spotlightTechId: m?.spotlight?.techId || null,
+    curvesOnly: true,
     includeAll: Boolean(state.developer && _waitTrendsDevView),
   });
 }
