@@ -29,7 +29,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  *   4. Deliver (◆ Converge): modular Idea → Pathway assembly & non-destructive disassembly
  */
 
-import { TECHS } from "../data.js";
+import { TECHS, DOMAINS } from "../data.js";
 import { techCost } from "../sim/economy.js";
 import { collectorInventionIsFree } from "../ontology/collector-ontology.js";
 import { convergenceRows, isUseCaseEarly, needsBridgeWarning } from "./pathway-model.js";
@@ -182,11 +182,202 @@ export const CHALLENGER_LENS_MAP = Object.freeze({
   },
 });
 
+const WORLD_ORDER = ["bits", "split", "atoms"];
+const DOMAIN_ORDER = ["power", "automator", "mover", "lifeforce", "link", "portal"];
 const VALID_WORLDS = new Set(["bits", "atoms", "split", "plain"]);
 const TECH_BY_ID = new Map(TECHS.map((t) => [t.id, t]));
 
 export function techMeta(techId) {
   return TECH_BY_ID.get(String(techId || "")) || null;
+}
+
+/**
+ * Analyze a `[Tech A × Tech B]` intersection on the emTech Convergence Canvas.
+ *
+ * @param {string|null} techIdA
+ * @param {string|null} techIdB
+ * @param {{ place?: string, scarcity?: string, hmwBrief?: string, year?: number }} [ctx]
+ */
+export function analyzeConvergencePair(techIdA, techIdB, ctx = {}) {
+  const a = techMeta(techIdA);
+  const b = techMeta(techIdB);
+  if (!a && !b) {
+    return {
+      ready: false,
+      techA: null,
+      techB: null,
+      knownSynergy: false,
+      bridgesWorlds: false,
+      needsBridge: false,
+      badge: "",
+      prompt: "Optional: tap 1–2 technologies across Bits, Bridge, or Atoms to spark convergence — or ideate freely without picking a tech yet.",
+    };
+  }
+  if (a && !b) {
+    const partners = (a.pairs || [])
+      .map((pid) => techMeta(pid))
+      .filter(Boolean)
+      .slice(0, 4)
+      .map((t) => ({ id: t.id, name: t.name, icon: t.icon || "", world: t.polarity || "bits" }));
+    return {
+      ready: false,
+      techA: a,
+      techB: null,
+      knownSynergy: false,
+      bridgesWorlds: a.polarity === "split",
+      needsBridge: false,
+      partners,
+      badge: `Selected: ${a.name}`,
+      prompt: `Anchor your idea on ${a.name}, or tap a second tech (pulsing chips show ⚡ synergy partners) to intersect.`,
+    };
+  }
+  const techA = a || b;
+  const techB = a ? b : null;
+  if (!techB || techA.id === techB.id) {
+    return {
+      ready: false,
+      techA,
+      techB: null,
+      knownSynergy: false,
+      bridgesWorlds: techA.polarity === "split",
+      needsBridge: false,
+      badge: `Selected: ${techA.name}`,
+      prompt: `Anchor your idea on ${techA.name}, or tap a different second technology to intersect.`,
+    };
+  }
+
+  const knownSynergy = Boolean(
+    techA.pairs?.includes(techB.id) || techB.pairs?.includes(techA.id)
+  );
+  const wA = techA.polarity || "bits";
+  const wB = techB.polarity || "bits";
+  const bridgesWorlds = wA === "split" || wB === "split";
+  const needsBridge =
+    (wA === "bits" && wB === "atoms") || (wA === "atoms" && wB === "bits");
+
+  const place = String(ctx.place || "this place").trim() || "this place";
+  const goalPhrase = ctx.hmwBrief
+    ? `answer your brief`
+    : ctx.scarcity
+      ? `make "${ctx.scarcity}" abundant`
+      : "ease the core crisis";
+  const bridgeNote = needsBridge
+    ? " Name the human or physical handoff step between digital and physical."
+    : "";
+
+  const badgeParts = [];
+  if (knownSynergy) badgeParts.push("⚡ Known Synergy Pair (×1.25)");
+  if (bridgesWorlds) badgeParts.push("✓ Bridges Bits ↔ Atoms");
+  else if (needsBridge) badgeParts.push("⚠️ Bits + Atoms — add Bridge or Human handoff");
+
+  return {
+    ready: true,
+    techA,
+    techB,
+    knownSynergy,
+    bridgesWorlds,
+    needsBridge,
+    badge: badgeParts.join(" · ") || "Cross-domain intersection",
+    prompt: `How can ${techA.name} + ${techB.name} work together in ${place} to ${goalPhrase}?${bridgeNote}`,
+  };
+}
+
+/**
+ * Build the 3-zone emTech Convergence Canvas (`Bits` | `Bridge` | `Atoms`)
+ * grouping all 29 technologies by domain. Respects `ctx.hideSuggested` to keep
+ * Quest-authored hints unspoiled in Problem-Pull mode unless toggled on.
+ *
+ * @param {Record<string, object>|string[]} techTracks
+ * @param {object|null|undefined} mission
+ * @param {string[]} [selectedPair]
+ * @param {{ place?: string, scarcity?: string, hmwBrief?: string, year?: number, hideSuggested?: boolean }} [ctx]
+ */
+export function buildConvergenceCanvas(
+  techTracks = {},
+  mission = null,
+  selectedPair = [],
+  ctx = {}
+) {
+  const activeIds = new Set(
+    Array.isArray(techTracks) ? techTracks : Object.keys(techTracks || {})
+  );
+  const pair = Array.isArray(selectedPair)
+    ? selectedPair.filter((id) => TECH_BY_ID.has(id)).slice(0, 2)
+    : [];
+  const slotA = pair[0] || null;
+  const slotB = pair[1] || null;
+  const hideSuggested = Boolean(ctx?.hideSuggested);
+
+  const suggestedIds = hideSuggested
+    ? new Set()
+    : new Set(
+        [
+          ...(Array.isArray(mission?.suggested) ? mission.suggested : []),
+          mission?.spotlight?.techId || null,
+        ].filter(Boolean)
+      );
+
+  const synergySourceIds = slotA && !slotB ? [slotA] : [...activeIds];
+  const synergyPartnerIds = new Set();
+  for (const srcId of synergySourceIds) {
+    const t = TECH_BY_ID.get(srcId);
+    for (const pid of t?.pairs || []) {
+      if (pid !== slotA) synergyPartnerIds.add(pid);
+    }
+  }
+
+  const pairAnalysis = analyzeConvergencePair(slotA, slotB, ctx);
+  const worldSubtitles = {
+    bits: "Software, models & information",
+    split: "Connects digital & physical",
+    atoms: "Energy, matter & hardware",
+  };
+
+  const zones = WORLD_ORDER.map((worldId) => {
+    const inWorld = TECHS.filter((t) => (t.polarity || "bits") === worldId);
+    const byDomain = new Map();
+    for (const t of inWorld) {
+      const dom = t.domain || "other";
+      if (!byDomain.has(dom)) byDomain.set(dom, []);
+      byDomain.get(dom).push({
+        id: t.id,
+        name: t.name,
+        icon: t.icon || "",
+        world: worldId,
+        summary: String(t.summary || "").slice(0, 140),
+        inPlay: activeIds.has(t.id),
+        synergy: synergyPartnerIds.has(t.id),
+        recommended: suggestedIds.has(t.id),
+        selectedSlot: t.id === slotA ? "A" : t.id === slotB ? "B" : null,
+      });
+    }
+    const groups = [...byDomain.entries()]
+      .sort(
+        (a, b) =>
+          (DOMAIN_ORDER.indexOf(a[0]) === -1 ? 99 : DOMAIN_ORDER.indexOf(a[0])) -
+          (DOMAIN_ORDER.indexOf(b[0]) === -1 ? 99 : DOMAIN_ORDER.indexOf(b[0]))
+      )
+      .map(([domId, techs]) => ({
+        domainId: domId,
+        domainLabel: DOMAINS[domId]?.label || domId,
+        color: DOMAINS[domId]?.color || "#94a3b8",
+        techs,
+      }));
+
+    return {
+      id: worldId,
+      subtitle: worldSubtitles[worldId] || "",
+      highlightBridge: worldId === "split" && Boolean(pairAnalysis.needsBridge),
+      groups,
+    };
+  });
+
+  return {
+    zones,
+    pairAnalysis,
+    selectedPair: pair,
+    hideSuggested,
+  };
 }
 
 export function normalizeWorkbenchWorld(world, techId = null) {
@@ -624,10 +815,18 @@ export function buildLensPrompt(method, opts = {}) {
   // Default: "seed"
   const ucTitles = (Array.isArray(opts.useCaseTitles) ? opts.useCaseTitles : []).filter(Boolean);
   const techName = String(opts.techName || "").trim();
+  const hasExplicitTech = Boolean(ucTitles.length || techName);
   const capability = ucTitles.length
     ? ucTitles.slice(0, 2).join(" + ")
     : techName || "your chosen emerging tech";
   if (hmwBrief) {
+    if (opts.problemFirst && !hasExplicitTech) {
+      return {
+        heading: "Seed Ideas for Your Brief",
+        question: `What concrete local mechanism answers your "How Might We…" brief in ${place} (${year})?`,
+        hint: "Pick 1–2 emTechs on the Convergence Canvas above if helpful — or write freely and let feasibility assessment link the Use Cases & capability level.",
+      };
+    }
     return {
       heading: "Seed Ideas for Your Brief",
       question: `Using ${capability} in ${place} (${year}), what concrete mechanism answers your "How Might We…" brief?`,
@@ -635,6 +834,13 @@ export function buildLensPrompt(method, opts = {}) {
     };
   }
   const target = scarcity ? `"${scarcity}"` : "the core problem";
+  if (opts.problemFirst && !hasExplicitTech) {
+    return {
+      heading: "Seed Ideas",
+      question: `What local mechanism could relieve ${target} in ${place} (${year})?`,
+      hint: "Ideate freely (or pick tech on the Convergence Canvas above) — assessing your Pathway will trace what emTech & capability level it needs.",
+    };
+  }
   return {
     heading: "Seed Ideas",
     question: `How can ${capability} address ${target} in ${place} (${year})?`,
@@ -660,19 +866,29 @@ export function ingredientToWorkbenchIdea(ing, opts = {}) {
     !ing.timingPending &&
     (ing.timingLevel === "green" || ing.timingLevel === "yellow" || ing.timingLevel === "red");
 
+  const isUnbound =
+    !ing.techId && (ing.techStatus === "unbound" || ing.techStatus === "proposed");
   return {
     id:
       opts.id ||
       `idea-${slug(ing.id || title)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
     method: "seed",
-    lens: tech ? "seed" : "human",
-    lensLabel: tech ? `${tech.icon ? `${tech.icon} ` : "💡 "}${tech.name}` : "🤝 Human Step",
+    lens: tech ? "seed" : isUnbound ? "unbound" : "human",
+    lensLabel: tech
+      ? `${tech.icon ? `${tech.icon} ` : "💡 "}${tech.name}`
+      : isUnbound
+        ? "🧭 Problem Idea · Tech TBD"
+        : "🤝 Human Step",
     author: "player",
     title,
     howText,
     techId: tech ? tech.id : null,
+    techStatus: tech ? "committed" : isUnbound ? ing.techStatus : "plain",
+    proposedTechId: isUnbound ? ing.proposedTechId || null : null,
     secondaryTechId: null,
     useCaseIds: Array.isArray(ing.useCaseIds) ? ing.useCaseIds.map(String) : [],
+    backcastUseCaseId: ing.backcastUseCaseId,
+    needsTimingAssess: ing.needsTimingAssess,
     world,
     eases: String(opts.eases || "").slice(0, 60),
     imagePrompt: String(ing.imagePrompt || howText || title).slice(0, 400),
@@ -682,6 +898,12 @@ export function ingredientToWorkbenchIdea(ing, opts = {}) {
     timingLevel: settledTiming ? ing.timingLevel : null,
     timingPct: settledTiming && ing.timingPct != null ? Number(ing.timingPct) : null,
     timingReason: settledTiming ? String(ing.timingReason || "").slice(0, 400) : "",
+    linkedMilestoneId: ing.linkedMilestoneId || null,
+    linkedMilestoneYear: ing.linkedMilestoneYear ?? null,
+    linkedMilestoneStatus: ing.linkedMilestoneStatus || null,
+    linkedMilestoneLabel: ing.linkedMilestoneLabel || "",
+    beyondForecasts: Boolean(ing.beyondForecasts),
+    gapReason: ing.gapReason || "",
     collectorCardId: ing.collectorCardId || null,
     seedLabel: "",
   };
@@ -743,19 +965,36 @@ export function draftToIngredientPartials(draft) {
     ];
   }
 
+  const isUnbound =
+    !techA &&
+    (draft.techStatus === "unbound" ||
+      draft.techStatus === "proposed" ||
+      Boolean(draft.needsTech));
   return [
     {
       techId: techA ? techA.id : null,
+      techStatus: techA ? "committed" : isUnbound ? draft.techStatus || "unbound" : "plain",
+      proposedTechId: isUnbound ? draft.proposedTechId || null : null,
       useCaseIds,
+      backcastUseCaseId: draft.backcastUseCaseId,
+      needsTimingAssess: draft.needsTimingAssess,
       title,
       howText,
-      world: normalizeWorkbenchWorld(draft.world, techA?.id || null),
+      world: isUnbound
+        ? normalizeWorkbenchWorld(draft.world === "plain" ? "split" : draft.world, null)
+        : normalizeWorkbenchWorld(draft.world, techA?.id || null),
       artUrl: draft.artUrl || null,
       artId: draft.artId || null,
       imagePrompt: String(draft.imagePrompt || howText || title).slice(0, 400),
       timingLevel: settledTiming ? draft.timingLevel : null,
       timingPct: settledTiming ? draft.timingPct : null,
       timingReason: settledTiming ? draft.timingReason || "" : "",
+      linkedMilestoneId: draft.linkedMilestoneId || null,
+      linkedMilestoneYear: draft.linkedMilestoneYear ?? null,
+      linkedMilestoneStatus: draft.linkedMilestoneStatus || null,
+      linkedMilestoneLabel: draft.linkedMilestoneLabel || "",
+      beyondForecasts: Boolean(draft.beyondForecasts),
+      gapReason: draft.gapReason || "",
       collectorCardId: draft.collectorCardId || null,
     },
   ];
@@ -948,14 +1187,15 @@ export function sanitizeWorkbenchDrafts(rawIdeas, opts = {}) {
   const method = ["discover", "define", "seed", "sit", "scamper"].includes(opts.method)
     ? opts.method
     : "seed";
+  const [pairFirst, pairSecond] = seedConvergencePair(method, opts);
   const defaultTechId =
     method === "discover" || method === "define"
       ? null
-      : opts.techId && TECH_BY_ID.has(opts.techId)
+      : pairFirst || (opts.techId && TECH_BY_ID.has(opts.techId)
         ? opts.techId
         : Array.isArray(opts.techIds) && TECH_BY_ID.has(opts.techIds[0])
           ? opts.techIds[0]
-          : null;
+          : null);
   const defaultEases = String(opts.eases || opts.scarcity || "").slice(0, 60);
   const useCaseIds = Array.isArray(opts.useCaseIds) ? opts.useCaseIds.map(String) : [];
   const seedLabel = String(opts.seedTitle || "").slice(0, 72);
@@ -999,25 +1239,38 @@ export function sanitizeWorkbenchDrafts(rawIdeas, opts = {}) {
       continue;
     }
 
-    // Explicit null is a human step. Absent or unknown ids fall back to the selected tech.
-    const humanStep = row.techId === null;
-    const rawTechId = humanStep
+    // Explicit null with world "plain" is a human step. In problemFirst mode with no
+    // chosen tech, keep ideas tech-unbound so feasibility assessment links emTech later.
+    const freeProblemDraft = Boolean((opts.problemFirst || opts.unboundRemix) && !defaultTechId);
+    const explicitHuman = !opts.unboundRemix &&
+      row.techId === null && (row.world === "plain" || (!freeProblemDraft && !pairFirst));
+    const rawTechId = explicitHuman || freeProblemDraft
       ? null
-      : row.techId != null && row.techId !== "" && TECH_BY_ID.has(String(row.techId))
+      : pairFirst || (row.techId != null && row.techId !== "" && TECH_BY_ID.has(String(row.techId))
         ? String(row.techId)
-        : defaultTechId;
-    const rawSecondary = humanStep
+        : defaultTechId);
+    const rawSecondary = explicitHuman || freeProblemDraft
       ? null
-      : row.secondaryTechId != null &&
+      : pairSecond || (row.secondaryTechId != null &&
           TECH_BY_ID.has(String(row.secondaryTechId)) &&
           String(row.secondaryTechId) !== rawTechId
         ? String(row.secondaryTechId)
-        : null;
+        : null);
+    const techStatus = rawTechId
+      ? "committed"
+      : explicitHuman
+        ? "plain"
+        : "unbound";
 
     const lens = String(row.lens || opts.lenses?.[i] || opts.lenses?.[0] || method).slice(0, 32);
     const lensLabel =
       String(row.lensLabel || "").trim().slice(0, 48) || formatLensBadge(method, lens);
-    const world = humanStep ? "plain" : normalizeWorkbenchWorld(row.world, rawTechId);
+    const world =
+      techStatus === "plain"
+        ? "plain"
+        : techStatus === "unbound"
+          ? normalizeWorkbenchWorld(row.world && row.world !== "plain" ? row.world : "split", null)
+          : normalizeWorkbenchWorld(row.world, rawTechId);
 
     out.push({
       id: `draft-${slug(row.id || `${method}-${lens}-${title}`)}-${i + 1}`,
@@ -1028,8 +1281,9 @@ export function sanitizeWorkbenchDrafts(rawIdeas, opts = {}) {
       title,
       howText,
       techId: rawTechId,
+      techStatus,
       secondaryTechId: rawSecondary,
-      useCaseIds: humanStep ? [] : useCaseIds,
+      useCaseIds: techStatus === "committed" ? useCaseIds : [],
       world,
       eases: clip(row.eases || defaultEases, 60),
       imagePrompt: clip(row.imagePrompt || howText, 400),
@@ -1039,6 +1293,14 @@ export function sanitizeWorkbenchDrafts(rawIdeas, opts = {}) {
   }
 
   return out;
+}
+
+function seedConvergencePair(method, opts) {
+  if (method !== "seed" || !Array.isArray(opts.convergenceTechIds)) return [];
+  const [first, second] = opts.convergenceTechIds;
+  return first !== second && TECH_BY_ID.has(first) && TECH_BY_ID.has(second)
+    ? [first, second]
+    : [];
 }
 
 export function formatLensBadge(method, lens) {
@@ -1074,7 +1336,10 @@ export function localWorkbenchLensDrafts(opts = {}) {
   const eases = String(opts.eases || scarcity || "").slice(0, 60);
   const seedTitle = String(opts.seedTitle || "").trim();
   const techIds = Array.isArray(opts.techIds) ? opts.techIds.filter((id) => TECH_BY_ID.has(id)) : [];
-  const techA = techMeta(techIds[0] || opts.techId);
+  const [pairFirst, pairSecond] = seedConvergencePair(method, opts);
+  const techA = techMeta(pairFirst || techIds[0] || opts.techId);
+  const techB = techMeta(pairSecond);
+  const localRemixWorld = techA?.polarity || (opts.problemFirst || opts.unboundRemix ? "split" : "plain");
   const useCaseIds = Array.isArray(opts.useCaseIds) ? opts.useCaseIds.map(String) : [];
 
   if (method === "discover") {
@@ -1168,10 +1433,10 @@ export function localWorkbenchLensDrafts(opts = {}) {
         lensLabel: formatLensBadge("sit", lensId),
         ...(templates[lensId] || templates.subtraction),
         techId: techA?.id || null,
-        world: techA?.polarity || "plain",
+        world: localRemixWorld,
         eases,
       })),
-      { method, techId: techA?.id || null, eases, scarcity, useCaseIds, seedTitle }
+      { ...opts, method, techId: techA?.id || null, eases, scarcity, useCaseIds, seedTitle }
     );
   }
 
@@ -1220,17 +1485,55 @@ export function localWorkbenchLensDrafts(opts = {}) {
         lensLabel: formatLensBadge("scamper", letter),
         ...(templates[letter] || templates.S),
         techId: techA?.id || null,
-        world: techA?.polarity || "plain",
+        world: localRemixWorld,
         eases,
       })),
-      { method, techId: techA?.id || null, eases, scarcity, useCaseIds, seedTitle }
+      { ...opts, method, techId: techA?.id || null, eases, scarcity, useCaseIds, seedTitle }
     );
   }
 
   // Default: "seed"
   const techName = techA ? techA.name : "Local stewards";
+  const techMechanism = techB ? `${techName.toLowerCase()} paired with ${techB.name.toLowerCase()}` : techName.toLowerCase();
   const ucLead = String(opts.useCaseHint || "").trim();
   const ucSnippet = ucLead ? ` building on ${clip(ucLead, 80)}` : "";
+  if (opts.problemFirst && !techA) {
+    return sanitizeWorkbenchDrafts(
+      [
+        {
+          id: "seed-problem-direct",
+          lens: "seed",
+          lensLabel: "🧭 Problem Seed · Direct",
+          title: clip(`On-site ${scarcity || "bottleneck"} unit`, 64),
+          howText: `${stakeholder} runs a compact on-site unit in ${place} (${year}) to ${goalText} within one shift, without waiting on distant regional infrastructure.`,
+          techId: null,
+          world: "split",
+          eases,
+        },
+        {
+          id: "seed-problem-monitor",
+          lens: "seed",
+          lensLabel: "🧭 Problem Seed · Sensing",
+          title: clip(`Early-warning ${scarcity || "local"} loop`, 64),
+          howText: `Continuous local monitoring in ${place} alerts ${stakeholder} hours before failure so crews intervene early and ${goalText}.`,
+          techId: null,
+          world: "bits",
+          eases,
+        },
+        {
+          id: "seed-problem-handoff",
+          lens: "seed",
+          lensLabel: "🤝 Seed · Human Bridge",
+          title: clip(`${stakeholder} handoff & ledger`, 64),
+          howText: `${stakeholder} pairs local dispatches with a signed open community log in ${place} so partners verify every outcome firsthand.`,
+          techId: null,
+          world: "plain",
+          eases,
+        },
+      ],
+      { method: "seed", problemFirst: true, techId: null, eases, scarcity, useCaseIds: [], seedTitle }
+    );
+  }
   return sanitizeWorkbenchDrafts(
     [
       {
@@ -1238,7 +1541,7 @@ export function localWorkbenchLensDrafts(opts = {}) {
         lens: "seed",
         lensLabel: "💡 Seed · Direct",
         title: clip(`${techName} on-demand loop`, 64),
-        howText: `${stakeholder} deploys ${techName.toLowerCase()} directly in ${place} (${year})${ucSnippet} to ${goalText} with open delivery checks.`,
+        howText: `${stakeholder} deploys ${techMechanism} directly in ${place} (${year})${ucSnippet} to ${goalText} with open delivery checks.`,
         techId: techA?.id || null,
         world: techA?.polarity || "plain",
         eases,
@@ -1248,7 +1551,7 @@ export function localWorkbenchLensDrafts(opts = {}) {
         lens: "seed",
         lensLabel: "💡 Seed · Shared Hub",
         title: clip(`Shared ${techName.toLowerCase()} relay`, 64),
-        howText: `Local partners in ${place} share a maintained ${techName.toLowerCase()} relay overseen by ${stakeholder} to cut waste and ${goalText}.`,
+        howText: `Local partners in ${place} share a maintained relay using ${techMechanism}, overseen by ${stakeholder} to cut waste and ${goalText}.`,
         techId: techA?.id || null,
         world: techA?.polarity || "plain",
         eases,
@@ -1258,12 +1561,12 @@ export function localWorkbenchLensDrafts(opts = {}) {
         lens: "seed",
         lensLabel: "💡 Seed · Human Bridge",
         title: clip(`${stakeholder} handoff & ledger`, 64),
-        howText: `${stakeholder} pairs ${techName.toLowerCase()} dispatches with a signed local log in ${place} so partners verify every unit firsthand.`,
+        howText: `${stakeholder} pairs ${techB ? "local" : techName.toLowerCase()} dispatches with a signed local log in ${place} so partners verify every unit firsthand.`,
         techId: null,
         world: "plain",
         eases,
       },
     ],
-    { method: "seed", techId: techA?.id || null, eases, scarcity, useCaseIds, seedTitle }
+    { ...opts, method: "seed", techId: techA?.id || null, eases, scarcity, useCaseIds, seedTitle }
   );
 }

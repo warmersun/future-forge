@@ -301,4 +301,26 @@ describe("leanCoInventContext arguments", () => {
     );
     assert.match(ctx.briefMd, /cannot add staff/);
   });
+
+  it("forwards backcastCandidates on assess-feasibility and preserves empty techIds in problemFirst workbench-lens", () => {
+    const candidates = { catalogTechIds: ["gene-sequencing"], tracks: [] };
+    const assessCtx = leanCoInventContext(
+      "assess-feasibility",
+      {
+        inventionHow: "Portable clinic swab sequencer reads samples in four hours.",
+        selectedTechIds: [],
+        backcastCandidates: candidates,
+      },
+      leftoverSnap
+    );
+    assert.deepEqual(assessCtx.backcastCandidates, candidates);
+    assert.deepEqual(assessCtx.selectedTechIds, []);
+
+    const wbCtx = leanCoInventContext(
+      "workbench-lens",
+      { method: "seed", problemFirst: true, techIds: [], focusTechId: null },
+      leftoverSnap
+    );
+    assert.deepEqual(wbCtx.techIds, []);
+  });
 });

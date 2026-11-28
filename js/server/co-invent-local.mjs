@@ -30,6 +30,7 @@ import {
   allTechIds,
   VISION_THEME_IDS,
   GAME,
+  TECHS,
 } from "../data.js";
 import { SUMMARY_CAP } from "../quest-summary.js";
 import { briefMdFromLivedStory } from "../brief-beats.js";
@@ -555,7 +556,11 @@ function localAssessFeasibility(context, selected, map, base) {
   const how = String(context.inventionHow || "").trim();
   const impact = String(context.inventionImpact || "").trim();
   const text = how || impact;
-  const techs = selected.map((id) => map.get(id)).filter(Boolean);
+  const backcast = context.backcastCandidates;
+  const candidateId = backcast?.tracks?.[0]?.techId;
+  const techs = selected.length
+    ? selected.map((id) => map.get(id)).filter(Boolean)
+    : TECHS.filter((tech) => tech.id === candidateId);
 
   const frontierRe =
     /quantum\s*internet|full(y)?\s*autonomous\s*(city|fleet|everything)|mind\s*control|upload(ed)?\s*consciousness|unlimited\s*energy|free\s*energy|teleport|cure\s*all\s*cancer|bci.*(everyone|consumer|mass)|programmable\s*(city|building)|living\s*(city|infrastructure)\s*that\s*grow|general[- ]purpose\s*quantum|replace\s*all\s*(doctors|teachers|drivers)/i;
@@ -567,7 +572,7 @@ function localAssessFeasibility(context, selected, map, base) {
   let level = "green";
   let reason = `Claims look compatible with near-term capabilities in ${year}.`;
 
-  if (!selected.length) {
+  if (!selected.length && !backcast) {
     level = "red";
     reason = "Add at least one technology to the stack.";
   } else if (text.length < 20) {

@@ -149,10 +149,14 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     const rawIds = Array.isArray(rest.techIds)
       ? rest.techIds.map(String).filter(Boolean).slice(0, 4)
       : [];
+    const techUnbound = Boolean(rest.problemFirst || rest.unboundRemix) &&
+      rawIds.length === 0 && !rest.focusTechId;
     const fallbackIds =
       rawIds.length > 0
         ? rawIds
-        : (rest.focusTechId ? [String(rest.focusTechId)] : [...(snap.selectedTechIds || [])]).slice(0, 3);
+        : techUnbound
+          ? []
+          : (rest.focusTechId ? [String(rest.focusTechId)] : [...(snap.selectedTechIds || [])]).slice(0, 3);
     const techs =
       typeof snap.techsForIds === "function" ? snap.techsForIds(fallbackIds) : [];
     const stakeholder = String(rest.stakeholder ?? snap.stakeholder ?? "").trim();
@@ -240,6 +244,13 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     }
     if (Array.isArray(rest.acceptedArguments) && rest.acceptedArguments.length) {
       out.acceptedArguments = rest.acceptedArguments;
+    }
+    if (
+      rest.backcastCandidates &&
+      typeof rest.backcastCandidates === "object" &&
+      !Array.isArray(rest.backcastCandidates)
+    ) {
+      out.backcastCandidates = rest.backcastCandidates;
     }
     return out;
   }

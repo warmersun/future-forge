@@ -221,6 +221,25 @@ export function buildTrendChartConfig(trend, opts = {}) {
       },
     };
   }
+  const neededVal = Number(opts.neededThreshold?.value);
+  if (Number.isFinite(neededVal) && neededVal > 0) {
+    annotations.neededLine = {
+      type: "line",
+      yMin: neededVal,
+      yMax: neededVal,
+      borderColor: css.neededLine || "rgba(244, 114, 182, 0.92)",
+      borderWidth: 2,
+      borderDash: [6, 4],
+      label: {
+        display: true,
+        content: opts.neededThreshold?.label || "🎯 Needed capability",
+        position: "end",
+        backgroundColor: "rgba(2, 6, 14, 0.84)",
+        color: "#fbcfe8",
+        font: { size: 10 },
+      },
+    };
+  }
 
   const lineColor = opts.spotlight ? css.warn : css.accent;
 

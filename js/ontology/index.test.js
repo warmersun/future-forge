@@ -19,7 +19,13 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { resolveTechTrack, isForecastEarly, milestonePlayable } from "./index.js";
+import {
+  resolveTechTrack,
+  isForecastEarly,
+  milestonePlayable,
+  buildBackcastCandidates,
+  matchIdeaToOntology,
+} from "./index.js";
 
 describe("resolveTechTrack", () => {
   it("prefers structured quest ontology over the catalog label", () => {
@@ -85,5 +91,56 @@ A device cart with a volunteer runbook.
     assert.equal(isForecastEarly(forecast, 2026), true);
     assert.equal(milestonePlayable(forecast, forecast.year), true);
     assert.equal(forecast.status, "predicted");
+  });
+
+  it("matches a tech-free idea to a grounded emTech, milestone, and use case, or flags beyondForecasts", () => {
+    const candidates = buildBackcastCandidates({
+      howText: "Portable field pathogen sequencer gives same-shift reads at border clinics.",
+      title: "Clinic Swab Sequencer",
+      year: 2026,
+    });
+    assert.ok(candidates.catalogTechIds.length >= 25);
+    assert.ok(candidates.tracks.some((t) => t.techId === "gene-sequencing"));
+
+    const reachedMatch = matchIdeaToOntology({
+      howText: "Portable clinic pathogen sequencer reads swabs on site within one shift.",
+      title: "Clinic Swab Sequencer",
+      techId: null,
+      year: 2026,
+      timingLevel: "green",
+      timingReason: "Portable field sequencers exist in 2026.",
+    });
+    assert.equal(reachedMatch.techId, "gene-sequencing");
+    assert.equal(reachedMatch.beyondForecasts, false);
+    assert.ok(reachedMatch.milestone);
+    assert.ok(reachedMatch.milestone.year <= 2026);
+    assert.ok(reachedMatch.useCase?.title);
+
+    const sciFiGap = matchIdeaToOntology({
+      howText: "Instant mind upload chip transfers every teacher's memory in 2 seconds.",
+      title: "Mind Upload Chip",
+      techId: "bci",
+      year: 2026,
+      timingLevel: "red",
+      timingReason: "Mind upload is sci-fi and beyond known forecasts.",
+    });
+    assert.equal(sciFiGap.beyondForecasts, true);
+    assert.equal(sciFiGap.milestone, null);
+    assert.match(sciFiGap.gapReason, /sci-fi|beyond/i);
+  });
+
+  it("leaves ideas without a supported catalog match unresolved", () => {
+    const opts = {
+      howText: "Qzxy qwzx jxzz.",
+      world: "atoms",
+      quest: { spotlight: { techId: "battery" } },
+      aiBackcast: { techId: "not-in-catalog" },
+      timingLevel: "red",
+    };
+    assert.deepEqual(buildBackcastCandidates(opts).tracks, []);
+    const match = matchIdeaToOntology(opts);
+    assert.equal(match.techId, null);
+    assert.equal(match.milestone, null);
+    assert.equal(match.useCase, null);
   });
 });

@@ -32,6 +32,8 @@ import {
   SIT_LENSES,
   SCAMPER_LENSES,
   CHALLENGER_LENS_MAP,
+  buildConvergenceCanvas,
+  analyzeConvergencePair,
   extractScarcityPrompts,
   extractDiscoveryClues,
   synthesizeHmwCandidates,
@@ -278,5 +280,44 @@ describe("workbench-methods", () => {
     assert.equal(handoff.techId, null);
     assert.equal(handoff.world, "plain");
     assert.deepEqual(handoff.useCaseIds, []);
+  });
+
+  it("builds the 3-zone Convergence Canvas and respects hideSuggested in Problem-Pull mode", () => {
+    const mission = { spotlight: { techId: "drones" }, suggested: ["drones", "battery"] };
+    const shown = buildConvergenceCanvas({}, mission, ["ai", "battery"], {
+      place: "Steamholt",
+      hideSuggested: false,
+    });
+    assert.deepEqual(shown.zones.map((z) => z.id), ["bits", "split", "atoms"]);
+    const allShownTechs = shown.zones.flatMap((z) => z.groups.flatMap((g) => g.techs));
+    assert.equal(allShownTechs.find((t) => t.id === "drones")?.recommended, true);
+    assert.equal(shown.pairAnalysis.needsBridge, true);
+    assert.equal(shown.zones.find((z) => z.id === "split")?.highlightBridge, true);
+
+    const hidden = buildConvergenceCanvas({}, mission, ["drones"], {
+      place: "Steamholt",
+      hideSuggested: true,
+    });
+    const allHiddenTechs = hidden.zones.flatMap((z) => z.groups.flatMap((g) => g.techs));
+    assert.equal(allHiddenTechs.some((t) => t.recommended), false);
+
+    const pair = analyzeConvergencePair("iot", "battery", { place: "Steamholt" });
+    assert.equal(pair.ready, true);
+    assert.equal(pair.bridgesWorlds, true);
+
+    const problemSeeds = localWorkbenchLensDrafts({
+      method: "seed",
+      problemFirst: true,
+      techIds: [],
+      place: "Steamholt",
+      year: 2026,
+      scarcity: "Outbreak",
+    });
+    assert.equal(problemSeeds.length, 3);
+    assert.equal(problemSeeds[0].techStatus, "unbound");
+    assert.equal(problemSeeds[0].techId, null);
+    assert.notEqual(problemSeeds[0].world, "plain");
+    assert.equal(problemSeeds[2].techStatus, "plain");
+    assert.equal(problemSeeds[2].world, "plain");
   });
 });

@@ -1093,4 +1093,71 @@ describe("workbench-lens fast-eval", () => {
     );
     assert.equal(fallback.ideas.length, 2);
   });
+
+  it("forwards backcastCandidates on assess-feasibility and sanitizes grounded backcast links", () => {
+    const candidates = {
+      catalogTechIds: ["gene-sequencing", "battery"],
+      tracks: [
+        {
+          techId: "gene-sequencing",
+          name: "Gene Sequencing",
+          world: "atoms",
+          milestones: [
+            {
+              id: "ms-gs-2026",
+              year: 2026,
+              status: "reached",
+              label: "Portable field sequencers",
+              useCases: [{ id: "uc-gs-1", title: "Same-shift swab triage" }],
+            },
+          ],
+        },
+      ],
+    };
+    const payload = buildFastPayload("assess-feasibility", {
+      year: 2026,
+      place: "Border Clinic",
+      inventionHow: "Portable swab sequencer reads samples within one shift.",
+      selectedTechIds: [],
+      backcastCandidates: candidates,
+    });
+    assert.deepEqual(payload.backcastCandidates, candidates);
+
+    const valid = sanitizeFast(
+      "assess-feasibility",
+      {
+        timing: { level: "green", reason: "Portable sequencers exist in 2026." },
+        backcast: {
+          techId: "gene-sequencing",
+          milestoneId: "ms-gs-2026",
+          useCaseId: "uc-gs-1",
+          beyondForecasts: false,
+        },
+      },
+      "ai",
+      { backcastCandidates: candidates }
+    );
+    assert.equal(valid.backcast.techId, "gene-sequencing");
+    assert.equal(valid.backcast.milestoneId, "ms-gs-2026");
+    assert.equal(valid.backcast.useCaseId, "uc-gs-1");
+
+    const forged = sanitizeFast(
+      "assess-feasibility",
+      {
+        timing: { level: "red", reason: "Not possible." },
+        backcast: {
+          techId: "warp-drive",
+          milestoneId: "ms-fake-2040",
+          beyondForecasts: true,
+          gapReason: "Warp drives violate physics.",
+        },
+      },
+      "ai",
+      { backcastCandidates: candidates }
+    );
+    assert.equal(forged.backcast.techId, null);
+    assert.equal(forged.backcast.milestoneId, null);
+    assert.equal(forged.backcast.beyondForecasts, true);
+    assert.match(forged.backcast.gapReason, /Warp drives/);
+  });
 });

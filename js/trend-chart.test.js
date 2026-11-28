@@ -190,4 +190,16 @@ describe("trend-chart", () => {
     }).trend;
     assert.equal(buildTrendChartConfig(noCurve, { yearNow: 2026 }), null);
   });
+
+  it("renders a horizontal neededThreshold annotation line alongside the vertical NOW line", () => {
+    const cfg = buildTrendChartConfig(trend, {
+      yearNow: 2026,
+      neededThreshold: { value: 120, year: 2029, label: "🎯 Needed (~2029)" },
+    });
+    const ann = cfg.options.plugins.annotation.annotations;
+    assert.equal(ann.nowLine.xMin, 2026);
+    assert.equal(ann.neededLine.yMin, 120);
+    assert.equal(ann.neededLine.yMax, 120);
+    assert.equal(ann.neededLine.label.content, "🎯 Needed (~2029)");
+  });
 });

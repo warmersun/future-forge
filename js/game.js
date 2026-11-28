@@ -173,7 +173,7 @@ import {
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
 import { createHexWorkshop } from "./hex/hex-workshop.js?v=calm-stage-2";
-import { createPathwayWorkshop } from "./board/pathway-workshop.js?v=ontology-2";
+import { createPathwayWorkshop } from "./board/pathway-workshop.js?v=ontology-3";
 import {
   isPathwayBoard,
   migrateToPathwayBoard,

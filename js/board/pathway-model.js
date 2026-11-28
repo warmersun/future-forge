@@ -128,16 +128,64 @@ function pctToTimingLevel(pct) {
   return "red";
 }
 
+export function ingredientTechStatus(ing) {
+  if (!ing || typeof ing !== "object") return "plain";
+  const explicit = String(ing.techStatus || "");
+  if (
+    explicit === "committed" ||
+    explicit === "unbound" ||
+    explicit === "proposed" ||
+    explicit === "plain"
+  ) {
+    return explicit;
+  }
+  return ing.techId ? "committed" : "plain";
+}
+
+export function ingredientHasUncommittedTech(ing) {
+  const status = ingredientTechStatus(ing);
+  return status === "unbound" || status === "proposed";
+}
+
+export function selectedIngredientUseCaseIds(ing, useCases) {
+  const ids = ing.useCaseIds || [];
+  // Older boards put the inferred use case directly in useCaseIds.
+  const inferredId = ing.backcastUseCaseId === undefined && ing.linkedMilestoneId
+    ? ids.find((id) => useCases?.[id]?.milestoneId === ing.linkedMilestoneId)
+    : ing.backcastUseCaseId;
+  return ids.filter((id) => id !== inferredId);
+}
+
 /**
- * Cap timing when any ingredient rests on a forecast that is still ahead.
+ * Cap timing when any ingredient rests on a forecast that is still ahead,
+ * or exceeds known forecasts / honest limits.
  * Applies Convergence and R&D multipliers when present. Does not mutate milestoneStatus.
  */
 export function effectiveTiming(pathway, useCases, questYear) {
+  const beyondIng = (pathway?.ingredients || []).find((ing) => Boolean(ing?.beyondForecasts));
+  if (beyondIng) {
+    return {
+      timingLevel: "red",
+      timingPct: 18,
+      early: false,
+      beyondForecasts: true,
+      pending: false,
+      timingReason:
+        String(beyondIng.gapReason || beyondIng.timingReason || "").trim() ||
+        "Beyond known forecasts or honest limits for this technology.",
+    };
+  }
   const earlyYears = [];
   for (const ing of pathway?.ingredients || []) {
     for (const id of ing.useCaseIds || []) {
       const uc = useCases?.[id];
       if (isUseCaseEarly(uc, questYear)) earlyYears.push(Number(uc.milestoneYear));
+    }
+    if (
+      ing?.linkedMilestoneYear != null &&
+      Number(ing.linkedMilestoneYear) > Number(questYear)
+    ) {
+      earlyYears.push(Number(ing.linkedMilestoneYear));
     }
   }
   if (earlyYears.length) {
@@ -146,6 +194,7 @@ export function effectiveTiming(pathway, useCases, questYear) {
       timingLevel: "red",
       timingPct: 20,
       early: true,
+      beyondForecasts: false,
       pending: false,
       timingReason: `Too early in ${questYear} — relies on ~${year} forecast`,
     };
@@ -195,6 +244,7 @@ export function effectiveTiming(pathway, useCases, questYear) {
     timingLevel: pending && worst !== "red" ? "yellow" : worst,
     timingPct: combinedPct,
     early: false,
+    beyondForecasts: false,
     pending,
     timingReason: reasons[0] || "",
   };
@@ -380,6 +430,7 @@ export function removeUseCase(board, useCaseId) {
       if (Array.isArray(ing.useCaseIds)) {
         ing.useCaseIds = ing.useCaseIds.filter((id) => id !== useCaseId);
       }
+      if (ing.backcastUseCaseId === useCaseId) ing.backcastUseCaseId = null;
     }
   }
   if (uc.techId && uc.milestoneId && next.techTracks[uc.techId]) {
@@ -418,13 +469,33 @@ export function addCustomUseCase(board, partial = {}) {
 function ingredientFrom(next, partial, useCases) {
   const ids = (partial.useCaseIds || []).map(String);
   const first = useCases[ids[0]];
+  const techId = partial.techId !== undefined ? partial.techId : first?.techId ?? null;
+  const explicitStatus = String(partial.techStatus || "");
+  const techStatus =
+    explicitStatus === "committed" ||
+    explicitStatus === "unbound" ||
+    explicitStatus === "proposed" ||
+    explicitStatus === "plain"
+      ? explicitStatus
+      : techId
+        ? "committed"
+        : partial.needsTech
+          ? "unbound"
+          : "plain";
+  const defaultWorld =
+    techId || techStatus === "unbound" || techStatus === "proposed" ? "bits" : "plain";
   return {
     id: partial.id || nextId(next, "ing"),
-    techId: partial.techId !== undefined ? partial.techId : first?.techId ?? null,
+    techId,
+    techStatus,
+    proposedTechId:
+      partial.proposedTechId && !techId ? String(partial.proposedTechId) : null,
     useCaseIds: ids,
+    backcastUseCaseId: partial.backcastUseCaseId,
+    needsTimingAssess: partial.needsTimingAssess,
     title: String(partial.title || first?.title || "Invention").slice(0, 80),
     howText: String(partial.howText || first?.blurb || "").slice(0, 4000),
-    world: worldOf(partial.world || first?.world, partial.techId ? "bits" : "plain"),
+    world: worldOf(partial.world || first?.world, defaultWorld),
     artUrl: partial.artUrl || null,
     artId: partial.artId ? String(partial.artId).slice(0, 140) : null,
     imagePrompt: partial.imagePrompt ? String(partial.imagePrompt).slice(0, 400) : "",
@@ -433,6 +504,20 @@ function ingredientFrom(next, partial, useCases) {
     timingLevel: partial.timingLevel || null,
     timingReason: partial.timingReason || "",
     timingPending: Boolean(partial.timingPending),
+    linkedMilestoneId: partial.linkedMilestoneId ? String(partial.linkedMilestoneId) : null,
+    linkedMilestoneYear:
+      partial.linkedMilestoneYear != null && Number.isFinite(Number(partial.linkedMilestoneYear))
+        ? Number(partial.linkedMilestoneYear)
+        : null,
+    linkedMilestoneStatus:
+      partial.linkedMilestoneStatus === "reached" || partial.linkedMilestoneStatus === "predicted"
+        ? partial.linkedMilestoneStatus
+        : null,
+    linkedMilestoneLabel: partial.linkedMilestoneLabel
+      ? String(partial.linkedMilestoneLabel).slice(0, 140)
+      : "",
+    beyondForecasts: Boolean(partial.beyondForecasts),
+    gapReason: partial.gapReason ? String(partial.gapReason).slice(0, 400) : "",
     collectorCardId: partial.collectorCardId || first?.collectorCardId || null,
   };
 }
@@ -615,6 +700,9 @@ export function findUnusedItems(board, opts = {}) {
     const pw = board.pathways?.[pwId];
     for (const ing of pw?.ingredients || []) {
       if (ing.techId && board.techTracks?.[ing.techId]) keepTechIds.add(ing.techId);
+      if (ing.proposedTechId && board.techTracks?.[ing.proposedTechId]) {
+        keepTechIds.add(ing.proposedTechId);
+      }
     }
   }
   for (const ucId of keepUseCaseIds) {
@@ -872,7 +960,126 @@ export function setIngredientTiming(board, pathwayId, ingredientId, patch = {}) 
   if (patch.timingPct !== undefined) ing.timingPct = patch.timingPct;
   if (patch.timingReason !== undefined) ing.timingReason = String(patch.timingReason || "").slice(0, 400);
   if (patch.timingPending !== undefined) ing.timingPending = Boolean(patch.timingPending);
+  if (patch.needsTimingAssess !== undefined) ing.needsTimingAssess = Boolean(patch.needsTimingAssess);
+  if (patch.beyondForecasts !== undefined) ing.beyondForecasts = Boolean(patch.beyondForecasts);
+  if (patch.gapReason !== undefined) ing.gapReason = String(patch.gapReason || "").slice(0, 400);
   return bump(next);
+}
+
+/**
+ * Link an assessed Pathway ingredient rightward to its grounded Use Case,
+ * Capability Milestone, and emTech Track (0$ browse cost).
+ * Never silently bills Moves/Budget: if the ingredient was authored tech-free
+ * ("unbound" / "proposed"), records `proposedTechId` and keeps `techId: null`
+ * until the player explicitly commits via `commitProposedIngredientTech`.
+ */
+export function applyBackcastLink(board, opts = {}) {
+  const next = clone(board);
+  const pathway = next.pathways?.[opts.pathwayId];
+  const ing = pathway?.ingredients?.find((row) => row.id === opts.ingredientId);
+  if (!pathway || !ing) return { board: next, ok: false, useCaseId: null };
+
+  const techId = String(ing.techId || opts.techId || "");
+  if (techId) ensureTrackInPlace(next, techId);
+
+  if (ingredientHasUncommittedTech(ing)) {
+    ing.proposedTechId = techId || null;
+    ing.techStatus = techId ? "proposed" : "unbound";
+    const techObj = TECHS.find((t) => t.id === techId);
+    if (techObj?.polarity && ing.world !== "plain") {
+      ing.world = worldOf(techObj.polarity, ing.world);
+    }
+  }
+
+  let linkedUseCaseId = null;
+  const ms = opts.milestone || null;
+  const uc = opts.useCase || null;
+
+  ing.useCaseIds = selectedIngredientUseCaseIds(ing, next.useCases);
+  ing.backcastUseCaseId = null;
+  ing.linkedMilestoneId = null;
+  ing.linkedMilestoneYear = null;
+  ing.linkedMilestoneStatus = null;
+  ing.linkedMilestoneLabel = "";
+  ing.needsTimingAssess = false;
+  if (opts.beyondForecasts) {
+    ing.beyondForecasts = true;
+    ing.gapReason = String(opts.gapReason || ing.timingReason || "").slice(0, 400);
+  } else {
+    ing.beyondForecasts = false;
+    ing.gapReason = "";
+    if (ms && ms.id) {
+      const msId = String(ms.id);
+      const msYear = Number(ms.year) || 2026;
+      const msStatus = ms.status === "reached" ? "reached" : "predicted";
+      ing.linkedMilestoneId = msId;
+      ing.linkedMilestoneYear = msYear;
+      ing.linkedMilestoneStatus = msStatus;
+      ing.linkedMilestoneLabel = String(ms.label || "").slice(0, 140);
+      ing.needsTimingAssess = msYear > (Number(opts.year ?? board.questYear) || 2026);
+      if (techId && next.techTracks[techId]) {
+        const track = next.techTracks[techId];
+        if (!track.activeMilestoneIds.includes(msId)) {
+          track.activeMilestoneIds.push(msId);
+        }
+      }
+    }
+    if (uc && (uc.id || uc.title)) {
+      let ucId = String(uc.id || "");
+      if (ucId && next.useCases[ucId]) {
+        linkedUseCaseId = ucId;
+      } else {
+        if (!ucId) ucId = nextId(next, "uc-bc");
+        while (next.useCases[ucId]) ucId = nextId(next, "uc-bc");
+        const msYear = Number(uc.milestoneYear ?? ms?.year) || 2026;
+        const msStatus =
+          (uc.milestoneStatus ?? ms?.status) === "reached" ? "reached" : "predicted";
+        next.useCases[ucId] = {
+          id: ucId,
+          techId: techId || String(uc.techId || ""),
+          milestoneId: uc.milestoneId || ms?.id || null,
+          milestoneLabel: String(uc.milestoneLabel || ms?.label || "").slice(0, 120),
+          milestoneYear: msYear,
+          milestoneStatus: msStatus,
+          title: String(uc.title || "Required use case").slice(0, 80),
+          blurb: String(uc.blurb || uc.title || "").slice(0, 280),
+          world: worldOf(uc.world || ing.world, "bits"),
+          origin: uc.origin || "backcast",
+          collectorCardId: uc.collectorCardId || ms?.collectorCardId || null,
+        };
+        linkedUseCaseId = ucId;
+      }
+      if (linkedUseCaseId && !ing.useCaseIds.includes(linkedUseCaseId)) {
+        ing.backcastUseCaseId = linkedUseCaseId;
+        ing.useCaseIds.push(linkedUseCaseId);
+      }
+    }
+  }
+
+  return { board: bump(next), ok: true, useCaseId: linkedUseCaseId, techId };
+}
+
+/**
+ * Explicitly promote a proposed backcast emTech to a committed `techId`
+ * (caller bills Moves / Budget / Goodwill synchronously).
+ */
+export function commitProposedIngredientTech(board, pathwayId, ingredientId, overrideTechId = null) {
+  const next = clone(board);
+  const pathway = next.pathways?.[pathwayId];
+  const ing = pathway?.ingredients?.find((row) => row.id === ingredientId);
+  if (!pathway || !ing) return { board: next, ok: false, techId: null };
+
+  const targetTechId = String(overrideTechId || ing.proposedTechId || "");
+  if (!targetTechId) return { board: next, ok: false, techId: null };
+
+  ensureTrackInPlace(next, targetTechId);
+  ing.techId = targetTechId;
+  ing.proposedTechId = null;
+  ing.techStatus = "committed";
+  const techObj = TECHS.find((t) => t.id === targetTechId);
+  if (techObj?.polarity) ing.world = worldOf(techObj.polarity, ing.world);
+  pathway.convergences = convergenceRows(pathway.ingredients);
+  return { board: bump(next), ok: true, techId: targetTechId };
 }
 
 export function setIngredientArt(
@@ -1177,6 +1384,7 @@ export function refreshCrisisLamps(board, winMax = {}) {
       if (seenPathway.has(wire.pathwayId)) continue;
       seenPathway.add(wire.pathwayId);
       const pathway = next.pathways[wire.pathwayId];
+      if (pathway?.ingredients?.some(ingredientHasUncommittedTech)) continue;
       const fp = pathwayContentFingerprint(pathway, next);
       const impact = next.pathwayImpacts?.[fp];
       if (!impact || isImpactRolePending(impact, role)) continue;
@@ -1215,8 +1423,12 @@ export function boardHolds(board, questYear) {
     }
   }
   for (const pathwayId of wiredPathwayIds) {
-    const timing = effectiveTiming(board.pathways[pathwayId], board.useCases, questYear);
-    if (timing.timingLevel === "red" || timing.early || timing.pending) return false;
+    const pw = board.pathways[pathwayId];
+    if ((pw?.ingredients || []).some((ing) => ingredientHasUncommittedTech(ing))) return false;
+    const timing = effectiveTiming(pw, board.useCases, questYear);
+    if (timing.timingLevel === "red" || timing.early || timing.beyondForecasts || timing.pending) {
+      return false;
+    }
   }
   const challengers = Object.values(board.challengers || {});
   if (!challengers.length) return false;
@@ -1238,6 +1450,7 @@ export function applyScoreToCrisis(board, crisisId, score, winMax = {}) {
     if (seen.has(wire.pathwayId)) continue;
     seen.add(wire.pathwayId);
     const pathway = next.pathways[wire.pathwayId];
+    if (pathway?.ingredients?.some(ingredientHasUncommittedTech)) continue;
     const fp = pathwayContentFingerprint(pathway, next);
     const prev = next.pathwayImpacts?.[fp] || {};
     const nextPendingRoles =

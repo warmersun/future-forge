@@ -42,6 +42,9 @@ import {
   boardHolds,
   effectiveTiming,
   forecastWireState,
+  applyBackcastLink,
+  commitProposedIngredientTech,
+  ingredientHasUncommittedTech,
   migrateToPathwayBoard,
   projectToTiles,
   createPathwayBoard,
@@ -580,5 +583,78 @@ describe("pathway board", () => {
     const timing = effectiveTiming(minted.board.pathways[minted.pathwayId], minted.board.useCases, 2026);
     assert.equal(timing.timingLevel, "red");
     assert.equal(timing.timingReason, "Pocket fusion cells are not demonstrated in 2026.");
+  });
+
+  it("applies proposed backcast links at 0 cost, blocks boardHolds until committed, and flags beyondForecasts", () => {
+    let b = seedCrises(createPathwayBoard(), [
+      { id: "c-local", role: "local", meterKey: "Outbreak", name: "Outbreak", lamp: "red" },
+    ]);
+    b.pressureBase = { Outbreak: 3 };
+    const created = createPathway(b, {
+      techId: null,
+      techStatus: "unbound",
+      world: "split",
+      title: "Field Swab Reader",
+      howText: "Border clinic nurses run portable pathogen sequencing on site.",
+      timingLevel: "green",
+      timingPct: 84,
+      timingPending: false,
+    });
+    b = created.board;
+    const linked = applyBackcastLink(b, {
+      pathwayId: created.pathwayId,
+      ingredientId: created.ingredientId,
+      techId: "gene-sequencing",
+      milestone: {
+        id: "ms-gs-2026",
+        year: 2026,
+        status: "reached",
+        label: "Portable field sequencers",
+      },
+      useCase: {
+        id: "uc-gs-triage",
+        title: "Same-shift swab triage",
+        blurb: "Read swabs in clinic.",
+        world: "atoms",
+      },
+    });
+    assert.equal(linked.ok, true);
+    b = linked.board;
+    const ing = b.pathways[created.pathwayId].ingredients[0];
+    assert.equal(ing.techId, null, "never silently promotes techId asynchronously");
+    assert.equal(ing.proposedTechId, "gene-sequencing");
+    assert.equal(ing.techStatus, "proposed");
+    assert.equal(ingredientHasUncommittedTech(ing), true);
+    assert.ok(b.techTracks["gene-sequencing"]);
+    assert.ok(b.useCases["uc-gs-triage"]);
+
+    // Plug, score green, clear challenger -> still cannot hold while tech is uncommitted
+    const wired = plugWire(b, created.pathwayId, "c-local");
+    b = applyScoreToCrisis(wired.board, "c-local", { delta: -2, reason: "Eases outbreak." }, { Outbreak: 1 });
+    const ch = summonChallenger(b, { wireId: wired.wireId, angle: "stakeholder" });
+    b = setChallengerAnswer(ch.board, ch.id, { answerQuality: "hit", lamp: "green" });
+    assert.equal(boardHolds(b, 2026), false, "uncommitted proposed tech must block hold");
+
+    const committed = commitProposedIngredientTech(b, created.pathwayId, created.ingredientId);
+    assert.equal(committed.ok, true);
+    b = committed.board;
+    assert.equal(b.pathways[created.pathwayId].ingredients[0].techId, "gene-sequencing");
+    assert.equal(b.pathways[created.pathwayId].ingredients[0].techStatus, "committed");
+    // Re-score under the committed fingerprint (as pathway-workshop.commitProposedTech does)
+    b = applyScoreToCrisis(b, "c-local", { delta: -2, reason: "Eases outbreak." }, { Outbreak: 1 });
+    assert.equal(boardHolds(b, 2026), true, "committed green pathway holds");
+
+    // Beyond forecasts caps effectiveTiming to red and blocks hold
+    const gap = applyBackcastLink(b, {
+      pathwayId: created.pathwayId,
+      ingredientId: created.ingredientId,
+      techId: "gene-sequencing",
+      beyondForecasts: true,
+      gapReason: "Instant zero-power DNA synthesis exceeds honest limits.",
+    });
+    const t = effectiveTiming(gap.board.pathways[created.pathwayId], gap.board.useCases, 2026);
+    assert.equal(t.timingLevel, "red");
+    assert.equal(t.beyondForecasts, true);
+    assert.equal(boardHolds(gap.board, 2026), false);
   });
 });

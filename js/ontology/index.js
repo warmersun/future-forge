@@ -361,3 +361,321 @@ export function milestonePlayable(milestone, questYear) {
 export function isForecastEarly(milestone, questYear) {
   return Number(milestone?.year) > Number(questYear);
 }
+
+const BACKCAST_STOPWORDS = new Set([
+  "the", "and", "for", "with", "that", "this", "from", "into", "over", "under",
+  "your", "their", "local", "place", "town", "year", "using", "uses", "used",
+  "more", "than", "make", "makes", "made", "help", "helps", "without", "when",
+  "where", "what", "will", "have", "need", "needs", "work", "works", "each",
+]);
+
+function backcastTokens(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter((w) => w.length >= 3 && !BACKCAST_STOPWORDS.has(w));
+}
+
+function tokenOverlapScore(needleTokens, haystackText) {
+  if (!needleTokens.length) return 0;
+  const hay = new Set(backcastTokens(haystackText));
+  let score = 0;
+  for (const tok of new Set(needleTokens)) {
+    if (hay.has(tok)) score += tok.length >= 6 ? 2 : 1;
+  }
+  return score;
+}
+
+function milestoneSearchText(milestone) {
+  return [
+    milestone.label,
+    milestone.detail,
+    ...(milestone.useCases || []).map((u) => `${u.title || ""} ${u.blurb || ""}`),
+  ].join(" ");
+}
+
+function rankBackcastTracks(opts, queryTokens) {
+  return TECHS.map((tech) => {
+    const track = resolveTechTrack(tech.id, opts);
+    const text = [
+      tech.id, tech.name, tech.summary, track?.capability,
+      ...(track?.milestones || []).map(milestoneSearchText),
+    ].join(" ");
+    const overlap = tokenOverlapScore(queryTokens, text);
+    const score = overlap && overlap + (tech.polarity === opts.world ? 0.5 : 0);
+    return { track, score };
+  })
+    .filter(({ track, score }) => track && score > 0)
+    .sort((a, b) => b.score - a.score || a.track.techId.localeCompare(b.track.techId));
+}
+
+function backcastMilestones(track, year) {
+  const milestones = track.milestones || [];
+  const playable = selectPlayableMilestones(milestones, year);
+  return [...playable, ...milestones.filter((m) => m.origin === "trend" && !playable.includes(m))];
+}
+
+/**
+ * Compact grounded ontology digest sent with `assess-feasibility` when linking
+ * a Pathway idea back to its Use Case, Capability Milestone, and emTech.
+ *
+ * @param {{
+ *   techId?: string|null,
+ *   milestoneId?: string|null,
+ *   howText?: string,
+ *   title?: string,
+ *   quest?: object|null,
+ *   predictions?: object[],
+ *   trends?: object[],
+ *   collectorCards?: object[],
+ *   year?: number,
+ * }} [opts]
+ */
+export function buildBackcastCandidates(opts = {}) {
+  const y = Number(opts.year) || 2026;
+  const explicitId = opts.techId && TECHS.some((t) => t.id === opts.techId)
+    ? String(opts.techId)
+    : null;
+  const queryTokens = backcastTokens(`${opts.title || ""} ${opts.howText || ""}`);
+
+  const rankedTracks = explicitId
+    ? [resolveTechTrack(explicitId, opts)].filter(Boolean)
+    : rankBackcastTracks(opts, queryTokens).slice(0, 6).map(({ track }) => track);
+  const tracks = rankedTracks.map((track) => {
+    const linked = track.milestones.find((m) => m.id === opts.milestoneId);
+    const playable = backcastMilestones(track, y).filter((m) => m !== linked)
+      .map((milestone) => ({
+        milestone,
+        score: tokenOverlapScore(queryTokens, milestoneSearchText(milestone)),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, linked ? 4 : 5)
+      .map(({ milestone }) => milestone);
+    if (linked) playable.unshift(linked);
+    return {
+      techId: track.techId,
+      name: track.name,
+      world: track.world,
+      milestones: playable.map((m) => ({
+        id: m.id,
+        year: m.year,
+        status: m.status,
+        label: String(m.label || "").slice(0, 120),
+        useCases: (m.useCases || []).slice(0, 4).map((u) => ({
+          id: u.id,
+          title: String(u.title || "").slice(0, 80),
+        })),
+      })),
+    };
+  });
+
+  return {
+    catalogTechIds: explicitId ? [explicitId] : TECHS.map((t) => t.id),
+    tracks,
+  };
+}
+
+/**
+ * Deterministically resolve a Pathway ingredient (plus optional AI backcast
+ * hints) onto a grounded `emTech` track, real Quest/Trend/Bank/Catalog
+ * Milestone, and Use Case—or mark `beyondForecasts: true` with zero fabricated
+ * milestone dates when the claim exceeds every known milestone or honest limit.
+ *
+ * @param {{
+ *   howText?: string,
+ *   title?: string,
+ *   techId?: string|null,
+ *   world?: string|null,
+ *   year?: number,
+ *   timingLevel?: string|null,
+ *   timingReason?: string,
+ *   quest?: object|null,
+ *   predictions?: object[],
+ *   trends?: object[],
+ *   collectorCards?: object[],
+ *   aiBackcast?: object|null,
+ * }} opts
+ */
+export function matchIdeaToOntology(opts = {}) {
+  const y = Number(opts.year) || 2026;
+  const ai = opts.aiBackcast && typeof opts.aiBackcast === "object" ? opts.aiBackcast : null;
+  const queryText = `${opts.title || ""} ${opts.howText || ""}`.trim();
+  const queryTokens = backcastTokens(queryText);
+
+  const validTech = (id) => (id && TECHS.some((t) => t.id === id) ? String(id) : null);
+
+  const explicitId = validTech(opts.techId) || validTech(ai?.techId);
+  const track = explicitId
+    ? resolveTechTrack(explicitId, opts)
+    : rankBackcastTracks(opts, queryTokens)[0]?.track;
+  if (!track) {
+    return {
+      techId: null,
+      milestone: null,
+      useCase: null,
+      beyondForecasts: false,
+      gapReason: "",
+    };
+  }
+
+  const chosenTechId = track.techId;
+  const allMilestones = Array.isArray(track.milestones) ? track.milestones : [];
+  const playable = backcastMilestones(track, y);
+  const pool = playable.length ? playable : allMilestones;
+  const inPlayPool = pool.filter((m) => Number(m.year) <= y);
+  const futurePool = pool.filter((m) => Number(m.year) > y);
+
+  const level = String(opts.timingLevel || "").toLowerCase();
+  const reasonText = String(ai?.gapReason || opts.timingReason || "").trim();
+
+  if (ai?.beyondForecasts === true) {
+    return {
+      techId: chosenTechId,
+      milestone: null,
+      useCase: null,
+      beyondForecasts: true,
+      gapReason:
+        reasonText ||
+        `Requires ${track.name} capabilities beyond known forecasts or honest limits.`,
+    };
+  }
+
+  const pickBestMs = (list) => {
+    if (!list.length) return null;
+    let best = list[0];
+    let bestScore = -1;
+    for (const m of list) {
+      const score = tokenOverlapScore(queryTokens, milestoneSearchText(m));
+      if (score > bestScore) {
+        bestScore = score;
+        best = m;
+      }
+    }
+    return best;
+  };
+
+  let milestone = null;
+  if (ai?.milestoneId) {
+    milestone =
+      allMilestones.find((m) => m.id === String(ai.milestoneId)) ||
+      null;
+  }
+
+  if (!milestone) {
+    if (level === "red") {
+      const futureMatch = pickBestMs(futurePool);
+      const sciFiRe = /\b(impossible|forbid|violat|sci-?fi|mind upload|teleport|antigrav|perpetual|beyond|honest limit)\b/i;
+      if (futureMatch && !sciFiRe.test(reasonText)) {
+        milestone = futureMatch;
+      } else {
+        return {
+          techId: chosenTechId,
+          milestone: null,
+          useCase: null,
+          beyondForecasts: true,
+          gapReason:
+            reasonText ||
+            `Stretches beyond known ${track.name} forecasts or honest limits in ${y}.`,
+        };
+      }
+    } else if (level === "yellow") {
+      const bestInPlay = pickBestMs(inPlayPool);
+      const bestFuture = pickBestMs(futurePool);
+      const inScore = bestInPlay
+        ? tokenOverlapScore(
+            queryTokens,
+            `${bestInPlay.label} ${(bestInPlay.useCases || []).map((u) => u.title).join(" ")}`
+          )
+        : -1;
+      const futScore = bestFuture
+        ? tokenOverlapScore(
+            queryTokens,
+            `${bestFuture.label} ${(bestFuture.useCases || []).map((u) => u.title).join(" ")}`
+          )
+        : -1;
+      milestone =
+        bestFuture && futScore > inScore + 1
+          ? bestFuture
+          : bestInPlay || bestFuture || pool.at(-1) || null;
+    } else {
+      milestone = pickBestMs(inPlayPool) || pool[0] || null;
+    }
+  }
+
+  if (!milestone) {
+    return {
+      techId: chosenTechId,
+      milestone: null,
+      useCase: null,
+      beyondForecasts: true,
+      gapReason:
+        reasonText ||
+        `No grounded ${track.name} milestone matches this capability level yet.`,
+    };
+  }
+
+  const msUcs = Array.isArray(milestone.useCases) ? milestone.useCases : [];
+  let useCase = null;
+  if (ai?.useCaseId) {
+    useCase = msUcs.find((u) => u.id === String(ai.useCaseId)) || null;
+  }
+  if (!useCase && ai?.customUseCaseTitle && String(ai.customUseCaseTitle).trim().length >= 4) {
+    const customTitle = String(ai.customUseCaseTitle).trim().slice(0, 80);
+    useCase = {
+      id: `uc-bc-${chosenTechId}-${milestone.id}-${customTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 20)}`,
+      techId: chosenTechId,
+      milestoneId: milestone.id,
+      milestoneLabel: milestone.label,
+      milestoneYear: milestone.year,
+      milestoneStatus: milestone.status,
+      title: customTitle,
+      blurb: String(opts.howText || customTitle).slice(0, 280),
+      world: track.world,
+      origin: "backcast",
+    };
+  }
+  if (!useCase && msUcs.length) {
+    let bestUc = msUcs[0];
+    let bestUcScore = -1;
+    for (const u of msUcs) {
+      const s = tokenOverlapScore(queryTokens, `${u.title || ""} ${u.blurb || ""}`);
+      if (s > bestUcScore) {
+        bestUcScore = s;
+        bestUc = u;
+      }
+    }
+    useCase = {
+      ...bestUc,
+      techId: chosenTechId,
+      milestoneId: milestone.id,
+      milestoneLabel: milestone.label,
+      milestoneYear: milestone.year,
+      milestoneStatus: milestone.status,
+      world: bestUc.world || track.world,
+    };
+  }
+  if (!useCase) {
+    const fallbackTitle = String(opts.title || milestone.label || `${track.name} capability`).slice(0, 80);
+    useCase = {
+      id: `uc-bc-${chosenTechId}-${milestone.id}`,
+      techId: chosenTechId,
+      milestoneId: milestone.id,
+      milestoneLabel: milestone.label,
+      milestoneYear: milestone.year,
+      milestoneStatus: milestone.status,
+      title: fallbackTitle,
+      blurb: String(opts.howText || milestone.label || "").slice(0, 280),
+      world: track.world,
+      origin: "backcast",
+    };
+  }
+
+  return {
+    techId: chosenTechId,
+    milestone,
+    useCase,
+    beyondForecasts: false,
+    gapReason: "",
+  };
+}

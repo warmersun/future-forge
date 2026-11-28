@@ -21,18 +21,20 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createPathwayWorkshop } from "./pathway-workshop.js";
 import { resolveTechTrack } from "../ontology/index.js";
+import { localCoInvent } from "../server/co-invent-local.mjs";
 import { renderOntologyBoard, resolveChainHighlight, formatChainSentence, worldBadge } from "./board-render.js";
 
 function harness(opts = {}) {
   let board = null;
   let year = opts.year ?? 2026;
   const calls = [];
+  const listeners = {};
   const root = {
     innerHTML: "",
-    addEventListener() {},
+    addEventListener(event, listener) { listeners[event] = listener; },
     querySelector() { return null; },
     querySelectorAll() { return []; },
-    contains() { return false; },
+    contains() { return true; },
   };
   const ws = createPathwayWorkshop({
     $: (sel) => (sel === "#ontology-board" ? root : null),
@@ -64,6 +66,14 @@ function harness(opts = {}) {
     ws,
     calls,
     root,
+    listeners,
+    click(action, attrs = {}) {
+      const button = {
+        getAttribute: (key) => key === "data-action" ? action : attrs[key] ?? null,
+        closest: (selector) => selector === "[data-action]" ? button : null,
+      };
+      listeners.click({ target: button });
+    },
     get board() { return board; },
     set year(n) { year = n; },
     get year() { return year; },
@@ -71,6 +81,254 @@ function harness(opts = {}) {
 }
 
 describe("pathway workshop", () => {
+  it("writes an unbound board idea, assesses it locally, and awards relief only after commitment", async () => {
+    const bills = [];
+    const awards = [];
+    const h = harness({
+      api: {
+        reconcileStackFromBoard: (techs) => { bills.push([...techs]); return { ok: true }; },
+        grantPathwayEase: (score) => awards.push(score),
+        coInvent: async (mode, _message, context) => {
+          h.calls.push(mode);
+          return localCoInvent({ mode, context });
+        },
+      },
+    });
+    h.ws.seedFromMission({ place: "Paddy Step Wells", pressure: { "Clean Water": 3 }, spotlight: { techId: "battery" } });
+    h.ws.setBoardFlow("problem-first");
+    h.ws.fillMintHow("Drones fly a supervised aerial mapping route to identify irrigation leaks and mark repairs for the well crew.");
+    h.click("write-pathway");
+
+    const [pathwayId] = Object.keys(h.board.pathways);
+    const ingredient = () => h.board.pathways[pathwayId].ingredients[0];
+    assert.equal(ingredient().techStatus, "unbound");
+    assert.deepEqual(bills, []);
+    await Promise.resolve();
+    assert.equal(ingredient().techId, null);
+    assert.equal(ingredient().proposedTechId, "drones");
+    assert.equal(ingredient().timingLevel, "green");
+    assert.ok(ingredient().linkedMilestoneYear <= h.year);
+
+    const [crisisId] = Object.keys(h.board.crises);
+    await h.ws.plug(pathwayId, crisisId);
+    assert.deepEqual(h.calls, ["assess-feasibility"]);
+    assert.equal(h.board.crises[crisisId].delta, 0);
+    assert.deepEqual(awards, []);
+    assert.match(h.root.innerHTML, /Commit the pathway’s required technology/);
+    assert.equal(h.ws.commitProposedTech(pathwayId, ingredient().id), true);
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.deepEqual(bills, [["drones"]]);
+    assert.deepEqual(h.calls, ["assess-feasibility", "score-pathway"]);
+    assert.ok(h.board.crises[crisisId].delta < 0);
+    assert.equal(awards.length, 1);
+  });
+
+  it("reassesses at the linked forecast year and preserves the forecast on the idea", async () => {
+    const milestone = resolveTechTrack("drones").milestones.find((m) => m.year > 2026);
+    const calls = [];
+    let reassessmentCandidates;
+    const h = harness({
+      api: {
+        coInvent: async (mode, _message, context) => {
+          if (mode !== "assess-feasibility") return {};
+          calls.push([context.year, context.selectedTechIds]);
+          if (context.year >= milestone.year) {
+            reassessmentCandidates = context.backcastCandidates;
+          }
+          return context.year < milestone.year
+            ? { timing: { level: "red", reason: "This payload requires a later heavy cargo drone." },
+                backcast: { techId: "drones", milestoneId: milestone.id } }
+            : { timing: { level: "green", reason: "Cargo drones can now lift the payload." } };
+        },
+      },
+    });
+    h.ws.seedFromMission({ pressure: { "Clean Water": 3 } });
+    h.ws.setBoardFlow("problem-first");
+    h.ws.fillMintHow("Drones lift full water tanks to cut deliveries off the flooded roads.");
+    h.click("write-pathway");
+    const [pathwayId] = Object.keys(h.board.pathways);
+    const ingredient = () => h.board.pathways[pathwayId].ingredients[0];
+    await Promise.resolve();
+    assert.equal(ingredient().timingLevel, "red");
+    assert.equal(ingredient().linkedMilestoneId, milestone.id);
+    assert.equal(h.ws.commitProposedTech(pathwayId, ingredient().id), true);
+
+    h.year = milestone.year;
+    await h.ws.refreshAfterYearChange();
+    assert.deepEqual(calls, [[2026, []], [milestone.year, ["drones"]]]);
+    assert.equal(reassessmentCandidates.tracks[0].milestones[0].id, milestone.id);
+    assert.equal(ingredient().timingLevel, "green");
+    assert.equal(ingredient().linkedMilestoneId, milestone.id);
+    assert.equal(ingredient().needsTimingAssess, false);
+  });
+
+  it("replaces an inferred forecast when a committed pathway's mechanism is rewritten", async () => {
+    const track = resolveTechTrack("drones");
+    const future = track.milestones.find((m) => m.year > 2026);
+    const reached = track.milestones.find((m) => m.year <= 2026 && m.useCases.length);
+    const h = harness({
+      api: {
+        coInvent: async (mode, _message, context) => {
+          if (mode !== "assess-feasibility") return {};
+          assert.ok(context.backcastCandidates);
+          const isCargo = context.inventionHow.includes("tanks");
+          return {
+            timing: { level: isCargo ? "red" : "green", reason: "Checked the proposed mechanism." },
+            backcast: { techId: "drones", milestoneId: (isCargo ? future : reached).id },
+          };
+        },
+      },
+    });
+    h.ws.seedFromMission({ pressure: { "Clean Water": 3 } });
+    h.ws.setBoardFlow("problem-first");
+    h.ws.fillMintHow("Drones lift full water tanks to cut deliveries off the flooded roads.");
+    h.click("write-pathway");
+    const [pathwayId] = Object.keys(h.board.pathways);
+    const ingredient = () => h.board.pathways[pathwayId].ingredients[0];
+    await Promise.resolve();
+    const oldUseCaseId = ingredient().backcastUseCaseId;
+    assert.ok(oldUseCaseId);
+    assert.equal(h.ws.commitProposedTech(pathwayId, ingredient().id), true);
+    h.root.querySelector = (selector) => selector.includes("pathway-how-input")
+      ? { value: "Drones map flood damage so the crew knows where to start repairs." }
+      : null;
+    h.click("save-pathway-how", { "data-pathway-id": pathwayId });
+    await Promise.resolve();
+    assert.equal(ingredient().linkedMilestoneId, reached.id);
+    assert.deepEqual(ingredient().useCaseIds, [ingredient().backcastUseCaseId]);
+    assert.ok(!ingredient().useCaseIds.includes(oldUseCaseId));
+    assert.equal(ingredient().timingLevel, "green");
+  });
+
+  it("uses the chosen crisis for briefs and preserves unbound SIT and SCAMPER seeds", async () => {
+    const requests = [];
+    const h = harness({
+      api: {
+        coInvent: async (mode, _message, context) => {
+          requests.push(context);
+          return localCoInvent({ mode, context });
+        },
+      },
+    });
+    h.ws.seedFromMission({ pressure: { "Clean Water": 3, "Farm Yield": 3 }, spotlight: { techId: "drones" } });
+    h.ws.setBoardFlow("problem-first");
+    const second = Object.values(h.board.crises)[1];
+    h.ws.openWorkbenchForCrisis(second.id);
+    await h.ws.dealHmwOptionsAi();
+    assert.equal(requests.at(-1).scarcity, second.name);
+    assert.ok(h.ws.getWorkbenchState().hmwBrief.includes(second.name));
+
+    h.ws.setWorkbenchMethod("seed");
+    const seed = h.ws.addPlayerWorkbenchIdea({ title: "Repair ledger", howText: "Teams keep a signed repair ledger at each neighborhood well." });
+    for (const method of ["sit", "scamper"]) {
+      assert.equal(h.ws.remixInWorkbench("draft", seed.id, method), true);
+      assert.equal(h.ws.getWorkbenchState().remixSeed.techId, null);
+      const written = h.ws.addPlayerWorkbenchIdea({ howText: "Teams move the verification step ahead of each repair handoff." });
+      assert.equal(written.techStatus, "unbound");
+      const generated = await h.ws.dealWorkbenchAiIdeas();
+      assert.deepEqual(requests.at(-1).techIds, []);
+      assert.ok(generated.length);
+      assert.ok(generated.every((draft) => draft.techId === null && draft.techStatus === "unbound"));
+    }
+  });
+
+  it("carries the canvas pair through generated ideas and ignores it in Tech → Problem", async () => {
+    let useLocal = true;
+    const requests = [];
+    const h = harness({
+      api: {
+        coInvent: async (mode, _message, context) => {
+          requests.push(context);
+          if (mode === "workbench-lens" && !useLocal) {
+            return { ideas: [{ title: "Aerial charging relay", howText: "Solar panels charge drones that map washed-out roads.", techId: "drones" }] };
+          }
+          return localCoInvent({ mode, context });
+        },
+      },
+    });
+    h.ws.seedFromMission({ pressure: { "Clean Water": 3 }, spotlight: { techId: "battery" } });
+    h.ws.setBoardFlow("problem-first");
+    h.ws.pickConvergenceTech("drones");
+    h.ws.pickConvergenceTech("solar");
+    h.ws.setWorkbenchMethod("seed");
+    const local = await h.ws.dealWorkbenchAiIdeas();
+    assert.ok(local.some((draft) => draft.techId === "drones" && draft.secondaryTechId === "solar"));
+    useLocal = false;
+    const [generated] = await h.ws.dealWorkbenchAiIdeas();
+    assert.equal(generated.secondaryTechId, "solar");
+    assert.equal(h.ws.startPathwayFromIdea(generated.id), true);
+    const [pathway] = Object.values(h.board.pathways);
+    assert.deepEqual(pathway.ingredients.map((ing) => ing.techId), ["drones", "solar"]);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(requests.filter((context) => context.inventionHow).map((context) => context.selectedTechIds), [["drones"], ["solar"]]);
+
+    h.ws.setBoardFlow("tech-first");
+    const written = h.ws.addPlayerWorkbenchIdea({ howText: "The well crew meters extra power during each maintenance shift." });
+    assert.equal(written.techId, "battery");
+    assert.equal(written.secondaryTechId, null);
+    await h.ws.dealWorkbenchAiIdeas();
+    assert.deepEqual(requests.at(-1).techIds, ["battery"]);
+    assert.equal(requests.at(-1).convergenceTechIds, undefined);
+  });
+
+  it("backcasts to a hosted milestone off-stack and plots its threshold only on its own curve", async (t) => {
+    const base = {
+      techId: "drones",
+      hasCurve: true,
+      unit: "kg",
+      compounding: { kind: "cagr", annualRate: 0.1 },
+      anchor: { date: "2026", value: 10 },
+      domain: { start: 2024, end: 2035 },
+    };
+    const cargo = {
+      ...base,
+      id: "drone-cargo",
+      name: "Pallet airlift payload",
+      milestones: [{ id: "pallet", label: "Pallet airlift", year: 2031, value: 90, status: "predicted" }],
+    };
+    const endurance = { ...base, id: "drone-endurance", name: "Drone endurance", unit: "hours", milestones: [] };
+    const originalChart = globalThis.Chart;
+    let config;
+    globalThis.Chart = class {
+      constructor(_canvas, chartConfig) { config = chartConfig; }
+    };
+    t.after(() => { globalThis.Chart = originalChart; });
+    let candidates;
+    const h = harness({
+      api: {
+        getTrends: (techId) => techId === "drones" ? [cargo, endurance] : [],
+        coInvent: async (_mode, _message, context) => {
+          candidates = context.backcastCandidates;
+          return { timing: { level: "red", reason: "Pallet airlift requires a heavier payload." } };
+        },
+      },
+    });
+    h.root.querySelectorAll = (selector) =>
+      selector === "canvas[data-trend-tech]" && h.root.innerHTML.includes('data-trend-tech="drones"')
+        ? [{ getAttribute: () => "drones" }]
+        : [];
+    h.ws.seedFromMission({ pressure: { "Clean Water": 3 }, spotlight: { techId: "battery" } });
+    h.ws.setBoardFlow("problem-first");
+    h.ws.fillMintHow("Drones provide pallet airlift to carry sealed water tanks across the ravine.");
+    h.click("write-pathway");
+    await Promise.resolve();
+    const [pathway] = Object.values(h.board.pathways);
+    const [ingredient] = pathway.ingredients;
+    const hosted = candidates.tracks.find((track) => track.techId === "drones").milestones.find((m) => m.label === "Pallet airlift");
+    assert.ok(hosted);
+    assert.equal(ingredient.linkedMilestoneId, hosted.id);
+    h.ws.focusTech("drones");
+    assert.equal(config.options.plugins.annotation.annotations.neededLine.yMin, 90);
+    const select = {
+      closest: (selector) => selector === "select[data-action='select-trend']" ? select : null,
+      getAttribute: () => "drones",
+      value: endurance.id,
+    };
+    h.listeners.change({ target: select });
+    assert.equal(config.options.plugins.annotation.annotations.neededLine, undefined);
+  });
+
   it("deals milestones and fuses with no model call, and scores only after a wire", async () => {
     const h = harness();
     h.ws.seedFromMission({ place: "Paddy Step Wells", pressure: { "Clean Water": 3 }, spotlight: { techId: "drones" } });
@@ -2376,5 +2634,147 @@ describe("pathway workshop", () => {
     assert.doesNotMatch(customRoot.innerHTML, /🎙️/);
     listeners.click({ target: makeBtn("ask-co-inventor") });
     assert.equal(opened, 2);
+  });
+
+  it("supports Problem → Tech polarity mirroring, always-visible Convergence Canvas, hidden hints, backcast linking, and synchronous tech commit", async () => {
+    let billedTechs = [];
+    const h = harness({
+      api: {
+        getMission: () => ({
+          place: "Border Clinic",
+          spotlight: { techId: "gene-sequencing" },
+          suggested: ["gene-sequencing", "battery"],
+          suggestedWhy: {
+            "gene-sequencing": "Reads swabs in one shift to ease Outbreak.",
+            battery: "Keeps clinic power steady.",
+          },
+          pressure: { Outbreak: 3 },
+        }),
+        reconcileStackFromBoard: (all) => {
+          billedTechs = [...all];
+          return { ok: true };
+        },
+        coInvent: async (mode, _msg, ctx) => {
+          h.calls.push(mode);
+          if (mode === "assess-feasibility") {
+            assert.ok(ctx.backcastCandidates, "expected grounded backcastCandidates on unbound assessment");
+            const gs = resolveTechTrack("gene-sequencing");
+            const reached = gs.milestones.find((m) => m.status === "reached" && m.year <= 2026);
+            return {
+              timing: { level: "green", reason: "Portable sequencers run on site in 2026." },
+              backcast: {
+                techId: "gene-sequencing",
+                milestoneId: reached.id,
+                useCaseId: reached.useCases?.[0]?.id || null,
+                beyondForecasts: false,
+              },
+            };
+          }
+          return {};
+        },
+      },
+    });
+    h.ws.seedFromMission({
+      place: "Border Clinic",
+      spotlight: { techId: "gene-sequencing" },
+      suggested: ["gene-sequencing", "battery"],
+      pressure: { Outbreak: 3 },
+    });
+
+    // Default polarity is tech-first
+    assert.equal(h.ws.getBoardFlow(), "tech-first");
+    assert.ok(
+      h.root.innerHTML.indexOf('id="ontology-lane-tech"') <
+        h.root.innerHTML.indexOf('id="ontology-lane-problem"')
+    );
+
+    // Flip to Problem → Tech: mirrors lanes in place (Problem first, Tech last)
+    assert.equal(h.ws.setBoardFlow("problem-first"), true);
+    assert.equal(h.ws.getBoardFlow(), "problem-first");
+    assert.ok(
+      h.root.innerHTML.indexOf('id="ontology-lane-problem"') <
+        h.root.innerHTML.indexOf('id="ontology-lane-pathway"')
+    );
+    assert.ok(
+      h.root.innerHTML.indexOf('id="ontology-lane-pathway"') <
+        h.root.innerHTML.indexOf('id="ontology-lane-use"')
+    );
+    assert.ok(
+      h.root.innerHTML.indexOf('id="ontology-lane-use"') <
+        h.root.innerHTML.indexOf('id="ontology-lane-tech"')
+    );
+    assert.match(h.root.innerHTML, /Frame &amp; Ideate/);
+
+    // Tech hints are hidden by default in Problem-Pull picker until toggled on
+    const crisisId = Object.keys(h.board.crises)[0];
+    assert.equal(h.ws.openWorkbenchForCrisis(crisisId), true);
+    assert.equal(h.ws.getWorkbenchState().open, true);
+    assert.equal(h.ws.getWorkbenchState().diamond, "problem");
+    assert.ok(
+      h.root.innerHTML.indexOf('data-lane="problem"') <
+        h.root.innerHTML.indexOf('id="ontology-lane-pathway"'),
+      "Problem rail docks on the left in Problem → Tech Workbench"
+    );
+
+    // Move to Diamond 2: always-visible Convergence Canvas appears with suggested hints hidden
+    h.ws.lockHmwAndIdeate("How might we identify outbreaks in one shift at Border Clinic?");
+    assert.match(h.root.innerHTML, /wb-conv-map/);
+    assert.match(h.root.innerHTML, /💡 Show tech hints/);
+    assert.doesNotMatch(h.root.innerHTML, /wb-conv-chip[^"]*is-rec/);
+    h.ws.toggleTechHints();
+    assert.match(h.root.innerHTML, /wb-conv-chip[^"]*is-rec/);
+    h.ws.toggleTechHints();
+
+    // Write a completely tech-free idea -> starts Pathway at 0$ (no Moves/Budget spent yet)
+    const freeIdea = h.ws.addPlayerWorkbenchIdea({
+      title: "Shift Swab Reader",
+      howText: "Clinic nurses sequence nasal swabs on a rugged bedside reader in under four hours.",
+    });
+    assert.equal(freeIdea.techId, null);
+    assert.equal(freeIdea.techStatus, "unbound");
+    assert.equal(h.ws.startPathwayFromIdea(freeIdea.id), true);
+    assert.deepEqual(billedTechs, [], "starting a tech-free pathway must not spend Moves/Budget");
+
+    // Let async assessIngredientFeasibility finish
+    await new Promise((r) => setTimeout(r, 20));
+    const pwId = Object.keys(h.board.pathways)[0];
+    const ing = h.board.pathways[pwId].ingredients[0];
+    assert.equal(ing.techId, null, "async backcast never bills or promotes techId silently");
+    assert.equal(ing.proposedTechId, "gene-sequencing");
+    assert.equal(ing.techStatus, "proposed");
+    assert.ok(h.board.techTracks["gene-sequencing"], "backcast adds emTech track to Lane 4");
+    assert.ok(Object.keys(h.board.useCases).length >= 1, "backcast populates linked Use Case in Lane 3");
+    assert.deepEqual(billedTechs, [], "still 0 async spend before player clicks Commit");
+
+    // Close workbench to inspect mirrored 4-lane circuit: 🎯 Needed badge + reversed trace sentence + Commit button
+    h.ws.closeWorkbench();
+    assert.match(h.root.innerHTML, /🎯 Needed/);
+    assert.match(h.root.innerHTML, /data-action="commit-proposed-tech"/);
+    const traceHtml = formatChainSentence(
+      resolveChainHighlight({
+        trace: { type: "pathway", id: pwId },
+        tracks: [{ techId: "gene-sequencing", name: "Gene Sequencing", milestones: [{ id: ing.linkedMilestoneId, year: 2026, status: "reached", label: ing.linkedMilestoneLabel }] }],
+        useCases: Object.values(h.board.useCases),
+        pathways: [{ id: pwId, title: "Shift Swab Reader", ingredients: [ing] }],
+        crises: Object.values(h.board.crises),
+        wires: [{ id: "w-1", pathwayId: pwId, crisisId }],
+      }),
+      {
+        year: 2026,
+        boardFlow: "problem-first",
+        tracks: [{ techId: "gene-sequencing", name: "Gene Sequencing", milestones: [{ id: ing.linkedMilestoneId, year: 2026, status: "reached", label: ing.linkedMilestoneLabel }] }],
+        useCases: Object.values(h.board.useCases),
+        pathways: [{ id: pwId, title: "Shift Swab Reader", ingredients: [ing] }],
+        crises: Object.values(h.board.crises),
+      }
+    );
+    assert.match(traceHtml.text, /^To address Outbreak, we build Shift Swab Reader/);
+    assert.match(traceHtml.text, /unlocked by Gene Sequencing/);
+
+    // 1-click Commit promotes techId and bills synchronously
+    assert.equal(h.ws.commitProposedTech(pwId, ing.id), true);
+    assert.equal(h.board.pathways[pwId].ingredients[0].techId, "gene-sequencing");
+    assert.equal(h.board.pathways[pwId].ingredients[0].techStatus, "committed");
+    assert.deepEqual(billedTechs, ["gene-sequencing"]);
   });
 });

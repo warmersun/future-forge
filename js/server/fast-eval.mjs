@@ -255,6 +255,8 @@ yellow = vague, OR after checking year the claimed scale is not yet demonstrated
 red = only (1) grounding EXPLICITLY forbids / says not yet, or (2) sci-fi treated as routine (consumer flying cars, mind upload). Never red or yellow merely for "different category" or "not a small hopper".
 If priorTiming is set with the same claims, a later year must not score harsher.
 Write a concrete, complete timing reason of at most 400 characters. Explain what is demonstrated or what is not yet possible; do not cut a word or leave a sentence unfinished.
+If backcastCandidates is present in the JSON state, ALSO return a top-level "backcast" object linking the claim to grounded ontology: {"techId": "valid catalog tech id from backcastCandidates.catalogTechIds or null when none matches", "milestoneId": "exact milestone id from backcastCandidates.tracks or null", "useCaseId": "exact useCase id from backcastCandidates.tracks or null", "customUseCaseTitle": "short 4-8 word functional use case if none fits, or null", "beyondForecasts": boolean, "gapReason": "one sentence when beyondForecasts is true, else empty string"}. Never invent a milestoneId or year not listed in backcastCandidates; set beyondForecasts true only when the claim requires capability beyond all listed milestones or violates explicit grounding limits.
+Evaluate relevant backcast milestones against the quest year. A listed capability can support a claim at its forecast year if the mechanism fits the milestone's limits.
 ${WORLD_CLOCK_TIMING_LINE}
 ${ASSESS_GROUNDING_LINE}
 ${SOURCE_CONSTRAINT_LINE}
@@ -306,12 +308,13 @@ Honor method:
 Every solution idea (seed/sit/scamper) is a pilot-honest local mechanism, not a bill, ban, or UBI.
 title is a plain noun phrase (<=64 chars). howText is 1-2 crisp everyday sentences (for define, one "How might we ...?" question <=220 chars).
 Set lens to the matching lens id (or method), techId to a listed tech id (or null for human/problem cards), world to bits|atoms|split|plain, eases to the exact crisis label helped most.
+When convergenceTechIds lists a pair, use both technologies in each technological idea and set techId and secondaryTechId to the first and second ID, respectively. Leave secondaryTechId null for a single-tech or human idea.
 Do not repeat avoidTitles.
 ${WORLD_CLOCK_CONTEXT_LINE}
 ${GROUNDING_LINE}
 ${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
-{"ideas":[{"id":"slug","lens":"subtraction","lensLabel":"SIT · Subtraction","title":"<=64 chars","howText":"<=360 chars","techId":"tech-id-or-null","world":"bits|atoms|split|plain","eases":"crisis label","imagePrompt":"<=400 chars"}]}`;
+{"ideas":[{"id":"slug","lens":"subtraction","lensLabel":"SIT · Subtraction","title":"<=64 chars","howText":"<=360 chars","techId":"tech-id-or-null","secondaryTechId":"tech-id-or-null","world":"bits|atoms|split|plain","eases":"crisis label","imagePrompt":"<=400 chars"}]}`;
 
 export const POSE_CHALLENGE_SYSTEM = `You are a hostile critic in Future Forge (local inventing practice).
 Speak ONLY as the fixed challengeAngle: moloch (system traps/freeriding), ethicist (hard tradeoffs), stakeholder (funding/permits/public), or nature (physical/ecological limits).
@@ -542,6 +545,9 @@ function buildAssessFeasibilityPayload(context) {
     inventionImpact: clip(context?.inventionImpact, 800),
     stack,
     priorTiming: context?.priorTiming || null,
+    ...(context?.backcastCandidates && typeof context.backcastCandidates === "object"
+      ? { backcastCandidates: context.backcastCandidates }
+      : {}),
     ...(inquiry ? { sourceInquiry: inquiry } : {}),
     ...(worldClock ? { worldClock } : {}),
   };
@@ -613,6 +619,9 @@ function buildWorkbenchLensPayload(context) {
     method,
     lenses,
     techIds,
+    ...(Array.isArray(context?.convergenceTechIds) && context.convergenceTechIds.length === 2
+      ? { convergenceTechIds: context.convergenceTechIds.map(String) }
+      : {}),
     techs,
     scarcity: clip(context?.scarcity, 140) || null,
     hmwBrief: clip(context?.hmwBrief, 280) || null,
@@ -770,13 +779,62 @@ function sanitizeScorePathway(parsed, source, context) {
   };
 }
 
+function sanitizeBackcast(raw, candidates) {
+  if (!raw || typeof raw !== "object") return null;
+  const allowedTechs = new Set(
+    Array.isArray(candidates?.catalogTechIds) ? candidates.catalogTechIds.map(String) : []
+  );
+  const techIdRaw = raw.techId ? String(raw.techId).trim() : "";
+  const techId =
+    techIdRaw && (!allowedTechs.size || allowedTechs.has(techIdRaw)) ? techIdRaw : null;
+
+  const allowedMilestones = new Set();
+  const allowedUseCases = new Set();
+  for (const tr of Array.isArray(candidates?.tracks) ? candidates.tracks : []) {
+    if (techId && tr?.techId && tr.techId !== techId) continue;
+    for (const ms of Array.isArray(tr?.milestones) ? tr.milestones : []) {
+      if (ms?.id) allowedMilestones.add(String(ms.id));
+      for (const uc of Array.isArray(ms?.useCases) ? ms.useCases : []) {
+        if (uc?.id) allowedUseCases.add(String(uc.id));
+      }
+    }
+  }
+
+  const msRaw = raw.milestoneId ? String(raw.milestoneId).trim() : "";
+  const milestoneId =
+    msRaw && (!allowedMilestones.size || allowedMilestones.has(msRaw)) ? msRaw : null;
+  const ucRaw = raw.useCaseId ? String(raw.useCaseId).trim() : "";
+  const useCaseId =
+    ucRaw && (!allowedUseCases.size || allowedUseCases.has(ucRaw)) ? ucRaw : null;
+  const customUseCaseTitle = raw.customUseCaseTitle
+    ? clip(raw.customUseCaseTitle, 80)
+    : null;
+  const beyondForecasts = raw.beyondForecasts === true || raw.beyondForecasts === "true";
+  const gapReason = beyondForecasts ? clip(raw.gapReason, 400) : "";
+
+  if (!techId && !milestoneId && !beyondForecasts && !customUseCaseTitle) return null;
+  return {
+    techId,
+    milestoneId: beyondForecasts ? null : milestoneId,
+    useCaseId: beyondForecasts ? null : useCaseId,
+    customUseCaseTitle: beyondForecasts ? null : customUseCaseTitle,
+    beyondForecasts,
+    gapReason,
+  };
+}
+
 function sanitizeTiming(parsed, source, context) {
   const raw = parsed?.timing || parsed;
   const inquiry = sourceInquiryOf(context, "assess-feasibility");
-  return {
+  const out = {
     source,
     timing: sanitizeScenarioTiming(raw, inquiry?.premise),
   };
+  if (context?.backcastCandidates && parsed?.backcast) {
+    const bc = sanitizeBackcast(parsed.backcast, context.backcastCandidates);
+    if (bc) out.backcast = bc;
+  }
+  return out;
 }
 
 function sanitizeIdeas(parsed, source, context) {
@@ -952,7 +1010,7 @@ export const FAST_EVAL_MODES = {
     system: ASSESS_FEASIBILITY_SYSTEM,
     userPrefix: "Judge claim timing (JSON state):",
     temperature: 0,
-    maxOutputTokens: 400,
+    maxOutputTokens: 560,
   },
   "evaluate-convergence": {
     system: EVALUATE_CONVERGENCE_SYSTEM,

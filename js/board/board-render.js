@@ -189,9 +189,10 @@ export function resolveChainHighlight(view) {
     const direct = [];
     const seen = new Set();
     for (const ing of pw?.ingredients || []) {
-      if (ing.techId && !coveredByUc.has(ing.techId) && !seen.has(ing.techId)) {
-        seen.add(ing.techId);
-        direct.push(ing.techId);
+      const tid = ing.techId || ing.proposedTechId;
+      if (tid && !coveredByUc.has(tid) && !seen.has(tid)) {
+        seen.add(tid);
+        direct.push(tid);
       }
     }
     return direct;
@@ -202,6 +203,7 @@ export function resolveChainHighlight(view) {
     pathwayIds.add(pw.id);
     for (const ing of pw.ingredients || []) {
       if (ing.techId) techIds.add(ing.techId);
+      if (ing.proposedTechId) techIds.add(ing.proposedTechId);
       for (const uid of ing.useCaseIds || []) {
         const uc = ucById.get(uid);
         if (uc) {
@@ -253,7 +255,7 @@ export function resolveChainHighlight(view) {
       }
     }
     for (const pw of pathways) {
-      if ((pw.ingredients || []).some((ing) => ing.techId === track.techId)) {
+      if ((pw.ingredients || []).some((ing) => (ing.techId || ing.proposedTechId) === track.techId)) {
         if (pwDirectTechIds(pw).includes(track.techId)) {
           tier2Edges.add(`tech:${track.techId}->${pw.id}`);
         }
@@ -432,6 +434,56 @@ export function formatChainSentence(highlight, view) {
   );
   const crTextParts = chainCrises.map((c) => c.name || c.role || c.id);
 
+  const isProblemFirst = view?.boardFlow === "problem-first";
+  if (isProblemFirst) {
+    const revHtml = [];
+    const revText = [];
+    if (chainCrises.length && chainPws.length) {
+      revHtml.push(`To address ${joinList(crHtmlParts, 3)}, we build ${joinList(pwHtmlParts, 2)}`);
+      revText.push(`To address ${joinList(crTextParts, 3)}, we build ${joinList(pwTextParts, 2)}`);
+    } else if (chainPws.length) {
+      revHtml.push(`We build ${joinList(pwHtmlParts, 2)}`);
+      revText.push(`We build ${joinList(pwTextParts, 2)}`);
+    } else if (chainCrises.length) {
+      revHtml.push(
+        `${joinList(crHtmlParts, 3)} <span class="trace-hint">— frame &amp; ideate a pathway in the Workbench.</span>`
+      );
+      revText.push(`${joinList(crTextParts, 3)} — frame & ideate a pathway in the Workbench.`);
+    }
+
+    if (chainUcs.length) {
+      const lead = revHtml.length ? ", requiring " : "Requires ";
+      revHtml.push(`${lead}${joinList(ucHtmlParts, 2)}`);
+      revText.push(`${lead}${joinList(ucTextParts, 2)}`);
+    }
+
+    if (chainTechs.length || chainMs.length) {
+      const subjHtml = techHtmlParts.length ? joinList(techHtmlParts, 2) : `<strong class="trace-tech">this capability</strong>`;
+      const subjText = techTextParts.length ? joinList(techTextParts, 2) : "this capability";
+      if (chainMs.length) {
+        const allAhead = chainMs.every((m) => m.status !== "reached" && Number(m.year) > year);
+        const verb = allAhead ? "forecast to reach" : "reaching";
+        const joiner = revHtml.length ? " — unlocked by " : "Unlocked by ";
+        revHtml.push(`${joiner}${subjHtml} ${verb} ${joinList(msHtmlParts, 2)}`);
+        revText.push(`${joiner}${subjText} ${verb} ${joinList(msTextParts, 2)}`);
+      } else {
+        const joiner = revHtml.length ? " — backed by " : "Backed by ";
+        revHtml.push(`${joiner}${subjHtml}`);
+        revText.push(`${joiner}${subjText}`);
+      }
+    }
+
+    if (revHtml.length) {
+      const joinedHtml = revHtml.join("");
+      const joinedText = revText.join("");
+      const needsDot = !/[.!?]$/.test(joinedText);
+      return {
+        html: needsDot && !joinedHtml.includes("trace-hint") ? `${joinedHtml}.` : joinedHtml,
+        text: needsDot && !joinedHtml.includes("trace-hint") ? `${joinedText}.` : joinedText,
+      };
+    }
+  }
+
   const htmlSentences = [];
   const textSentences = [];
   let techUsedInLead = false;
@@ -563,6 +615,8 @@ function renderTraceBar(highlight, view) {
  * @param {object} view
  */
 export function renderOntologyBoard(view) {
+  const isProblemFirst = view?.boardFlow === "problem-first";
+  const showTechHints = Boolean(view?.showTechHints);
   const year = Number(view?.year) || 2026;
   const tracks = Array.isArray(view?.tracks) ? view.tracks : [];
   const useCases = Array.isArray(view?.useCases) ? view.useCases : [];
@@ -595,8 +649,9 @@ export function renderOntologyBoard(view) {
       }
     }
     for (const ing of pw.ingredients || []) {
-      if (ing.techId && !coveredByUc.has(ing.techId)) {
-        directTechPathways.add(ing.techId);
+      const tid = ing.techId || ing.proposedTechId;
+      if (tid && !coveredByUc.has(tid)) {
+        directTechPathways.add(tid);
       }
     }
   }
@@ -614,18 +669,29 @@ export function renderOntologyBoard(view) {
           )
         )
         .join("")
-    : `<div class="ontology-empty-card">
-        <p class="ontology-empty-title">Start at the left of the chain</p>
-        <p class="ontology-empty">Pick an emerging tech to inspect its trend, reached milestones, and future forecasts.</p>
-        <button type="button" class="btn btn-primary btn-sm" data-action="toggle-picker">+ Add tech</button>
-      </div>`;
+    : isProblemFirst
+      ? `<div class="ontology-empty-card">
+          <p class="ontology-empty-title">Needed emTech &amp; capability level</p>
+          <p class="ontology-empty">Assessing an idea in Lane 2 links its required emTech, reached or forecast milestones, and curve threshold here — or add any tech to inspect its curve.</p>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="toggle-picker">+ Add tech</button>
+        </div>`
+      : `<div class="ontology-empty-card">
+          <p class="ontology-empty-title">Start at the left of the chain</p>
+          <p class="ontology-empty">Pick an emerging tech to inspect its trend, reached milestones, and future forecasts.</p>
+          <button type="button" class="btn btn-primary btn-sm" data-action="toggle-picker">+ Add tech</button>
+        </div>`;
 
   const useLane = useCases.length
     ? useCases.map((uc) => renderUseCase(uc, year, selected.has(uc.id), highlight)).join("")
-    : `<div class="ontology-empty-card">
-        <p class="ontology-empty-title">Unlock building blocks</p>
-        <p class="ontology-empty">Tap any milestone in Lane 1 to deal the general use cases it unlocks.</p>
-      </div>`;
+    : isProblemFirst
+      ? `<div class="ontology-empty-card">
+          <p class="ontology-empty-title">Required use cases</p>
+          <p class="ontology-empty">Assessing a Pathway in Lane 2 populates the functional use cases it relies on here — or add a custom one.</p>
+        </div>`
+      : `<div class="ontology-empty-card">
+          <p class="ontology-empty-title">Unlock building blocks</p>
+          <p class="ontology-empty">Tap any milestone in Lane 1 to deal the general use cases it unlocks.</p>
+        </div>`;
 
   const customTechField =
     tracks.length > 1
@@ -657,6 +723,7 @@ export function renderOntologyBoard(view) {
 
   const composerHtml = renderPathwayComposer({
     tracks,
+    isProblemFirst,
     focusedTechId,
     focusedTechName,
     selectedCount: selected.size,
@@ -695,7 +762,13 @@ export function renderOntologyBoard(view) {
 
   const emptyHint =
     !pathways.length && !sparks.length
-      ? `<p class="ontology-empty ontology-lane-hint">Ask for ideas on a selected use case—or write your own—then fuse pieces together here.</p>`
+      ? isProblemFirst
+        ? `<div class="ontology-empty-card is-problem-cta">
+            <p class="ontology-empty-title">Start with the problem in the Workbench</p>
+            <p class="ontology-empty">Unpack tensions, frame a <strong>How Might We…</strong> brief, and ideate with the Convergence Canvas — then assess to link Use Cases &amp; capability levels.</p>
+            <button type="button" class="btn btn-primary btn-sm" data-action="toggle-workbench">⤢ Frame &amp; Ideate in Workbench →</button>
+          </div>`
+        : `<p class="ontology-empty ontology-lane-hint">Ask for ideas on a selected use case—or write your own—then fuse pieces together here.</p>`
       : "";
   const pathLane = `${composerHtml}${sparksHtml}${pathCardsHtml}${emptyHint}`;
 
@@ -717,12 +790,17 @@ export function renderOntologyBoard(view) {
       <div class="ontology-rules-chips">${ruleChips}</div>
     </div>` +
     (crises
-      .map((c) => renderCrisisCard(c, wires, highlight, collapsedSet.has(`crisis:${c.id}`)))
+      .map((c) =>
+        renderCrisisCard(c, wires, highlight, collapsedSet.has(`crisis:${c.id}`), isProblemFirst)
+      )
       .join("") ||
       `<p class="ontology-empty">Crises land here after the briefing.</p>`);
 
   const picker = view?.pickerOpen
-    ? renderPicker(catalog, view?.pickerDomain || "all")
+    ? renderPicker(catalog, view?.pickerDomain || "all", {
+        isProblemFirst,
+        showTechHints,
+      })
     : "";
 
   const roadblockModal = view?.openChallenger
@@ -752,45 +830,61 @@ export function renderOntologyBoard(view) {
   const wbOpen = Boolean(wb.open);
   const wbBadge = wb.draftCount > 0 ? ` <span class="ontology-wb-badge">${wb.draftCount}</span>` : "";
 
-  const lanesBody = wbOpen
-    ? `<div class="ontology-lanes is-workbench-open">
-        ${renderWorkbenchLeftRail(tracks, useCases, year, selected, wb)}
-        ${renderWorkbenchStudio(view, wb, tracks, useCases, pathways, crises, wires, selected, collapsedSet)}
-        ${renderWorkbenchRightRail(crises, wires, rules)}
-      </div>`
-    : `<div class="ontology-lanes">
-        <section id="ontology-lane-tech" class="ontology-lane" data-lane="tech" aria-label="Tech and milestones">
+  const nums = isProblemFirst
+    ? { problem: 1, pathway: 2, use: 3, tech: 4 }
+    : { tech: 1, use: 2, pathway: 3, problem: 4 };
+
+  const techSection = `<section id="ontology-lane-tech" class="ontology-lane" data-lane="tech" aria-label="Tech and milestones">
           <header class="ontology-lane-head">
-            <h2><span class="ontology-lane-num">1</span> Tech &amp; Milestones</h2>
+            <h2><span class="ontology-lane-num">${nums.tech}</span> Tech &amp; Milestones</h2>
             <button type="button" class="ontology-mini-btn is-accent" id="btn-add-tech" data-action="toggle-picker">+ Add tech</button>
           </header>
           <div class="ontology-lane-body">${techLane}</div>
-        </section>
-        <section id="ontology-lane-use" class="ontology-lane" data-lane="use" aria-label="Use cases">
+        </section>`;
+  const useSection = `<section id="ontology-lane-use" class="ontology-lane" data-lane="use" aria-label="Use cases">
           <header class="ontology-lane-head">
-            <h2><span class="ontology-lane-num">2</span> Use Cases</h2>
+            <h2><span class="ontology-lane-num">${nums.use}</span> Use Cases</h2>
             <button type="button" class="ontology-mini-btn" data-action="toggle-custom-use">+ Custom</button>
           </header>
           <div class="ontology-lane-body">${customUseForm}${useLane}</div>
-        </section>
-        <section id="ontology-lane-pathway" class="ontology-lane" data-lane="pathway" data-drop="pathway" aria-label="Pathway">
+        </section>`;
+  const pathwaySection = `<section id="ontology-lane-pathway" class="ontology-lane" data-lane="pathway" data-drop="pathway" aria-label="Pathway">
           <header class="ontology-lane-head">
             <div class="ontology-lane-title-row">
-              <h2><span class="ontology-lane-num">3</span> Pathway</h2>
+              <h2><span class="ontology-lane-num">${nums.pathway}</span> Pathway</h2>
               <div class="ontology-lane-head-btns">
-                <button type="button" class="ontology-mini-btn is-wb-open" id="btn-open-workbench" data-action="toggle-workbench" title="Expand Lane 3 into the Double-Diamond Innovation Workbench (Convergence Canvas, SIT, SCAMPER)">⤢ Workbench${wbBadge}</button>
+                <button type="button" class="ontology-mini-btn is-wb-open" id="btn-open-workbench" data-action="toggle-workbench" title="Expand into the Double-Diamond Innovation Workbench (Convergence Canvas, SIT, SCAMPER)">⤢ Workbench${wbBadge}</button>
                 <button type="button" class="ontology-mini-btn" data-action="human-step" title="Add an ordinary human workflow or non-emTech step">+ Human</button>
               </div>
             </div>
           </header>
           <div class="ontology-lane-body">${pathLane}</div>
-        </section>
-        <section id="ontology-lane-problem" class="ontology-lane" data-lane="problem" data-drop="crisis" aria-label="Problem">
+        </section>`;
+  const problemSection = `<section id="ontology-lane-problem" class="ontology-lane" data-lane="problem" data-drop="crisis" aria-label="Problem">
           <header class="ontology-lane-head">
-            <h2><span class="ontology-lane-num">4</span> Problem</h2>
+            <h2><span class="ontology-lane-num">${nums.problem}</span> Problem</h2>
           </header>
           <div class="ontology-lane-body">${problemLane}</div>
-        </section>
+        </section>`;
+
+  const lanesBody = wbOpen
+    ? isProblemFirst
+      ? `<div class="ontology-lanes is-workbench-open is-problem-first">
+          ${renderWorkbenchRightRail(crises, wires, rules, { isProblemFirst: true })}
+          ${renderWorkbenchStudio(view, wb, tracks, useCases, pathways, crises, wires, selected, collapsedSet)}
+          ${renderWorkbenchLeftRail(tracks, useCases, year, selected, wb, { isProblemFirst: true })}
+        </div>`
+      : `<div class="ontology-lanes is-workbench-open">
+          ${renderWorkbenchLeftRail(tracks, useCases, year, selected, wb, { isProblemFirst: false })}
+          ${renderWorkbenchStudio(view, wb, tracks, useCases, pathways, crises, wires, selected, collapsedSet)}
+          ${renderWorkbenchRightRail(crises, wires, rules, { isProblemFirst: false })}
+        </div>`
+    : `<div class="ontology-lanes${isProblemFirst ? " is-problem-first" : ""}">
+        ${
+          isProblemFirst
+            ? `${problemSection}${pathwaySection}${useSection}${techSection}`
+            : `${techSection}${useSection}${pathwaySection}${problemSection}`
+        }
       </div>`;
 
   const isMultiplayer = Boolean(view?.isMultiplayer);
@@ -803,12 +897,23 @@ export function renderOntologyBoard(view) {
       ? `Moves used — advance to ${year + 1} to refresh Moves`
       : "Advance +1 year and refresh Moves";
 
-  return `<div class="ontology-topbar">
-      <div class="ontology-circuit" role="tablist" aria-label="Lanes">
-        <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="tech">1 · Tech <span>${tracks.length}</span></button>
+  const circuitPills = isProblemFirst
+    ? `<button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="problem">1 · Problem <span>${crises.length}</span></button>
+        <button type="button" class="ontology-step-pill${wbOpen ? " is-active" : ""}" data-action="jump-lane" data-lane="pathway">2 · Pathway <span>${pathways.length}</span></button>
+        <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="use">3 · Use Cases <span>${useCases.length}</span></button>
+        <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="tech">4 · Tech <span>${tracks.length}</span></button>`
+    : `<button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="tech">1 · Tech <span>${tracks.length}</span></button>
         <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="use">2 · Use Cases <span>${useCases.length}</span></button>
         <button type="button" class="ontology-step-pill${wbOpen ? " is-active" : ""}" data-action="jump-lane" data-lane="pathway">3 · Pathway <span>${pathways.length}</span></button>
-        <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="problem">4 · Problem <span>${crises.length}</span></button>
+        <button type="button" class="ontology-step-pill" data-action="jump-lane" data-lane="problem">4 · Problem <span>${crises.length}</span></button>`;
+
+  return `<div class="ontology-topbar">
+      <div class="ontology-flow-switch" role="group" aria-label="Innovation direction">
+        <button type="button" class="ontology-flow-btn${!isProblemFirst ? " is-active" : ""}" data-action="set-flow" data-flow="tech-first" aria-pressed="${!isProblemFirst}" title="Tech-Push: start from emerging tech &amp; milestones → problem">Tech → Problem</button>
+        <button type="button" class="ontology-flow-btn${isProblemFirst ? " is-active" : ""}" data-action="set-flow" data-flow="problem-first" aria-pressed="${isProblemFirst}" title="Problem-Pull (Backcast): start from the problem &amp; work back to needed emTech &amp; capability level">Problem → Tech</button>
+      </div>
+      <div class="ontology-circuit" role="tablist" aria-label="Lanes">
+        ${circuitPills}
       </div>
       <div class="ontology-calendar" role="group" aria-label="Quest timeline">
         <button type="button" class="ontology-year-badge" data-action="open-year-dialog" title="Inspect world foresight for ${year}">📅 <span class="ontology-year-prefix">QUEST YEAR: </span>${year}</button>
@@ -835,9 +940,9 @@ export function renderOntologyBoard(view) {
     </div>
     ${summonBanner}
     <div class="ontology-lanes-scroll" data-lanes-scroll>
-    <div class="ontology-lanes-stage${highlight && !wbOpen ? " has-chain-highlight" : ""}${wbOpen ? " is-workbench-open" : ""}" data-lanes-stage>
-      <svg class="ontology-wires" viewBox="0 0 1000 800" aria-hidden="true">${wbOpen ? "" : renderFallbackWires(wires, pathways, crises, highlight, "base")}</svg>
-      <svg class="ontology-wires is-active-layer" viewBox="0 0 1000 800" aria-hidden="true">${wbOpen ? "" : renderFallbackWires(wires, pathways, crises, highlight, "active")}</svg>
+    <div class="ontology-lanes-stage${highlight && !wbOpen ? " has-chain-highlight" : ""}${wbOpen ? " is-workbench-open" : ""}${isProblemFirst ? " is-problem-first" : ""}" data-lanes-stage>
+      <svg class="ontology-wires" viewBox="0 0 1000 800" aria-hidden="true">${wbOpen ? "" : renderFallbackWires(wires, pathways, crises, highlight, "base", isProblemFirst)}</svg>
+      <svg class="ontology-wires is-active-layer" viewBox="0 0 1000 800" aria-hidden="true">${wbOpen ? "" : renderFallbackWires(wires, pathways, crises, highlight, "active", isProblemFirst)}</svg>
       <div class="ontology-wire-tokens" data-wire-tokens>${wbOpen ? "" : wireRoadblockTokens}</div>
       ${lanesBody}
     </div>
@@ -873,8 +978,9 @@ function renderQualitativeTimeline(track, milestones, year) {
       const stroke = early ? "#fb7185" : isForecast ? "#fbbf24" : "#34d399";
       const fill = isForecast ? "#0c1220" : "#34d399";
       const yrLabel = isForecast ? `~${yr}` : String(yr);
-      return `<g class="ontology-qual-dot${m.dealt ? " is-dealt" : ""}" data-action="deal-milestone" data-tech-id="${escapeHtml(track.techId)}" data-milestone-id="${escapeHtml(m.id)}" role="button" tabindex="0">
-        <title>${escapeHtml(yrLabel)}: ${escapeHtml(m.label)} — click to deal</title>
+      return `<g class="ontology-qual-dot${m.dealt ? " is-dealt" : ""}${m.needed ? " is-needed" : ""}" data-action="deal-milestone" data-tech-id="${escapeHtml(track.techId)}" data-milestone-id="${escapeHtml(m.id)}" role="button" tabindex="0">
+        <title>${escapeHtml(yrLabel)}: ${escapeHtml(m.label)}${m.needed ? " (🎯 Needed by your Pathway)" : ""} — click to deal</title>
+        ${m.needed ? `<circle cx="${cx.toFixed(1)}" cy="${cy}" r="13.5" fill="none" stroke="#f472b6" stroke-width="1.8" stroke-dasharray="3 2"></circle>` : ""}
         ${m.dealt ? `<circle cx="${cx.toFixed(1)}" cy="${cy}" r="10.5" fill="${stroke}" opacity="0.24"></circle>` : ""}
         <circle cx="${cx.toFixed(1)}" cy="${cy}" r="5.5" fill="${fill}" stroke="${stroke}" stroke-width="2.4"></circle>
         <text x="${cx.toFixed(1)}" y="${cy + 18}" text-anchor="middle" fill="#cbd5e1" font-size="10.5" font-weight="600">${escapeHtml(yrLabel)}</text>
@@ -971,6 +1077,7 @@ function renderTrack(
       m.isHistoryAnchor ? "is-history" : "is-current",
       playable ? "is-playable" : "is-ahead is-early",
       m.dealt ? "is-dealt" : "",
+      m.needed ? "is-needed" : "",
       msSelected ? "is-chain-selected" : "",
       msLinked ? "is-chain-linked" : "",
       msDim ? "is-chain-dim" : "",
@@ -979,12 +1086,16 @@ function renderTrack(
       .join(" ");
 
     const portLit = Boolean(highlight && [...highlight.tier1Edges].some((e) => e.startsWith(`${m.id}->`)));
+    const neededPill = m.needed
+      ? `<span class="ontology-ms-needed" title="${escapeHtml((m.neededBy || []).length ? `Needed by: ${m.neededBy.join(", ")}` : "Capability level needed by your Pathway")}">🎯 Needed</span>`
+      : "";
 
     return `<div class="ontology-ms-row">
       <button type="button" class="${cls}" data-action="deal-milestone" data-tech-id="${escapeHtml(track.techId)}" data-milestone-id="${escapeHtml(m.id)}" title="${escapeHtml(m.label)} — click to deal ${escapeHtml(m.useCases?.length || 0)} use cases">
         <span class="ontology-ms-top">
           <span class="ontology-ms-year">${icon} ${escapeHtml(yearText)}</span>
           <span class="ontology-ms-badge">${escapeHtml(statusText)}</span>
+          ${neededPill}
           ${m.dealt ? `<span class="ontology-ms-count">✓ Dealt</span>` : `<span class="ontology-ms-count">+${(m.useCases || []).length} uses</span>`}
         </span>
         <span class="ontology-ms-label">${escapeHtml(m.label)}</span>
@@ -1146,6 +1257,19 @@ function renderTrack(
       <span>📅 NOW: ${year}</span>
     </div>
     ${ahead.length ? `<div class="ontology-spine is-dashed">${ahead.map(renderMilestoneRow).join("")}</div>` : `<p class="ontology-all-reached">All listed milestones are in play by ${year}.</p>`}
+    ${
+      Array.isArray(track.capabilityGaps) && track.capabilityGaps.length
+        ? `<div class="ontology-cap-gap" role="status">
+            <strong>⚠️ Beyond known forecasts / Honest limit</strong>
+            ${track.capabilityGaps
+              .map(
+                (g) =>
+                  `<p><em>${escapeHtml(g.pathwayTitle || "Pathway")}:</em> ${escapeHtml(g.reason || "Capability demand exceeds known forecasts or grounding limits.")}</p>`
+              )
+              .join("")}
+          </div>`
+        : ""
+    }
   </article>`;
 }
 
@@ -1157,9 +1281,13 @@ function renderUseCase(uc, year, isSelected, highlight = null) {
       ? "🃏 Collected"
       : uc.origin === "custom"
         ? "✍️ Custom"
-        : isForecast
-          ? `◌ ~${uc.milestoneYear} Forecast`
-          : `● ${uc.milestoneYear} Reached`;
+        : uc.origin === "backcast"
+          ? isForecast
+            ? `🎯 ~${uc.milestoneYear} Forecast`
+            : `🎯 ${uc.milestoneYear} Reached`
+          : isForecast
+            ? `◌ ~${uc.milestoneYear} Forecast`
+            : `● ${uc.milestoneYear} Reached`;
   const ucChainCls = chainCardClass(highlight, "usecase", uc.id, highlight?.useCaseIds);
   const inEdgeKey = uc.milestoneId
     ? `${uc.milestoneId}->${uc.id}`
@@ -1263,8 +1391,9 @@ function renderPathwayComposer(opts) {
           <span>How does it work in this place?</span>
           <textarea class="ontology-textarea" data-role="draft-how" rows="3" maxlength="2000" placeholder="Who does what, with what hardware/workflow, here this year…">${escapeHtml(opts.draftHow || "")}</textarea>
         </label>
+        ${opts.isProblemFirst && !opts.selectedCount ? '<p class="ontology-selected-hint">Write the idea first. The board will look for a matching technology.</p>' : ""}
         <div class="ontology-inline-actions">
-          <button type="button" class="btn btn-primary btn-sm" data-action="write-pathway">Add Invention</button>
+          <button type="button" class="btn btn-primary btn-sm" data-action="write-pathway">${opts.isProblemFirst ? "Add Idea" : "Add Invention"}</button>
           ${opts.coInventorSupported ? `<button type="button" class="btn btn-secondary btn-sm" data-action="ask-co-inventor" title="Open the AI Co-Inventor to brainstorm your idea">💬 Ask Co-Inventor</button>` : ""}
           <button type="button" class="btn btn-ghost btn-sm" data-action="toggle-write">Close</button>
         </div>
@@ -1393,11 +1522,21 @@ function renderPathwayCard(pw, crises, wires, opts) {
   const directTechIds = [
     ...new Set(
       (pw.ingredients || [])
-        .map((ing) => ing.techId)
+        .map((ing) => ing.techId || ing.proposedTechId)
         .filter((tid) => Boolean(tid) && !coveredTechIds.has(tid))
     ),
   ];
   const fromTechs = directTechIds.join(",");
+
+  const proposedRows = (pw.ingredients || [])
+    .filter((ing) => ing.techStatus === "proposed" && ing.proposedTechId)
+    .map(
+      (ing) => `<div class="ontology-proposed-tech">
+        <span class="ontology-proposed-copy">🔗 Needs <strong>${escapeHtml(ing.proposedTechName || ing.proposedTechId)}</strong>${ing.proposedCostLabel ? ` (${escapeHtml(ing.proposedCostLabel)})` : ""}</span>
+        <button type="button" class="ontology-mini-btn is-accent" data-action="commit-proposed-tech" data-pathway-id="${escapeHtml(pw.id)}" data-ingredient-id="${escapeHtml(ing.id)}" title="Commit this emTech onto your pathway (spends 1 Move + reversible Budget)">✓ Commit</button>
+      </div>`
+    )
+    .join("");
 
   const howSection = opts.editing
     ? `<div class="ontology-edit-how">
@@ -1477,6 +1616,7 @@ function renderPathwayCard(pw, crises, wires, opts) {
     ${artBanner}
     ${timingBar}
     ${scoringBanner}
+    ${proposedRows}
     <div class="ontology-chips">${chips}</div>
     <div class="ontology-badges">${conv}${bridge}${rd}${args}</div>
     ${howSection}
@@ -1495,7 +1635,13 @@ function worldDot(world) {
   return `<span class="ontology-world-icon is-${key}" title="${escapeHtml(meta.title)}" aria-label="${escapeHtml(meta.label)}">${worldIconSvg(key)}</span>`;
 }
 
-function renderCrisisCard(crisis, wires, highlight = null, collapsed = false) {
+function renderCrisisCard(
+  crisis,
+  wires,
+  highlight = null,
+  collapsed = false,
+  isProblemFirst = false
+) {
   const inbound = wires.filter((w) => w.crisisId === crisis.id);
   const roleText = roleLabel(crisis.role);
   const meterPips =
@@ -1615,7 +1761,22 @@ function renderCrisisCard(crisis, wires, highlight = null, collapsed = false) {
       </div>
     </header>
     <p class="ontology-crisis-desc">${escapeHtml(crisis.description || "")}</p>
-    ${inbound.length ? `<div class="ontology-inbound-list">${wireReads}</div>` : `<p class="ontology-unplugged-hint">Drag a Pathway here (or use 🔌 Plug) to address this crisis.</p>`}
+    ${
+      isProblemFirst
+        ? `<div class="ontology-crisis-pull-bar">
+            <button type="button" class="ontology-mini-btn is-accent" data-action="wb-frame-crisis" data-crisis-id="${escapeHtml(crisis.id)}" title="Unpack this crisis in Diamond 1 and ideate backward to needed tech">⤢ Frame &amp; Ideate →</button>
+          </div>`
+        : ""
+    }
+    ${
+      inbound.length
+        ? `<div class="ontology-inbound-list">${wireReads}</div>`
+        : `<p class="ontology-unplugged-hint">${
+            isProblemFirst
+              ? "Frame in Workbench → or plug a Pathway from Lane 2 to address this crisis."
+              : "Drag a Pathway here (or use 🔌 Plug) to address this crisis."
+          }</p>`
+    }
   </article>`;
 }
 
@@ -1644,7 +1805,14 @@ function renderWireRoadblockTokens(wires, highlight = null) {
 /**
  * Fallback deterministic SVG paths for SSR/Node unit tests before live DOM measurement runs.
  */
-function renderFallbackWires(wires, pathways, crises, highlight = null, layer = "base") {
+function renderFallbackWires(
+  wires,
+  pathways,
+  crises,
+  highlight = null,
+  layer = "base",
+  isProblemFirst = false
+) {
   return wires
     .filter((wire) => {
       const hit = Boolean(highlight && highlight.wireIds.has(wire.id));
@@ -1659,13 +1827,18 @@ function renderFallbackWires(wires, pathways, crises, highlight = null, layer = 
       const state = wire.state === "early" ? "early" : wire.pending ? "pending" : blocked ? "blocked" : wire.lamp || "solid";
       const dash = wire.state === "early" ? `stroke-dasharray="8 6"` : "";
       const hlCls = highlight ? (layer === "active" ? " is-highlighted" : " is-dimmed") : "";
-      return `<path class="ontology-wire-path is-tier-3${hlCls}" data-wire-id="${escapeHtml(wire.id)}" data-wire-state="${escapeHtml(wire.state === "early" ? "early" : "solid")}" data-wire-lamp="${escapeHtml(state)}" d="M 720 ${y1} C 790 ${y1}, 810 ${y2}, 880 ${y2}" ${dash} />`;
+      const d = isProblemFirst
+        ? `M 280 ${y1} C 210 ${y1}, 190 ${y2}, 120 ${y2}`
+        : `M 720 ${y1} C 790 ${y1}, 810 ${y2}, 880 ${y2}`;
+      return `<path class="ontology-wire-path is-tier-3${hlCls}" data-wire-id="${escapeHtml(wire.id)}" data-wire-state="${escapeHtml(wire.state === "early" ? "early" : "solid")}" data-wire-lamp="${escapeHtml(state)}" d="${d}" ${dash} />`;
     })
     .join("");
 }
 
-function renderPicker(catalog, activeDomain) {
-  const recommended = catalog.filter((t) => t.recommended);
+function renderPicker(catalog, activeDomain, opts = {}) {
+  const isProblemFirst = Boolean(opts.isProblemFirst);
+  const showHints = !isProblemFirst || Boolean(opts.showTechHints);
+  const recommended = showHints ? catalog.filter((t) => t.recommended) : [];
   const domains = [
     { id: "all", label: "All (29)" },
     ...Object.entries(DOMAINS).map(([id, d]) => ({ id, label: d.label })),
@@ -1674,25 +1847,39 @@ function renderPicker(catalog, activeDomain) {
     (t) => activeDomain === "all" || t.domain === activeDomain
   );
 
-  const renderItem = (tech) => `<div class="ontology-picker-item${tech.onBoard ? " is-on-board" : ""}">
-    <button type="button" class="tech-card${tech.recommended ? " recommended" : ""}" data-action="pick-tech" data-tech-id="${escapeHtml(tech.id)}" data-id="${escapeHtml(tech.id)}">
+  const renderItem = (tech) => {
+    const showRec = showHints && tech.recommended;
+    return `<div class="ontology-picker-item${tech.onBoard ? " is-on-board" : ""}">
+    <button type="button" class="tech-card${showRec ? " recommended" : ""}" data-action="pick-tech" data-tech-id="${escapeHtml(tech.id)}" data-id="${escapeHtml(tech.id)}">
       <span class="ontology-picker-top">
         <strong>${escapeHtml(tech.icon ? `${tech.icon} ` : "")}${escapeHtml(tech.name)}</strong>
         ${worldBadge(tech.world)}
         ${tech.costLabel ? `<span class="ontology-cost-pill">${escapeHtml(tech.costLabel)}</span>` : ""}
       </span>
-      <span class="ontology-picker-why">${escapeHtml(tech.why || "")}</span>
+      <span class="ontology-picker-why">${escapeHtml(showHints ? tech.why || "" : tech.genericSummary || tech.why || "")}</span>
     </button>
   </div>`;
+  };
+
+  const hintToggleBtn = isProblemFirst
+    ? `<button type="button" class="ontology-mini-btn${opts.showTechHints ? " is-accent" : ""}" data-action="toggle-tech-hints">${opts.showTechHints ? "🙈 Hide tech hints" : "💡 Show tech hints"}</button>`
+    : "";
 
   return `<div class="ontology-modal-scrim" data-action="close-picker">
     <div id="ontology-tech-picker" class="ontology-picker-modal" role="dialog" aria-modal="true" aria-label="Add an emerging technology">
       <header class="ontology-modal-head">
         <div>
           <h3>Choose an emerging technology</h3>
-          <p class="ontology-meta">Explore any tech freely in Lane 1. Frontier techs use more town Budget or Goodwill when placed in a Pathway.</p>
+          <p class="ontology-meta">${
+            isProblemFirst
+              ? "Explore any tech freely in Lane 4 to inspect its capabilities &amp; curve. Frontier techs use more town Budget or Goodwill when committed to a Pathway."
+              : "Explore any tech freely in Lane 1. Frontier techs use more town Budget or Goodwill when placed in a Pathway."
+          }</p>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm" data-action="toggle-picker">Close</button>
+        <div class="ontology-modal-head-actions">
+          ${hintToggleBtn}
+          <button type="button" class="btn btn-ghost btn-sm" data-action="toggle-picker">Close</button>
+        </div>
       </header>
       ${
         recommended.length
@@ -1783,7 +1970,8 @@ function renderArgumentModal(pathways, focusedPathwayId, busy) {
 
 /* ── Expanded Lane 3: Docked Circuit Frame & Double-Diamond Innovation Workbench ── */
 
-function renderWorkbenchLeftRail(tracks, useCases, year, selected, wb) {
+function renderWorkbenchLeftRail(tracks, useCases, year, selected, wb, opts = {}) {
+  const isProblemFirst = Boolean(opts.isProblemFirst);
   const techChips = tracks.length
     ? tracks
         .map((t) => {
@@ -1832,10 +2020,10 @@ function renderWorkbenchLeftRail(tracks, useCases, year, selected, wb) {
         .join("")
     : `<p class="wb-rail-empty">Tap a Tech above to unlock milestones &amp; Use Cases.</p>`;
 
-  return `<aside class="ontology-lane wb-dock-rail wb-dock-left" aria-label="Docked Tech and Use Cases">
+  return `<aside class="ontology-lane wb-dock-rail ${isProblemFirst ? "wb-dock-right" : "wb-dock-left"}" aria-label="${isProblemFirst ? "Docked Use Cases and Tech" : "Docked Tech and Use Cases"}">
     <header class="ontology-lane-head">
       <div class="ontology-lane-title-row">
-        <h2><span class="ontology-lane-num">1–2</span> Inputs</h2>
+        <h2><span class="ontology-lane-num">${isProblemFirst ? "3–4" : "1–2"}</span> ${isProblemFirst ? "Capabilities" : "Inputs"}</h2>
         <button type="button" class="ontology-mini-btn is-accent" data-action="toggle-picker" title="Add another emerging tech">+ Tech</button>
       </div>
     </header>
@@ -1850,7 +2038,8 @@ function renderWorkbenchLeftRail(tracks, useCases, year, selected, wb) {
   </aside>`;
 }
 
-function renderWorkbenchRightRail(crises, wires, rules) {
+function renderWorkbenchRightRail(crises, wires, rules, opts = {}) {
+  const isProblemFirst = Boolean(opts.isProblemFirst);
   const ruleCount = (rules || []).length;
   const cards = crises.length
     ? crises
@@ -1882,16 +2071,114 @@ function renderWorkbenchRightRail(crises, wires, rules) {
         .join("")
     : `<p class="wb-rail-empty">Crises appear here.</p>`;
 
-  return `<aside class="ontology-lane wb-dock-rail wb-dock-right" data-lane="problem" data-drop="crisis" aria-label="Docked Problem targets">
+  return `<aside class="ontology-lane wb-dock-rail ${isProblemFirst ? "wb-dock-left" : "wb-dock-right"}" data-lane="problem" data-drop="crisis" aria-label="Docked Problem targets">
     <header class="ontology-lane-head">
       <div class="ontology-lane-title-row">
-        <h2><span class="ontology-lane-num">4</span> Problem</h2>
+        <h2><span class="ontology-lane-num">${isProblemFirst ? "1" : "4"}</span> Problem</h2>
         <button type="button" class="ontology-mini-btn" data-action="tool-lobby" title="Lobby a local rule">🏛️ ${ruleCount || "+"}</button>
       </div>
     </header>
-    <p class="wb-rail-hint">Drop any Pathway below onto a Crisis to plug in.</p>
+    <p class="wb-rail-hint">${
+      isProblemFirst
+        ? "Frame tensions in Diamond 1, or drop any Pathway onto a Crisis here to plug in."
+        : "Drop any Pathway below onto a Crisis to plug in."
+    }</p>
     <div class="wb-rail-crisis-list">${cards}</div>
   </aside>`;
+}
+
+function renderWorkbenchConvergencePanel(wb) {
+  if (wb?.boardFlow !== "problem-first") return "";
+  const conv = wb?.convergence;
+  if (!conv || !Array.isArray(conv.zones)) return "";
+  const pair = conv.pairAnalysis || {};
+  const isProblemFirst = wb?.boardFlow === "problem-first";
+  const collapsed = Boolean(wb?.convCollapsed);
+  const slotA = pair.techA
+    ? `<span class="wb-pair-pill is-a">${escapeHtml(pair.techA.icon ? `${pair.techA.icon} ` : "")}${escapeHtml(pair.techA.name)} ${worldDot(pair.techA.polarity)}</span>`
+    : `<span class="wb-pair-pill is-empty">Optional Tech A</span>`;
+  const slotB = pair.techB
+    ? `<span class="wb-pair-pill is-b">${escapeHtml(pair.techB.icon ? `${pair.techB.icon} ` : "")}${escapeHtml(pair.techB.name)} ${worldDot(pair.techB.polarity)}</span>`
+    : `<span class="wb-pair-pill is-empty">Optional Tech B</span>`;
+
+  const hintBtn = isProblemFirst
+    ? `<button type="button" class="ontology-link-btn${wb?.showTechHints ? " is-on" : ""}" data-action="toggle-tech-hints" title="Toggle Quest-authored suggested tech highlights">${wb?.showTechHints ? "🙈 Hide hints" : "💡 Show tech hints"}</button>`
+    : "";
+
+  const zonesHtml = collapsed
+    ? ""
+    : `<div class="wb-conv-legend">
+        <span class="wb-legend-item"><i class="is-in-play"></i> On board</span>
+        <span class="wb-legend-item"><i class="is-synergy"></i> ⚡ Synergy partner</span>
+        <span class="wb-legend-item">Tap 1–2 chips to think across domains, or leave clear to ideate tech-free</span>
+      </div>
+      <div class="wb-conv-map">
+        ${conv.zones
+          .map(
+            (z) => `<div class="wb-conv-zone is-${escapeHtml(z.id)}${z.highlightBridge ? " is-bridge-needed" : ""}">
+              <div class="wb-conv-zone-head">
+                ${worldBadge(z.id)}
+                <span class="wb-conv-zone-sub">${z.highlightBridge ? "⚠️ Bridge gap" : escapeHtml(z.subtitle)}</span>
+              </div>
+              <div class="wb-conv-groups">
+                ${z.groups
+                  .map(
+                    (g) => `<div class="wb-conv-group">
+                      <span class="wb-conv-dom" style="--dom-color:${escapeHtml(g.color)}">${escapeHtml(g.domainLabel)}</span>
+                      <div class="wb-conv-chips">
+                        ${g.techs
+                          .map((t) => {
+                            const cls = [
+                              "wb-conv-chip",
+                              t.inPlay ? "is-in-play" : "",
+                              t.synergy ? "is-synergy" : "",
+                              t.recommended ? "is-rec" : "",
+                              t.selectedSlot === "A" ? "is-slot-a" : "",
+                              t.selectedSlot === "B" ? "is-slot-b" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ");
+                            const slotTag = t.selectedSlot
+                              ? `<span class="wb-conv-slot">${t.selectedSlot}</span>`
+                              : "";
+                            return `<button type="button" class="${cls}" data-action="wb-conv-pick" data-tech-id="${escapeHtml(t.id)}" title="${escapeHtml(t.name)}${t.inPlay ? " (on board)" : ""}${t.synergy ? " — ⚡ Synergy pair!" : ""} — ${escapeHtml(t.summary)}">
+                              ${slotTag}<span>${escapeHtml(t.icon ? `${t.icon} ` : "")}${escapeHtml(t.name)}</span>
+                            </button>`;
+                          })
+                          .join("")}
+                      </div>
+                    </div>`
+                  )
+                  .join("")}
+              </div>
+            </div>`
+          )
+          .join("")}
+      </div>
+      <div class="wb-pair-bar${pair.ready ? " is-ready" : ""}">
+        <div class="wb-pair-slots">
+          ${slotA}
+          <span class="wb-pair-x" aria-hidden="true">×</span>
+          ${slotB}
+          ${pair.techA ? `<button type="button" class="ontology-link-btn" data-action="wb-conv-clear">Clear</button>` : ""}
+        </div>
+        ${pair.badge ? `<span class="wb-pair-badge${pair.knownSynergy ? " is-synergy" : pair.needsBridge ? " is-warn" : ""}">${escapeHtml(pair.badge)}</span>` : ""}
+      </div>`;
+
+  return `<section class="wb-conv-panel${collapsed ? " is-collapsed" : ""}" aria-label="emTech Convergence Canvas">
+    <header class="wb-conv-panel-head">
+      <button type="button" class="wb-conv-panel-toggle" data-action="wb-conv-toggle" aria-expanded="${!collapsed}">
+        <span aria-hidden="true">${collapsed ? "▸" : "▾"}</span>
+        <strong>🔀 Convergence Canvas</strong>
+        <span class="wb-conv-panel-sub">Bits ↔ Bridge ↔ Atoms</span>
+      </button>
+      <div class="wb-conv-panel-actions">
+        ${pair.techA && collapsed ? `<span class="wb-conv-compact-sel">${escapeHtml(pair.techA.name)}${pair.techB ? ` × ${escapeHtml(pair.techB.name)}` : ""}</span>` : ""}
+        ${hintBtn}
+      </div>
+    </header>
+    ${zonesHtml}
+  </section>`;
 }
 
 function renderWorkbenchMethodControls(wb, useCases, selected) {
@@ -2267,6 +2554,16 @@ function renderWorkbenchVisualPathway(
     </article>`;
   }
 
+  const proposedRows = (pw.ingredients || [])
+    .filter((ing) => ing.techStatus === "proposed" && ing.proposedTechId)
+    .map(
+      (ing) => `<div class="ontology-proposed-tech">
+        <span class="ontology-proposed-copy">🔗 Needs <strong>${escapeHtml(ing.proposedTechName || ing.proposedTechId)}</strong>${ing.proposedCostLabel ? ` (${escapeHtml(ing.proposedCostLabel)})` : ""}</span>
+        <button type="button" class="ontology-mini-btn is-accent" data-action="commit-proposed-tech" data-pathway-id="${escapeHtml(pw.id)}" data-ingredient-id="${escapeHtml(ing.id)}" title="Commit this emTech onto your pathway (spends 1 Move + reversible Budget)">✓ Commit</button>
+      </div>`
+    )
+    .join("");
+
   return `<article class="wb-visual-pathway${multi ? " is-assembled" : ""}${isTarget ? " is-target" : ""}" data-pathway-id="${escapeHtml(pw.id)}" data-drop="wb-fuse-pathway" draggable="true">
     <header class="wb-visual-pw-head">
       <div class="wb-pw-head-left">
@@ -2287,6 +2584,7 @@ function renderWorkbenchVisualPathway(
     </div>
     ${timingBar}
     ${scoringBanner}
+    ${proposedRows}
     ${convBadges ? `<div class="ontology-badges">${convBadges}</div>` : ""}
     ${bridgeBlock}
     ${howControls}
@@ -2551,7 +2849,10 @@ function renderWorkbenchDiamond2(
         <button type="button" class="ontology-link-btn" data-action="wb-set-diamond" data-diamond="problem">← Open Diamond 1</button>
       </div>`;
 
+  const convPanelHtml = renderWorkbenchConvergencePanel(wb);
+
   return `${hmwBanner}
+  ${convPanelHtml}
   <div class="wb-diamond2">
     <div class="wb-col wb-diverge">
       <div class="wb-col-head">
@@ -2630,10 +2931,11 @@ function renderWorkbenchStudio(
           collapsedSet
         );
 
+  const wbLaneNum = view?.boardFlow === "problem-first" ? "2" : "3";
   return `<section id="ontology-lane-pathway" class="ontology-lane ontology-workbench" data-lane="pathway" data-drop="pathway" aria-label="Innovation Workbench">
     <header class="wb-head">
       <div class="wb-head-left">
-        <h2><span class="ontology-lane-num">3</span> Innovation Workbench</h2>
+        <h2><span class="ontology-lane-num">${wbLaneNum}</span> Innovation Workbench</h2>
         <span class="wb-head-sep" aria-hidden="true">/</span>
         <span class="wb-head-subtitle">Design Thinking · Double Diamond</span>
       </div>
@@ -2692,8 +2994,10 @@ export function syncOntologyWireGeometry(root, opts = {}) {
   };
 
   const bezier = (p1, p2) => {
-    const span = Math.abs(p2.x - p1.x);
-    const dx = span >= 8 ? Math.max(18, Math.min(span * 0.42, 140)) : 16;
+    const diff = p2.x - p1.x;
+    const span = Math.abs(diff);
+    const dir = diff < 0 ? -1 : 1;
+    const dx = (span >= 8 ? Math.max(18, Math.min(span * 0.42, 140)) : 16) * dir;
     return `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${(p1.x + dx).toFixed(1)} ${p1.y.toFixed(1)}, ${(p2.x - dx).toFixed(1)} ${p2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
   };
 
