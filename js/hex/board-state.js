@@ -34,6 +34,7 @@ import {
 import { polarityForTech, SPLIT } from "./polarity.js";
 import { GAME, clampChallengerCount } from "../data.js";
 import { crisisRoleKeys, crisisDeltaValues, crisisDeltaReasons } from "./crisis-delta.js?v=crisis-role-3";
+import { isPathwayBoard, boardHolds as pathwayBoardHolds } from "../board/pathway-model.js";
 
 export const TILE_KIND = {
   invention: "invention",
@@ -170,7 +171,7 @@ export function cloneBoard(board) {
   const base = board.pressureBase;
   const impacts = board.pathwayImpacts || {};
   const roles = boardCrisisRoles(board);
-  return {
+  const next = {
     tiles: Object.fromEntries(
       Object.entries(board.tiles || {}).map(([id, t]) => [id, cloneTile(t)])
     ),
@@ -227,6 +228,28 @@ export function cloneBoard(board) {
     rulesWeatherKey: String(board.rulesWeatherKey ?? ""),
     sourceInquiryKey: String(board.sourceInquiryKey ?? ""),
   };
+  if (isPathwayBoard(board)) copyPathwayOverlay(next, board);
+  return next;
+}
+
+/** Keep the 4-lane document when a hex clone would otherwise drop it. */
+function copyPathwayOverlay(next, board) {
+  next.schema = board.schema;
+  next.techTracks = structuredClone(board.techTracks || {});
+  next.useCases = structuredClone(board.useCases || {});
+  next.pathways = structuredClone(board.pathways || {});
+  next.wires = structuredClone(board.wires || {});
+  next.crises = structuredClone(board.crises || {});
+  next.challengers = structuredClone(board.challengers || {});
+  next.arguments = structuredClone(board.arguments || {});
+  next.concernsRoster = Array.isArray(board.concernsRoster)
+    ? board.concernsRoster.map(String)
+    : [];
+  next.seq = Number(board.seq) || 1;
+  next.rev = Number(board.rev) || 0;
+  next.paidEaseRoles = structuredClone(board.paidEaseRoles || {});
+  next.rules = structuredClone(board.rules || []);
+  if (board.questYear != null) next.questYear = board.questYear;
 }
 
 /**
@@ -1303,6 +1326,77 @@ export function stackPlacementPlan(tile, board, selectedTechIds) {
 }
 
 /**
+ * Afford several new tray tiles as one delta.
+ * Later tiles see earlier accepts, so one tech is not charged or slotted twice,
+ * and two techs that each fit alone can still fail together.
+ * @param {object[]} tiles
+ * @param {{
+ *   selectedTechIds?: string[],
+ *   board?: object|null,
+ *   stackCap?: number,
+ *   apEnabled?: boolean,
+ *   budgetWillEnabled?: boolean,
+ *   spendableAp?: number,
+ *   spendableBudget?: number,
+ *   spendableWill?: number,
+ *   costFor?: (techId: string) => { budget?: number, will?: number }|null,
+ * }} ctx
+ * @returns {{ ok: true } | { ok: false, error?: string, techId?: string }}
+ */
+export function stackBatchPlacementGate(tiles, ctx = {}) {
+  const selected = new Set(ctx.selectedTechIds || []);
+  const econ = placedTechEconomy(ctx.board);
+  const onField = new Set(econ.all);
+  const paid = new Set(econ.paid);
+  const collectorOnly = new Set(econ.collectorOnly);
+  const charged = new Set();
+  let ap = Number(ctx.spendableAp) || 0;
+  let budget = Number(ctx.spendableBudget) || 0;
+  let will = Number(ctx.spendableWill) || 0;
+  const cap = Number(ctx.stackCap) > 0 ? Number(ctx.stackCap) : 6;
+  const apOn = Boolean(ctx.apEnabled);
+  const bwOn = Boolean(ctx.budgetWillEnabled);
+
+  for (const tile of tiles || []) {
+    if (!tile?.techId || (tile.q != null && tile.r != null)) continue;
+    const id = tile.techId;
+    const collector = isCollectorTile(tile);
+    const alreadySelected = selected.has(id);
+    const alreadyOn = onField.has(id);
+    const newSlot = !alreadyOn && !alreadySelected;
+    if (newSlot && selected.size >= cap) {
+      return { ok: false, error: "stack full", techId: id };
+    }
+    const alreadyPaid =
+      paid.has(id) || charged.has(id) || (alreadySelected && !collectorOnly.has(id));
+    const charge = !collector && !alreadyPaid;
+    if (charge) {
+      const cost = ctx.costFor?.(id);
+      if (!cost) return { ok: false, techId: id };
+      if (apOn && ap < 1) return { ok: false, error: "no_ap", techId: id };
+      if (bwOn) {
+        const needBudget = Number(cost.budget) || 0;
+        const needWill = Number(cost.will) || 0;
+        if (budget < needBudget) return { ok: false, error: "no_budget", techId: id };
+        if (will < needWill) return { ok: false, error: "no_will", techId: id };
+        budget -= needBudget;
+        will -= needWill;
+      }
+      if (apOn) ap -= 1;
+      charged.add(id);
+      paid.add(id);
+      collectorOnly.delete(id);
+    }
+    if (newSlot) {
+      selected.add(id);
+      onField.add(id);
+      if (collector) collectorOnly.add(id);
+    }
+  }
+  return { ok: true };
+}
+
+/**
  * Tech ids on invention tiles that sit in a yellow/green given's pathway.
  * Tray tiles and isolated (undocked) inventions do not count.
  * Call on a held quest: those pathways are the invents that passed the
@@ -1457,6 +1551,7 @@ export function deriveBoardProse(board) {
  * @param {object} board
  */
 export function boardHolds(board) {
+  if (isPathwayBoard(board)) return pathwayBoardHolds(board, board.questYear ?? 2026);
   if (!board?.concernsSummoned) return false;
   const givens = Object.values(board.tiles || {}).filter(
     (t) => t.kind === TILE_KIND.crisis || t.kind === TILE_KIND.concern
@@ -1526,8 +1621,19 @@ export function isInlineArtUrl(url) {
  */
 export function boardForWire(board) {
   const next = cloneBoard(board);
+  // Lane 3 Innovation Workbench drafts and lens states are strictly solo/private;
+  // only committed pathways and wires sync across seats.
+  if ("workbench" in next) delete next.workbench;
+  if ("workbenchDrafts" in next) delete next.workbenchDrafts;
   for (const t of Object.values(next.tiles || {})) {
     if (t && isInlineArtUrl(t.artUrl)) t.artUrl = null;
+  }
+  if (next.pathways && typeof next.pathways === "object") {
+    for (const pw of Object.values(next.pathways)) {
+      for (const ing of pw?.ingredients || []) {
+        if (ing && isInlineArtUrl(ing.artUrl)) ing.artUrl = null;
+      }
+    }
   }
   return next;
 }
@@ -1574,6 +1680,11 @@ export function preferIncomingHexBoard(local, incoming, opts = {}) {
   if (opts.forceIncoming) return true;
   if (!local || typeof local !== "object") return true;
   if (opts.keepLocal) return false;
+  if (isPathwayBoard(local) && isPathwayBoard(incoming)) {
+    const inRev = Number(incoming.rev) || 0;
+    const locRev = Number(local.rev) || 0;
+    if (inRev !== locRev) return inRev > locRev;
+  }
   const localTiles = local.tiles || {};
   const incomingTiles = incoming.tiles || {};
   const localIds = Object.keys(localTiles);

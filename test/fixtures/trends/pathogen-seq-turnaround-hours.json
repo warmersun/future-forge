@@ -1,10 +1,12 @@
 {
-  "schema": "future-forge.capability-trend/v1",
+  "schema": "future-forge.capability-trend/v2",
   "id": "pathogen-seq-turnaround-hours",
   "techId": "gene-sequencing",
+  "axis": "speed",
   "name": "Sample-to-provisional read time",
   "summary": "Reading a pathogen’s DNA used to mean days of waiting after the sample left the clinic. Better machines, kits, and analysis software have shortened that wait — from about two days toward same-shift answers in well-run pilots. Workflow, power, and training still limit how often that speed shows up in the field. The chart is hours from sample in to a first usable read — lower means faster.",
   "capability": "Faster pathogen sequencing turnaround",
+  "trendSummary": "Pathogen sample-to-read turnaround compressed from multi-day lab waits toward same-shift triage.",
   "unit": "hours (sample to first read)",
   "compounding": { "kind": "halving", "periodYears": 3 },
   "anchor": { "date": "2018-01-01", "value": 48 },
@@ -29,14 +31,28 @@
       "label": "Same-shift clinic workflows",
       "date": "2026",
       "value": 8,
-      "status": "reached"
+      "status": "reached",
+      "useCases": [
+        {
+          "title": "Same-shift clinic isolation triage",
+          "blurb": "Identify high-risk pathogens before patients leave a border or regional clinic.",
+          "world": "atoms"
+        }
+      ]
     },
     {
       "id": "turn-2030-pred",
       "label": "Sub-4h more routine (forecast)",
       "date": "2030",
       "value": 3,
-      "status": "predicted"
+      "status": "predicted",
+      "useCases": [
+        {
+          "title": "Rapid point-of-care antibiotic selection",
+          "blurb": "Match targeted antimicrobial treatments within a single clinic visit.",
+          "world": "atoms"
+        }
+      ]
     }
   ],
   "sources": [

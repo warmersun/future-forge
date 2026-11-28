@@ -1,10 +1,12 @@
 {
-  "schema": "future-forge.capability-trend/v1",
+  "schema": "future-forge.capability-trend/v2",
   "id": "leo-broadband-users",
   "techId": "networks",
+  "axis": "scale",
   "name": "Low-Earth-orbit broadband users",
   "summary": "Low-Earth-orbit broadband is internet from satellites that fly much closer than classic big satellites, so latency is lower and rural links are easier. Since early commercial service, consumer and business subscribers have grown quickly — roughly doubling every year and a half in the early years. Coverage and dish terminals are still uneven by place. The chart is subscribers in millions — higher means more people and sites connected this way.",
   "capability": "Satellite broadband reach",
+  "trendSummary": "Low-Earth-orbit satellite internet grew to millions of rural and mobile subscribers.",
   "unit": "subscribers (millions)",
   "compounding": { "kind": "doubling", "periodYears": 1.5 },
   "anchor": { "date": "2022-01-01", "value": 0.5 },
@@ -29,14 +31,28 @@
       "label": "Tens of millions class",
       "date": "2026",
       "value": 8,
-      "status": "reached"
+      "status": "reached",
+      "useCases": [
+        {
+          "title": "Off-grid clinic and school uplink",
+          "blurb": "Deliver low-latency telemedicine and cloud lessons where fiber cables do not reach.",
+          "world": "bits"
+        }
+      ]
     },
     {
       "id": "leo-2030-pred",
       "label": "Broader rural default (forecast)",
       "date": "2030",
       "value": 40,
-      "status": "predicted"
+      "status": "predicted",
+      "useCases": [
+        {
+          "title": "Direct-to-phone emergency coverage",
+          "blurb": "Keep everyday mobile handsets connected across remote areas and storm blackouts.",
+          "world": "bits"
+        }
+      ]
     }
   ],
   "sources": [

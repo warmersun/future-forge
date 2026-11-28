@@ -18,16 +18,18 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 */
 
 /**
- * On-demand next-step coach-mark for the invent workshop.
+ * On-demand next-step spotlight for the 4-Lane Visual Ontology Board
+ * and Double-Diamond Innovation Workbench.
  * Resolver is pure (no DOM). Overlay is browser-only.
  */
 
-/** @typedef {"selector"|"tech"|"hex-tile"} TourTargetKind */
+/** @typedef {"selector"|"tech"} TourTargetKind */
 
 /**
  * @typedef {{
  *   kind: TourTargetKind,
  *   selector?: string,
+ *   selectors?: string[],
  *   id?: string,
  * }} TourTarget
  */
@@ -39,30 +41,35 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  *   body: string,
  *   target: TourTarget,
  *   skipDimmer?: boolean,
+ *   openSideTab?: string,
+ *   expandCard?: { kind: "tech"|"pathway"|"crisis", id: string },
  * }} TourStep
  */
-
-import { listConcepts } from "./concept-cards.js";
 
 const MINT_HOW_MIN = 12;
 
 /**
+ * Normalize a raw tourSnapshot() payload for resolveTourStep().
  * @param {object} [raw]
  */
-function snapOf(raw = {}) {
+export function snapOf(raw = {}) {
   const briefing = raw.briefing || {};
-  const pathway = raw.pathway || {};
-  const ui = raw.ui || {};
   const mp = raw.mp || {};
+  const ui = raw.ui || {};
+  const wb = raw.wb || raw.workbench || ui.workbench || {};
+  const pathway = raw.pathway || {};
+  const suggestedIds = Array.isArray(raw.suggestedIds)
+    ? raw.suggestedIds.filter(Boolean)
+    : [];
+
   return {
     screen: raw.screen || "workshop",
     place: String(raw.place || "").trim(),
+    spotlightTechId: raw.spotlightTechId || null,
     spotlightName: String(raw.spotlightName || "").trim(),
     spotlightEncourage: String(raw.spotlightEncourage || "").trim(),
-    spotlightTechId: raw.spotlightTechId || null,
-    suggestedIds: Array.isArray(raw.suggestedIds) ? raw.suggestedIds.filter(Boolean) : [],
-    focusedTechId: raw.focusedTechId || null,
-    focusedTechName: String(raw.focusedTechName || "").trim(),
+    hasRecommended: Boolean(raw.hasRecommended ?? suggestedIds.length > 0),
+    suggestedIds,
     isLearning: Boolean(raw.isLearning),
     tutorOn: Boolean(raw.tutorOn),
     sideTab: raw.sideTab || "vision",
@@ -71,37 +78,6 @@ function snapOf(raw = {}) {
       index: Number(briefing.index) || 0,
       beatCount: Number(briefing.beatCount) || 0,
     },
-    unplacedInventionCount: Number(raw.unplacedInventionCount) || 0,
-    placedInventionCount: Number(raw.placedInventionCount) || 0,
-    howTextLength: Number(raw.howTextLength) || 0,
-    hasSparkBatch: Boolean(raw.hasSparkBatch),
-    pathway: {
-      overall: pathway.overall || "red",
-      bonds: pathway.bonds || "red",
-      coverage: pathway.coverage || "red",
-      timingLevel: pathway.timingLevel || "red",
-      timingPending: Boolean(pathway.timingPending),
-    },
-    concernsOnBoard: Number(raw.concernsOnBoard) || 0,
-    remainingConcerns: Number(raw.remainingConcerns) || 0,
-    concernsSummoned: Boolean(raw.concernsSummoned),
-    boardHolds: Boolean(raw.boardHolds),
-    unansweredConcernId: raw.unansweredConcernId || null,
-    concernAnswerPending: Boolean(raw.concernAnswerPending),
-    redGivenId: raw.redGivenId || null,
-    redInventionId: raw.redInventionId || null,
-    uncoveredGivenId: raw.uncoveredGivenId || null,
-    uncoveredGivenName: String(raw.uncoveredGivenName || "").trim(),
-    uncoveredCount: Number(raw.uncoveredCount) || 0,
-    bondsNote: String(raw.bondsNote || "").trim(),
-    coverageNote: String(raw.coverageNote || "").trim(),
-    coverageReds: Number(raw.coverageReds) || 0,
-    ap: Number.isFinite(Number(raw.ap)) ? Number(raw.ap) : 0,
-    apEnabled: Boolean(raw.apEnabled),
-    budget: Number.isFinite(Number(raw.budget)) ? Number(raw.budget) : 0,
-    budgetWillEnabled: Boolean(raw.budgetWillEnabled),
-    will: Number.isFinite(Number(raw.will)) ? Number(raw.will) : 0,
-    lobbyVisible: Boolean(raw.lobbyVisible),
     mp: {
       spectator: Boolean(mp.spectator),
       viewingOther: Boolean(mp.viewingOther),
@@ -109,18 +85,57 @@ function snapOf(raw = {}) {
       needPassDevice: Boolean(mp.needPassDevice),
     },
     ui: {
-      techCatalogHidden: Boolean(ui.techCatalogHidden),
       waitConfirmOpen: Boolean(ui.waitConfirmOpen),
-      tilePopupOpen: Boolean(ui.tilePopupOpen),
-      convergenceOpen: Boolean(ui.convergenceOpen),
+      pickerOpen: Boolean(ui.pickerOpen),
+      openChallengerId: ui.openChallengerId || null,
+      argumentModalOpen: Boolean(ui.argumentModalOpen),
+      argumentBusy: Boolean(ui.argumentBusy),
       createBusy: Boolean(ui.createBusy),
       summonBusy: Boolean(ui.summonBusy),
       challengerDrawOpen: Boolean(ui.challengerDrawOpen),
+      scoringPending: Boolean(ui.scoringPending),
+      timingPending: Boolean(ui.timingPending ?? pathway.timingPending),
     },
-    islandHowEmpty: Boolean(raw.islandHowEmpty),
-    coinventorUsed: Boolean(raw.coinventorUsed),
-    learnOpenedThisTurn: Boolean(raw.learnOpenedThisTurn),
-    waitUsed: Boolean(raw.waitUsed),
+    wb: {
+      open: Boolean(wb.open),
+      diamond: wb.diamond || "solution",
+      busy: Boolean(wb.busy),
+      hasHmwBrief: Boolean(wb.hasHmwBrief ?? wb.hmwBrief),
+      hmwLocked: Boolean(wb.hmwLocked),
+      ideaCount: Number(wb.ideaCount) || 0,
+    },
+    tracks: Number(raw.tracks) || 0,
+    focusedTechId: raw.focusedTechId || null,
+    focusedTechName: String(raw.focusedTechName || "").trim(),
+    useCaseCount: Number(raw.useCaseCount) || 0,
+    sparksCount: Number(raw.sparksCount) || 0,
+    writeOpen: Boolean(raw.writeOpen),
+    draftHowLength: Number(raw.draftHowLength) || 0,
+    pathwayCount: Number(raw.pathwayCount) || 0,
+    primaryPathwayId: raw.primaryPathwayId || raw.focusedPathwayId || null,
+    unpluggedCrisisId: raw.unpluggedCrisisId || null,
+    unpluggedCrisisName: String(raw.unpluggedCrisisName || "").trim(),
+    unpluggedCount: Number(raw.unpluggedCount) || 0,
+    redChallengerId: raw.redChallengerId || null,
+    redChallengerCrisisId: raw.redChallengerCrisisId || null,
+    challengerAnswerPending: Boolean(raw.challengerAnswerPending),
+    timingLevel: String(raw.timingLevel || pathway.timingLevel || "green"),
+    redPathwayId: raw.redPathwayId || null,
+    hasEarlyForecastWire: Boolean(raw.hasEarlyForecastWire),
+    redCrisisId: raw.redCrisisId || null,
+    redCrisisName: String(raw.redCrisisName || "").trim(),
+    redCrisisCount: Number(raw.redCrisisCount) || 0,
+    concernsOnBoard: Number(raw.concernsOnBoard) || 0,
+    remainingConcerns: Number(raw.remainingConcerns) || 0,
+    concernsSummoned: Boolean(raw.concernsSummoned),
+    boardHolds: Boolean(raw.boardHolds),
+    ap: Number.isFinite(Number(raw.ap)) ? Number(raw.ap) : 0,
+    apEnabled: Boolean(raw.apEnabled),
+    isMultiplayer: Boolean(
+      raw.isMultiplayer ?? (mp.spectator || mp.viewingOther || mp.hotseat)
+    ),
+    budget: Number.isFinite(Number(raw.budget)) ? Number(raw.budget) : 0,
+    budgetWillEnabled: Boolean(raw.budgetWillEnabled),
   };
 }
 
@@ -128,16 +143,12 @@ function step(id, title, body, target, extra = {}) {
   return { id, title, body, target, ...extra };
 }
 
-function sel(selector) {
-  return { kind: "selector", selector };
-}
-
-function techTarget(id) {
-  return { kind: "tech", id };
-}
-
-function hexTarget(id) {
-  return { kind: "hex-tile", id };
+function sel(...list) {
+  const clean = list.filter(Boolean);
+  if (clean.length <= 1) {
+    return { kind: "selector", selector: clean[0] || "" };
+  }
+  return { kind: "selector", selector: clean[0], selectors: clean };
 }
 
 function techName(s) {
@@ -154,473 +165,377 @@ function lastBriefBeat(s) {
   return s.briefing.index >= n - 1;
 }
 
-function noInventYet(s) {
-  return s.placedInventionCount === 0 && s.unplacedInventionCount === 0;
-}
-
-function pathwayNotRed(s) {
-  return s.pathway.overall !== "red";
-}
-
-function outOfAp(s) {
-  return s.apEnabled && s.ap < 1;
-}
-
-function uncoveredLabel(s) {
-  return s.uncoveredGivenName || "a crisis hex";
-}
-
-function bondsTarget(s) {
-  if (s.uncoveredGivenId) return hexTarget(s.uncoveredGivenId);
-  if (s.redGivenId) return hexTarget(s.redGivenId);
-  return sel("#feasibility");
-}
-
-function bondsRedStep(s, id) {
-  const n = s.uncoveredCount || 1;
-  const name = uncoveredLabel(s);
-  const who =
-    n === 1 ? `“${name}”` : `${n} crisis hexes`;
-  const verb = n === 1 ? "isn't" : "aren't";
-  return step(
-    id,
-    "Bonds is red",
-    `${who} ${verb} touching your invent island — that's why the pathway is red. Drag the crisis hex next to your idea (crisis tiles move). You don't need more invention tiles for this.`,
-    bondsTarget(s)
-  );
-}
-
-function coverageRedStep(s, id) {
-  const n = s.coverageReds || 0;
-  const lights =
-    n === 1
-      ? "1 crisis light is still red"
-      : n > 1
-        ? `${n} crisis lights are still red`
-        : "a crisis light is still red";
-  const target = s.redGivenId ? hexTarget(s.redGivenId) : sel("#feasibility");
-  return step(
-    id,
-    "Coverage is red",
-    `${lights}${s.coverageNote ? ` (${s.coverageNote})` : ""}. The idea is on the board, but it isn't helping that role enough yet. Click the red hex to see why, then change how it works or add an idea aimed at that meter.`,
-    target
-  );
-}
-
 /**
- * First matching next-step for a workshop snapshot.
+ * First matching next-step for an Ontology Board / Workbench snapshot.
  * @param {object} raw
  * @returns {TourStep}
  */
 export function resolveTourStep(raw) {
   const s = snapOf(raw);
 
-  // A — blocking overlays / busy
+  // M1–M5 — Active modals & in-flight work
   if (s.ui.waitConfirmOpen) {
     return step(
-      "A1",
+      "M1",
       "Look Ahead",
-      "Waiting jumps the calendar +2 years and raises the crisis. Confirm only if later capability is worth that heat.",
+      "Jumping +2 years advances capability curves and raises crisis pressure. Confirm only if the curve gain is worth it.",
       sel("#wait-confirm-ok"),
       { skipDimmer: true }
     );
   }
-  if (s.concernAnswerPending) {
+
+  if (s.ui.openChallengerId) {
+    if (s.challengerAnswerPending) {
+      return step(
+        "M2",
+        "Judging defense…",
+        "Wait a moment while the Challenger judges your defense.",
+        sel("#ontology-roadblock"),
+        { skipDimmer: true }
+      );
+    }
     return step(
-      "H3",
-      "Challenger is reading",
-      "Wait — your answer is being judged. You can close this card when it finishes.",
-      sel(".hex-tile-popup-card"),
+      "M2",
+      "Defend or remix",
+      "Explain who acts, who pays, or what guardrail holds, then click Submit defense (or Remix in Workbench).",
+      sel("#ontology-roadblock"),
       { skipDimmer: true }
-    );
-  }
-  if (s.ui.tilePopupOpen && s.unansweredConcernId) {
-    return step(
-      "H2",
-      "Answer the hard question",
-      "Write who acts, who pays, or what limit you respect — a short paragraph is enough — then submit.",
-      sel(".hex-tile-popup-card"),
-      { skipDimmer: true }
-    );
-  }
-  if (s.ui.tilePopupOpen) {
-    return step(
-      "A2",
-      "This tile",
-      "Read the tile, then close it (or keep editing). Looking at the board is the thinking.",
-      sel(".hex-tile-popup-card"),
-      { skipDimmer: true }
-    );
-  }
-  if (s.ui.convergenceOpen) {
-    return step(
-      "A3",
-      "Convergence",
-      "Two ideas docked and sped each other up. Got it to keep inventing.",
-      sel(".hex-convergence-card"),
-      { skipDimmer: true }
-    );
-  }
-  if (s.ui.summonBusy || s.ui.challengerDrawOpen) {
-    return step(
-      "H1",
-      "Summoning a challenger",
-      "Wait — a hard question is landing on the board.",
-      sel("#hex-board-pending")
-    );
-  }
-  if (s.ui.createBusy) {
-    return step(
-      "A4",
-      "Working…",
-      "Wait — ideas or a tile are still minting.",
-      sel("#hex-create-pending")
-    );
-  }
-  if (s.pathway.timingPending) {
-    return step(
-      "A5",
-      "Re-checking timing",
-      "Wait for the year-honesty check to finish before you summon or hold.",
-      sel("#feasibility")
     );
   }
 
-  // B — multiplayer
+  if (s.ui.argumentModalOpen) {
+    return step(
+      "M3",
+      "Fact-check argument",
+      s.ui.argumentBusy
+        ? "Wait a moment while your real-world capability fact is verified."
+        : "State a real-world capability fact to challenge the assessment, or close to return to the board.",
+      sel(".ontology-modal-scrim form", ".ontology-modal-scrim"),
+      { skipDimmer: true }
+    );
+  }
+
+  if (s.ui.pickerOpen) {
+    if (s.spotlightTechId) {
+      const extra = s.spotlightEncourage ? ` ${s.spotlightEncourage}` : "";
+      return step(
+        "M4",
+        `Pick ${spotlightLabel(s)}`,
+        `${spotlightLabel(s)} is the suggested tech for this Quest. Select it to add it to Lane 1.${extra}`,
+        sel(
+          `#ontology-tech-picker [data-tech-id="${cssIdent(s.spotlightTechId)}"]`,
+          "#ontology-tech-picker .tech-card.recommended",
+          "#ontology-tech-picker"
+        ),
+        { skipDimmer: true }
+      );
+    }
+    if (s.hasRecommended) {
+      return step(
+        "M4",
+        "Pick a suggested tech",
+        "Pick a recommended emerging tech for this place, or choose any tech in the picker.",
+        sel("#ontology-tech-picker .tech-card.recommended", "#ontology-tech-picker"),
+        { skipDimmer: true }
+      );
+    }
+    return step(
+      "M4",
+      "Pick an emerging tech",
+      "Select any emerging technology in the picker to add it to Lane 1.",
+      sel("#ontology-tech-picker"),
+      { skipDimmer: true }
+    );
+  }
+
+  if (
+    s.ui.summonBusy ||
+    s.ui.challengerDrawOpen ||
+    s.ui.createBusy ||
+    s.ui.scoringPending ||
+    s.ui.timingPending ||
+    s.wb.busy
+  ) {
+    const busyTarget =
+      s.ui.summonBusy || s.ui.challengerDrawOpen
+        ? sel("#hex-challenger-draw", "#ontology-lane-problem")
+        : s.ui.createBusy || s.wb.busy
+          ? sel("#ontology-lane-pathway", "#ontology-board")
+          : sel("#ontology-lane-problem", "#ontology-lane-pathway");
+    return step(
+      "M5",
+      "Working…",
+      "Wait a moment for AI generation or pathway scoring to finish before the next move.",
+      busyTarget
+    );
+  }
+
+  // B1–B3 — Multiplayer gates
   if (s.mp.spectator) {
     return step(
       "B1",
       "Not your turn",
-      "Browse freely. Only the active seat spends AP, places costs, and summons challengers.",
+      "Browse freely. Only the active seat spends Moves, commits pathways, and answers challengers.",
       sel("#mp-seat-tabs")
     );
   }
   if (s.mp.viewingOther) {
     return step(
       "B2",
-      "Someone else's invent",
-      "You can add idea tiles here. Only the owner can summon challengers or declare the pathway holds — use the seat tabs to open yours.",
+      "Someone else's board",
+      "You can browse here, but only the owner can summon challengers or declare the pathway holds — use the seat tabs to switch back.",
       sel("#mp-seat-tabs")
     );
   }
   if (s.mp.hotseat && s.mp.needPassDevice) {
     return step(
       "B3",
-      "Pass the device",
-      "This seat is done. Pass the device so the next inventor can play.",
-      sel("#btn-mp-pass-device")
+      "End your turn",
+      "When you're ready, click End turn → to pass to the next inventor and refill Moves.",
+      sel("#btn-mp-workshop-end-turn")
     );
   }
 
-  // C — briefing walk
+  // C1–C2 — Quest briefing walk
   if (s.briefing.active) {
     if (lastBriefBeat(s)) {
       return step(
         "C2",
         "Finish the briefing",
-        "Last card. When you know the job, click Start inventing — then invent on the hex board.",
+        "Last card. When you know the job, click Start inventing to build on the Ontology Board.",
         sel(".quest-briefing-invent")
       );
     }
     return step(
       "C1",
       "Read the briefing",
-      "The story is this card on the right. Read it, then Next.",
+      "The story is this card on the right. Read it, then click Next.",
       sel('[data-brief="next"]')
     );
   }
 
-  // D — learning tutor (only before inventing)
-  if (s.isLearning && s.tutorOn && noInventYet(s) && !s.focusedTechId) {
+  // D1 — Learning tutor before board work
+  if (s.isLearning && s.tutorOn && s.pathwayCount === 0 && s.tracks === 0) {
     return step(
-      "D2",
+      "D1",
       "Talk to the tutor",
-      "Ask about the idea of this lesson, one beat at a time. End tutoring when you want invent tools (Ask for ideas costs AP after that).",
-      sel("#co-inventor-root")
+      "Walk through the lesson idea first, or click End tutoring when ready to build on the board.",
+      sel("#co-inventor-root"),
+      { openSideTab: "coinventor" }
     );
   }
 
-  // E — pick / focus a tech
-  if (noInventYet(s) && !s.focusedTechId) {
-    if (s.ui.techCatalogHidden) {
+  // W1–W4 — Double-Diamond Innovation Workbench open
+  if (s.wb.open) {
+    if (s.wb.diamond === "problem") {
       return step(
-        "E0",
-        "Open emerging tech",
-        "The catalog is tucked away. Open it, then pick a tech to invent with.",
-        sel("#screen-workshop [data-tech-dock-handle]")
+        "W1",
+        "Lock your Design Brief",
+        "Pick or write a How Might We… frame, then click Lock Brief & Develop Ideas → (or Skip to Ideas →).",
+        sel('[data-action="wb-lock-hmw"]', "#ontology-lane-pathway")
       );
     }
-    if (s.spotlightTechId) {
-      const extra = s.spotlightEncourage ? ` ${s.spotlightEncourage}` : "";
+    if (s.pathwayCount === 0 && s.wb.ideaCount === 0) {
       return step(
-        "E1",
-        `Pick ${spotlightLabel(s)}`,
-        `${spotlightLabel(s)} is the suggested emTech for this Quest. Click it, then Ask for ideas.${extra}`,
-        techTarget(s.spotlightTechId)
+        "W2",
+        "Generate or write Ideas",
+        "Deal AI ideas with SIT/SCAMPER/Open lenses (or save your own) onto the Ideas bench.",
+        sel('[data-action="wb-deal-ai"]', "#ontology-lane-pathway")
       );
     }
-    if (s.suggestedIds.length) {
+    if (s.pathwayCount === 0 && s.wb.ideaCount > 0) {
       return step(
-        "E2",
-        "Pick a suggested tech",
-        "Start with a suggested emTech for this place — then Ask for ideas. The AI will mint 3 tiles.",
-        sel("#screen-workshop .tech-card.recommended")
+        "W3",
+        "Assemble a Pathway",
+        "Click → Start Pathway on an Idea (or drag it into Pathways) to form your invention.",
+        sel('[data-drop="wb-assemble-canvas"]', "#ontology-lane-pathway")
       );
     }
-    return step(
-      "E3",
-      "Pick an emTech",
-      "Click any emerging tech, then Ask for ideas — or write how it works and mint a tile.",
-      sel("#tech-list")
-    );
-  }
-
-  // Pathway red while something is already on the board — explain WHY
-  // before asking for more tiles (bonds is geometry: move crisis hexes).
-  if (s.placedInventionCount > 0 && s.pathway.bonds === "red") {
-    return bondsRedStep(s, "G2");
-  }
-  if (s.placedInventionCount > 0 && s.pathway.coverage === "red") {
-    return coverageRedStep(s, "G3");
-  }
-  if (s.placedInventionCount > 0 && s.pathway.timingLevel === "red") {
-    const target = s.redInventionId ? hexTarget(s.redInventionId) : sel("#btn-wait");
-    return step(
-      "G4",
-      "Timing is red",
-      "The idea over-claims what this tech can do this year — that's why the pathway is red. Soften how it works, or Look Ahead to wait +2 years (crisis rises).",
-      target
-    );
-  }
-
-  // F — mint / place ideas
-  if (s.unplacedInventionCount > 0 && s.placedInventionCount === 0) {
-    return step(
-      "F3",
-      "Place an idea on the board",
-      "Drag a tile onto the hex board (or double-click). Dock it against a crisis hex so the pathway can turn yellow.",
-      sel("#hex-idea-cards")
-    );
-  }
-
-  if (s.focusedTechId && s.placedInventionCount === 0) {
-    if (s.howTextLength >= MINT_HOW_MIN) {
+    if (s.unpluggedCount > 0) {
       return step(
-        "F2",
-        "Mint your idea",
-        `Mint a tile for ${techName(s)} so you can drag it onto the board.`,
-        sel("#btn-mint-custom")
-      );
-    }
-    if (s.hasSparkBatch) {
-      return step(
-        "F5",
-        "Ask again",
-        "Those idea tiles are gone. Refresh for a new trio, or write how it works and mint your own.",
-        sel("#btn-refresh-ideas")
+        "W4",
+        "Plug into Problem",
+        "Drag your Pathway onto an unplugged Crisis on the right rail (or collapse to use 🔌 Plug).",
+        sel(".wb-dock-right", "#btn-close-workbench")
       );
     }
     return step(
-      "F1",
-      "Ask for ideas",
-      `Click Ask for ideas — the AI will mint 3 tiles for ${techName(s)} in this place. You can also write your own under How it works.`,
-      sel("#btn-ask-ideas")
+      "W4",
+      "Return to 4-lane circuit",
+      "Collapse Workbench to clear roadblocks, summon challengers, or hold.",
+      sel("#btn-close-workbench", "#ontology-lane-pathway")
     );
   }
 
-  if (!s.focusedTechId && s.placedInventionCount === 0 && s.ui.techCatalogHidden) {
+  // L1–L5 — 4-Lane causal chain
+  if (s.tracks === 0 && s.pathwayCount === 0) {
+    const hint = s.spotlightTechId
+      ? `Open + Add tech in Lane 1 and pick ${spotlightLabel(s)} (or another tech) to start the chain.`
+      : "Open + Add tech in Lane 1 and pick a technology to start the chain.";
+    return step("L1", "1 · Add an emerging tech", hint, sel("#btn-add-tech", "#ontology-lane-tech"));
+  }
+
+  if (
+    s.tracks > 0 &&
+    s.useCaseCount === 0 &&
+    s.pathwayCount === 0 &&
+    s.sparksCount === 0
+  ) {
     return step(
-      "E0",
-      "Open emerging tech",
-      "Open the catalog to pick another emTech.",
-      sel("#screen-workshop [data-tech-dock-handle]")
+      "L2",
+      "2 · Deal a milestone",
+      `Tap a reached ● milestone (at or above NOW) on ${techName(s)} in Lane 1 to unlock its Use Cases in Lane 2.`,
+      sel(
+        '#ontology-lane-tech [data-action="deal-milestone"].is-latest-reached',
+        '#ontology-lane-tech [data-action="deal-milestone"]',
+        "#ontology-lane-tech"
+      ),
+      s.focusedTechId
+        ? { expandCard: { kind: "tech", id: s.focusedTechId } }
+        : {}
     );
   }
 
-  if (!s.focusedTechId && s.placedInventionCount === 0) {
-    if (s.spotlightTechId) {
+  if (s.pathwayCount === 0 && s.sparksCount > 0) {
+    return step(
+      "L3",
+      "3 · Add an idea to Pathway",
+      "Tap + Add on one of the generated sparks to place it as a Pathway.",
+      sel("#ontology-sparks", "#ontology-lane-pathway")
+    );
+  }
+
+  if (s.pathwayCount === 0) {
+    if (s.writeOpen && s.draftHowLength >= MINT_HOW_MIN) {
       return step(
-        "E1",
-        `Pick ${spotlightLabel(s)}`,
-        `${spotlightLabel(s)} is the suggested emTech. Click it, then Ask for ideas.`,
-        techTarget(s.spotlightTechId)
+        "L4",
+        "Add Invention",
+        `Click Add Invention to place your ${techName(s)} idea into Lane 3.`,
+        sel('[data-action="write-pathway"]', "#ontology-lane-pathway")
+      );
+    }
+    if (s.apEnabled && s.ap < 1) {
+      return step(
+        "L4",
+        "Out of Moves",
+        s.isMultiplayer
+          ? "You've used your Moves for this year. Click End turn → to refill Moves."
+          : "You've used your Moves for this year. Advance the year (+1 yr →) to refill Moves.",
+        s.isMultiplayer
+          ? sel("#btn-mp-workshop-end-turn", "#btn-end-turn")
+          : sel('#ontology-board [data-action="year-plus"][data-years="1"]', "#btn-end-turn")
+      );
+    }
+    if (s.budgetWillEnabled && s.budget <= 0) {
+      return step(
+        "L4",
+        "Budget capacity full",
+        "All Budget capacity is allocated on your board. Remove a pathway or ease a crisis to free capacity.",
+        sel("#hud-budget")
       );
     }
     return step(
-      "E3",
-      "Pick an emTech",
-      "Pick a tech, then Ask for ideas.",
-      sel("#tech-list")
+      "L4",
+      "3 · Create a Pathway",
+      `Click ✨ Ask for ideas on ${techName(s)} (or ✍️ Write / ⤢ Workbench) to create a Pathway in Lane 3.`,
+      sel("#btn-ask-ideas", "#ontology-lane-pathway")
     );
   }
 
-  // G / H — board honesty, summon, hold
-  if (s.unansweredConcernId && !s.ui.tilePopupOpen) {
+  if (s.unpluggedCount > 0) {
+    const label = s.unpluggedCrisisName ? `“${s.unpluggedCrisisName}”` : "A Crisis";
+    const plugTarget = s.primaryPathwayId
+      ? sel(
+          `#ontology-lane-pathway [data-pathway-id="${cssIdent(s.primaryPathwayId)}"] [data-menu="plug"]`,
+          '[data-menu="plug"]',
+          "#ontology-lane-pathway"
+        )
+      : sel('[data-menu="plug"]', "#ontology-lane-pathway");
     return step(
-      "H2",
-      "Answer the hard question",
-      "Click the challenger hex. Write who acts, who pays, or what limit you respect.",
-      hexTarget(s.unansweredConcernId)
+      "L5",
+      "4 · Plug into every Crisis",
+      `${label} isn't wired yet. Open 🔌 Plug on your Pathway (or drag from its output port) to connect every Crisis in Lane 4.`,
+      plugTarget,
+      s.primaryPathwayId
+        ? { expandCard: { kind: "pathway", id: s.primaryPathwayId } }
+        : {}
     );
   }
 
-  if (s.concernsSummoned && s.boardHolds && s.pathway.timingLevel === "red") {
+  // R1–R3 — Red diagnostics
+  if (s.redChallengerId) {
+    const chId = cssIdent(s.redChallengerId);
     return step(
-      "H7",
+      "R1",
+      "Clear the roadblock",
+      "A Challenger is blocking a wire. Click the red roadblock token to defend your pathway (1 Move) or remix it in the Workbench.",
+      sel(
+        `.ontology-wire-token.is-red[data-challenger-id="${chId}"]`,
+        `.ontology-roadblock-pill.is-red[data-challenger-id="${chId}"]`,
+        "#ontology-lane-problem"
+      ),
+      s.redChallengerCrisisId
+        ? { expandCard: { kind: "crisis", id: s.redChallengerCrisisId } }
+        : {}
+    );
+  }
+
+  if (s.timingLevel === "red") {
+    return step(
+      "R2",
       "Timing is too early",
-      "The pathway is honest on the lights, but the year-claim is still red. Soften a claim, or Look Ahead (+2 years, crisis rises).",
-      sel("#btn-wait")
+      "This pathway relies on a future forecast or stretch claim for the current year. Jump +2 yrs (Look Ahead — crises rise), roll an R&D boost / fuse a convergence, or soften how it works.",
+      sel(
+        '#ontology-board [data-action="year-plus"][data-years="2"]',
+        "#btn-wait",
+        "#ontology-lane-pathway"
+      )
+    );
+  }
+
+  if (s.redCrisisCount > 0) {
+    const label = s.redCrisisName ? `“${s.redCrisisName}”` : "A Crisis";
+    return step(
+      "R3",
+      "Crisis light is still red",
+      `${label} isn't eased enough yet. Read the wire reason on that Crisis card, then 🔀 Remix, fuse another piece, or plug a second Pathway aimed at it.`,
+      s.redCrisisId
+        ? sel(
+            `#ontology-lane-problem [data-crisis-id="${cssIdent(s.redCrisisId)}"]`,
+            "#ontology-lane-problem"
+          )
+        : sel("#ontology-lane-problem"),
+      s.redCrisisId
+        ? { expandCard: { kind: "crisis", id: s.redCrisisId } }
+        : {}
+    );
+  }
+
+  // H1–H2 — Summon challengers & declare hold
+  if (!s.concernsSummoned && s.remainingConcerns > 0) {
+    return step(
+      "H1",
+      "Summon the hard questions",
+      "Every Crisis is wired and yellow/green. Click Answer the hard questions to test your pathway against Challengers.",
+      sel("#btn-to-challenge")
     );
   }
 
   if (s.concernsSummoned && s.boardHolds) {
     return step(
-      "H6",
+      "H2",
       "The pathway holds",
-      "Every active light is yellow or green. Declare that the pathway holds before the crisis wins.",
+      "All active lamps and roadblocks are yellow or green. Click The pathway holds → before a crisis meter hits 5.",
       sel("#btn-to-challenge")
     );
   }
 
-  if (s.concernsOnBoard > 0 && s.remainingConcerns > 0 && pathwayNotRed(s)) {
-    const n = s.remainingConcerns;
-    return step(
-      "H4",
-      "Next challenger",
-      `${n} hard question${n === 1 ? "" : "s"} still to summon. Keep going — one at a time.`,
-      sel("#btn-to-challenge")
-    );
-  }
-
-  if (s.concernsSummoned && s.pathway.bonds === "red") {
-    return bondsRedStep(s, "H5");
-  }
-  if (s.concernsSummoned && s.pathway.coverage === "red") {
-    return coverageRedStep(s, "H5");
-  }
-  if (s.concernsSummoned && s.pathway.overall === "red") {
-    const target = s.redGivenId
-      ? hexTarget(s.redGivenId)
-      : sel("#feasibility");
-    return step(
-      "H5",
-      "Ease the red lights",
-      "A crisis or concern light is still red. Click it to see why, then dock an honest idea against it — or move that hex next to your island.",
-      target
-    );
-  }
-
-  if (
-    s.budgetWillEnabled &&
-    s.budget <= 0 &&
-    s.placedInventionCount > 0
-  ) {
-    return step(
-      "G7",
-      "Budget is empty",
-      "Budget is empty — you cannot buy more techs or lobby. A docked pathway that eases a crisis pays some back.",
-      sel("#hud-budget")
-    );
-  }
-
-  if (
-    s.placedInventionCount > 0 &&
-    pathwayNotRed(s) &&
-    !s.concernsSummoned &&
-    s.concernsOnBoard === 0
-  ) {
-    if (outOfAp(s)) {
-      return step(
-        "G6",
-        "Refill AP",
-        "You're out of AP. End turn to refill — the year advances and crises get worse. Inventing is what eases them.",
-        sel("#btn-end-turn")
-      );
-    }
-    return step(
-      "G5",
-      "Answer the hard questions",
-      "Your pathway is honest enough. Summon a challenger onto the board — Mother Nature, Moloch, Ethicist, or Stakeholder.",
-      sel("#btn-to-challenge")
-    );
-  }
-
-  // Focused but already placing — invite Ask for another tech's ideas
-  if (s.focusedTechId && s.placedInventionCount > 0 && s.unplacedInventionCount === 0) {
-    if (s.howTextLength >= MINT_HOW_MIN) {
-      return step(
-        "F2",
-        "Mint another idea",
-        `Mint this ${techName(s)} idea and dock it against remaining red or thin spots.`,
-        sel("#btn-mint-custom")
-      );
-    }
-    if (!s.hasSparkBatch) {
-      return step(
-        "F1",
-        "Ask for more ideas",
-        `Ask for ideas on ${techName(s)} — or pick another emTech if the pathway still has a gap.`,
-        sel("#btn-ask-ideas")
-      );
-    }
-  }
-
-  // I — idle extras. Board actions outrank the always-visible co-inventor,
-  // so a paused tutor or unused chat cannot hide Lobby, Learn, or Look Ahead.
-  if (s.lobbyVisible && s.will < 4 && !outOfAp(s) && s.budget >= 1) {
-    return step(
-      "I2",
-      "Lobby for support",
-      "Lobby sits on Local rules. Spend 1 AP and 1$ to write a rule — or click a pill to read it, × to remove.",
-      sel("#btn-lobby")
-    );
-  }
-  if (s.focusedTechId && !s.learnOpenedThisTurn) {
-    return step(
-      "I4",
-      "Learn this emTech",
-      `Open Learn for a short brief on ${techName(s)} — then come back and invent.`,
-      sel("#btn-learn-tech")
-    );
-  }
-  if (s.islandHowEmpty && s.placedInventionCount > 0) {
-    return step(
-      "I6",
-      "How the pathway works",
-      "Write how the whole island works together — the parts are on the tiles; this is the whole.",
-      sel("#hex-island-how")
-    );
-  }
-  if (!s.waitUsed && s.pathway.timingLevel === "yellow") {
-    return step(
-      "I3",
-      "Look Ahead",
-      "Timing is tight but not blocked. Look Ahead if you want later-year capability (crisis will rise).",
-      sel("#btn-wait")
-    );
-  }
-  if (s.isLearning && !s.tutorOn) {
-    return step(
-      "I1",
-      "Tutor is paused",
-      "Resume tutoring anytime (free AP), or keep inventing — co-inventor chat costs 1 AP.",
-      sel("#co-resume-tutor")
-    );
-  }
-  if (!s.coinventorUsed) {
-    return step(
-      "I5",
-      "AI co-inventor",
-      "Stuck on the idea? The co-inventor can suggest a stack or check timing — first ask this turn costs 1 AP, then more help is free.",
-      sel("#co-inventor-root")
-    );
-  }
-
+  // Sensible fallback
   return step(
-    "I7",
+    "H0",
     "Keep inventing",
-    "Watch the crisis meters and the year. Place honest ideas, then hold the pathway before a meter hits 5.",
-    sel("#hud-crisis-wrap")
+    "Watch the crisis meters and the year. Keep every lamp yellow or green, clear challengers, and hold the pathway before a meter hits 5.",
+    sel("#hud-crisis-wrap", "#ontology-board")
   );
 }
 
@@ -641,29 +556,37 @@ function queryIn(root, selector) {
 
 /**
  * Resolve a step's target to a live element.
- * @param {TourStep} step
+ * @param {TourStep} stepObj
  * @param {ParentNode} [root]
  * @returns {HTMLElement|SVGElement|null}
  */
-export function queryTourTarget(step, root) {
+export function queryTourTarget(stepObj, root) {
   const doc = typeof document !== "undefined" ? document : null;
   const scope = root || tourQueryRoot(doc);
-  if (!step?.target || !scope?.querySelector) return null;
-  const t = step.target;
-  const lookup = (sel) => queryIn(scope, sel) || (doc && scope !== doc ? queryIn(doc, sel) : null);
+  if (!stepObj?.target || !scope?.querySelector) return null;
+  const t = stepObj.target;
+  const lookup = (s) => queryIn(scope, s) || (doc && scope !== doc ? queryIn(doc, s) : null);
+
   if (t.kind === "tech" && t.id) {
+    const id = cssIdent(t.id);
     return (
-      lookup(`.tech-card[data-id="${cssIdent(t.id)}"]`) ||
-      lookup(`[data-tech-focus="${cssIdent(t.id)}"]`)
+      lookup(`#ontology-tech-picker [data-tech-id="${id}"]`) ||
+      lookup(`#ontology-lane-tech [data-tech-id="${id}"]`) ||
+      lookup(`.tech-card[data-id="${id}"]`) ||
+      lookup(`[data-tech-focus="${id}"]`)
     );
   }
-  if (t.kind === "hex-tile" && t.id) {
-    return (
-      lookup(`#hex-board-svg [data-id="${cssIdent(t.id)}"]`) ||
-      lookup(`#hex-board [data-id="${cssIdent(t.id)}"]`)
-    );
+
+  const list =
+    Array.isArray(t.selectors) && t.selectors.length
+      ? t.selectors
+      : t.selector
+        ? [t.selector]
+        : [];
+  for (const s of list) {
+    const hit = lookup(s);
+    if (hit) return hit;
   }
-  if (t.selector) return lookup(t.selector);
   return null;
 }
 
@@ -675,12 +598,44 @@ function cssIdent(id) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-function escapeAttr(s) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+function matchesNode(el, selector) {
+  if (!el) return false;
+  if (typeof el.matches === "function") {
+    try {
+      return el.matches(selector);
+    } catch {
+      /* fallback */
+    }
+  }
+  if (selector.startsWith("#")) return el.id === selector.slice(1);
+  if (selector.startsWith(".")) return Boolean(el.classList?.contains(selector.slice(1)));
+  return false;
+}
+
+function closestNode(el, selector) {
+  let cur = el;
+  while (cur) {
+    if (matchesNode(cur, selector)) return cur;
+    cur = cur.parentNode || null;
+  }
+  return null;
+}
+
+function isDescendantOrSelf(target, ancestor) {
+  if (!target || !ancestor) return false;
+  if (target === ancestor) return true;
+  if (typeof ancestor.contains === "function" && ancestor.contains(target)) return true;
+  let cur = target.parentNode || null;
+  while (cur) {
+    if (cur === ancestor) return true;
+    cur = cur.parentNode || null;
+  }
+  return false;
 }
 
 const GAP = 12;
 const RING_PAD = 6;
+const OPENER_SUPPRESS_MS = 800;
 
 /**
  * Browser overlay. Call createGuidedTour() once; open/refresh/close after that.
@@ -689,9 +644,6 @@ const RING_PAD = 6;
  *   ensureTargetVisible?: (step: TourStep) => void | Promise<void>,
  *   restoreFocusEl?: () => HTMLElement|null,
  *   snapshot?: () => object,
- *   onOpenConcept?: (id: string) => void,
- *   onMuteConcept?: (id: string, on: boolean) => void,
- *   isConceptMuted?: (id: string) => boolean,
  * }} [opts]
  */
 export function createGuidedTour(opts = {}) {
@@ -699,14 +651,14 @@ export function createGuidedTour(opts = {}) {
   let root = null;
   /** @type {TourStep|null} */
   let current = null;
-  /** "step" = next-step coach-mark; "concept" = one of the Friend's-seven cards */
-  let mode = "step";
   /** @type {HTMLElement|SVGElement|null} */
   let lastTarget = null;
   /** @type {HTMLElement|null} */
   let openerEl = null;
   let bound = false;
   let gen = 0;
+  let suppressOpenerClick = false;
+  let suppressOpenerUntil = 0;
 
   function ensureRoot() {
     if (root && root.isConnected) return root;
@@ -719,12 +671,6 @@ export function createGuidedTour(opts = {}) {
     if (!root.dataset.tourBuilt) {
       root.dataset.tourBuilt = "1";
       root.innerHTML = `
-        <div class="tour-panes" hidden>
-          <div class="tour-pane" data-edge="n"></div>
-          <div class="tour-pane" data-edge="s"></div>
-          <div class="tour-pane" data-edge="w"></div>
-          <div class="tour-pane" data-edge="e"></div>
-        </div>
         <div class="tour-ring" hidden></div>
         <div class="tour-card" hidden role="dialog" aria-modal="false" aria-labelledby="tour-card-title" aria-describedby="tour-card-body" tabindex="-1">
           <p class="tour-kicker" id="tour-card-kicker">Next step</p>
@@ -732,41 +678,14 @@ export function createGuidedTour(opts = {}) {
           <p class="tour-card-body" id="tour-card-body"></p>
           <div class="tour-card-actions">
             <button type="button" class="btn btn-ghost btn-sm" id="tour-rules">Rules</button>
-            <button type="button" class="btn btn-primary btn-sm" id="tour-got-it">Got it</button>
-          </div>
-          <div class="tour-foot" id="tour-foot">
-            <label class="tour-mute" id="tour-mute-row" hidden>
-              <input type="checkbox" id="tour-mute" /> Don't auto-show this one
-            </label>
-            <div class="tour-concepts" role="group" aria-label="Concepts">
-              <span class="tour-concepts-label">Concepts</span>
-              ${listConcepts()
-                .map(
-                  (c) =>
-                    `<button type="button" class="tour-concept-chip" data-concept="${c.id}" title="${escapeAttr(c.title)}">${escapeAttr(c.title.split(":")[0].split(" is ")[0])}</button>`
-                )
-                .join("")}
-            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="tour-dismiss">Got it</button>
           </div>
         </div>
       `;
-      root.querySelector("#tour-mute")?.addEventListener("change", (e) => {
-        if (mode !== "concept" || !current) return;
-        opts.onMuteConcept?.(current.id, Boolean(e.target?.checked));
-      });
-      root.querySelectorAll(".tour-concept-chip").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const id = btn.dataset?.concept || btn.getAttribute?.("data-concept");
-          if (id) opts.onOpenConcept?.(id);
-        });
-      });
-      root.querySelector("#tour-got-it")?.addEventListener("click", () => close());
+      root.querySelector("#tour-dismiss")?.addEventListener("click", () => close());
       root.querySelector("#tour-rules")?.addEventListener("click", () => {
-        close();
+        close({ restoreFocus: false });
         opts.onOpenRules?.();
-      });
-      root.querySelectorAll(".tour-pane").forEach((el) => {
-        el.addEventListener("click", () => close());
       });
     }
     return root;
@@ -778,6 +697,58 @@ export function createGuidedTour(opts = {}) {
     window.addEventListener("resize", onGeometry, { passive: true });
     window.addEventListener("scroll", onGeometry, { passive: true, capture: true });
     document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointerDownCapture, { capture: true });
+    document.addEventListener("click", onClickCapture, { capture: true });
+  }
+
+  function isTourCardTarget(target) {
+    if (!target) return false;
+    const card = root?.querySelector?.(".tour-card");
+    if (card && isDescendantOrSelf(target, card)) return true;
+    return Boolean(closestNode(target, ".tour-card"));
+  }
+
+  function isOpenerTarget(target) {
+    if (!target) return false;
+    if (openerEl && isDescendantOrSelf(target, openerEl)) return true;
+    if (closestNode(target, "#btn-help")) return true;
+    const helpBtn = document.getElementById("btn-help");
+    if (helpBtn && isDescendantOrSelf(target, helpBtn)) return true;
+    return false;
+  }
+
+  function onPointerDownCapture(e) {
+    if (!isOpen()) {
+      suppressOpenerClick = false;
+      return;
+    }
+    const target = e?.target;
+    if (isTourCardTarget(target)) return;
+
+    if (isOpenerTarget(target)) {
+      suppressOpenerClick = true;
+      suppressOpenerUntil = Date.now() + OPENER_SUPPRESS_MS;
+      e.preventDefault?.();
+      close();
+      return;
+    }
+
+    suppressOpenerClick = false;
+    close({ restoreFocus: false });
+  }
+
+  function onClickCapture(e) {
+    if (!suppressOpenerClick) return;
+    if (Date.now() > suppressOpenerUntil) {
+      suppressOpenerClick = false;
+      return;
+    }
+    if (isOpenerTarget(e?.target)) {
+      suppressOpenerClick = false;
+      e.preventDefault?.();
+      e.stopPropagation?.();
+      e.stopImmediatePropagation?.();
+    }
   }
 
   function onKey(e) {
@@ -785,7 +756,7 @@ export function createGuidedTour(opts = {}) {
     if (!isOpen()) return;
     const help = document.getElementById("help-backdrop");
     if (help?.classList.contains("open")) return;
-    e.stopPropagation();
+    e.stopPropagation?.();
     close();
   }
 
@@ -808,23 +779,12 @@ export function createGuidedTour(opts = {}) {
     if (!refresh && extra.opener) openerEl = extra.opener;
     const host = ensureRoot();
     bindWindow();
-    mode = "step";
-    let next = resolveTourStep(snapshot);
+    const next = resolveTourStep(snapshot);
     current = next;
     try {
       await opts.ensureTargetVisible?.(next);
     } catch {
       /* still show the card */
-    }
-    if (token !== gen) return;
-    if (next.id === "E0" && typeof opts.snapshot === "function") {
-      try {
-        next = resolveTourStep(opts.snapshot());
-        current = next;
-        await opts.ensureTargetVisible?.(next);
-      } catch {
-        /* keep E0 */
-      }
     }
     if (token !== gen) return;
     host.classList.add("is-open");
@@ -841,65 +801,33 @@ export function createGuidedTour(opts = {}) {
 
   async function refresh(snapshot) {
     if (!isOpen()) return;
-    if (mode === "concept") {
-      // A concept card stays until dismissed; only follow its target around.
-      if (current) layout(current);
-      return;
-    }
     await open(snapshot, { refresh: true });
   }
 
-  /**
-   * Show one Friend's-seven concept card (auto-open or on demand).
-   * @param {object|null} card — from concept-cards.js
-   * @param {object} [_snapshot]
-   * @param {{ opener?: HTMLElement|null }} [extra]
-   */
-  async function openConcept(card, _snapshot, extra = {}) {
-    if (!card) return;
-    const token = ++gen;
-    if (extra.opener) openerEl = extra.opener;
-    const host = ensureRoot();
-    bindWindow();
-    mode = "concept";
-    current = card;
-    try {
-      await opts.ensureTargetVisible?.(card);
-    } catch {
-      /* still show the card */
-    }
-    if (token !== gen) return;
-    host.classList.add("is-open");
-    document.body.classList.add("tour-open");
-    layout(card);
-    const el = host.querySelector(".tour-card");
-    try {
-      el?.focus?.({ preventScroll: true });
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function close() {
+  function close(options = {}) {
+    const restoreFocus = options.restoreFocus !== false;
     gen += 1;
-    mode = "step";
     if (!root) return;
     root.classList.remove("is-open");
     document.body.classList.remove("tour-open");
-    root.querySelector(".tour-panes")?.setAttribute("hidden", "");
     const ring = root.querySelector(".tour-ring");
     const card = root.querySelector(".tour-card");
-    if (ring) ring.hidden = true;
+    if (ring) {
+      ring.hidden = true;
+      ring.classList.remove("has-dimmer");
+    }
     if (card) card.hidden = true;
     lastTarget?.classList?.remove("tour-target");
     lastTarget = null;
     current = null;
     const restore = openerEl || opts.restoreFocusEl?.() || null;
     openerEl = null;
-    try {
-      restore?.focus?.({ preventScroll: true });
-    } catch {
-      /* ignore */
+    if (restoreFocus) {
+      try {
+        restore?.focus?.({ preventScroll: true });
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -907,27 +835,16 @@ export function createGuidedTour(opts = {}) {
     const host = ensureRoot();
     const card = host.querySelector(".tour-card");
     const ring = host.querySelector(".tour-ring");
-    const panes = host.querySelector(".tour-panes");
     const title = host.querySelector("#tour-card-title");
     const body = host.querySelector("#tour-card-body");
-    if (!card || !ring || !panes || !title || !body) return;
+    if (!card || !ring || !title || !body) return;
 
     title.textContent = stepObj.title;
     body.textContent = stepObj.body;
     card.hidden = false;
     card.dataset.step = stepObj.id;
-    const concept = mode === "concept";
     const kicker = host.querySelector("#tour-card-kicker");
-    if (kicker) kicker.textContent = concept ? stepObj.kicker || "Concept" : "Next step";
-    card.classList.toggle("is-concept", concept);
-    const muteRow = host.querySelector("#tour-mute-row");
-    if (muteRow) muteRow.hidden = !concept;
-    const mute = host.querySelector("#tour-mute");
-    if (mute && concept) mute.checked = Boolean(opts.isConceptMuted?.(stepObj.id));
-    host.querySelectorAll?.(".tour-concept-chip").forEach((btn) => {
-      const id = btn.dataset?.concept || btn.getAttribute?.("data-concept");
-      btn.classList.toggle("is-active", concept && id === stepObj.id);
-    });
+    if (kicker) kicker.textContent = "Next step";
 
     lastTarget?.classList?.remove("tour-target");
     const target = queryTourTarget(stepObj);
@@ -945,25 +862,17 @@ export function createGuidedTour(opts = {}) {
       ring.style.width = `${rect.width + RING_PAD * 2}px`;
       ring.style.height = `${rect.height + RING_PAD * 2}px`;
     }
-
-    const skipDimmer = Boolean(stepObj.skipDimmer) || !rect;
-    panes.hidden = skipDimmer;
-    if (!skipDimmer && rect) {
-      const hole = inflate(rect, RING_PAD);
-      placePanes(panes, hole, vw, vh);
-    }
+    ring.classList.toggle("has-dimmer", Boolean(rect) && !stepObj.skipDimmer);
 
     placeCard(card, rect, vw, vh);
   }
 
   return {
     open,
-    openConcept,
     refresh,
     close,
     isOpen,
     currentStep: () => current,
-    mode: () => mode,
   };
 }
 
@@ -981,57 +890,9 @@ function targetRect(el) {
   };
 }
 
-function inflate(r, pad) {
-  return {
-    top: r.top - pad,
-    left: r.left - pad,
-    width: r.width + pad * 2,
-    height: r.height + pad * 2,
-    bottom: r.bottom + pad,
-    right: r.right + pad,
-  };
-}
-
-function placePanes(panes, hole, vw, vh) {
-  const n = panes.querySelector('[data-edge="n"]');
-  const s = panes.querySelector('[data-edge="s"]');
-  const w = panes.querySelector('[data-edge="w"]');
-  const e = panes.querySelector('[data-edge="e"]');
-  const top = Math.max(0, hole.top);
-  const left = Math.max(0, hole.left);
-  const bottom = Math.min(vh, hole.bottom);
-  const right = Math.min(vw, hole.right);
-  if (n) {
-    n.style.top = "0";
-    n.style.left = "0";
-    n.style.right = "0";
-    n.style.height = `${top}px`;
-  }
-  if (s) {
-    s.style.top = `${bottom}px`;
-    s.style.left = "0";
-    s.style.right = "0";
-    s.style.bottom = "0";
-    s.style.height = `${Math.max(0, vh - bottom)}px`;
-  }
-  if (w) {
-    w.style.top = `${top}px`;
-    w.style.left = "0";
-    w.style.width = `${left}px`;
-    w.style.height = `${Math.max(0, bottom - top)}px`;
-  }
-  if (e) {
-    e.style.top = `${top}px`;
-    e.style.left = `${right}px`;
-    e.style.right = "0";
-    e.style.height = `${Math.max(0, bottom - top)}px`;
-  }
-}
-
 function placeCard(card, rect, vw, vh) {
   card.style.maxWidth = `${Math.min(340, vw - 24)}px`;
   card.removeAttribute("data-edge");
-  // Measure after content set
   const cw = card.offsetWidth || 320;
   const ch = card.offsetHeight || 160;
   const hudish = rect && rect.top < 88;
@@ -1076,7 +937,13 @@ function placeCard(card, rect, vw, vh) {
     },
   ];
 
-  let chosen = candidates.find((c) => c.top >= 8 && c.left >= 8 && c.top + ch <= vh - 8 && c.left + cw <= vw - 8);
+  let chosen = candidates.find(
+    (c) =>
+      c.top >= 8 &&
+      c.left >= 8 &&
+      c.top + ch <= vh - 8 &&
+      c.left + cw <= vw - 8
+  );
   if (!chosen) {
     chosen = {
       edge: "bottom",
@@ -1094,4 +961,3 @@ function placeCard(card, rect, vw, vh) {
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
 }
-

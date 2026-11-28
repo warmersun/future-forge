@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { isPathwayBoard } from '../board/pathway-model.js';
 
 const mission = (id = 'quest-a', trust = 'official') => ({ id, packageRef: { questId: id }, runWorld: { trust } });
 function harness(initialMission) {
   const source = fs.readFileSync(new URL('../game.js', import.meta.url), 'utf8');
   const starter = source.slice(source.indexOf('function postCloudRunStart(mission)'), source.indexOf('async function syncCloudProgress()'));
-  const scheduler = source.slice(source.indexOf('function scheduleCloudRunState()'), source.indexOf('function applyRestoredPlay(play)'));
+  const scheduler = source.slice(source.indexOf('function scheduleCloudRunState()'), source.indexOf('function applyRestoredPlay('));
   const post = source.slice(source.indexOf('function postCloudRun(run,'), source.indexOf('function postCloudRunStart(mission)'));
   const state = { mission: initialMission, cloudRunId: null, progress: 'initial' };
   const pending = [], puts = [], notices = [], timers = new Map(); let nextTimer = 0;
@@ -18,9 +19,9 @@ function harness(initialMission) {
   const setTimer = (fn) => { timers.set(++nextTimer, fn); return nextTimer; };
   const clearTimer = (id) => timers.delete(id);
   const payload = () => ({ questId: state.mission.id, runId: state.cloudRunId, progress: state.progress });
-  const methods = new Function('state', 'apiFetch', 'isClerkSignedIn', 'cloudRunKind', 'isRoomOrHotseatSession', 'flashToast', 'setTimeout', 'clearTimeout', 'cloudRunStatePayload', 'applyOutcomeCloudSaveChrome',
+  const methods = new Function('state', 'apiFetch', 'isClerkSignedIn', 'cloudRunKind', 'isRoomOrHotseatSession', 'flashToast', 'setTimeout', 'clearTimeout', 'cloudRunStatePayload', 'applyOutcomeCloudSaveChrome', 'isPathwayBoard',
     `let cloudRunStateTimer = null; ${post}\n${starter}\n${scheduler}\nreturn { postCloudRun, postCloudRunStart, scheduleCloudRunState };`)(
-    state, apiFetch, () => true, () => 'solo', () => false, (s) => notices.push(s), setTimer, clearTimer, payload, () => {});
+    state, apiFetch, () => true, () => 'solo', () => false, (s) => notices.push(s), setTimer, clearTimer, payload, () => {}, isPathwayBoard);
   const tick = () => { const tasks = [...timers.values()]; timers.clear(); for (const f of tasks) f(); };
   return { state, pending, puts, notices, tick, ...methods };
 }

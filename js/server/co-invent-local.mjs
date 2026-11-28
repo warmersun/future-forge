@@ -38,6 +38,7 @@ import {
   rotateLocalIdeaSparks,
   localPlainTiming,
 } from "../idea-cards.js";
+import { localWorkbenchLensDrafts } from "../board/workbench-methods.js";
 import { localScrutinyProposals } from "../scrutiny-shared.js";
 import { heuristicConverges, clampPathwayScore } from "../hex/evaluate.js";
 import { scopeCrisisScore } from "../hex/crisis-delta.js";
@@ -799,6 +800,17 @@ function localCoInvent({ mode, messages, context }) {
 
   if (mode === "idea-sparks") {
     return localIdeaSparksResult(context, base);
+  }
+
+  if (mode === "workbench-lens") {
+    const ideas = localWorkbenchLensDrafts(context);
+    return {
+      source: "local",
+      message: `Drafted ${ideas.length} local lens ${ideas.length === 1 ? "card" : "cards"}.`,
+      ideas,
+      proposals: base,
+      teaching: [],
+    };
   }
 
   if (mode === "assess-plain") {

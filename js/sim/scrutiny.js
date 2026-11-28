@@ -109,11 +109,11 @@ export function applyArgueResult(scrutiny, encounterId, quality) {
   return { scrutiny: next, miss, damage, cleared: enc.cleared };
 }
 
-export function applyPatchResult(scrutiny, encounterId, funded = false) {
+export function applyPatchResult(scrutiny, encounterId) {
   const next = cloneScrutiny(scrutiny);
   const enc = next.encounters.find((e) => e.id === encounterId);
   if (!enc || enc.cleared) return { scrutiny: next, damage: 0 };
-  const damage = funded ? 2 : 1;
+  const damage = 1;
   enc.hp = Math.max(0, enc.hp - damage);
   if (enc.hp <= 0) {
     enc.cleared = true;
@@ -135,14 +135,11 @@ export function applyPivotResult(scrutiny, encounterId) {
 }
 
 /**
- * Sidestep cost = remaining resolve hearts.
- * Full critic (2♥) → 2 AP + 2 Will; after a glance (1♥) → 1 AP + 1 Will.
+ * Sidestep cost: 1 Move (no Goodwill burn; still once per Quest with elegance penalty).
  * @param {object|null|undefined} enc
- * @param {{ budgetWill?: boolean }} [opts]
  * @returns {{ ok: boolean, error?: string, hearts: number, ap: number, will: number }}
  */
-export function sidestepCostForEncounter(enc, opts = {}) {
-  const budgetWill = opts.budgetWill !== false;
+export function sidestepCostForEncounter(enc) {
   if (!enc || enc.cleared) {
     return { ok: false, error: "no_encounter", hearts: 0, ap: 0, will: 0 };
   }
@@ -154,8 +151,8 @@ export function sidestepCostForEncounter(enc, opts = {}) {
   return {
     ok: true,
     hearts,
-    ap: hearts,
-    will: budgetWill ? hearts : 0,
+    ap: 1,
+    will: 0,
   };
 }
 

@@ -162,26 +162,38 @@ export function createCapabilityExplorer(host, dependencies = {}) {
       renderChoices(choices);
       const trend = model.selectedTrend;
       if (trend) {
+        const hasCurve = trend.hasCurve !== false && Boolean(trend.compounding);
         appendText(body, 'h3', trend.name, 'capability-explorer-title');
-        appendText(body, 'p', `${trend.capability} · ${trend.unit} · ${trend.source === 'quest' ? 'Quest-authored' : 'Catalog reference'}`, 'capability-explorer-meta');
-        appendText(body, 'p', `${assumption(trend.compounding)} · If this trend continues`, 'capability-explorer-assumption');
-        if (model.currentYear.inDomain) appendText(body, 'p', `Model estimate at quest year ${snapshot.year}: ${formatTrendValue(model.currentYear.value, trend.unit)}`, 'capability-explorer-estimate');
-        else appendText(body, 'p', `This trend covers ${trend.domain.start}–${trend.domain.end}; no projection is supplied for the current quest year.`, 'capability-explorer-estimate');
+        appendText(body, 'p', [trend.capability, hasCurve ? trend.unit : null, trend.source === 'quest' ? 'Quest-authored' : 'Catalog reference'].filter(Boolean).join(' · '), 'capability-explorer-meta');
+        if (hasCurve) {
+          appendText(body, 'p', `${assumption(trend.compounding)} · If this trend continues`, 'capability-explorer-assumption');
+          if (model.currentYear.inDomain) appendText(body, 'p', `Model estimate at quest year ${snapshot.year}: ${formatTrendValue(model.currentYear.value, trend.unit)}`, 'capability-explorer-estimate');
+          else appendText(body, 'p', `This trend covers ${trend.domain.start}–${trend.domain.end}; no projection is supplied for the current quest year.`, 'capability-explorer-estimate');
+        } else if (trend.trendSummary) {
+          appendText(body, 'p', trend.trendSummary, 'capability-explorer-assumption');
+        }
         const layout = appendText(body, 'div', null, 'capability-explorer-layout');
         const descCol = appendText(layout, 'div', null, 'capability-explorer-description');
         description = appendText(descCol, 'p', model.description, `capability-explorer-description-text${expanded.has(trend.id) ? '' : ' capability-explorer-description-text--clamped'}`); description.id = uid;
         expandButton = button(descCol, expanded.has(trend.id) ? 'Show less' : 'Read full description', 'description'); expandButton.setAttribute('aria-controls', uid); expandButton.setAttribute('aria-expanded', String(expanded.has(trend.id))); expandButton.hidden = true;
         const column = appendText(layout, 'div', null, 'capability-explorer-chart-column');
-        const chartBox = appendText(column, 'div', null, 'capability-explorer-chart'); const canvas = appendText(chartBox, 'canvas', null); canvas.setAttribute('aria-label', `${trend.name} trend model`);
-        rail = appendText(column, 'div', null, 'capability-explorer-rail');
-        evidenceList = appendText(column, 'div', null); renderEvidence();
-        const generation = activeGeneration;
-        const year = Number(snapshot.year); const min = Number(trend.domain.start), max = Number(trend.domain.end);
-        try { chart = mount(canvas, trend, { yearNow: year, nowLabel: 'Quest year', dashedModel: true, displayMin: Number.isFinite(year) ? Math.min(min,year) : min, displayMax: Number.isFinite(year) ? Math.max(max,year) : max, explorerTicks: true, onLayout(c) { if (!destroyed && generation === activeGeneration) placeRail(c); } }); } catch { chart = null; }
-        if (chart) placeRail(chart); else appendText(chartBox, 'p', 'Chart unavailable');
+        if (hasCurve) {
+          const chartBox = appendText(column, 'div', null, 'capability-explorer-chart'); const canvas = appendText(chartBox, 'canvas', null); canvas.setAttribute('aria-label', `${trend.name} trend model`);
+          rail = appendText(column, 'div', null, 'capability-explorer-rail');
+          evidenceList = appendText(column, 'div', null); renderEvidence();
+          const generation = activeGeneration;
+          const year = Number(snapshot.year); const min = Number(trend.domain.start), max = Number(trend.domain.end);
+          try { chart = mount(canvas, trend, { yearNow: year, nowLabel: 'Quest year', dashedModel: true, displayMin: Number.isFinite(year) ? Math.min(min,year) : min, displayMax: Number.isFinite(year) ? Math.max(max,year) : max, explorerTicks: true, onLayout(c) { if (!destroyed && generation === activeGeneration) placeRail(c); } }); } catch { chart = null; }
+          if (chart) placeRail(chart); else appendText(chartBox, 'p', 'Chart unavailable');
+        } else {
+          evidenceList = appendText(column, 'div', null); renderEvidence();
+        }
         const milestones = appendText(body, 'details', null); appendText(milestones, 'summary', 'Authored milestones').setAttribute('data-focus-key', 'milestones');
         if (!trend.milestones?.length) appendText(milestones, 'p', 'No milestones supplied.');
-        for (const m of trend.milestones || []) appendText(milestones, 'p', `${m.label} · ${m.date} · ${formatTrendValue(m.value, trend.unit)} · ${m.status}`);
+        for (const m of trend.milestones || []) {
+          const parts = [m.label, m.date, hasCurve && m.value != null ? formatTrendValue(m.value, trend.unit) : null, m.status].filter(Boolean);
+          appendText(milestones, 'p', parts.join(' · '));
+        }
         const sources = appendText(body, 'details', null); appendText(sources, 'summary', 'Sources').setAttribute('data-focus-key', 'sources');
         if (!model.sources.length) appendText(sources, 'p', 'No source link supplied');
         for (const source of model.sources) { const p = appendText(sources, 'p', null); link(p, source.label, source.url); }

@@ -189,11 +189,11 @@ Three stocks sit beside the crisis meters. Crisis meters are the place. These th
 
 | Player label | Code | What it is |
 |--------------|------|------------|
-| **Attention** (AP) | `state.ap` | The action window. The first thinking ask of a turn costs 1. Further thinking that turn is free. Judging and submitting still cost Attention. |
-| **Budget** | `state.budget` | Capital. It is a stock: ending the turn refills Attention, not Budget. |
-| **Support** | `state.will` | Political will — goodwill you can spend. Older design notes say “political will.” The HUD says Support. A crisis meter may also be named Trust; that meter is the place, not this resource. |
+| **Moves** | `state.ap` | 3 quiet commitments per year/turn (default `apMax: 3`). Thinking, AI chat, Workbench ideation, editing, and summoning roadblocks are always free (0 Moves). Committing a new emTech, Lobby, R&D Boost, Roadblock defense, or a fact-checked argument spends 1 Move. |
+| **Budget** | `state.budget` / `state.budgetCap` | 100% reversible town capacity (starts at `5`, max `10`). Removing a Pathway or R&D frees 100% of its Budget immediately. |
+| **Goodwill** | `state.will` / `state.willCap` | 100% reversible civic backing (starts at `3`, max `5`). Needed for frontier/AI tech; grows only upward via Lobby (`1 Move`, `0 Budget`) and cleared Roadblocks. A crisis meter may also be named Trust; that meter is the place, not Goodwill. |
 
-**Two-act economy.** A local island this year should not also finish the root-cause meter. Later, more honest capabilities — after the calendar moves — are act two. When a scored pathway eases a crisis role, it pays **+1 Budget per newly eased role**, once per role this Quest. That payment funds act two. Authors tune starting meters and wallet with the economy lab so a Quest is **challenging**: solvable before meters go red, not trivial in year one. See [quest-economy-lab.md](quest-economy-lab.md).
+**Quiet guardrails & capacity growth.** A local island this year should not also finish the root-cause meter. Later, more honest capabilities — after the calendar moves — are act two. When a scored pathway eases a crisis role, it grows Budget capacity by **+1 per newly eased role**, once per role this Quest (max `10`). Authors keep `resources` optional (town defaults apply automatically) and rely on `validate:quest --strict` for lightweight sanity checks.
 
 ### AI co-inventor
 
@@ -315,11 +315,10 @@ A learning Quest that includes lesson pages ships as one **`.ffquest`** file: a 
 
 ```bash
 npm run validate:quest -- path/to/quest.json --strict
-npm run economy:quest -- path/to/quest.json
 npm run pack:quest -- <srcdir> -o <id>.ffquest
 ```
 
-`--strict` fails on craft warnings (technology named in player text, thin grounding, template leftovers, and the rest). The economy lab’s target verdict is **challenging**. Developer mode (`npm run start:developer` or `FF_DEVELOPER=1`) unlocks inspect chrome and the lab at `/tools/quest-economy`. Production `npm start` leaves developer mode off. The client reads the flag from `/api/health`; there is no URL override.
+`--strict` fails on craft and lightweight resource/clock sanity warnings (technology named in player text, thin grounding, template leftovers, out-of-range starting caps, or immediate clock collapse). Developer mode (`npm run start:developer` or `FF_DEVELOPER=1`) unlocks inspect chrome. Production `npm start` leaves developer mode off. The client reads the flag from `/api/health`; there is no URL override.
 
 ### Collector cards
 
@@ -383,13 +382,13 @@ In this checkout, quest, predictions, companion, and collector cards are also li
 
 | Skill | You author | It drives | Check |
 |-------|------------|-----------|-------|
-| [future-forge-quest](../skills/future-forge-quest/) | A Spotlight Quest tile. A learning Quest with pages also packs to one `.ffquest` | Library, External Quests, Sponsored and Learning catalogs, the briefing, grounding for every AI judgement, tutor mode | `npm run validate:quest -- <file> --strict` and `npm run economy:quest -- <file>` (verdict: **challenging**) |
+| [future-forge-quest](../skills/future-forge-quest/) | A Spotlight Quest tile. A learning Quest with pages also packs to one `.ffquest` | Library, External Quests, Sponsored and Learning catalogs, the briefing, grounding for every AI judgement, tutor mode | `npm run validate:quest -- <file> --strict` |
 | [future-forge-predictions](../skills/future-forge-predictions/) | One `future-forge.predictions/v1` bank of dated milestones, trends, and predictions, with attribution | Capability outlook, year dialog, outcome foresight cards, the AI world clock | `npm run validate:predictions -- <file>`, then `FF_PREDICTIONS_FILE=<file> npm start` |
 | [future-forge-companion](../skills/future-forge-companion/) | One companion quest from a YouTube video, podcast, blog, or X post, plus the grant rows when the premise is assumed | The source stage before play, and the bank that quest pins | The quest and predictions checks above. Procedure: that skill |
 | [future-forge-trends](../skills/future-forge-trends/) | One measured capability series (`future-forge.capability-trend/v1`): compounding, anchor, milestones. No invented statistics | Inline Capability outlook and Look Ahead charts; optional embed on a Quest | `npm run validate:trend -- <file>` |
 | [future-forge-collector-cards](../skills/future-forge-collector-cards/) | One capability card plus a sibling page image | Public `/card/<id>` page; a free reusable invention tile once collected | `npm run validate:collector-card -- cards/<slug>.json` |
 
-Quest hard rules worth knowing before you edit a tile: the spotlight id is index 0 of `mission.suggested`, with 2–4 supporting ids; player-facing prose never names those technologies or a product as the answer; `briefMd` runs The place → The bigger problem → Your job (outcome only); `grounding` holds the truth the model must respect; new meters default to local 3↑1, global 2↑1, support 2↑0. The skill’s `references/` spell the character clips, the prose craft, the lint codes, and the economy.
+Quest hard rules worth knowing before you edit a tile: the spotlight id is index 0 of `mission.suggested`, with 2–4 supporting ids; player-facing prose never names those technologies or a product as the answer; `briefMd` runs The place → The bigger problem → Your job (outcome only); `grounding` holds the truth the model must respect; new meters default to local 3↑1, global 2↑1, support 2↑0. The skill’s `references/` spell the character clips, the prose craft, and the lint codes.
 
 Predictions change how harshly timing is judged. Place years honestly. Due rows become “already real.” Rows still ahead stay forecasts. The shipped default mixes unattributed rows; `predictions/examples/musk-abundance.json` is the attributed example.
 
@@ -458,7 +457,6 @@ The five authoring skills are MIT and may be reused on their own. AI providers�
 | [workshop-hex-invent-surface.md](workshop-hex-invent-surface.md) | Visual language of the hex board. Written as a change proposal; the board it describes is what ships |
 | [quest-tile-schema.md](quest-tile-schema.md) | Quest JSON: fields, who sees them, character clips |
 | [quest-package.md](quest-package.md) | `.ffquest` zip for a Quest plus lesson pages |
-| [quest-economy-lab.md](quest-economy-lab.md) | Difficulty simulator; target verdict **challenging** |
 | [predictions-bank.md](predictions-bank.md) | Year dialog and the AI world clock |
 | [capability-trend-schema.md](capability-trend-schema.md) | One measured curve per file |
 | [capability-trends-remote.md](capability-trends-remote.md) | Where Wait charts load from |

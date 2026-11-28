@@ -140,8 +140,54 @@ describe("trend-chart", () => {
     assert.equal(buildTrendChartConfig(trend).plugins, undefined);
   });
 
+  it("plots clickable playable milestones on the curve and routes clicks by milestoneId", () => {
+    const clicked = [];
+    const cfg = buildTrendChartConfig(trend, {
+      yearNow: 2026,
+      nowLabel: "NOW 2026",
+      compact: true,
+      playableMilestones: [
+        { id: "ms-2026", year: 2026, label: "Clinic kit", status: "reached", dealt: true, useCases: [{}, {}] },
+        { id: "ms-2030", year: 2030, label: "Portable sequencer", status: "predicted", dealt: false, useCases: [{}, {}] },
+      ],
+      onClickMilestone: (id) => clicked.push(id),
+    });
+    assert.equal(cfg.options.scales.x.title.display, false);
+    assert.equal(cfg.options.scales.y.title.display, false);
+    const pr = cfg.data.datasets.find((d) => d.label === "Playable reached");
+    const pf = cfg.data.datasets.find((d) => d.label === "Playable forecast");
+    assert.equal(pr?.data?.length, 1);
+    assert.equal(pf?.data?.length, 1);
+    assert.equal(pf.data[0].early, true);
+    const prIdx = cfg.data.datasets.indexOf(pr);
+    cfg.options.onClick({}, [{ datasetIndex: prIdx, index: 0 }], { data: cfg.data });
+    assert.deepEqual(clicked, ["ms-2026"]);
+  });
+
   it("destroyTrendChart tolerates null", () => {
     destroyTrendChart(null);
     destroyTrendChart({ destroy() {} });
+  });
+
+  it("returns null config for milestone-only capabilities without a curve", () => {
+    const noCurve = validateCapabilityTrend({
+      schema: "future-forge.capability-trend/v2",
+      id: "quantum-random-number-generation",
+      techId: "quantum-internet",
+      name: "Hardware quantum random numbers",
+      summary: "Quantum photon fluctuations generate verifiable encryption randomness.",
+      capability: "Generate physical randomness from quantum photon fluctuations.",
+      trendSummary: "Commercial quantum entropy cards ship for key seeding.",
+      milestones: [
+        {
+          id: "qrng-2026",
+          label: "Commercial entropy cards ship",
+          date: "2026",
+          status: "reached",
+          useCases: [{ title: "Hardware key seeding", blurb: "Seed encryption keys locally." }],
+        },
+      ],
+    }).trend;
+    assert.equal(buildTrendChartConfig(noCurve, { yearNow: 2026 }), null);
   });
 });

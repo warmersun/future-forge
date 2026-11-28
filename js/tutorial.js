@@ -152,8 +152,21 @@ export function tutorialCoInventResult(mode, extra) {
       };
     case "evaluate-convergence":
       return tutorialConvergence(extra);
-    case "idea-sparks":
-      return { ideas: [] };
+    case "idea-sparks": {
+      const techId = String(extra?.focusTechId || extra?.techId || "");
+      const battery = techId === "battery";
+      const how = battery ? TUTORIAL_TEXT.mechBattery : TUTORIAL_TEXT.mechDrones;
+      return {
+        ideas: [{
+          id: battery ? "spark-battery" : "spark-drones",
+          title: battery ? "Battery Flight Pack" : "Runoff Mapper",
+          blurb: how,
+          insertText: how,
+          howText: how,
+          year: 2026,
+        }],
+      };
+    }
     case "fact-check-argument":
       return {
         verdict: "reject",
@@ -295,392 +308,94 @@ function workshop(snap) {
  */
 export const TUTORIAL_STEPS = [
   {
-    id: "home-quest",
-    title: "Start with a Quest",
-    body: "A Quest is a design challenge in a fictive place: the people, and the harm they are living. It also sets the AI's grounding — the facts and limits the built-in AI must respect. Only the glowing control works. Click Start a Quest.",
-    targets: [sel("#btn-choose-theme")],
-    advanceWhen: (s) => s.screen === "quest-hub",
-  },
-  {
-    id: "hub-themes",
-    title: "How you enter",
-    body: "Themes are the bigger problems. Each one opens the local design challenges, not the problem in the abstract. Skip Sponsored, Learning, and Library. Click Themes.",
-    targets: [sel('#quest-hub-grid .quest-hub-card[data-hub="themes"]')],
-    advanceWhen: (s) => s.screen === "global",
-  },
-  {
-    id: "theme-water",
-    title: "Pick Clean Water",
-    body: "Clean Water holds several design challenges, each in its own fictive place, with its own people. Click it.",
-    targets: [sel('#global-grid .challenge-card[data-id="water"]')],
-    advanceWhen: (s) => s.screen === "mission" && s.globalId === "water",
-  },
-  {
-    id: "pick-paddy",
-    title: "Green film coats the Paddy Step Wells",
-    body: "Sita keeps the wells the paddies drink from. Green film coats the steps, and a neighbor's child is already home with diarrhea. This card is one local instance of Clean Water. Click this Quest.",
-    targets: (s) => [
-      s.paddyId
-        ? sel(`#mission-grid .challenge-card[data-id="${cssAttr(s.paddyId)}"]`)
-        : sel("#mission-grid .challenge-card"),
-    ],
-    advanceWhen: (s) => s.screen === "workshop",
-  },
-  {
-    id: "hud-read",
-    mode: "read",
-    title: "Clock, attention, crisis",
-    body: "Year and Turn are the calendar. AP is attention: you start with 3, and spending it is how you act. Budget pays to place a technology. Support is political will. The three meters — Tummy Bugs, Field Runoff, and Well Fights — run from 0 to 5, and they start too high. The ? is free help on a normal Quest. Here it is stricter. Click Next.",
-    targets: [sel("#hud-clock"), sel("#hud-crisis-wrap")],
-  },
-  {
-    id: "briefing",
-    dockBeside: true,
-    title: "Read the place",
-    body: (s) =>
-      lastBriefBeat(s)
-        ? "Last card. Get Sita through this year without the same harm landing again. Click Start inventing."
-        : "The card on the right is this Quest's scenario. Read it, then click the arrow. One card at a time.",
-    targets: (s) =>
-      lastBriefBeat(s)
-        ? [
-            sel(".quest-briefing-invent"),
-            sel('.quest-briefing-arrow[data-brief="invent"]'),
-          ]
-        : [sel('[data-brief="next"]')],
-    advanceWhen: (s) =>
-      workshop(s) &&
-      !s.briefing?.active &&
-      (Boolean(s.briefingSeen) || s.briefing?.mode === "off"),
-  },
-  {
-    id: "crisis-introduction",
-    title: "Meet the crisis",
-    body: "The cards show the harm here and now, its root cause, and public support. Click each card one at a time to send its crisis hex to the board. Crisis hexes stay on the board.",
-    focusSelector: "#crisis-introduction-cards button",
-    targets: [sel("#crisis-introduction-cards")],
-    advanceWhen: (s) => !s.crisisIntroductionPending,
-  },
-  {
-    id: "board-read",
-    mode: "read",
-    title: "Why pathway",
-    body: "Those three hexes are the crisis meters. Dock an invention beside one and it touches that crisis. We call the solution a pathway, not a finished fix. It is built from emerging tech, which gets better, cheaper, and faster every year, so what works today is a path toward a solution that scales tomorrow. The panel is red because nothing is touching the crises yet. Bonds: do your ideas touch every crisis? Coverage: does a touch ease the meter? Timing: is the claim honest this year? Click Next.",
-    targets: [sel("#hex-board-wrap"), sel("#feasibility")],
-  },
-  {
-    id: "hover-crisis",
-    title: "Read a crisis tile",
-    body: "Rest your pointer on the Tummy Bugs hex. A card opens with the harm, and how bad it is now. Hover any tile later to read it the same way.",
-    pinPopup: true,
-    targets: (s) =>
-      s.tilePopupOpen
-        ? [hexTile("crisis-local"), sel(".hex-tile-popup-card")]
-        : [hexTile("crisis-local")],
-    advanceWhen: (s) => Boolean(s.tilePopupOpen),
-  },
-  {
-    id: "crisis-card",
-    mode: "read",
-    pinPopup: true,
-    title: "What the card says",
-    body: "This card is the meter. It stays open so you can read it. Click Next when you have read it.",
-    targets: [hexTile("crisis-local"), sel(".hex-tile-popup-card")],
-  },
-  {
-    id: "focus-iot",
-    title: "Pick an emTech",
-    body: "The tray is emerging tech: tools that get more capable every year. The For this place shelf lists the ones that fit here. Internet of Things is sensors, cheap enough to put at a sluice this year. Click it. Focusing is free. You pay AP and Budget only when the tile lands on the board.",
-    targets: [techTarget("iot")],
-    advanceWhen: (s) => s.focusedTechId === "iot",
-  },
-  {
-    id: "paste-iot",
-    mode: "read",
+    id: "deal-drones",
+    title: "1 · Deal a 2026 milestone",
+    body: "Drones already fly. Tap the lit 2026 milestone. Its use cases land in the next lane. No typing.",
+    targets: [sel('#ontology-lane-tech [data-tech-id="drones"] button.is-latest-reached')],
     dockVision: true,
-    title: "How the sensors work",
-    body: "Here, technology means taking something scarce and making it abundant. Both blanks are filled in: what is scarce in the wells, and how the sensors make it abundant. It is a pilot, not a cure for the whole district. Click Next, then mint the tile.",
-    targets: [sel("#hex-scaffold-scarce"), sel("#hex-scaffold-mech")],
-    paste: [
-      scarcePaste("#hex-scaffold-scarce", TUTORIAL_TEXT.scarceIot),
-      mechPaste("#hex-scaffold-mech", TUTORIAL_TEXT.mechIot),
-    ],
+    advanceWhen: (s) => (s.useCaseCount || 0) > 0,
   },
   {
-    id: "mint-iot",
-    title: "Mint a tile",
-    body: "Mint turns that how-it-works into a tile you can drag. It does not spend AP. The tile appears under the blanks. Blue faces on the left are bits. Pink faces on the right are atoms. A crisis hex can dock on either. Click Mint tile.",
-    targets: [sel("#btn-mint-custom")],
-    advanceWhen: (s) => hasInvention(s, "iot"),
-  },
-  {
-    id: "drag-iot",
-    title: "Dock it on the glowing hex",
-    body: "Drag the new tile onto the glowing hex — one row below the crisis hexes, between the left and the middle. That spends 1 AP and 1 Budget. You started with 3 AP and $5. Bonds stays red: Well Fights, on the right, is still not touching.",
-    targets: [sel('#hex-idea-cards [data-tech-id="iot"]'), hexSlot(2, 2)],
-    place: { techId: "iot", q: 2, r: 2 },
-    wrongPlaceHint: "Drop it on the glowing hex, under the left and middle crisis hexes.",
-    advanceWhen: (s) => tileAt(s, "iot", 2, 2),
-  },
-  {
-    id: "vision-iot",
-    mode: "read",
-    watchVision: true,
-    openSideTab: "vision",
-    expandVision: true,
-    dockBottom: true,
-    title: "Future vision redraws",
-    body: "The picture on the right is this place, enlarged. Drag the bar under it to make it taller or shorter. It is being redrawn to include the sensors you just docked — the invention in the world, not only on the board. Watch it, then click Next. If the new frame is slow, Next is still there.",
-    targets: [sel("#vision-root")],
-  },
-  {
-    id: "timing-iot",
-    mode: "read",
-    title: "Two year-checks",
-    body: "The bar on the sensor hex is this tile's year-check: is the claim honest in 2026? The Timing row is the pathway. It takes the worst year-check of any invention on it, and a weak claim pulls that row down further. One tile, so they match for now. Click Next.",
-    targets: (s) => {
-      const tile = (s.tiles || []).find((t) => t.techId === "iot" && t.q != null);
-      return [sel("#feasibility"), tile ? hexTile(tile.id) : sel("#hex-board-wrap")];
-    },
-  },
-  {
-    id: "meters-iot",
-    mode: "read",
-    pinPopup: true,
-    showTile: "crisis-local",
-    title: "What the sensors ease",
-    body: "This card is Tummy Bugs. The sensors touch it, and what you wrote can drop it one step. They also touch Field Runoff, but do not ease it. They do not touch Well Fights, so that meter stays put. Touching a crisis is not the same as easing it. Click Next.",
-    targets: [hexTile("crisis-local"), sel(".hex-tile-popup-card")],
-  },
-  {
-    id: "log-iot",
-    mode: "read",
-    openSideTab: "log",
-    title: "The log writes it down",
-    body: "The Log is a ledger, not a retelling of the Quest. It records what you did, and how the built-in AI assessed it. Placed is the sensor tile landing. The timing line is the year-check you just watched. Click Next.",
-    targets: [sel("#captain-log-list")],
-  },
-  {
-    id: "focus-drones",
-    title: "A second emTech",
-    openSideTab: "vision",
-    body: "A tile can touch six neighbors, so one invention can reach all three crisis hexes. This step places Drones apart on purpose. They are pink (atoms). They will touch only Well Fights, not the sensors. Click Drones.",
-    targets: [techTarget("drones")],
-    advanceWhen: (s) => s.focusedTechId === "drones",
-  },
-  {
-    id: "paste-drones",
-    mode: "read",
-    dockVision: true,
-    title: "How the drone works",
-    body: "Same two blanks, filled in for Drones. The first line is what is scarce. The second is how the drone makes that warning abundant: one pilot flight after rain. Click Next, then mint.",
-    targets: [sel("#hex-scaffold-scarce"), sel("#hex-scaffold-mech")],
-    paste: [
-      scarcePaste("#hex-scaffold-scarce", TUTORIAL_TEXT.scarceDrones),
-      mechPaste("#hex-scaffold-mech", TUTORIAL_TEXT.mechDrones),
-    ],
-  },
-  {
-    id: "mint-drones",
-    title: "Mint the drone tile",
-    body: "Mint again. This tile is pink (atoms). It sits apart from the sensors instead of docking to them. Click Mint tile.",
-    targets: [sel("#btn-mint-custom")],
-    advanceWhen: (s) => hasInvention(s, "drones"),
-  },
-  {
-    id: "drag-drones",
-    title: "Touch Well Fights, not the sensors",
-    body: "Drag the drone onto the glowing hex, one step to the right of the sensors, with an empty hex between them. It touches Well Fights only. The two tiles do not share an edge. This spends 1 AP, leaving 1 for the battery. Touching Well Fights does not ease it, so Coverage does not turn green.",
-    targets: [sel('#hex-idea-cards [data-tech-id="drones"]'), hexSlot(4, 2)],
-    place: { techId: "drones", q: 4, r: 2 },
-    wrongPlaceHint: "Drop it on the glowing hex to the right of the sensors, touching Well Fights. Do not dock it onto the sensor tile.",
-    advanceWhen: (s) => tileAt(s, "drones", 4, 2),
-  },
-  {
-    id: "vision-drones",
-    mode: "read",
-    watchVision: true,
-    openSideTab: "vision",
-    expandVision: true,
-    dockBottom: true,
-    title: "The picture includes the drone",
-    body: "The picture redraws again. Drag the bar under it if you want a different size. The drone is now part of the place, beside the sensors, not fused to them. Watch it, then click Next.",
-    targets: [sel("#vision-root")],
-  },
-  {
-    id: "focus-battery",
-    title: "A pack for the drone",
-    body: "The drone's flight is short without stored power. Battery Technology is atoms too, so it can dock on the drone's pink face. From the glowing hex it will not touch the sensors. Click Battery Technology.",
-    targets: [techTarget("battery")],
-    advanceWhen: (s) => s.focusedTechId === "battery",
-  },
-  {
-    id: "paste-battery",
-    mode: "read",
-    dockVision: true,
-    title: "How the pack works",
-    body: "Same two blanks, filled in. What is scarce is flight time. One pack keeps the pilot flight in the air. Click Next, then mint.",
-    targets: [sel("#hex-scaffold-scarce"), sel("#hex-scaffold-mech")],
-    paste: [
-      scarcePaste("#hex-scaffold-scarce", TUTORIAL_TEXT.scarceBattery),
-      mechPaste("#hex-scaffold-mech", TUTORIAL_TEXT.mechBattery),
-    ],
-  },
-  {
-    id: "mint-battery",
-    dockVision: true,
-    title: "Mint the battery tile",
-    body: "Mint the pack. It is pink (atoms), so it can dock on the drone's pink face. Click Mint tile.",
-    targets: [sel("#btn-mint-custom")],
-    advanceWhen: (s) => hasInvention(s, "battery"),
-  },
-  {
-    id: "drag-battery",
-    title: "Dock the pack onto the drone",
-    body: "Drag the battery onto the glowing hex to the right of the drone. Their pink faces meet, so they dock. The sensors stay a gap away. This spends your last AP.",
-    targets: [sel('#hex-idea-cards [data-tech-id="battery"]'), hexSlot(5, 2)],
-    place: { techId: "battery", q: 5, r: 2 },
-    wrongPlaceHint: "Drop it on the glowing hex to the right of the drone.",
-    advanceWhen: (s) => tileAt(s, "battery", 5, 2),
-  },
-  {
-    id: "converge-battery",
-    title: "Convergence",
-    body: "Convergence is two technologies speeding each other up, not merely touching. The pack keeps this drone in the air long enough to map the sluices. That longer flight is why a better pack is worth building. The dialog shows both year-checks rising. Click Got it.",
-    targets: (s) =>
-      s.convergenceOpen
-        ? [sel("#hex-convergence-dialog"), sel("#hex-convergence-ok")]
-        : [sel("#hex-board-wrap")],
-    advanceWhen: (s) => Boolean(s.hasBatteryConvergence) && !s.convergenceOpen,
-  },
-  {
-    id: "pathway-pair",
-    mode: "read",
-    title: "Two pathways",
-    body: "Drones and the battery touch, so they are one pathway. The sensors do not touch them, so the sensors are a second pathway. Together they touch all three crisis hexes. Click Next.",
-    targets: [sel("#hex-board-wrap"), sel("#feasibility")],
-  },
-  {
-    id: "pathway-how",
-    title: "One description for the whole pathway",
-    body: "The box under the board describes a pathway as a whole, not tile by tile. The sentence is filled in for you, for Drones and the battery together. Click Save.",
-    targets: [islandHowTarget(["drones", "battery"])],
-    paste: [
-      {
-        islandTechs: ["drones", "battery"],
-        label: "How this pathway works as a whole",
-        text: TUTORIAL_TEXT.pathwayHow,
-      },
-    ],
-    advanceWhen: (s) =>
-      (s.islandHowTexts || []).some((t) => typedMatches(t, TUTORIAL_TEXT.pathwayHow)),
-  },
-  {
-    id: "pathway-read",
-    mode: "read",
-    title: "Yellow is enough",
-    body: "The Pathway light is no longer red. Yellow means the ideas touch the crises and are honest enough to question. Green means Bonds, Coverage, and Timing are all the way green. On your own, keep going until the panel turns green. For now, click Next.",
-    targets: [sel("#feasibility")],
-  },
-  {
-    id: "end-turn",
-    title: "You are out of AP",
-    body: "Three tiles spent the 3 AP you started with. Summoning a challenger costs 1 AP, so you cannot do it yet. End turn refills AP to 3, moves the year forward, and lets each crisis rise one step. Budget already spent stays spent. Click End turn.",
-    targets: [sel("#btn-end-turn")],
-    advanceWhen: (s) => (Number(s.turn) || 0) >= 1,
-  },
-  {
-    id: "summon",
-    title: (s) =>
-      s.challengerDrawOpen || s.summonBusy ? "A challenger is arriving" : "Summon a hard question",
-    body: (s) => {
-      if (s.challengerDrawOpen || s.summonBusy) {
-        return "Watch the reel. It draws this Quest's one challenger: the Stakeholder, who must sign, fund, and defend the pathway in public.";
-      }
-      const wait = s.challengeDisabled
-        ? " If the button is still dim, the year-check is still finishing. It will light up."
-        : "";
-      return `Click Answer the hard questions. That spends 1 AP. The reel spins, then the Stakeholder hex lands against your pathway. Its light stays red until you answer in writing.${wait}`;
-    },
-    dockBottom: (s) => Boolean(s.challengerDrawOpen || s.summonBusy),
-    targets: [sel("#btn-to-challenge")],
-    spotlight: (s) =>
-      s.challengerDrawOpen || s.summonBusy
-        ? [sel("#hex-challenger-draw")]
-        : [sel("#btn-to-challenge")],
-    advanceWhen: (s) =>
-      (Number(s.concernsOnBoard) || 0) >= 1 && !s.challengerDrawOpen && !s.summonBusy,
-  },
-  {
-    id: "market-news",
-    title: "The market moved",
-    body: "A new year brings a market bulletin. It can change what a technology costs in Budget or Support next turn. Read it, then click Got it.",
-    targets: [sel(".market-news-dialog")],
-    skipIf: (s) =>
-      (Number(s.turn) || 0) >= 1 && !s.marketNewsOpen && s.marketNewsGaveUp === true,
-    advanceWhen: (s) => Boolean(s.marketNewsSeen) && !s.marketNewsOpen,
-  },
-  {
-    id: "open-stakeholder",
-    title: "Open the Stakeholder",
-    body: "Rest your pointer on the Stakeholder hex until its card opens. The hard question is who says yes, who pays, and how you keep people from being priced out of the wells.",
-    pinPopup: true,
-    targets: [hexTile("concern-stakeholder"), sel(".hex-tile-popup-card")],
-    advanceWhen: (s) => Boolean(s.tilePopupOpen),
-  },
-  {
-    id: "answer",
-    title: "Answer the Stakeholder",
-    body: "The reply is filled in for you: who signs, who pays this year and by year five, and the limit you will not cross. Click Answer this critic.",
-    pinPopup: true,
-    dockTop: true,
+    id: "spark-mapper",
+    title: "2 · Make a Runoff Mapper",
+    body: "Ask for ideas, then tap + Add on Runoff Mapper. That one click places the invention. You do not type the how.",
     targets: [
-      sel("#hex-concern-answer"),
-      sel("#hex-concern-answer-submit"),
-      sel(".hex-tile-popup-card"),
-      hexTile("concern-stakeholder"),
+      sel("#btn-ask-ideas"),
+      sel("#ontology-sparks"),
     ],
-    paste: [{ selector: "#hex-concern-answer", text: TUTORIAL_TEXT.answer }],
-    advanceWhen: (s) => Boolean(s.concern?.answered) && !s.concern?.pending,
+    dockVision: true,
+    advanceWhen: (s) => (s.pathwayCount || 0) >= 1,
   },
   {
-    id: "answer-judged",
-    mode: "read",
-    pinPopup: true,
-    showTile: "concern-stakeholder",
+    id: "add-battery",
+    title: "3 · Add Battery",
+    body: "Open Add tech, pick Battery, then tap its lit 2026 milestone.",
+    targets: [
+      sel("#btn-add-tech"),
+      sel('#ontology-tech-picker [data-tech-id="battery"]'),
+      sel('#ontology-lane-tech [data-tech-id="battery"] button.is-latest-reached'),
+    ],
+    dockVision: true,
+    advanceWhen: (s) => (s.batteryUseCount || 0) > 0,
+  },
+  {
+    id: "spark-pack",
+    title: "3 · Make a Flight Pack",
+    body: "Ask for ideas on Battery, then tap + Add on Battery Flight Pack.",
+    targets: [
+      sel("#btn-ask-ideas"),
+      sel("#ontology-sparks"),
+    ],
+    dockVision: true,
+    advanceWhen: (s) => (s.pathwayCount || 0) >= 2 || Boolean(s.hasBattery),
+  },
+  {
+    id: "fuse-pack",
+    title: "3 · Alchemy-fuse",
+    body: "Open Fuse with… and join the Flight Pack to the Runoff Mapper. The bolt means the two techs make each other better.",
+    targets: [sel('[data-menu="fuse"]')],
+    dockVision: true,
+    advanceWhen: (s) => Boolean(s.fused),
+  },
+  {
+    id: "plug-water",
+    title: "4 · Plug into Clean Water",
+    body: "Open Plug into… and choose Clean Water. The wire is what gets scored.",
+    targets: [sel('[data-menu="plug"]')],
+    dockVision: true,
+    advanceWhen: (s) => Boolean(s.wired),
+  },
+  {
+    id: "clear-roadblock",
+    title: "5 · Clear the Stakeholder",
+    body: "Click Answer the hard questions to summon the Stakeholder onto the wire, then tap Fill tutorial reply →.",
+    targets: (s) =>
+      s.challengerDrawOpen
+        ? [sel("#hex-challenger-draw")]
+        : s.concernsOnBoard > 0
+          ? [sel('[data-action="roadblock-suggest"]'), sel("#ontology-roadblock"), sel('[data-action="open-roadblock"]')]
+          : [sel("#btn-to-challenge")],
+    pinPopup: (s) => Boolean(s.concernsOnBoard > 0),
     dockBottom: true,
-    title: "The critic judges the answer",
-    body: "The card now shows the judgment. Glance means the reply is only partly honest. The Stakeholder light follows that judgment and turns yellow. Click Next.",
-    targets: [sel(".hex-tile-popup-card"), hexTile("concern-stakeholder")],
+    advanceWhen: (s) => Boolean(s.roadblockClear),
   },
   {
-    id: "hold",
-    title: "The pathway holds",
-    body: (s) => {
-      const wait = s.timingPending
-        ? " Wait for the year-check to finish if the button is dim."
-        : "";
-      return `The crisis lights and the Stakeholder light are yellow or green, and the hard question is answered, so you may hold. Yellow is enough to finish here. On your own, push the lights to green. Click The pathway holds.${wait}`;
-    },
+    id: "declare-holds",
+    title: "6 · Declare the pathway holds",
+    body: "When the lights are yellow or green, declare the pathway holds. The Future Vision shows what changed.",
     targets: [sel("#btn-to-challenge")],
+    dockVision: true,
     advanceWhen: (s) => s.screen === "outcome",
   },
   {
     id: "graduation",
     mode: "finish",
     title: "You held the pathway",
-    body: "That is the loop: choose a Quest, mint honest tiles, dock them beside the crises, answer one hard question, and hold. You held on yellow. Next time, make the Pathway panel green. The list on this screen is what a Quest adds once you are on your own. Click Finish to read the outcome on your own.",
-    targets: [sel("#outcome-tutorial-done")],
+    body: "That was the whole loop: a milestone, a use, an invention, a fuse, a wire, one hard question, and a future. Start a Quest when you want a new place.",
+    targets: [],
   },
 ];
 
-/**
- * First step that still needs the player, starting at stepIndex.
- * Outcome always lands on the graduation card.
- * @param {object} raw
- * @param {number} [stepIndex]
- * @returns {{ index: number, step: object|null, done: boolean }}
- */
 export function resolveTutorialStep(raw, stepIndex = 0) {
   const snap = raw || {};
   if (snap.screen === "outcome") {
@@ -718,7 +433,10 @@ function materialize(step, snap) {
     paste: Array.isArray(step.paste) ? step.paste : null,
     place: step.place || null,
     wrongPlaceHint: step.wrongPlaceHint || "",
-    pinPopup: Boolean(step.pinPopup),
+    pinPopup:
+      typeof step.pinPopup === "function"
+        ? Boolean(step.pinPopup(snap))
+        : Boolean(step.pinPopup),
     dockTop: Boolean(step.dockTop),
     dockBeside: Boolean(step.dockBeside),
     dockVision: Boolean(step.dockVision),
@@ -879,10 +597,6 @@ export function createTutorial(opts = {}) {
   /** Step id that last played the ring entrance animation. */
   let lastRingStep = "";
   let briefingSeen = false;
-  let marketSeen = false;
-  let marketGaveUp = false;
-  /** @type {ReturnType<typeof setTimeout>|null} */
-  let marketGrace = null;
   /** @type {object|null} */
   let current = null;
   /** Materialized card the speaker reads. Updated before each paint. */
@@ -1031,17 +745,7 @@ export function createTutorial(opts = {}) {
   function latch(snap) {
     const next = { ...(snap || {}) };
     if (next.briefing?.active) briefingSeen = true;
-    if (next.marketNewsOpen) {
-      marketSeen = true;
-      marketGaveUp = false;
-      if (marketGrace) {
-        clearTimeout(marketGrace);
-        marketGrace = null;
-      }
-    }
     next.briefingSeen = Boolean(next.briefingSeen || briefingSeen);
-    next.marketNewsSeen = Boolean(next.marketNewsSeen || marketSeen);
-    next.marketNewsGaveUp = Boolean(next.marketNewsGaveUp || marketGaveUp);
     return next;
   }
 
@@ -1072,16 +776,6 @@ export function createTutorial(opts = {}) {
     void refreshNow();
   }
 
-  function armMarketGrace(step, snap) {
-    if (step?.id !== "market-news") return;
-    if (snap.marketNewsOpen || marketSeen || marketGaveUp || marketGrace) return;
-    marketGrace = setTimeout(() => {
-      marketGrace = null;
-      if (!marketSeen) marketGaveUp = true;
-      void refreshNow();
-    }, 700);
-  }
-
   function isOpen() {
     return open;
   }
@@ -1092,13 +786,7 @@ export function createTutorial(opts = {}) {
     lastGeomKey = "";
     lastRingStep = "";
     briefingSeen = false;
-    marketSeen = false;
-    marketGaveUp = false;
     visionLatch = { id: "", baseline: "", settled: false };
-    if (marketGrace) {
-      clearTimeout(marketGrace);
-      marketGrace = null;
-    }
     open = true;
     silenceVoice();
     ensureRoot();
@@ -1122,10 +810,6 @@ export function createTutorial(opts = {}) {
     paintedId = "";
     lastGeomKey = "";
     lastRingStep = "";
-    if (marketGrace) {
-      clearTimeout(marketGrace);
-      marketGrace = null;
-    }
     document.body.classList.remove("tutorial-open", "tutorial-popup-front");
     root?.classList.remove("is-open");
     document.querySelectorAll(".tutorial-target").forEach((el) => {
@@ -1148,7 +832,6 @@ export function createTutorial(opts = {}) {
         close();
         return;
       }
-      armMarketGrace(resolved.step, snap);
       current = resolved.step;
       ensuring = true;
       try {
@@ -1356,11 +1039,23 @@ export function createTutorial(opts = {}) {
     }
     if (el.closest(".tour-card.is-tutorial")) return true;
     if (el.closest("#btn-abandon")) return true;
+    if (el.closest("#hex-challenger-draw")) return true;
+    if (current?.id === "clear-roadblock" && el.closest("#ontology-roadblock")) return true;
     if (current?.id === "answer" && el.closest(".hex-tile-popup-card")) return true;
     if (current?.expandVision && el.closest(".vision-split-handle")) return true;
+    if (current?.id === "deal-drones" && el.closest('#ontology-lane-tech [data-tech-id="drones"] button.ontology-ms')) {
+      return true;
+    }
+    if (current?.id === "add-battery" && el.closest('#ontology-lane-tech [data-tech-id="battery"] button.ontology-ms, #ontology-tech-picker .ontology-domain-pills')) {
+      return true;
+    }
     if (current?.mode !== "act") return false;
     if (deniedSels.some((s) => el.closest(s))) return false;
-    return allowedEls.some((t) => t === el || t.contains(el));
+    if (allowedEls.some((t) => t.isConnected && (t === el || t.contains(el)))) return true;
+    const liveClickable = clickableTargets(current)
+      .map((t) => queryTutorialTarget(t))
+      .filter(Boolean);
+    return liveClickable.some((t) => t === el || t.contains(el));
   }
 
   function typingFieldFocused() {

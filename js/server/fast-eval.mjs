@@ -23,6 +23,10 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { ideasOrFallback } from "../idea-cards.js";
+import {
+  sanitizeWorkbenchDrafts,
+  localWorkbenchLensDrafts,
+} from "../board/workbench-methods.js";
 import { crisisRoleKeys, scopeCrisisScore } from "../hex/crisis-delta.js";
 import { FILL_QUEST_SUMMARY_SYSTEM, clipSummary } from "../quest-summary.js";
 import { worldClockForYear } from "../sim/world-foresight.js";
@@ -291,6 +295,23 @@ ${GROUNDING_LINE}
 ${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"ideas":[{"id":"slug","title":"≤60 chars","blurb":"≤140","insertText":"≤280","howText":"≤280","imagePrompt":"≤400","year":2026}]}`;
+
+export const WORKBENCH_LENS_SYSTEM = `You return structured cards for the Design Thinking Double-Diamond Innovation Workbench in Future Forge.
+Honor method:
+- discover: Diamond 1 Problem Discovery. Return 3 non-obvious, concrete ground-truth field tensions or overlooked operational constraints in this place and year (who gets stuck, what spoils or breaks, why trust stalls). Do NOT propose technologies or solutions yet. Set techId to null and world to "plain".
+- define: Diamond 1 Problem Definition. Synthesize 3 distinct, sharp "How might we..." problem statements from mission, crisisMeters, stakeholder, and discoveryNotes. Each howText MUST start with "How might we " and frame the stakeholder, desired outcome, and constraint without locking in a specific gadget. Set techId to null and world to "plain".
+- seed: Diamond 2 Ideation. Return 3 distinct local solution ideas applying the listed techIds/use cases to answer hmwBrief (or ease scarcity) in this place and year.
+- sit: Diamond 2 Systematic Inventive Thinking closed-world remix of seedText. Return exactly ONE card per requested lens in lenses[] (subtraction, division, multiplication, addition). Stay inside elements already present in seedText, techIds, and this place, aiming at hmwBrief when present.
+- scamper: Diamond 2 open remix of seedText. Return exactly ONE card per requested letter in lenses[] (S Substitute, C Combine, A Adapt, M Modify, P Put to other uses, E Eliminate, R Reverse/Rearrange). If challengerAngle and challengerQuestion are present, each card must concretely address that roadblock; otherwise aim at hmwBrief.
+Every solution idea (seed/sit/scamper) is a pilot-honest local mechanism, not a bill, ban, or UBI.
+title is a plain noun phrase (<=64 chars). howText is 1-2 crisp everyday sentences (for define, one "How might we ...?" question <=220 chars).
+Set lens to the matching lens id (or method), techId to a listed tech id (or null for human/problem cards), world to bits|atoms|split|plain, eases to the exact crisis label helped most.
+Do not repeat avoidTitles.
+${WORLD_CLOCK_CONTEXT_LINE}
+${GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
+Return JSON only:
+{"ideas":[{"id":"slug","lens":"subtraction","lensLabel":"SIT · Subtraction","title":"<=64 chars","howText":"<=360 chars","techId":"tech-id-or-null","world":"bits|atoms|split|plain","eases":"crisis label","imagePrompt":"<=400 chars"}]}`;
 
 export const POSE_CHALLENGE_SYSTEM = `You are a hostile critic in Future Forge (local inventing practice).
 Speak ONLY as the fixed challengeAngle: moloch (system traps/freeriding), ethicist (hard tradeoffs), stakeholder (funding/permits/public), or nature (physical/ecological limits).
@@ -568,6 +589,55 @@ function buildIdeaSparksPayload(context) {
   };
 }
 
+function buildWorkbenchLensPayload(context) {
+  const mission = missionSlice(context);
+  const method = String(context?.method || "seed").slice(0, 24);
+  const lenses = Array.isArray(context?.lenses)
+    ? context.lenses.map(String).slice(0, 4)
+    : [];
+  const techIds = Array.isArray(context?.techIds)
+    ? context.techIds.map(String).filter(Boolean).slice(0, 4)
+    : [];
+  const techs = (context?.availableTechs || []).map(slimTech).filter(Boolean);
+  const inquiry = sourceInquiryOf(context, "workbench-lens");
+  const worldClock = worldClockContext(
+    { ...context, sourceInquiry: inquiry },
+    {
+      techIds,
+      limit: 8,
+      premise: inquiry?.premise,
+    }
+  );
+  return {
+    mode: "workbench-lens",
+    method,
+    lenses,
+    techIds,
+    techs,
+    scarcity: clip(context?.scarcity, 140) || null,
+    hmwBrief: clip(context?.hmwBrief, 280) || null,
+    discoveryNotes: Array.isArray(context?.discoveryNotes)
+      ? context.discoveryNotes.map((s) => clip(s, 200)).filter(Boolean).slice(0, 6)
+      : [],
+    seedTitle: clip(context?.seedTitle, 80) || null,
+    seedText: clip(context?.seedText, 1200) || null,
+    challengerAngle: context?.challengerAngle ? String(context.challengerAngle).slice(0, 32) : null,
+    challengerQuestion: clip(context?.challengerQuestion, 400) || null,
+    stakeholder: clip(context?.stakeholder, 140) || null,
+    crisisMeters: Array.isArray(context?.crisisMeters) ? context.crisisMeters.slice(0, 3) : [],
+    place: context?.place || null,
+    year: context?.year || null,
+    mission,
+    grounding: groundingOf(context),
+    sourceConstraint: sourceConstraintOf(context),
+    avoidTitles: Array.isArray(context?.avoidTitles)
+      ? context.avoidTitles.map(String).slice(0, 12)
+      : [],
+    ...(inquiry ? { sourceInquiry: inquiry } : {}),
+    ...(worldClock ? { worldClock } : {}),
+  };
+}
+
 function buildFillQuestSummaryPayload(context) {
   const mission = missionSlice(context);
   return {
@@ -661,6 +731,7 @@ export function buildFastPayload(mode, context = {}) {
     return withInquiry(buildEvaluateConvergencePayload(context), context, mode);
   }
   if (mode === "idea-sparks") return buildIdeaSparksPayload(context);
+  if (mode === "workbench-lens") return buildWorkbenchLensPayload(context);
   if (mode === "assess-plain") return buildAssessPlainPayload(context);
   if (mode === "pose-challenge") return finishPosePayload(context);
   if (mode === "fill-quest-summary") return buildFillQuestSummaryPayload(context);
@@ -715,6 +786,14 @@ function sanitizeIdeas(parsed, source, context) {
   return {
     source,
     ideas: ideasOrFallback(parsed?.ideas, focus, context),
+  };
+}
+
+function sanitizeWorkbenchLens(parsed, source, context) {
+  const sanitized = sanitizeWorkbenchDrafts(parsed?.ideas, context);
+  return {
+    source,
+    ideas: sanitized.length ? sanitized : localWorkbenchLensDrafts(context),
   };
 }
 
@@ -849,6 +928,7 @@ export function sanitizeFast(mode, parsed, source = "ai", context = {}) {
     return sanitizeEvaluateConvergence(parsed, source, context);
   }
   if (mode === "idea-sparks") return sanitizeIdeas(parsed, source, context);
+  if (mode === "workbench-lens") return sanitizeWorkbenchLens(parsed, source, context);
   if (mode === "assess-plain") return sanitizePlainTiming(parsed, source);
   if (mode === "pose-challenge") return sanitizePose(parsed, source);
   if (mode === "judge-scrutiny-move") return sanitizeJudgeScrutiny(parsed, source);
@@ -885,6 +965,12 @@ export const FAST_EVAL_MODES = {
     userPrefix: "Three application sparks (JSON state):",
     temperature: 0.4,
     maxOutputTokens: 700,
+  },
+  "workbench-lens": {
+    system: WORKBENCH_LENS_SYSTEM,
+    userPrefix: "Structured Workbench lens drafts (JSON state):",
+    temperature: 0.45,
+    maxOutputTokens: 900,
   },
   "assess-plain": {
     system: ASSESS_PLAIN_SYSTEM,

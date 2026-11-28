@@ -632,7 +632,7 @@ Each imagePrompt is ≤400 chars: a photoreal documentary still of that concern 
 Use null or [] when empty. For complete-picture fill only the missing face. For scrutinize fill scrutiny and keep techs unless asked.`;
 
 /** Tutor mode — active tutor session on a learning-module Quest. Same JSON contract as SYSTEM_PROMPT + endTutoring. */
-const TUTOR_SYSTEM_PROMPT = `You are the AI Tutor in Future Forge for a LEARNING MODULE quest (local invent + emerging tech). Tutor session is ACTIVE (free AP for the learner while tutoring).
+const TUTOR_SYSTEM_PROMPT = `You are the AI Tutor in Future Forge for a LEARNING MODULE quest (local invent + emerging tech). Tutor session is ACTIVE.
 
 Role:
 - Be a patient tutor and creative co-inventor. Follow the learner’s request: explain, brainstorm, give examples, or provide a complete solution when asked.
@@ -1634,7 +1634,6 @@ const IMAGE_MODEL = process.env.FF_XAI_IMAGE_MODEL || "grok-imagine-image";
 /** @type {Map<string, object>} */
 const visionSessions = new Map();
 /** Cache market news illustrations by event id (no invent context). */
-const marketImageCache = new Map();
 /** Cache idea-card thumbnails by client-provided id. */
 const ideaImageCache = new Map();
 
@@ -1995,90 +1994,6 @@ async function handleVision(body) {
       director: directorExchange,
     })
   );
-}
-
-/**
- * Lightweight Imagine generate for round market-news cards.
- * Cached by event id so multiplayer clients share one illustration.
- */
-async function handleMarketImage(body) {
-  const id = String(body?.id || "").slice(0, 80);
-  const clientSessionId = clientSessionFromBody(body);
-  if (clientSessionId) usage.touchSession(clientSessionId);
-  if (!id) {
-    return { ok: false, error: "missing_id" };
-  }
-  const cached = marketImageCache.get(id);
-  if (cached?.imageUrl) {
-    recordAiImage({
-      kind: "market",
-      mode: "generate",
-      source: "cache",
-      imageCount: 0,
-      ok: true,
-      sessionId: clientSessionId,
-    });
-    return {
-      ok: true,
-      cached: true,
-      imageUrl: cached.imageUrl,
-      model: IMAGE_MODEL,
-      id,
-    };
-  }
-
-  const headline = String(body?.headline || "Market news").slice(0, 200);
-  const rawPrompt = String(body?.prompt || headline).slice(0, 700);
-  const prompt = [
-    "Editorial news illustration for a strategy board game about emerging technology.",
-    "Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
-    rawPrompt || headline,
-  ].join(" ");
-
-  try {
-    const data = await runVisionImage("generate", prompt, null);
-    const imageUrl = await normalizeVisionDataUrl(data);
-    marketImageCache.set(id, { imageUrl, prompt, updatedAt: Date.now() });
-    if (marketImageCache.size > 60) {
-      const oldest = [...marketImageCache.entries()].sort(
-        (a, b) => (a[1].updatedAt || 0) - (b[1].updatedAt || 0)
-      )[0];
-      if (oldest) marketImageCache.delete(oldest[0]);
-    }
-    recordAiImage({
-      kind: "market",
-      mode: "generate",
-      source: "live",
-      imageCount: 1,
-      usage: data?.usage || null,
-      latencyMs: data?._latencyMs ?? null,
-      ok: true,
-      sessionId: clientSessionId,
-    });
-    return {
-      ok: true,
-      cached: false,
-      imageUrl,
-      model: IMAGE_MODEL,
-      id,
-    };
-  } catch (e) {
-    console.warn("[market-image]", e.message || e);
-    recordAiImage({
-      kind: "market",
-      mode: "generate",
-      source: "error",
-      imageCount: 0,
-      ok: false,
-      sessionId: clientSessionId,
-    });
-    return {
-      ok: false,
-      error: String(e.message || "generate_failed").slice(0, 200),
-      imageUrl: null,
-      id,
-    };
-  }
 }
 
 /**
@@ -3804,29 +3719,6 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, status, {
         ok: false,
         error: e.message || "Idea image generation failed",
-      });
-    }
-  }
-
-  if (req.method === "POST" && req.url?.startsWith("/api/market-image")) {
-    try {
-      const body = await readBody(req);
-      const gate = await gateExpensive(req, "market-image", body);
-      if (!gate.ok) {
-        return sendJson(res, gate.status || 429, {
-          ok: false,
-          error: gate.error || "rate_limited",
-          message: gate.message || undefined,
-        });
-      }
-      const result = await withClerkIdentity(req, () => handleMarketImage(body));
-      return sendJson(res, 200, result);
-    } catch (e) {
-      console.error("[market-image]", e.message || e);
-      const status = errorStatus(e);
-      return sendJson(res, status, {
-        ok: false,
-        error: e.message || "Market image generation failed",
       });
     }
   }

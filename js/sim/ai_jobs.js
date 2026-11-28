@@ -23,7 +23,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { GAME } from "../data.js";
-import { applyThinkingAiCharge, isAiSeasonTaxMode } from "./ai-tax.js";
+import { aiMoveCost } from "./economy.js";
 
 /** Design defaults for friends rooms */
 export const ROOM_AI_QUOTAS = {
@@ -140,18 +140,12 @@ export function clearPoseJudgeBusy(quota, clientActionId = null) {
 export function reserveAiOnSim(sim, payload = {}, opts = {}) {
   const features = opts.features || sim.featureFlags || GAME.features || {};
   const apOn = Boolean(features.actionPoints);
-  const apMax = opts.apMax ?? sim.apMax ?? GAME.apMax ?? 3;
   const mode = payload.mode || "chat";
-  const requested = payload.reservedAp ?? 1;
   const next = {
     ...sim,
     pressure: { ...(sim.pressure || {}) },
-    techAddedThisTurn: { ...(sim.techAddedThisTurn || {}) },
   };
-  const charge = applyThinkingAiCharge(next, mode, requested, {
-    tutor: Boolean(opts.tutor || payload.tutor),
-  });
-  const cost = charge.cost;
+  const cost = aiMoveCost(mode);
   if (apOn && cost > 0) {
     if ((next.ap ?? 0) < cost) {
       return { ok: false, error: "no_ap", sim };
@@ -159,7 +153,6 @@ export function reserveAiOnSim(sim, payload = {}, opts = {}) {
     next.ap -= cost;
     next.apSpentThisTurn = (next.apSpentThisTurn || 0) + cost;
   }
-  if (charge.markPaid) next.aiTaxThisTurn = true;
   next.turnPhase = "ai_pending";
   next.pendingAi = {
     clientActionId: payload.clientActionId || null,
@@ -181,7 +174,6 @@ export function resolveAiOnSim(sim, opts = {}) {
   const next = {
     ...sim,
     pressure: { ...(sim.pressure || {}) },
-    techAddedThisTurn: { ...(sim.techAddedThisTurn || {}) },
     pendingAi: null,
   };
   if (next.turnPhase === "ai_pending") next.turnPhase = "act";
@@ -193,7 +185,7 @@ export function resolveAiOnSim(sim, opts = {}) {
 }
 
 /**
- * Reject AI — refund reserved AP, clear pending.
+ * Reject AI — refund reserved Move (if any), clear pending.
  */
 export function rejectAiOnSim(sim, opts = {}) {
   const features = opts.features || sim.featureFlags || GAME.features || {};
@@ -202,14 +194,12 @@ export function rejectAiOnSim(sim, opts = {}) {
   const next = {
     ...sim,
     pressure: { ...(sim.pressure || {}) },
-    techAddedThisTurn: { ...(sim.techAddedThisTurn || {}) },
   };
   const pending = next.pendingAi;
   const refund = pending?.reservedAp || 0;
   if (apOn && refund > 0) {
     next.ap = Math.min(apMax, (next.ap || 0) + refund);
     next.apSpentThisTurn = Math.max(0, (next.apSpentThisTurn || 0) - refund);
-    if (isAiSeasonTaxMode(pending?.mode)) next.aiTaxThisTurn = false;
   }
   const clientActionId = pending?.clientActionId || opts.clientActionId || null;
   next.pendingAi = null;

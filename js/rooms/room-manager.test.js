@@ -435,7 +435,7 @@ describe("RoomManager", () => {
     assert.equal(set.ok, true, set.error);
   });
 
-  it("requestAi only for active seat; refunds on failure", async () => {
+  it("requestAi only for active seat; refunds commitment Move on failure", async () => {
     const { rm, created, room, host, bea } = twoPlayerRoom();
     rm.hostCommand(room, host, "start_quest", {
       hostToken: created.hostToken,
@@ -445,14 +445,14 @@ describe("RoomManager", () => {
     const denied = await rm.requestAi(room, bea, {
       mode: "chat",
       clientActionId: "nope",
-      reservedAp: 1,
+      reservedAp: 0,
     });
     assert.equal(denied.ok, false);
     assert.equal(denied.error, "not_active_seat");
 
     const startAp = room.mp.invents[host.id].ap;
     const pending = await rm.requestAi(room, host, {
-      mode: "chat",
+      mode: "judge-challenge",
       clientActionId: "t1",
       reservedAp: 1,
     });
@@ -487,7 +487,7 @@ describe("RoomManager", () => {
     assert.match(room.mp.invents[host.id].inventionHow, /Sensors/);
   });
 
-  it("requestAi mode voice charges thinking tax without calling Grok", async () => {
+  it("requestAi mode voice is free (0 Moves) and skips Grok text handler", async () => {
     let grok = 0;
     const { rm, created, room, host } = twoPlayerRoom();
     rm.coInventHandler = async () => {
@@ -510,15 +510,15 @@ describe("RoomManager", () => {
     assert.equal(r.mode, "voice");
     assert.equal(grok, 0);
     assert.equal(room.mp.invents[host.id].inventionHow || "", "");
-    assert.equal(room.mp.invents[host.id].ap, startAp - 1);
+    assert.equal(room.mp.invents[host.id].ap, startAp);
     assert.equal(room.mp.invents[host.id].pendingAi.mode, "voice");
     const ready = rm.finishVoiceJob(room, host, "voice-1", true);
     assert.equal(ready.ok, true);
-    assert.equal(room.mp.invents[host.id].ap, startAp - 1);
+    assert.equal(room.mp.invents[host.id].ap, startAp);
     assert.equal(room.mp.invents[host.id].pendingAi, null);
   });
 
-  it("voice connect failure refunds the reserved AP", async () => {
+  it("voice connect failure clears pending state without altering Moves", async () => {
     const { rm, created, room, host } = twoPlayerRoom();
     rm.hostCommand(room, host, "start_quest", {
       hostToken: created.hostToken,
@@ -532,13 +532,12 @@ describe("RoomManager", () => {
       reservedAp: 1,
     });
     assert.equal(r.pending, true);
-    assert.equal(room.mp.invents[host.id].ap, startAp - 1);
+    assert.equal(room.mp.invents[host.id].ap, startAp);
     const failed = rm.finishVoiceJob(room, host, "voice-fail", false);
     assert.equal(failed.ok, false);
     assert.equal(failed.mode, "voice");
     assert.equal(room.mp.invents[host.id].ap, startAp);
     assert.equal(room.mp.invents[host.id].pendingAi, null);
-    assert.equal(room.mp.invents[host.id].aiTaxThisTurn, false);
     const again = rm.finishVoiceJob(room, host, "voice-fail", false);
     assert.equal(again.error, "not_pending");
     assert.equal(room.mp.invents[host.id].ap, startAp);
@@ -572,7 +571,7 @@ describe("RoomManager", () => {
     assert.equal(room.mp.invents[host.id].ap, ap);
   });
 
-  it("requestAi reservedAp 0 without tutor still spends first thinking AP", async () => {
+  it("thinking AI chat is free (0 Moves) with or without tutor flag", async () => {
     const { rm, created, room, host } = twoPlayerRoom();
     rm.hostCommand(room, host, "start_quest", {
       hostToken: created.hostToken,
@@ -582,31 +581,21 @@ describe("RoomManager", () => {
     const startAp = room.mp.invents[host.id].ap;
     const pending = await rm.requestAi(room, host, {
       mode: "chat",
-      clientActionId: "sneak",
-      reservedAp: 0,
+      clientActionId: "chat-free",
+      reservedAp: 1,
     });
     assert.equal(pending.ok, true);
-    assert.equal(room.mp.invents[host.id].ap, startAp - 1);
-    assert.equal(room.mp.invents[host.id].aiTaxThisTurn, true);
-  });
+    assert.equal(room.mp.invents[host.id].ap, startAp);
+    rm.completeAiJob(room, host, "chat-free", { ok: true, result: { message: "ok" } });
 
-  it("requestAi tutor flag keeps chat free", async () => {
-    const { rm, created, room, host } = twoPlayerRoom();
-    rm.hostCommand(room, host, "start_quest", {
-      hostToken: created.hostToken,
-      mission: sampleMission,
-      globalId: "climate",
-    });
-    const startAp = room.mp.invents[host.id].ap;
-    const pending = await rm.requestAi(room, host, {
+    const tutor = await rm.requestAi(room, host, {
       mode: "chat",
       clientActionId: "tutor",
       reservedAp: 0,
       tutor: true,
     });
-    assert.equal(pending.ok, true);
+    assert.equal(tutor.ok, true);
     assert.equal(room.mp.invents[host.id].ap, startAp);
-    assert.equal(room.mp.invents[host.id].aiTaxThisTurn, false);
   });
 
   it("does not grant host powers across rooms via player.isHost", () => {

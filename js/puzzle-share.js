@@ -1,4 +1,5 @@
 import { listInventionPathways, visionPathwaysFromBoard, reasonsForCrisisTile, pathwayContentFingerprint, pathwayScoreLabel, resolveIslandHow, hexPathwayPanel, boardPathwayReevaluating } from './hex/evaluate.js?v=calm-stage-1';
+import { isPathwayBoard, composePathwayHow, effectiveTiming, formatRdFactor } from './board/pathway-model.js';
 import { hexToPixel } from './hex/hex-tile-grid.js';
 import { createHexBoardUi, HEX_BOARD_VIEW } from './hex/board-ui.js?v=calm-stage-1';
 import { plainTextFromMarkdown } from './md-lite.js';
@@ -20,6 +21,11 @@ export function puzzleMeter(value, goal) {
 
 /** Actual pending work, not an unknown score on an empty or unscored board. */
 export function puzzleHasPendingEvaluation(board) {
+  if (isPathwayBoard(board)) {
+    if (Object.values(board.pathways || {}).some(pw => (pw?.ingredients || []).some(ing => ing?.timingPending))) return true;
+    if (Object.values(board.challengers || {}).some(ch => ch?.posePending || ch?.answerPending)) return true;
+    if (Object.values(board.arguments || {}).some(arg => arg?.pending)) return true;
+  }
   if (Object.values(board?.tiles || {}).some(t => t.timingPending || t.lampPending || t.verdictPending || t.answerPending)) return true;
   return listInventionPathways(board).some(island => {
     const impact = board?.pathwayImpacts?.[pathwayContentFingerprint(island, board)];
@@ -128,11 +134,371 @@ export function puzzleBoardBounds(tiles) {
     height: Math.max(...points.map(p => p.y)) + dy - y };
 }
 
+function roundRectPath(ctx, x, y, w, h, r) {
+  const rad = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.lineTo(x + w - rad, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+  ctx.lineTo(x + w, y + h - rad);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+  ctx.lineTo(x + rad, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+  ctx.lineTo(x, y + rad);
+  ctx.quadraticCurveTo(x, y, x + rad, y);
+  ctx.closePath();
+}
+
+/** Four-lane circuit for a pathway-board/v2 snapshot. Hex boards keep the SVG path. */
+async function renderPathwayPuzzle(board, snapshot = {}) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1920;
+  canvas.height = 1040;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return { boardImage: null, trayImage: null };
+
+  const qYear = Number(snapshot.year ?? board.questYear ?? 2026) || 2026;
+  ctx.fillStyle = '#09131d';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Top calendar + rules ribbon
+  roundRectPath(ctx, 28, 22, canvas.width - 56, 54, 12);
+  ctx.fillStyle = '#112231';
+  ctx.fill();
+  ctx.strokeStyle = '#244156';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#6ee7cb';
+  ctx.font = '700 22px Arial, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`NOW: ${qYear}   ·   CAUSAL PATHWAY BOARD`, 48, 49);
+
+  const rules = (board.rules || []).map(r => r?.label || r?.text || String(r || '')).filter(Boolean);
+  if (rules.length) {
+    ctx.fillStyle = '#f4d77d';
+    ctx.font = '600 19px Arial, sans-serif';
+    const ruleLine = `Town rules: ${rules.slice(0, 3).join('  •  ')}`;
+    ctx.fillText(wrapText(ctx, ruleLine, 980)[0] || '', 540, 49);
+  }
+
+  const laneSpecs = [
+    { key: 'tech', title: '1 · TECH & MILESTONES', sub: 'Real curves & forecasts' },
+    { key: 'use', title: '2 · USE CASES', sub: 'General unlocks' },
+    { key: 'pathway', title: '3 · PATHWAY', sub: 'Local inventions & fusion' },
+    { key: 'crisis', title: '4 · PROBLEM', sub: 'Plugged crises & stakes' },
+  ];
+  const laneW = 426;
+  const laneGap = 52;
+  const laneTop = 94;
+  const laneH = canvas.height - laneTop - 26;
+  const laneX = (i) => 28 + i * (laneW + laneGap);
+
+  laneSpecs.forEach((spec, i) => {
+    const x = laneX(i);
+    roundRectPath(ctx, x, laneTop, laneW, laneH, 16);
+    ctx.fillStyle = '#0f1f2d';
+    ctx.fill();
+    ctx.strokeStyle = '#20384b';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#6ee7cb';
+    ctx.font = '700 21px Arial, sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.fillText(spec.title, x + 18, laneTop + 16);
+    ctx.fillStyle = MUTED;
+    ctx.font = '400 17px Arial, sans-serif';
+    ctx.fillText(spec.sub, x + 18, laneTop + 43);
+
+    ctx.fillStyle = '#1e3547';
+    ctx.fillRect(x + 16, laneTop + 68, laneW - 32, 2);
+  });
+
+  const techOut = new Map();
+  const useIn = new Map();
+  const useOut = new Map();
+  const pathIn = new Map();
+  const pathOut = new Map();
+  const crisisIn = new Map();
+
+  // Lane 1: Tech tracks & dealt milestones
+  {
+    const x = laneX(0) + 16;
+    const w = laneW - 32;
+    let cy = laneTop + 84;
+    const tracks = Object.values(board.techTracks || {});
+    const usesByTech = new Map();
+    for (const uc of Object.values(board.useCases || {})) {
+      if (!usesByTech.has(uc.techId)) usesByTech.set(uc.techId, []);
+      usesByTech.get(uc.techId).push(uc);
+    }
+    if (!tracks.length) {
+      ctx.fillStyle = MUTED;
+      ctx.font = '400 20px Arial, sans-serif';
+      ctx.fillText('No tech tracks added yet.', x + 8, cy + 12);
+    }
+    for (const track of tracks.slice(0, 6)) {
+      const ucs = usesByTech.get(track.techId) || [];
+      const msLabels = [...new Map(ucs.map(u => [
+        u.milestoneId || u.milestoneYear,
+        `${u.milestoneStatus === 'predicted' ? '◌ Forecast' : '● Reached'} ~${u.milestoneYear || qYear}${Number(u.milestoneYear) > qYear ? ' (ahead)' : ''}`
+      ])).values()];
+      const cardH = 74 + Math.min(2, msLabels.length) * 26;
+      if (cy + cardH > laneTop + laneH - 14) break;
+      roundRectPath(ctx, x, cy, w, cardH, 12);
+      ctx.fillStyle = '#162c3f';
+      ctx.fill();
+      ctx.strokeStyle = '#2d526d';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = INK;
+      ctx.font = '700 22px Arial, sans-serif';
+      const titleLine = wrapText(ctx, track.name || track.techId, w - 28)[0] || track.techId;
+      ctx.fillText(titleLine, x + 14, cy + 14);
+
+      ctx.fillStyle = '#7dd3fc';
+      ctx.font = '600 16px Arial, sans-serif';
+      ctx.fillText((track.world || 'tech').toUpperCase(), x + 14, cy + 44);
+
+      msLabels.slice(0, 2).forEach((ms, idx) => {
+        ctx.fillStyle = ms.includes('ahead') ? '#fda4af' : '#6ee7b7';
+        ctx.font = '600 17px Arial, sans-serif';
+        ctx.fillText(ms, x + 110, cy + 44 + idx * 24);
+      });
+
+      techOut.set(track.techId, { x: x + w, y: cy + cardH / 2 });
+      cy += cardH + 14;
+    }
+  }
+
+  // Lane 2: Use cases
+  {
+    const x = laneX(1) + 16;
+    const w = laneW - 32;
+    let cy = laneTop + 84;
+    const useCases = Object.values(board.useCases || {});
+    if (!useCases.length) {
+      ctx.fillStyle = MUTED;
+      ctx.font = '400 20px Arial, sans-serif';
+      ctx.fillText('No use cases dealt yet.', x + 8, cy + 12);
+    }
+    for (const uc of useCases.slice(0, 8)) {
+      ctx.font = '700 20px Arial, sans-serif';
+      const lines = wrapText(ctx, uc.title || 'Use case', w - 28).slice(0, 2);
+      const early = Number(uc.milestoneYear || 0) > qYear;
+      const cardH = 48 + lines.length * 24;
+      if (cy + cardH > laneTop + laneH - 14) break;
+
+      roundRectPath(ctx, x, cy, w, cardH, 11);
+      ctx.fillStyle = '#15293b';
+      ctx.fill();
+      ctx.strokeStyle = early ? '#e11d48' : '#2b4d66';
+      ctx.setLineDash(early ? [8, 6] : []);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = INK;
+      ctx.font = '700 20px Arial, sans-serif';
+      lines.forEach((ln, idx) => ctx.fillText(ln, x + 14, cy + 12 + idx * 24));
+
+      const statusTxt = `${uc.milestoneStatus === 'predicted' ? '◌ Forecast' : '● Reached'} ~${uc.milestoneYear || qYear}${early ? ' · Too early' : ''}`;
+      ctx.fillStyle = early ? '#fda4af' : MUTED;
+      ctx.font = '600 16px Arial, sans-serif';
+      ctx.fillText(statusTxt, x + 14, cy + 16 + lines.length * 24);
+
+      useIn.set(uc.id, { x, y: cy + cardH / 2, techId: uc.techId, early });
+      useOut.set(uc.id, { x: x + w, y: cy + cardH / 2, early });
+      cy += cardH + 12;
+    }
+  }
+
+  // Lane 3: Pathways
+  {
+    const x = laneX(2) + 16;
+    const w = laneW - 32;
+    let cy = laneTop + 84;
+    const pathways = Object.values(board.pathways || {});
+    if (!pathways.length) {
+      ctx.fillStyle = MUTED;
+      ctx.font = '400 20px Arial, sans-serif';
+      ctx.fillText('No pathways invented yet.', x + 8, cy + 12);
+    }
+    for (const pw of pathways.slice(0, 5)) {
+      const timing = effectiveTiming(pw, board.useCases, qYear);
+      const title = pw.title || (pw.ingredients || []).map(i => i.title).join(' + ') || 'Pathway';
+      ctx.font = '700 21px Arial, sans-serif';
+      const titleLines = wrapText(ctx, title, w - 28).slice(0, 2);
+      const chips = (pw.ingredients || []).map(i => i.techId || 'human').join(' + ');
+      const badges = [];
+      if ((pw.convergences || []).length) badges.push('⚡ Convergence');
+      if (pw.missingBridge) badges.push('⚠ Missing Bridge?');
+      const rdList = board.rd?.[pw.id] || [];
+      if (rdList.length) badges.push(`🧪 R&D ${formatRdFactor(rdList.at(-1).factor)}`);
+      badges.push(`${timing.timingPct}% ${timing.timingLevel.toUpperCase()}`);
+
+      ctx.font = '400 17px Arial, sans-serif';
+      const howLines = wrapText(ctx, composePathwayHow(pw) || '', w - 28).slice(0, 3);
+      const cardH = 72 + titleLines.length * 24 + howLines.length * 21;
+      if (cy + cardH > laneTop + laneH - 14) break;
+
+      roundRectPath(ctx, x, cy, w, cardH, 12);
+      ctx.fillStyle = '#162d40';
+      ctx.fill();
+      ctx.strokeStyle = timing.early ? '#e11d48' : '#38bdf8';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '700 21px Arial, sans-serif';
+      titleLines.forEach((ln, idx) => ctx.fillText(ln, x + 14, cy + 12 + idx * 24));
+
+      let rowY = cy + 16 + titleLines.length * 24;
+      ctx.fillStyle = '#6ee7cb';
+      ctx.font = '600 16px Arial, sans-serif';
+      ctx.fillText(wrapText(ctx, `${chips}  ·  ${badges.join(' · ')}`, w - 28)[0] || '', x + 14, rowY);
+      rowY += 24;
+
+      ctx.fillStyle = MUTED;
+      ctx.font = '400 17px Arial, sans-serif';
+      howLines.forEach((ln, idx) => ctx.fillText(ln, x + 14, rowY + idx * 21));
+
+      pathIn.set(pw.id, { x, y: cy + cardH / 2 });
+      pathOut.set(pw.id, { x: x + w, y: cy + cardH / 2 });
+      cy += cardH + 14;
+    }
+  }
+
+  // Lane 4: Crises
+  {
+    const x = laneX(3) + 16;
+    const w = laneW - 32;
+    let cy = laneTop + 84;
+    const crisesById = new Map((snapshot.crises || []).map(c => [c.id, c]));
+    const crises = Object.values(board.crises || {});
+    for (const c of crises.slice(0, 5)) {
+      const snapC = crisesById.get(c.id) || c;
+      const lampColor = { green: '#22c55e', yellow: '#eab308', red: '#ef4444' }[c.lamp || 'red'] || '#ef4444';
+      ctx.font = '700 22px Arial, sans-serif';
+      const nameLines = wrapText(ctx, c.name || c.role || 'Crisis', w - 52).slice(0, 2);
+      const roadblocks = Object.values(board.challengers || {}).filter(ch => {
+        const wire = board.wires?.[ch.wireId];
+        return wire && wire.crisisId === c.id;
+      });
+      const cardH = 66 + nameLines.length * 25 + (roadblocks.length ? 26 : 0);
+      if (cy + cardH > laneTop + laneH - 14) break;
+
+      roundRectPath(ctx, x, cy, w, cardH, 12);
+      ctx.fillStyle = '#16293a';
+      ctx.fill();
+      ctx.strokeStyle = lampColor;
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(x + 22, cy + 25, 8, 0, Math.PI * 2);
+      ctx.fillStyle = lampColor;
+      ctx.fill();
+
+      ctx.fillStyle = INK;
+      ctx.font = '700 22px Arial, sans-serif';
+      nameLines.forEach((ln, idx) => ctx.fillText(ln, x + 38, cy + 13 + idx * 25));
+
+      const meterVal = snapC.value != null ? `Meter ${snapC.value}/5` : `Lamp: ${(c.lamp || 'red').toUpperCase()}`;
+      const deltaTxt = Number.isFinite(c.scoreDelta) && c.scoreDelta !== 0
+        ? `  ·  ${c.scoreDelta > 0 ? '+' : ''}${c.scoreDelta} pressure`
+        : '';
+      let subY = cy + 18 + nameLines.length * 25;
+      ctx.fillStyle = MUTED;
+      ctx.font = '600 17px Arial, sans-serif';
+      ctx.fillText(`${meterVal}${deltaTxt}`, x + 16, subY);
+
+      if (roadblocks.length) {
+        subY += 24;
+        const ch = roadblocks[0];
+        ctx.fillStyle = ch.lamp === 'red' ? '#fda4af' : '#fde68a';
+        ctx.font = '700 16px Arial, sans-serif';
+        ctx.fillText(`⚡ Roadblock: ${String(ch.angle || 'challenger').toUpperCase()} (${(ch.lamp || 'red').toUpperCase()})`, x + 16, subY);
+      }
+
+      crisisIn.set(c.id, { x, y: cy + cardH / 2 });
+      cy += cardH + 14;
+    }
+  }
+
+  // Draw Bezier wires across all 3 lane gaps
+  const drawCurve = (p1, p2, color, dashed = false, width = 3.2) => {
+    if (!p1 || !p2) return;
+    const dx = Math.max(24, Math.abs(p2.x - p1.x) * 0.45);
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.setLineDash(dashed ? [9, 7] : []);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.bezierCurveTo(p1.x + dx, p1.y, p2.x - dx, p2.y, p2.x, p2.y);
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  for (const [, uIn] of useIn.entries()) {
+    const tOut = techOut.get(uIn.techId);
+    drawCurve(tOut, uIn, uIn.early ? '#e11d48' : 'rgba(110, 231, 203, 0.55)', uIn.early, 2.4);
+  }
+
+  for (const pw of Object.values(board.pathways || {})) {
+    const pIn = pathIn.get(pw.id);
+    if (!pIn) continue;
+    const ucIds = new Set((pw.ingredients || []).flatMap(i => i.useCaseIds || []));
+    for (const ucId of ucIds) {
+      const uOut = useOut.get(ucId);
+      drawCurve(uOut, pIn, uOut?.early ? '#e11d48' : 'rgba(56, 189, 248, 0.65)', Boolean(uOut?.early), 2.8);
+    }
+  }
+
+  for (const wire of Object.values(board.wires || {})) {
+    const pOut = pathOut.get(wire.pathwayId);
+    const cIn = crisisIn.get(wire.crisisId);
+    if (!pOut || !cIn) continue;
+    const early = wire.state === 'early';
+    const crisisLamp = board.crises?.[wire.crisisId]?.lamp || 'red';
+    const ch = Object.values(board.challengers || {}).find(row => row.wireId === wire.id);
+    const blocked = ch && ch.lamp === 'red';
+    const color = early
+      ? '#e11d48'
+      : blocked
+        ? '#f59e0b'
+        : crisisLamp === 'green'
+          ? '#22c55e'
+          : crisisLamp === 'yellow'
+            ? '#eab308'
+            : '#f87171';
+    drawCurve(pOut, cIn, color, early || blocked, 4.2);
+    if (ch) {
+      const mx = (pOut.x + cIn.x) / 2;
+      const my = (pOut.y + cIn.y) / 2;
+      ctx.beginPath();
+      ctx.arc(mx, my, 13, 0, Math.PI * 2);
+      ctx.fillStyle = ch.lamp === 'red' ? '#ef4444' : '#eab308';
+      ctx.fill();
+      ctx.strokeStyle = '#09131d';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+  }
+
+  const boardImage = await loadImage(canvas.toDataURL('image/png'));
+  return { boardImage, trayImage: null };
+}
+
 /** Reuse the live renderer on a detached snapshot; no changes to the playing board. */
 export async function renderPuzzleBoard(snapshot) {
+  const board = snapshot.renderBoard || { tiles: Object.fromEntries((snapshot.tiles || []).map(t => [t.id, t])) };
+  if (isPathwayBoard(board)) return renderPathwayPuzzle(board, snapshot);
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
-  const board = snapshot.renderBoard || { tiles: Object.fromEntries(snapshot.tiles.map(t => [t.id, t])) };
   const ui = createHexBoardUi({ svg, getBoard: () => board, getYear: () => snapshot.year, isInteractive: () => false });
   ui.render();
   const embedded = new Map();

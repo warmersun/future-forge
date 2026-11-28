@@ -209,21 +209,21 @@ describe("immutable package publisher", () => {
     });
   }
 
-  for (const [gate, edit] of [
-    ["craft", (tile) => { delete tile.grounding; delete tile.mission.grounding; }],
-    ["economy", (tile) => { tile.mission.collapseYear = tile.mission.startYear; }],
+  for (const [gate, pattern, edit] of [
+    ["craft", /Craft acceptance/i, (tile) => { delete tile.grounding; delete tile.mission.grounding; }],
+    ["clock", /clock_immediate_collapse/i, (tile) => { tile.mission.collapseYear = tile.mission.startYear; }],
   ]) {
     it(`rejects ${gate} failures before adapter load or any adapter/network call, including dry-run`, async () => {
       const bad = editRelease(files, edit);
       let touched = 0;
       const adapter = new Proxy({}, { get() { touched++; throw new Error("adapter touched"); } });
-      assert.throws(() => planPublishPackage({ files: bad }), new RegExp(gate, "i"));
-      await assert.rejects(publishPackagePlan({ files: bad }, { adapter }), new RegExp(gate, "i"));
+      assert.throws(() => planPublishPackage({ files: bad }), pattern);
+      await assert.rejects(publishPackagePlan({ files: bad }, { adapter }), pattern);
       for (const flags of [[], ["--dry-run"]]) {
         await assert.rejects(main([archive, ...flags], {
           readArchive: async () => bad,
           loadAdapter: async () => { touched++; throw new Error("adapter loaded"); }, stdout: () => {},
-        }), new RegExp(gate, "i"));
+        }), pattern);
       }
       // Genuine archive verification succeeds: authoring acceptance is a
       // separate gate and must still reject before loading the live adapter.
@@ -231,13 +231,12 @@ describe("immutable package publisher", () => {
       await readArchivePackage(rejectedArchive);
       await assert.rejects(main([rejectedArchive], {
         loadAdapter: async () => { touched++; throw new Error("adapter loaded"); }, stdout: () => {},
-      }), new RegExp(gate, "i"));
+      }), pattern);
       assert.equal(touched, 0);
     });
   }
-  it("--force bypasses too-easy economy acceptance in dry-run and publication without changing raw bytes", async () => {
-    const easy = packFixture("too-easy", "open", "kiln-ferry", (tile) => {
-      // A synthetic local/support-only quest can be solved with one invention.
+  it("accepts a simple local/support-only quest without heavy economy simulation and preserves raw bytes", async () => {
+    const easy = packFixture("simple-quest", "open", "kiln-ferry", (tile) => {
       delete tile.mission.pressure.global;
       for (const meter of Object.values(tile.mission.pressure)) {
         meter.pressure = 2;
@@ -246,20 +245,12 @@ describe("immutable package publisher", () => {
       tile.mission.suggestedWhy.robots = `A cart eases ${tile.mission.pressure.local.label}.`;
     });
     const raw = await readArchivePackage(easy);
-    assert.throws(() => planPublishPackage({ files: raw }), /Economy acceptance.*too_easy/);
-    const warnings = [];
-    const dry = await main([easy, "--force", "--dry-run"], {
-      loadAdapter: async () => { throw new Error("dry-run loaded adapter"); },
-      stdout: () => {}, stderr: text => warnings.push(text),
-    });
-    assert.equal(dry.plan.force, true);
-    assert.deepEqual(dry.wrote, []);
-    assert.match(warnings[0], /--force bypasses economy acceptance only/);
+    const plan = planPublishPackage({ files: raw });
+    assert.equal(plan.entries.length, 1);
     const store = memoryStore(null);
-    await main([easy, "--force"], {
+    await main([easy], {
       loadAdapter: async () => store.adapter, stdout: () => {}, stderr: () => {},
     });
-    const plan = planPublishPackage({ files: raw, force: true });
     assert.deepEqual(store.catalog().quests, plan.entries);
     for (const object of plan.objects) assert.deepEqual(store.objects.get(object.key).body, raw[object.name]);
     store.set(plan.objects[0].key, Buffer.from("conflicting immutable bytes"));

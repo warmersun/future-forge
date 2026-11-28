@@ -495,12 +495,6 @@ export class RoomManager {
     // If the active player left, force end_turn (skip offline seats)
     if (activeId === leftPlayer.id && connected.length >= 1) {
       const cur = activeId;
-      if (room.mp.invents[cur]) {
-        room.mp.invents[cur].apSpentThisTurn = Math.max(
-          1,
-          room.mp.invents[cur].apSpentThisTurn || 0
-        );
-      }
       endResult = applyMpAction(
         room.mp,
         {
@@ -961,12 +955,8 @@ export class RoomManager {
       }
     }
 
-    // Skip offline seats on End turn / Wait so handoff reaches a connected player
-    if (
-      (type === "end_turn" || type === "wait") &&
-      action &&
-      typeof action === "object"
-    ) {
+    // Skip offline seats on End turn so handoff reaches a connected player
+    if (type === "end_turn" && action && typeof action === "object") {
       const connectedIds = room.players
         .filter((p) => p.connected)
         .map((p) => p.id);
@@ -1493,7 +1483,6 @@ function inventPlaceShim(mp, playerId) {
     deployStage: f.deployStage,
     abandoned: f.abandoned,
     pendingAi: f.pendingAi || null,
-    aiTaxThisTurn: Boolean(f.aiTaxThisTurn),
     turnPhase: f.pendingAi ? "ai_pending" : f.turnPhase || "act",
     featureFlags: {
       actionPoints: true,
@@ -1510,7 +1499,6 @@ function applySliceToChallenge(mp, playerId, slice) {
   if (!f || !slice) return;
   f.ap = slice.ap;
   f.pendingAi = slice.pendingAi || null;
-  if ("aiTaxThisTurn" in slice) f.aiTaxThisTurn = Boolean(slice.aiTaxThisTurn);
   if (slice.apSpentThisTurn != null) f.apSpentThisTurn = slice.apSpentThisTurn;
   if (slice.turnPhase === "ai_pending") {
     /* keep invent turnPhase */

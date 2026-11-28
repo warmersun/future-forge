@@ -1,0 +1,65 @@
+{
+  "schema": "future-forge.capability-trend/v2",
+  "id": "quantum-random-number-generation",
+  "techId": "quantum-internet",
+  "axis": "speed",
+  "name": "Hardware quantum random numbers",
+  "summary": "Encryption keys need numbers that nobody can guess or reproduce. Ordinary computers use formulas that look random, whereas quantum random number generators measure unpredictable quantum events such as single photons hitting a beam splitter or vacuum noise. Compact circuit cards now plug into servers and telecom equipment to supply physical randomness directly. Manufacturers report peak bitrates under different setups rather than one shared multi-year price table, so this card tracks hardware availability milestones instead of a curve.",
+  "capability": "Generate verifiable physical randomness from quantum photon fluctuations.",
+  "trendSummary": "Commercial quantum entropy cards ship in compact chips and server modules for key seeding.",
+  "milestones": [
+    {
+      "id": "qrng-chip-2023",
+      "label": "High-speed chip-scale quantum entropy demonstrated",
+      "date": "2023",
+      "status": "reached",
+      "detail": "Integrated photonic and vacuum-fluctuation chips reached multi-gigabit entropy rates in compact packages.",
+      "useCases": [
+        {
+          "title": "Mobile and edge key seeding",
+          "blurb": "Generate unpredictable device encryption seeds locally without relying on remote entropy servers.",
+          "world": "bits"
+        }
+      ]
+    },
+    {
+      "id": "qrng-cards-2026",
+      "label": "Commercial quantum entropy cards ship for servers",
+      "date": "2026",
+      "status": "reached",
+      "detail": "Plug-in server cards and chip modules ship for data centers and telecom key-management gear.",
+      "useCases": [
+        {
+          "title": "Data-center cryptographic key generation",
+          "blurb": "Feed fresh physical randomness into hospital, municipal, and financial key-management vaults.",
+          "world": "bits"
+        },
+        {
+          "title": "Auditable public lottery and voting seeds",
+          "blurb": "Provide hardware-backed randomness for public records, audits, and fair-selection systems.",
+          "world": "bits"
+        }
+      ]
+    },
+    {
+      "id": "qrng-standard-2029",
+      "label": "Integrated quantum entropy on commodity NICs (forecast)",
+      "date": "2029",
+      "status": "predicted",
+      "detail": "Entropy chips may become standard options inside network interface cards alongside post-quantum firmware.",
+      "useCases": [
+        {
+          "title": "Zero-config network card key entropy",
+          "blurb": "Upgrade everyday municipal routers and hospital gateways with physical randomness by default.",
+          "world": "bits"
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "label": "Physical Review Letters — chip-scale vacuum-noise quantum random number generator (2023)",
+      "url": "https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.130.210801"
+    }
+  ]
+}

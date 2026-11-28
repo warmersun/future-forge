@@ -35,13 +35,14 @@ import {
 } from "./brief-beats.js";
 import { DO_NOT_SAY } from "./tech-why.js";
 import { plainTextFromMarkdown } from "./md-lite.js";
+import { GAME, techById } from "./data.js";
+import { baseTechCost } from "./sim/economy.js";
 
 /** What the co-inventor sees of the brief (js/game.js getContext). */
 export const BRIEF_AI_CLIP = 2800;
 /** What fast-eval sees of grounding (js/server/fast-eval.mjs GROUNDING_CAP). */
 export const GROUNDING_AI_CLIP = 3000;
 export const WALK_CARD_CAP = 8;
-export const BUDGET_HIGH = 7;
 
 const GROUNDING_HEADINGS = new Set([
   "technology",
@@ -135,7 +136,14 @@ export function lintQuestTile(rawTile, validated, opts = {}) {
   lintPlaceholders(placeholderFields, warn);
   lintDoNotSay(playerFields, pressure, warn);
   lintPressure(pressure, warn);
-  lintResources(pick("resources"), warn);
+  lintResourcesAndClock({
+    resources: pick("resources"),
+    spotlightId,
+    pressure,
+    mission,
+    missionIn,
+    techs: opts.techs,
+  }, warn);
   lintGrounding(pick("grounding"), warn);
   lintResearch(tile.research, warn);
   lintCompanion(tile, mission, missionIn, warn);
@@ -263,20 +271,78 @@ function lintPressure(pressure, warn) {
   }
 }
 
-function lintResources(resources, warn) {
-  if (!resources || typeof resources !== "object") return;
-  const keys = Object.keys(resources);
-  if (!keys.length) return;
-  if (Number(resources.startingBudget) >= BUDGET_HIGH) {
+function lintResourcesAndClock(
+  { resources, spotlightId, pressure, mission, missionIn, techs },
+  warn
+) {
+  const maxBudget = GAME.maxBudget ?? 10;
+  const maxWill = GAME.maxWill ?? 5;
+  const res = resources && typeof resources === "object" ? resources : {};
+  const startingBudget =
+    res.startingBudget != null && Number.isFinite(Number(res.startingBudget))
+      ? Number(res.startingBudget)
+      : GAME.startingBudget ?? 5;
+  const startingWill =
+    res.startingWill != null && Number.isFinite(Number(res.startingWill))
+      ? Number(res.startingWill)
+      : GAME.startingWill ?? 3;
+  const apMax =
+    res.apMax != null && Number.isFinite(Number(res.apMax))
+      ? Number(res.apMax)
+      : GAME.apMax ?? 3;
+
+  if (
+    startingBudget > maxBudget ||
+    startingWill > maxWill ||
+    apMax < 1 ||
+    startingBudget < 0 ||
+    startingWill < 0
+  ) {
     warn(
-      "resources_budget_high",
-      `startingBudget ${resources.startingBudget} pre-funds act two; pathway ease pays +1 Budget per eased role, so omit resources unless the first tile is unaffordable.`
+      "resources_over_cap",
+      `resources override out of capacity bounds (apMax >= 1, startingBudget 0..${maxBudget}, startingWill 0..${maxWill}).`
     );
-  } else {
+  }
+
+  if (spotlightId) {
+    const tech = Array.isArray(techs)
+      ? techs.find((t) => t && t.id === spotlightId) || techById(spotlightId)
+      : techById(spotlightId);
+    if (tech) {
+      const cost = baseTechCost(tech);
+      if (cost.budget > startingBudget || cost.will > startingWill) {
+        warn(
+          `resources_spotlight_unaffordable:${spotlightId}`,
+          `Spotlight tech "${spotlightId}" requires ${cost.budget} Budget / ${cost.will} Goodwill, exceeding starting capacity (${startingBudget} Budget / ${startingWill} Goodwill).`
+        );
+      }
+    }
+  }
+
+  const startYear = Number(mission?.startYear ?? missionIn?.startYear ?? GAME.startYear ?? 2026);
+  const collapseYear = Number(mission?.collapseYear ?? missionIn?.collapseYear ?? startYear + 10);
+  if (Number.isFinite(startYear) && Number.isFinite(collapseYear) && collapseYear <= startYear) {
     warn(
-      "resources_present",
-      "resources override the default wallet; keep only if the first island cannot buy the spotlight tech at Budget 5."
+      "clock_immediate_collapse:years",
+      `collapseYear (${collapseYear}) must be strictly greater than startYear (${startYear}).`
     );
+  }
+  for (const [role, m] of Object.entries(pressure || {})) {
+    if (!m || typeof m !== "object") continue;
+    const start = Number(m.pressure);
+    const rise = Number(m.pressureRise) || 0;
+    if (!Number.isFinite(start)) continue;
+    if (start >= 5) {
+      warn(
+        `clock_immediate_collapse:${role}`,
+        `pressure.${role} starts at ${start} (>= 5), collapsing the quest immediately.`
+      );
+    } else if (rise > 0 && start + rise >= 5) {
+      warn(
+        `clock_immediate_collapse:${role}`,
+        `pressure.${role} (${start}) + pressureRise (${rise}) hits 5 on the very first year tick.`
+      );
+    }
   }
 }
 

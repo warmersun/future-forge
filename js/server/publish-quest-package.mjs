@@ -36,29 +36,18 @@ import { resolvePackageRelease } from "./package-release.mjs";
 import { joinObjectKey } from "./quest-object-storage.mjs";
 import { validateQuestDocument } from "../quest-tile.js";
 import { lintQuestTile, formatLintWarnings } from "../quest-lint.js";
-import { evaluateQuestEconomy } from "../sim/quest-economy.js";
 import { catalogCard } from "./cloud-gate.mjs";
 
-/** Match strict authoring acceptance, not merely package integrity. Modules have
- * craft lint but no playable economy; every playable member must pass both solo
- * paths in the same finite finishing year unless force explicitly bypasses
- * economy acceptance. Craft lint remains mandatory. No adapter/credentials are involved.
+/** Match strict authoring acceptance, not merely package integrity.
+ * Craft lint (including spotlight affordability and clock sanity checks)
+ * remains mandatory. No adapter/credentials are involved.
  */
-function acceptAuthoring(raw, id, force = false) {
+function acceptAuthoring(raw, id) {
   const document = JSON.parse(raw.toString("utf8"));
   const validated = validateQuestDocument(document);
   if (!validated.ok) throw new Error(`Invalid quest ${id}: ${validated.error}`);
   const { warnings } = lintQuestTile(document, validated);
   if (warnings.length) throw new Error(`Craft acceptance failed for ${id}:\n${formatLintWarnings(warnings).join("\n")}`);
-  if (!force && validated.kind !== "module" && validated.tile.kind !== "module") {
-    const report = evaluateQuestEconomy(validated, { recommend: false });
-    const noAi = report.archetypes["solo-no-ai"];
-    const ai = report.archetypes["solo-ai"];
-    if (report.questVerdict !== "challenging" || noAi?.verdict !== "challenging" || ai?.verdict !== "challenging" ||
-        !Number.isFinite(noAi?.year) || !Number.isFinite(ai?.year) || noAi.year !== ai.year) {
-      throw new Error(`Economy acceptance failed for ${id}: solo-no-ai ${noAi?.verdict} (${noAi?.year}), solo-ai ${ai?.verdict} (${ai?.year}); both must be challenging in the same year`);
-    }
-  }
 }
 
 const digest = (body) => createHash("sha256").update(body).digest("hex");
@@ -102,7 +91,7 @@ export function planPublishPackage({ files, prefix = "", access = null, force = 
     const packageRef = { ...ref, questId: id };
     const resolved = resolvePackageRelease(indexed, packageRef, { prefix, projectDelivery: false });
     if (!resolved.ok) throw new Error(`${resolved.code}: ${resolved.message}`);
-    acceptAuthoring(raw[file], id, force);
+    acceptAuthoring(raw[file], id);
     // Only the shared, allowlisted public card belongs in a catalog. Never copy
     // the raw quest, mission, tutor curriculum, or package world into metadata.
     return { ...catalogCard(resolved.record), id, file: packageObjectKey("", ref, file), packageRef };

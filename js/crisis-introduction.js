@@ -53,7 +53,8 @@ export function createCrisisIntroduction({
   const cardButtons = () => [...(cards()?.querySelectorAll?.('button.crisis-introduction-card') || [])];
   const placeAllButton = () => cards()?.querySelector?.('button[data-crisis-place-all]') || null;
   const tileElement = (id) =>
-    [...doc.querySelectorAll('#hex-board-svg g[data-id]')].find((el) => el.dataset.id === id);
+    [...doc.querySelectorAll('#hex-board-svg g[data-id]')].find((el) => el.dataset.id === id) ||
+    doc.querySelector(`[data-crisis-slot="${String(id || "").replace(/"/g, "")}"]`);
 
   function cleanupFlight() {
     for (const t of timers) clearTimeout(t);

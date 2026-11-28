@@ -165,13 +165,27 @@ describe("quest-lint", () => {
     assert.ok(codes.includes("pressure_missing_description:global"));
   });
 
-  it("flags a high starting budget and any resources override", () => {
-    const t = goodTile();
-    t.resources = { startingBudget: 8, startingWill: 4 };
-    assert.ok(lint(t).includes("resources_budget_high"));
-    const t2 = goodTile();
-    t2.mission.resources = { apMax: 4 };
-    assert.ok(lint(t2).includes("resources_present"));
+  it("checks capacity bounds, spotlight affordability, and immediate clock collapse", () => {
+    const okOverride = goodTile();
+    okOverride.resources = { startingBudget: 8, startingWill: 4, apMax: 4 };
+    assert.deepEqual(lint(okOverride), []);
+
+    const overCap = goodTile();
+    overCap.resources = { startingBudget: 12, startingWill: 4 };
+    assert.ok(lint(overCap).includes("resources_over_cap"));
+
+    const unaffordable = goodTile();
+    unaffordable.resources = { startingBudget: 0 };
+    assert.ok(has(lint(unaffordable), "resources_spotlight_unaffordable"));
+
+    const badClock = goodTile();
+    badClock.mission.collapseYear = badClock.mission.startYear;
+    assert.ok(lint(badClock).includes("clock_immediate_collapse:years"));
+
+    const instaFall = goodTile();
+    instaFall.mission.pressure.local.pressure = 4;
+    instaFall.mission.pressure.local.pressureRise = 1;
+    assert.ok(lint(instaFall).includes("clock_immediate_collapse:local"));
   });
 
   it("flags missing grounding and Honest limits past the AI clip", () => {

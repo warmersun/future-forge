@@ -310,11 +310,11 @@ describe("quest-tile", () => {
     );
     assert.equal(
       resourceOverrideLabel({ startingBudget: 9, startingWill: 5 }),
-      "Budget 9 · Will 5"
+      "Budget 9 · Goodwill 5"
     );
     assert.equal(
       resourceOverrideLabel({ apMax: 4, startingBudget: 8, startingWill: 5 }),
-      "AP 4 · Budget 8 · Will 5"
+      "Moves 4 · Budget 8 · Goodwill 5"
     );
   });
 
@@ -736,6 +736,7 @@ describe("quest-tile", () => {
     name: "Cost per human genome",
     summary: "Halving curve for sequencing cost.",
     capability: "Affordable WGS",
+    trendSummary: "Sequencing cost fell toward clinical affordability.",
     unit: "USD / genome",
     compounding: { kind: "halving", periodYears: 1.5 },
     anchor: { date: "2015-01-01", value: 4000 },
@@ -745,6 +746,13 @@ describe("quest-tile", () => {
         date: "2014",
         value: 1000,
         status: "reached",
+        useCases: [
+          {
+            title: "Clinic pathogen read",
+            blurb: "Sequence clinic samples locally.",
+            world: "atoms",
+          },
+        ],
       },
     ],
   };
@@ -1067,6 +1075,32 @@ describe("quest author license", () => {
     assert.equal(r.ok, true, JSON.stringify(r.details));
     assert.equal(r.tile.license, authorLicense);
     assert.deepEqual(r.tile.author, author);
+  });
+
+  it("accepts an omitted ontology and rejects an empty or unknown one", () => {
+    const ok = validateQuestTile(baseTile(), { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(ok.ok, true);
+    assert.equal(ok.mission.ontology, undefined);
+    const empty = validateQuestTile(baseTile({ ontology: [] }), { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(empty.ok, false);
+    assert.ok(empty.details.includes("ontology_empty"));
+    const unknown = validateQuestTile(
+      baseTile({ ontology: [{ techId: "not-a-tech", milestones: [] }] }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(unknown.ok, false);
+    assert.ok(unknown.details.some((d) => d.startsWith("ontology_unknown_tech:")));
+    const kept = validateQuestTile(baseTile({
+      ontology: [{
+        techId: "drones",
+        capability: "Map runoff",
+        milestones: [{ year: 2026, label: "Field drones", status: "reached", useCases: [{ title: "Map sluices" }] }],
+      }],
+    }), { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(kept.ok, true, JSON.stringify(kept.details));
+    assert.equal(kept.mission.ontology[0].techId, "drones");
+    assert.equal(kept.mission.ontology[0].milestones[0].status, "reached");
+    assert.equal(kept.tile.ontology[0].milestones[0].useCases[0].title, "Map sluices");
   });
 
   it("leaves an omitted license empty", () => {

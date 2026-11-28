@@ -1,72 +1,88 @@
-# Capability trend schema (`future-forge.capability-trend/v1`)
+# Capability & Trend Schema (`future-forge.capability-trend/v2`)
 
-Portable **quantitative exponential trend** files for the inline Invent Capability outlook and Future Forge Wait charts.
+Portable **emTech Capability → Milestones (Trend) → Use Cases** files for the 4-Lane Ontology Board, Look Ahead charts, and Invent Capability Explorer.
 
-The outlook displays the authored `summary`; when it overflows, **Read full description** expands the full text. Its chart is a read-only model, not a simulation action or a new authoritative grant for AI. An estimate is shown for the quest year only within the authored domain. Existing Look Ahead / Wait charts and the HUD year dialog remain available. This presentation adds no authoring fields or changes to the limits below.
+One JSON file describes **one Capability** belonging to a Future Forge `techId`. Every capability carries dated milestones (reached and/or predicted) and unlocked `useCases`. When an honest, primary-sourced numeric series exists, the file also includes an all-or-nothing quantitative log-scale curve (`unit`, `compounding`, `anchor`, and numeric `milestone.value`); otherwise those curve fields are omitted cleanly (`hasCurve: false`).
 
-| Channel | How trends get in |
-|---------|------------------|
-| **Official catalog** | warmersun.com `/trends/catalog.json` (server downloads) |
+| Channel | How capabilities & trends get in |
+|---------|----------------------------------|
+| **Official catalog** | warmersun.com `/trends/catalog.json` + `/trends/bundle.json` (server downloads) |
 | **Quest tile** | Optional embedded `trends[]` on a quest (overrides catalog by `id`) |
 
 Validate:
 
 ```bash
-npm run validate:trend -- path/to/trend.json
+npm run validate:trend -- path/to/capability.json
 ```
 
-## Minimal shape
+## Schema fields
 
-See `test/fixtures/trends/gene-seq-cost-per-genome.json`.
+See `test/fixtures/trends/gene-seq-cost-per-genome.json` (with curve) and `skills/future-forge-trends/examples/quantum-random-number-generation.json` (milestone-only).
 
 | Field | Notes |
-|-------|--------|
-| `schema` | `"future-forge.capability-trend/v1"` (optional when nested in a quest) |
-| `id` | kebab-case, unique in catalog |
+|-------|-------|
+| `schema` | `"future-forge.capability-trend/v2"` (optional when nested in a quest) |
+| `id` | kebab-case, unique in catalog, matches filename stem |
 | `techId` | Must match a `TECHS` id |
-| `name`, `summary`, `capability`, `unit` | Required strings (caps 80 / 900 / 160 / 80). Summary is plain sentences; introduce terms. The 900-char summary cap is a safety ceiling, not a brevity goal. |
-| `compounding` | `{ kind: "doubling"\|"halving"\|"cagr", … }` |
-| `anchor` | `{ date, value }` — value must be **> 0** (log-Y) |
-| `milestones` | Non-empty array of `{ label, date, value, status }` |
-| `domain` | Optional `{ start, end }` year or ISO date |
-| `sources` | Optional `{ label, url }` with `https` only |
+| `name` | ≤80 chars — everyday capability title |
+| `capability` | ≤160 chars — operational mechanism (what this capability does) |
+| `summary` | ≤900 chars — plain-language teaching prose (full sentences, introduce terms) |
+| `trendSummary` | ≤180 chars — concise 1-sentence trajectory headline shown in Lane 1 |
+| `milestones` | Non-empty array (max 24) of `{ id?, label (≤80), date, status ("reached"\|"predicted"), detail? (≤280), attribution? (≤160), value? (>0), useCases? }` |
+| `axis` | Optional: `"price" \| "speed" \| "capacity" \| "range" \| "scale" \| "quality"` |
+| `useCases` | Optional top-level fallback array (max 8) of `{ id?, title (≤80), blurb (≤280), world? ("bits"\|"atoms"\|"split") }` |
+| `domain` | Optional `{ start, end }` year or ISO date (auto-derived if omitted) |
+| `sources` | Optional `{ label (≤120), url }` with `https` only |
 
-### Compounding
+> **Hard use-case rule:** At least one valid use case must appear either on a milestone's `useCases[]` or in top-level `useCases[]`.
+
+### Optional quantitative curve (all-or-nothing)
+
+Either **all** of `{ unit (≤80), compounding, anchor, and numeric milestone.value > 0 on every milestone }` are present (`hasCurve: true`), or **none** of them are present (`hasCurve: false`). Partial mixes fail validation (`partial_curve_fields`).
 
 | `kind` | Extra field | Curve |
-|--------|-------------|--------|
+|--------|-------------|-------|
 | `doubling` | `periodYears` > 0 | \(v = v_0 \cdot 2^{\Delta t / T}\) |
 | `halving` | `periodYears` > 0 | \(v = v_0 \cdot 2^{-\Delta t / T}\) |
 | `cagr` | `annualRate` (> −1) | \(v = v_0 \cdot (1+r)^{\Delta t}\) |
 
-Milestones are plot markers; they need not sit exactly on the model curve.
+Milestones are evidence markers; they need not sit exactly on the model curve.
 
 ### Milestone status
 
 | `status` | Meaning |
 |----------|---------|
 | `reached` | Already observed / widely accepted |
-| `predicted` | Forecast — label as such in UI |
+| `predicted` | Forecast — never relabeled as reached when game year advances |
 
-## Catalog (`future-forge.capability-trend-catalog/v1`)
+## Catalog & Bundle (`v2`)
 
 ```json
 {
-  "schema": "future-forge.capability-trend-catalog/v1",
-  "updated": "2026-08-21",
+  "schema": "future-forge.capability-trend-catalog/v2",
+  "updated": "2026-11-27",
+  "bundle": "bundle.json",
   "trends": [
-    { "id": "gene-seq-cost-per-genome", "techId": "gene-sequencing", "file": "gene-seq-cost-per-genome.json" }
+    {
+      "id": "gene-seq-cost-per-genome",
+      "techId": "gene-sequencing",
+      "file": "gene-seq-cost-per-genome.json",
+      "name": "Cost per human genome",
+      "hasCurve": true
+    }
   ]
 }
 ```
+
+When `bundle` is present, `js/trends-remote.mjs` loads `bundle.json` (`future-forge.capability-trend-bundle/v2`) in a single request and falls back to parallel per-file fetches if needed.
 
 ## Quest embedding
 
 Optional on a quest tile (top-level or under `mission`):
 
 ```json
-"trends": [ { /* capability-trend object */ } ],
+"trends": [ { /* capability-trend v2 object */ } ],
 "spotlightTrends": ["gene-seq-cost-per-genome"]
 ```
 
-Quest trends override catalog rows with the same `id`. Spotlight ids may refer to catalog or embedded trends.
+Quest entries override catalog rows with the same `id`.

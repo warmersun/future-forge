@@ -33,6 +33,13 @@ import { worseLevel } from "../sim/deploy.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { neighbor } from "./hex-tile-grid.js";
 import {
+  isPathwayBoard,
+  ingredientGroups,
+  pathwayForIngredientIds,
+  composePathwayHow,
+  effectiveTiming,
+} from "../board/pathway-model.js";
+import {
   TILE_KIND,
   boardCrisisRoles,
   neighborTiles,
@@ -102,6 +109,10 @@ export function clampPressure(n) {
  * @returns {object[][]}
  */
 export function listInventionPathways(board) {
+  if (isPathwayBoard(board) && Object.keys(board.pathways || {}).length) {
+    const groups = ingredientGroups(board);
+    if (groups?.length) return groups;
+  }
   const seen = new Set();
   const out = [];
   for (const t of Object.values(board?.tiles || {})) {
@@ -184,6 +195,17 @@ function concatMemberHow(inventions) {
  * @returns {{ text: string, source: "concat"|"user"|"ai", key: string, stored: boolean }}
  */
 export function resolveIslandHow(board, inventions) {
+  const pathway = pathwayForIngredientIds(board, inventions);
+  if (pathway) {
+    const text = composePathwayHow(pathway);
+    const stored = Boolean(String(pathway.customHow || "").trim());
+    return {
+      text,
+      source: stored ? "user" : "concat",
+      key: islandHowKey(inventions),
+      stored,
+    };
+  }
   const key = islandHowKey(inventions);
   const stored = key ? board?.islandHow?.[key] : null;
   const text = String(stored?.text || "").trim();
@@ -826,7 +848,69 @@ export function worseLamp(a, b) {
  * Coverage + Bonds + Timing for the invent panel. Overall is the worst of the three.
  * @param {object|null|undefined} board
  */
+function pathwayPanelFromWires(board) {
+  const year = board.questYear ?? 2026;
+  const crises = Object.values(board.crises || {});
+  const challengers = Object.values(board.challengers || {});
+  const givens = [
+    ...crises.map((c) => ({ ...c, kind: "crisis", q: 0, r: 0, lamp: c.lamp || "red" })),
+    ...challengers.map((c) => ({ ...c, kind: "concern", q: 0, r: 0, lamp: c.lamp || "red" })),
+  ];
+  const reds = givens.filter((t) => t.lamp === "red").length;
+  const yellows = givens.filter((t) => t.lamp === "yellow").length;
+  const greens = givens.filter((t) => t.lamp === "green").length;
+  const coverage =
+    reds === 0 && givens.length
+      ? {
+          level: greens === givens.length ? "green" : "yellow",
+          note: greens === givens.length ? "All lights green" : "No red lights — some still yellow",
+        }
+      : {
+          level: "red",
+          note: reds ? `${reds} light(s) still red` : "No crisis on the board",
+        };
+  const wired = new Set(Object.values(board.wires || {}).map((w) => w.crisisId));
+  const uncovered = crises.filter((c) => !wired.has(c.id));
+  const bonds = !crises.length
+    ? { level: "red", note: "No crisis on the board", uncovered: 0, uncoveredIds: [] }
+    : uncovered.length === 0
+      ? { level: "green", note: "Every crisis is plugged in", uncovered: 0, uncoveredIds: [] }
+      : {
+          level: wired.size ? "yellow" : "red",
+          note: wired.size ? "Some crises are still unplugged" : "Plug a pathway into each crisis",
+          uncovered: uncovered.length,
+          uncoveredIds: uncovered.map((c) => c.id),
+        };
+  let timing = { pct: null, level: "yellow", pending: false, count: 0, rdFactor: 1 };
+  for (const pathway of Object.values(board.pathways || {})) {
+    const isWired = Object.values(board.wires || {}).some((w) => w.pathwayId === pathway.id);
+    if (!isWired) continue;
+    const row = effectiveTiming(pathway, board.useCases, year);
+    const level = row.early ? "red" : row.timingLevel || "yellow";
+    if (!timing.count || (level === "red" && timing.level !== "red")) {
+      timing = {
+        pct: row.timingPct,
+        level,
+        pending: false,
+        count: pathway.ingredients?.length || 1,
+        rdFactor: pathway.rdBoost?.factor || 1,
+      };
+    }
+  }
+  const pending = Object.values(board.pathwayImpacts || {}).some((row) => row?.pending);
+  if (pending) timing = { ...timing, pending: true };
+  const timingLevel = timing.pending ? "yellow" : timing.level || "yellow";
+  const overall = worseLevel(worseLevel(coverage.level, bonds.level), timingLevel);
+  return { coverage, bonds, timing, timingLevel, overall, reds, yellows, greens, givens };
+}
+
 export function hexPathwayPanel(board) {
+  if (
+    isPathwayBoard(board) &&
+    (Object.keys(board.crises || {}).length || Object.keys(board.pathways || {}).length)
+  ) {
+    return pathwayPanelFromWires(board);
+  }
   const tiles = Object.values(board?.tiles || {});
   const givens = tiles.filter(
     (t) =>
@@ -1928,6 +2012,23 @@ export function givensReachedFromInvention(board, tileId) {
  * @returns {object[]}
  */
 export function concernsReachedFromPathway(board, inventions) {
+  const pathway = pathwayForIngredientIds(board, inventions);
+  if (pathway && isPathwayBoard(board)) {
+    return Object.values(board.challengers || {})
+      .filter((ch) => ch && ch.pathwayId === pathway.id && ch.angle)
+      .map((ch) => ({
+        id: ch.id,
+        kind: "concern",
+        angle: ch.angle,
+        playerAnswer: ch.playerAnswer || "",
+        answerQuality: ch.answerQuality || null,
+        lamp: ch.lamp || "red",
+        speech: ch.speech || "",
+        question: ch.question || "",
+        q: 0,
+        r: 0,
+      }));
+  }
   const seedId = inventions?.[0]?.id;
   if (!seedId) return [];
   const out = [];

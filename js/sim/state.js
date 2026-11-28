@@ -47,14 +47,19 @@ export function createSimState(mission, global = null, opts = {}) {
     ...(GAME.features || {}),
     ...(opts.features || {}),
   };
-  const apMax = opts.apMax ?? mission?.apMax ?? GAME.apMax ?? 3;
-  const budget =
+  const apMax = opts.apMax ?? mission?.apMax ?? mission?.resources?.apMax ?? GAME.apMax ?? 3;
+  const budgetCap =
     opts.startingBudget ??
     mission?.startingBudget ??
+    mission?.resources?.startingBudget ??
     GAME.startingBudget ??
     5;
-  const will =
-    opts.startingWill ?? mission?.startingWill ?? GAME.startingWill ?? 3;
+  const willCap =
+    opts.startingWill ??
+    mission?.startingWill ??
+    mission?.resources?.startingWill ??
+    GAME.startingWill ??
+    3;
 
   return {
     schemaVersion: 1,
@@ -68,6 +73,7 @@ export function createSimState(mission, global = null, opts = {}) {
     waits: 0,
     pressure: clonePressure(mission?.pressure || {}),
     selectedTechIds: [],
+    freeTechIds: [],
     learnOrder: [],
     inventionName: "",
     inventionHow: "",
@@ -83,17 +89,15 @@ export function createSimState(mission, global = null, opts = {}) {
     ap: apMax,
     apMax,
     apSpentThisTurn: 0,
-    writeCommitsThisTurn: 0,
-    learnOpenedThisTurn: false,
-    budget,
-    will,
-    /** Roles already paid by pathway-ease income ({ local, global, support }). */
+    budget: budgetCap,
+    budgetCap,
+    will: willCap,
+    willCap,
+    rdCount: 0,
+    /** Roles already granted +1 Budget capacity ({ local, global, support }). */
     pathwayEasePaid: {},
-    techAddedThisTurn: {},
     actionsThisTurn: [],
     pendingAi: null,
-    /** First thinking AI request of this seat-turn has been paid (1 AP). */
-    aiTaxThisTurn: false,
     aiTiming: null,
     challengePassed: false,
     challengeAngle: null,
@@ -119,8 +123,6 @@ export function createSimState(mission, global = null, opts = {}) {
     outcome: null,
     lastNews: "",
     waitReport: "",
-    /** Active round market news (shifts emTech Budget/Will costs). Null until first round completes. */
-    marketNews: null,
     /** Live policy weather (quest-seeded + lobby-written). */
     rules: seedLiveRules(mission?.rules, mission?.startYear ?? GAME.startYear ?? 2026),
     featureFlags: {
@@ -210,8 +212,8 @@ export function cloneSimState(sim) {
     mission: cloneMission(sim.mission),
     pressure: clonePressure(sim.pressure),
     selectedTechIds: [...(sim.selectedTechIds || [])],
+    freeTechIds: [...(sim.freeTechIds || [])],
     learnOrder: [...(sim.learnOrder || [])],
-    techAddedThisTurn: { ...(sim.techAddedThisTurn || {}) },
     actionsThisTurn: [...(sim.actionsThisTurn || [])],
     pendingAi: sim.pendingAi ? { ...sim.pendingAi } : null,
     aiTiming: sim.aiTiming ? { ...sim.aiTiming } : null,
@@ -222,13 +224,6 @@ export function cloneSimState(sim) {
         }
       : null,
     outcome: sim.outcome ? { ...sim.outcome } : null,
-    marketNews: sim.marketNews
-      ? {
-          ...sim.marketNews,
-          techIds: sim.marketNews.techIds ? [...sim.marketNews.techIds] : undefined,
-          domains: sim.marketNews.domains ? [...sim.marketNews.domains] : undefined,
-        }
-      : null,
     featureFlags: { ...(sim.featureFlags || {}) },
     rules: cloneRules(sim.rules),
   };

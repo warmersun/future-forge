@@ -94,7 +94,6 @@ import {
   checkApiSecret,
 } from "./js/server/cost-policy.mjs";
 import { resolveDeveloperEnabled } from "./js/server/developer-mode.mjs";
-import { handleQuestEconomyHttp } from "./js/server/quest-economy.mjs";
 import {
   resolveAiSearchEnabled,
   searchToolsForMode,
@@ -102,6 +101,7 @@ import {
   searchSystemLineForMode,
 } from "./js/server/ai-search.mjs";
 import { ideasOrFallback } from "./js/idea-cards.js";
+import { sanitizeWorkbenchDrafts, localWorkbenchLensDrafts } from "./js/board/workbench-methods.js";
 import { sanitizeScrutiny } from "./js/scrutiny-shared.js";
 import {
   FAST_EVAL_MODES,
@@ -863,7 +863,7 @@ Each imagePrompt is ≤400 chars: a photoreal documentary still of that concern 
 Use null or [] when empty. For complete-picture fill only the missing face. For scrutinize fill scrutiny and keep techs unless asked.`;
 
 /** Tutor mode — active tutor session on a learning-module Quest. Same JSON contract as SYSTEM_PROMPT + endTutoring. */
-const TUTOR_SYSTEM_PROMPT = `You are the AI Tutor in Future Forge for a LEARNING MODULE quest (local invent + emerging tech). Tutor session is ACTIVE (free AP for the learner while tutoring).
+const TUTOR_SYSTEM_PROMPT = `You are the AI Tutor in Future Forge for a LEARNING MODULE quest (local invent + emerging tech). Tutor session is ACTIVE.
 
 Role:
 - Be a patient tutor and creative co-inventor. Follow the learner’s request: explain, brainstorm, give examples, or provide a complete solution when asked.
@@ -970,6 +970,9 @@ function buildUserPayload({ messages, context, mode }) {
       GROUNDING_HINT,
     "idea-sparks":
       "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (\u226460 chars), blurb (\u2264140), insertText/howText (\u2264280), imagePrompt (\u2264400), year, eases }. eases = the exact label of one context.crisisMeters entry this spark helps most; aim at least one spark at the meter furthest above its goal; write for context.stakeholder when named. Three DIFFERENT angles. Pilot-honest. title is a plain noun phrase a learner can say aloud (what the idea is, not a slogan; no coined slang). howText/insertText is one clear mechanism sentence in everyday words, using the named person/place when known. Leave proposals empty. If context.refresh is true, do not repeat context.avoidTitles." +
+      GROUNDING_HINT,
+    "workbench-lens":
+      "Return structured visual Draft Cards for the Innovation Workbench in top-level ideas[]. Honor context.method (seed | convergence | sit | scamper), context.lenses[], context.techIds[], context.scarcity, context.seedText, and optional context.challengerAngle / context.challengerQuestion. Each card: { id, lens, lensLabel, title (<=64 chars), howText (<=360 chars), techId, secondaryTechId, world (bits|atoms|split|plain), eases, imagePrompt }. Pilot-honest local mechanisms only. Leave proposals empty." +
       GROUNDING_HINT,
     "evaluate-neighbors":
       "Judge hex-board traffic lights for context.hexEval.givens from EACH given's FULL reachable invention pathway (neighbors[] + pathway howText/techIds; direct:true = edge contact) plus playerAnswer if present. Judge the combination as one invent. Crisis: role criteria — local = here-and-now / local fit; global = root cause / sustainable; support = public buy-in + scale beyond pilot; honor prior; green OK when honest. Concern: judge against stored challengeSpeech/challengeQuestion AND playerAnswer — hard question honestly answered by the pathway plus written answer? Docking/touching is NOT addressing. Docked with no answer and no pathway mechanism that answers THIS challenge stays red. yellow = partial honest address; green only if the pathway honestly holds the answer. Return lights: [{id, level:red|yellow|green, reason}]. Do not rewrite inventions. Leave proposals empty." +
@@ -1218,11 +1221,12 @@ function extractJson(text) {
 
 function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat", context = {}) {
   const ids = new Set(availableIds);
-  // SIT / SCAMPER / idea-sparks are brainstorm sparks — never offer Apply how-it-works
+  // SIT / SCAMPER / idea-sparks / workbench-lens are brainstorm sparks — never offer Apply how-it-works
   const brainstormOnly =
     mode === "sit" ||
     mode === "scamper" ||
     mode === "idea-sparks" ||
+    mode === "workbench-lens" ||
     mode === "evaluate-neighbors" ||
     mode === "score-pathway";
   const empty = {
@@ -1290,6 +1294,9 @@ function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat", cont
 
   if (mode === "idea-sparks") {
     out.ideas = ideasOrFallback(parsed.ideas, null, context);
+  } else if (mode === "workbench-lens") {
+    const clean = sanitizeWorkbenchDrafts(parsed.ideas, context);
+    out.ideas = clean.length ? clean : localWorkbenchLensDrafts(context);
   }
 
   // Tutor session exit signal (learning modules)
@@ -1736,7 +1743,6 @@ const IMAGE_MODEL = process.env.FF_XAI_IMAGE_MODEL || "grok-imagine-image";
 /** @type {Map<string, object>} */
 const visionSessions = new Map();
 /** Cache market news illustrations by event id (no invent context). */
-const marketImageCache = new Map();
 /** Cache idea-card thumbnails by client-provided id. */
 const ideaImageCache = new Map();
 
@@ -2097,90 +2103,6 @@ async function handleVision(body) {
       director: directorExchange,
     })
   );
-}
-
-/**
- * Lightweight Imagine generate for round market-news cards.
- * Cached by event id so multiplayer clients share one illustration.
- */
-async function handleMarketImage(body) {
-  const id = String(body?.id || "").slice(0, 80);
-  const clientSessionId = clientSessionFromBody(body);
-  if (clientSessionId) usage.touchSession(clientSessionId);
-  if (!id) {
-    return { ok: false, error: "missing_id" };
-  }
-  const cached = marketImageCache.get(id);
-  if (cached?.imageUrl) {
-    recordAiImage({
-      kind: "market",
-      mode: "generate",
-      source: "cache",
-      imageCount: 0,
-      ok: true,
-      sessionId: clientSessionId,
-    });
-    return {
-      ok: true,
-      cached: true,
-      imageUrl: cached.imageUrl,
-      model: IMAGE_MODEL,
-      id,
-    };
-  }
-
-  const headline = String(body?.headline || "Market news").slice(0, 200);
-  const rawPrompt = String(body?.prompt || headline).slice(0, 700);
-  const prompt = [
-    "Editorial news illustration for a strategy board game about emerging technology.",
-    "Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
-    rawPrompt || headline,
-  ].join(" ");
-
-  try {
-    const data = await runVisionImage("generate", prompt, null);
-    const imageUrl = await normalizeVisionDataUrl(data);
-    marketImageCache.set(id, { imageUrl, prompt, updatedAt: Date.now() });
-    if (marketImageCache.size > 60) {
-      const oldest = [...marketImageCache.entries()].sort(
-        (a, b) => (a[1].updatedAt || 0) - (b[1].updatedAt || 0)
-      )[0];
-      if (oldest) marketImageCache.delete(oldest[0]);
-    }
-    recordAiImage({
-      kind: "market",
-      mode: "generate",
-      source: "live",
-      imageCount: 1,
-      usage: data?.usage || null,
-      latencyMs: data?._latencyMs ?? null,
-      ok: true,
-      sessionId: clientSessionId,
-    });
-    return {
-      ok: true,
-      cached: false,
-      imageUrl,
-      model: IMAGE_MODEL,
-      id,
-    };
-  } catch (e) {
-    console.warn("[market-image]", e.message || e);
-    recordAiImage({
-      kind: "market",
-      mode: "generate",
-      source: "error",
-      imageCount: 0,
-      ok: false,
-      sessionId: clientSessionId,
-    });
-    return {
-      ok: false,
-      error: String(e.message || "generate_failed").slice(0, 200),
-      imageUrl: null,
-      id,
-    };
-  }
 }
 
 /**
@@ -2863,36 +2785,6 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  if (req.method === "POST" && req.url?.startsWith("/api/market-image")) {
-    try {
-      const body = await readBody(req);
-      const outcome = await hostedAi(
-        req,
-        "market-image",
-        body,
-        () => handleMarketImage(body),
-        (result) => (result?.cached || result?.ok === false ? { release: true } : { bill: true })
-      );
-      if (!outcome.ok) {
-        const gate = outcome.gate || outcome;
-        return sendJson(res, gate.status || 429, {
-          ok: false,
-          error: gate.error || "rate_limited",
-          message: quotaDenyMessage(gate, "", ""),
-          subscribeUrl: gate.subscribeUrl,
-        });
-      }
-      return sendJson(res, 200, outcome.result);
-    } catch (e) {
-      console.error("[market-image]", e.message || e);
-      const status = errorStatus(e);
-      return sendJson(res, status, {
-        ok: false,
-        error: e.message || "Market image generation failed",
-      });
-    }
-  }
-
   if (req.method === "POST" && req.url?.startsWith("/api/tts")) {
     try {
       const body = await readBody(req);
@@ -3220,16 +3112,6 @@ const server = http.createServer(async (req, res) => {
         teaching: [],
       });
     }
-  }
-
-  if (
-    await handleQuestEconomyHttp(req, res, {
-      root: ROOT,
-      developer: DEVELOPER_MODE,
-      packageRegistry: localPackageRegistry.registry,
-    })
-  ) {
-    return;
   }
 
   if (
@@ -3639,9 +3521,7 @@ async function afterListen() {
     console.log("Usage metrics OFF (pass --usage or set FF_USAGE_ENABLED=1 to enable)");
   }
   if (DEVELOPER_MODE) {
-    console.log(
-      `Developer mode: ON (quest / trend inspect UI · economy lab http://127.0.0.1:${PORT}/tools/quest-economy)`
-    );
+    console.log("Developer mode: ON (quest / trend inspect UI)");
   } else {
     console.log("Developer mode: OFF (pass --developer or set FF_DEVELOPER=1 to enable)");
   }

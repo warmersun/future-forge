@@ -1,41 +1,55 @@
 {
-  "schema": "future-forge.capability-trend-catalog/v1",
-  "updated": "2026-08-21",
+  "schema": "future-forge.capability-trend-catalog/v2",
+  "updated": "2026-11-27",
   "trends": [
     {
       "id": "gene-seq-cost-per-genome",
       "techId": "gene-sequencing",
-      "file": "gene-seq-cost-per-genome.json"
+      "file": "gene-seq-cost-per-genome.json",
+      "name": "Cost per human genome",
+      "hasCurve": true
     },
     {
       "id": "pathogen-seq-turnaround-hours",
       "techId": "gene-sequencing",
-      "file": "pathogen-seq-turnaround-hours.json"
+      "file": "pathogen-seq-turnaround-hours.json",
+      "name": "Sample-to-provisional read time",
+      "hasCurve": true
     },
     {
       "id": "ai-training-flops-frontier",
       "techId": "ai",
-      "file": "ai-training-flops-frontier.json"
+      "file": "ai-training-flops-frontier.json",
+      "name": "Frontier training compute",
+      "hasCurve": true
     },
     {
       "id": "solar-utility-lcoe",
       "techId": "solar",
-      "file": "solar-utility-lcoe.json"
+      "file": "solar-utility-lcoe.json",
+      "name": "Utility-scale solar power cost",
+      "hasCurve": true
     },
     {
       "id": "li-ion-pack-cost",
       "techId": "battery",
-      "file": "li-ion-pack-cost.json"
+      "file": "li-ion-pack-cost.json",
+      "name": "Lithium-ion pack cost",
+      "hasCurve": true
     },
     {
       "id": "warehouse-robot-deployed",
       "techId": "robots",
-      "file": "warehouse-robot-deployed.json"
+      "file": "warehouse-robot-deployed.json",
+      "name": "Warehouse robots in service",
+      "hasCurve": true
     },
     {
       "id": "leo-broadband-users",
       "techId": "networks",
-      "file": "leo-broadband-users.json"
+      "file": "leo-broadband-users.json",
+      "name": "Low-Earth-orbit broadband users",
+      "hasCurve": true
     }
   ]
 }

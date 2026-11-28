@@ -39,11 +39,12 @@ import { scoreRun } from "./scoring.js";
 import { applyAction } from "./actions.js";
 import {
   techCost,
-  applyG2DeployDeltas,
   deployActionCost,
   scaleActionCost,
   pathwayEaseGrant,
   pathwayEaseGrantFromImpacts,
+  isHeavyTechCost,
+  formatHeavyTechCost,
 } from "./economy.js";
 import { GAME, TECHS } from "../data.js";
 
@@ -360,36 +361,38 @@ describe("actions", () => {
     assert.equal(rejected.sim.turnPhase, "scrutiny");
   });
 
-  it("refund_ap undoes enter_challenge AP; abandon_scrutiny leaves scrutiny", () => {
+  it("enter_challenge, write_commit, and open_learn cost 0 Moves; abandon_scrutiny leaves scrutiny", () => {
     const s = base();
     s.ap = 3;
     s.apSpentThisTurn = 0;
-    const entered = applyAction(s, { type: "enter_challenge" }, {
+    const learned = applyAction(s, { type: "open_learn" }, { features: { actionPoints: true } });
+    assert.equal(learned.ok, true);
+    assert.equal(learned.sim.ap, 3);
+
+    const wrote = applyAction(
+      learned.sim,
+      { type: "write_commit", payload: { changed: true } },
+      { features: { actionPoints: true } }
+    );
+    assert.equal(wrote.ok, true);
+    assert.equal(wrote.sim.ap, 3);
+
+    const entered = applyAction(wrote.sim, { type: "enter_challenge" }, {
       features: { actionPoints: true },
     });
     assert.equal(entered.ok, true);
-    assert.equal(entered.sim.ap, 2);
-    assert.equal(entered.sim.apSpentThisTurn, 1);
+    assert.equal(entered.sim.ap, 3);
+    assert.equal(entered.sim.apSpentThisTurn, 0);
     assert.equal(entered.sim.turnPhase, "scrutiny");
 
-    const refunded = applyAction(
-      entered.sim,
-      { type: "refund_ap", payload: { amount: 1 } },
-      { features: { actionPoints: true } }
-    );
-    assert.equal(refunded.ok, true);
-    assert.equal(refunded.sim.ap, 3);
-    assert.equal(refunded.sim.apSpentThisTurn, 0);
-    assert.equal(refunded.sim.turnPhase, "scrutiny");
-
-    const left = applyAction(refunded.sim, { type: "abandon_scrutiny" }, {
+    const left = applyAction(entered.sim, { type: "abandon_scrutiny" }, {
       features: { actionPoints: true },
     });
     assert.equal(left.ok, true);
     assert.equal(left.sim.turnPhase, "act");
   });
 
-  it("first thinking AI of the turn costs 1 AP; further thinking is free", () => {
+  it("thinking AI is always free (0 Moves); commitment AI costs 1 Move", () => {
     const s = base();
     s.ap = 3;
     s.apSpentThisTurn = 0;
@@ -399,8 +402,8 @@ describe("actions", () => {
       { features: { actionPoints: true } }
     );
     assert.equal(first.ok, true);
-    assert.equal(first.sim.ap, 2);
-    assert.equal(first.sim.aiTaxThisTurn, true);
+    assert.equal(first.sim.ap, 3);
+    assert.equal(first.sim.pendingAi.reservedAp, 0);
     const resolved = applyAction(first.sim, { type: "resolve_ai" }, {
       features: { actionPoints: true },
     });
@@ -410,7 +413,7 @@ describe("actions", () => {
       { features: { actionPoints: true } }
     );
     assert.equal(second.ok, true);
-    assert.equal(second.sim.ap, 2);
+    assert.equal(second.sim.ap, 3);
     assert.equal(second.sim.pendingAi.reservedAp, 0);
     const judge = applyAction(
       applyAction(second.sim, { type: "resolve_ai" }, { features: { actionPoints: true } }).sim,
@@ -418,85 +421,48 @@ describe("actions", () => {
       { features: { actionPoints: true } }
     );
     assert.equal(judge.ok, true);
-    assert.equal(judge.sim.ap, 1);
+    assert.equal(judge.sim.ap, 2);
+    assert.equal(judge.sim.pendingAi.reservedAp, 1);
   });
 
-  it("end_turn clears the AI season tax", () => {
+  it("end_turn is allowed even with 0 Moves spent (no end_turn_noop gate)", () => {
     const s = base();
-    s.ap = 2;
-    s.apSpentThisTurn = 1;
-    s.aiTaxThisTurn = true;
+    s.ap = 3;
+    s.apSpentThisTurn = 0;
     const r = applyAction(s, { type: "end_turn" }, { features: { actionPoints: true } });
     assert.equal(r.ok, true);
-    assert.equal(r.sim.aiTaxThisTurn, false);
     assert.equal(r.sim.year, 2027);
+    assert.equal(r.sim.ap, 3);
   });
 
-  it("reserve_ai with reservedAp 0 does not spend AP when tutor is set", () => {
+  it("reject_ai refunds a commitment Move and restores apSpentThisTurn", () => {
     const s = base();
     s.ap = 3;
     s.apSpentThisTurn = 0;
     const reserved = applyAction(
       s,
-      {
-        type: "reserve_ai",
-        payload: { mode: "chat", reservedAp: 0, tutor: true, clientActionId: "tutor" },
-      },
+      { type: "reserve_ai", payload: { mode: "fact-check-argument", reservedAp: 1 } },
       { features: { actionPoints: true } }
     );
-    assert.equal(reserved.ok, true);
-    assert.equal(reserved.sim.ap, 3);
-    assert.equal(reserved.sim.apSpentThisTurn, 0);
-    assert.equal(reserved.sim.pendingAi?.reservedAp, 0);
-  });
-
-  it("reserve_ai reservedAp 0 without tutor still pays the thinking tax", () => {
-    const s = base();
-    s.ap = 3;
-    s.apSpentThisTurn = 0;
-    const reserved = applyAction(
-      s,
-      {
-        type: "reserve_ai",
-        payload: { mode: "chat", reservedAp: 0, clientActionId: "sneak" },
-      },
-      { features: { actionPoints: true } }
-    );
-    assert.equal(reserved.ok, true);
     assert.equal(reserved.sim.ap, 2);
-    assert.equal(reserved.sim.aiTaxThisTurn, true);
-  });
-
-  it("reject_ai restores apSpentThisTurn", () => {
-    const s = base();
-    s.ap = 3;
-    s.apSpentThisTurn = 0;
-    const reserved = applyAction(
-      s,
-      { type: "reserve_ai", payload: { mode: "chat", reservedAp: 1 } },
-      { features: { actionPoints: true } }
-    );
     assert.equal(reserved.sim.apSpentThisTurn, 1);
     const rejected = applyAction(reserved.sim, { type: "reject_ai" }, {
       features: { actionPoints: true },
     });
     assert.equal(rejected.sim.ap, 3);
     assert.equal(rejected.sim.apSpentThisTurn, 0);
-    assert.equal(rejected.sim.aiTaxThisTurn, false);
   });
 
-  it("refund_ap after a thinking ask clears the season tax", () => {
+  it("refund_ap restores Moves and decrements apSpentThisTurn", () => {
     const s = base();
     s.ap = 2;
     s.apSpentThisTurn = 1;
-    s.aiTaxThisTurn = true;
     const r = applyAction(s, { type: "refund_ap", payload: { amount: 1 } }, {
       features: { actionPoints: true },
     });
     assert.equal(r.ok, true);
     assert.equal(r.sim.ap, 3);
     assert.equal(r.sim.apSpentThisTurn, 0);
-    assert.equal(r.sim.aiTaxThisTurn, false);
   });
 
   it("end_turn raises pressure one year (year +1 market round)", () => {
@@ -569,11 +535,13 @@ describe("actions", () => {
     assert.equal(r.sim.ap, 2);
   });
 
-  it("select_tech free adds a collector emTech without spending", () => {
+  it("select_tech free adds a collector emTech without allocating capacity", () => {
     const s = base();
     s.ap = 0;
     s.budget = 0;
+    s.budgetCap = 0;
     s.will = 0;
+    s.willCap = 0;
     const tech = { id: "drones", readyYear: 2026, curve: "steep" };
     const r = applyAction(
       s,
@@ -584,14 +552,16 @@ describe("actions", () => {
     assert.equal(r.sim.ap, 0);
     assert.equal(r.sim.budget, 0);
     assert.deepEqual(r.sim.selectedTechIds, ["drones"]);
-    assert.equal(r.sim.techAddedThisTurn.drones, undefined);
+    assert.deepEqual(r.sim.freeTechIds, ["drones"]);
   });
 
   it("select_tech bill charges an emTech that a collector card already added", () => {
     const s = base();
     s.selectedTechIds = ["drones"];
+    s.freeTechIds = ["drones"];
     s.ap = 3;
     s.budget = 5;
+    s.budgetCap = 5;
     const tech = { id: "drones", readyYear: 2026, curve: "steep" };
     const r = applyAction(
       s,
@@ -602,13 +572,48 @@ describe("actions", () => {
     assert.equal(r.sim.ap, 2);
     assert.equal(r.sim.budget, 4);
     assert.deepEqual(r.sim.selectedTechIds, ["drones"]);
-    assert.ok(r.sim.techAddedThisTurn.drones);
+    assert.deepEqual(r.sim.freeTechIds, []);
   });
 
-  it("lobby trades budget for will", () => {
+  it("deselect_tech frees 100% of allocated Budget & Goodwill even on a later turn", () => {
+    const earlyTech = { id: "fusion", readyYear: 2030, curve: "early" }; // 3 Budget, 1 Goodwill
+    const techById = (id) => (id === "fusion" ? earlyTech : null);
+    let s = base();
+    s.budget = 5;
+    s.budgetCap = 5;
+    s.will = 3;
+    s.willCap = 3;
+    const added = applyAction(
+      s,
+      { type: "select_tech", payload: { techId: "fusion", tech: earlyTech } },
+      { features: { actionPoints: true, budgetWill: true }, techById }
+    );
+    assert.equal(added.ok, true);
+    assert.equal(added.sim.budget, 2);
+    assert.equal(added.sim.will, 2);
+    // Advance a full year before removing
+    const nextYear = applyAction(
+      added.sim,
+      { type: "end_turn" },
+      { features: { actionPoints: true, budgetWill: true }, techById }
+    );
+    assert.equal(nextYear.ok, true);
+    const removed = applyAction(
+      nextYear.sim,
+      { type: "deselect_tech", payload: { techId: "fusion", tech: earlyTech } },
+      { features: { actionPoints: true, budgetWill: true }, techById }
+    );
+    assert.equal(removed.ok, true);
+    assert.equal(removed.sim.budget, 5, "100% Budget freed across turns");
+    assert.equal(removed.sim.will, 3, "100% Goodwill freed across turns");
+  });
+
+  it("lobby costs 1 Move and 0 Budget, growing Goodwill capacity by +1", () => {
     const s = base();
     s.budget = 5;
+    s.budgetCap = 5;
     s.will = 3;
+    s.willCap = 3;
     s.ap = 3;
     const r = applyAction(
       s,
@@ -616,8 +621,9 @@ describe("actions", () => {
       { features: { actionPoints: true, budgetWill: true } }
     );
     assert.equal(r.ok, true);
-    assert.equal(r.sim.budget, 4);
+    assert.equal(r.sim.budget, 5, "Lobby costs 0 Budget");
     assert.equal(r.sim.will, 4);
+    assert.equal(r.sim.willCap, 4);
     assert.equal(r.sim.ap, 2);
   });
 
@@ -763,9 +769,10 @@ describe("actions", () => {
     );
   });
 
-  it("mint_rd spends 1 AP + 1 Budget", () => {
+  it("mint_rd allocates 1 Move + 1 reversible Budget; remove_rd / sync_rd_count frees it", () => {
     const s = base();
     s.budget = 5;
+    s.budgetCap = 5;
     s.ap = 3;
     const r = applyAction(
       s,
@@ -775,6 +782,39 @@ describe("actions", () => {
     assert.equal(r.ok, true, r.error);
     assert.equal(r.sim.ap, 2);
     assert.equal(r.sim.budget, 4);
+    assert.equal(r.sim.rdCount, 1);
+
+    const freed = applyAction(
+      r.sim,
+      { type: "sync_rd_count", payload: { rdCount: 0 } },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(freed.ok, true);
+    assert.equal(freed.sim.budget, 5, "removing R&D frees 100% Budget");
+    assert.equal(freed.sim.rdCount, 0);
+
+    const twice = applyAction(
+      applyAction(s, { type: "mint_rd" }, { features: { actionPoints: true, budgetWill: true } }).sim,
+      { type: "mint_rd" },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(twice.sim.rdCount, 2);
+    assert.equal(twice.sim.budget, 3);
+    const partial = applyAction(
+      twice.sim,
+      { type: "sync_rd_count", payload: { count: 1 } },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(partial.ok, true);
+    assert.equal(partial.sim.rdCount, 1, "workshop count field must not zero a partial removal");
+    assert.equal(partial.sim.budget, 4);
+    const prefersRd = applyAction(
+      twice.sim,
+      { type: "sync_rd_count", payload: { rdCount: 2, count: 0 } },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(prefersRd.sim.rdCount, 2);
+
     const noAp = applyAction(
       { ...r.sim, ap: 0 },
       { type: "mint_rd" },
@@ -783,7 +823,7 @@ describe("actions", () => {
     assert.equal(noAp.ok, false);
     assert.equal(noAp.error, "no_ap");
     const noBudget = applyAction(
-      { ...r.sim, budget: 0 },
+      { ...r.sim, budgetCap: 1, budget: 0 },
       { type: "mint_rd" },
       { features: { actionPoints: true, budgetWill: true } }
     );
@@ -791,39 +831,43 @@ describe("actions", () => {
     assert.equal(noBudget.error, "no_budget");
   });
 
-  it("deploy action spends AP and budget", () => {
+  it("challenge_income is positive-only (pass grows Goodwill, fail never shrinks it)", () => {
+    const s = base();
+    s.will = 3;
+    s.willCap = 3;
+    const fail = applyAction(
+      s,
+      { type: "challenge_income", payload: { verdict: "fail" } },
+      { features: { budgetWill: true } }
+    );
+    assert.equal(fail.ok, true);
+    assert.equal(fail.sim.will, 3);
+    assert.equal(fail.sim.willCap, 3);
+
+    const pass = applyAction(
+      fail.sim,
+      { type: "challenge_income", payload: { verdict: "pass" } },
+      { features: { budgetWill: true } }
+    );
+    assert.equal(pass.ok, true);
+    assert.equal(pass.sim.will, 4);
+    assert.equal(pass.sim.willCap, 4);
+  });
+
+  it("deploy action spends 1 Move and 0 Budget", () => {
     const s = base();
     s.ap = 2;
     s.budget = 3;
+    s.budgetCap = 3;
     s.will = 3;
     const r = applyAction(
       s,
-      { type: "deploy", payload: { apCost: 1, budgetCost: 2 } },
+      { type: "deploy", payload: { apCost: 1 } },
       { features: { actionPoints: true, budgetWill: true } }
     );
     assert.equal(r.ok, true);
     assert.equal(r.sim.ap, 1);
-    assert.equal(r.sim.budget, 1);
-  });
-
-  it("0-AP deploy marks engagement for end_turn without burning AP", () => {
-    const s = base();
-    s.ap = 3;
-    s.apSpentThisTurn = 0;
-    s.budget = 5;
-    const r = applyAction(
-      s,
-      { type: "deploy", payload: { apCost: 0, budgetCost: 1 } },
-      { features: { actionPoints: true, budgetWill: true } }
-    );
-    assert.equal(r.ok, true, r.error);
-    assert.equal(r.sim.ap, 3);
-    assert.equal(r.sim.budget, 4);
-    assert.equal(r.sim.apSpentThisTurn, 1);
-    const end = applyAction(r.sim, { type: "end_turn" }, {
-      features: { actionPoints: true, budgetWill: true },
-    });
-    assert.equal(end.ok, true, end.error);
+    assert.equal(r.sim.budget, 3);
   });
 
   it("pathway_income pays +1 Budget per newly eased role, once", () => {
@@ -877,39 +921,26 @@ describe("economy", () => {
   it("techCost does not inflate all steep techs to 2", () => {
     const steep = techCost({ id: "x", readyYear: 2026, curve: "steep" });
     assert.equal(steep.budget, 1);
+    assert.equal(steep.will, 0);
   });
 
-  it("G2 deploy deltas only will≥4 / will===0", () => {
-    assert.equal(applyG2DeployDeltas(5, 4).drop, 6);
-    assert.equal(applyG2DeployDeltas(5, 0).drop, 4);
-    assert.equal(applyG2DeployDeltas(5, 2).drop, 5);
+  it("heavy tech cost badges appear only for frontier/Goodwill techs", () => {
+    assert.equal(isHeavyTechCost({ budget: 1, will: 0 }), false);
+    assert.equal(formatHeavyTechCost({ budget: 1, will: 0 }), "");
+    assert.equal(isHeavyTechCost({ budget: 1, will: 1 }), true);
+    assert.equal(formatHeavyTechCost({ budget: 1, will: 1 }), "1 Budget · 1 Goodwill");
+    assert.equal(formatHeavyTechCost({ budget: 3, will: 1 }), "3 Budget · 1 Goodwill");
   });
 
-  it("deploy field cost scales with stack and discounts high will", () => {
-    const one = deployActionCost([{ id: "a", readyYear: 2026, curve: "mature" }], { will: 2 });
-    assert.equal(one.ap, 0); // Pilot is free attention
-    assert.equal(one.budget, 1);
+  it("pilot and scale both cost 1 Move and 0 Budget (no hidden Goodwill thresholds)", () => {
+    const pilot = deployActionCost();
+    assert.equal(pilot.ap, 1);
+    assert.equal(pilot.budget, 0);
 
-    const three = deployActionCost(
-      [
-        { id: "a", readyYear: 2026, curve: "mature" },
-        { id: "b", readyYear: 2026, curve: "mature" },
-        { id: "c", readyYear: 2026, curve: "mature" },
-      ],
-      { will: 2 }
-    );
-    assert.equal(three.budget, 2);
-    assert.equal(three.ap, 0);
-
-    const threeMandate = deployActionCost(
-      [
-        { id: "a", readyYear: 2026, curve: "mature" },
-        { id: "b", readyYear: 2026, curve: "mature" },
-        { id: "c", readyYear: 2026, curve: "mature" },
-      ],
-      { will: 4 }
-    );
-    assert.equal(threeMandate.budget, 1);
+    const scale = scaleActionCost();
+    assert.equal(scale.ap, 1);
+    assert.equal(scale.budget, 0);
+    assert.equal(scale.will, 0);
   });
 
   it("pathwayEaseGrant is once per role and ignores pending impacts", () => {
@@ -934,11 +965,5 @@ describe("economy", () => {
     assert.equal(fromBoard.amount, 2);
     assert.ok(fromBoard.roles.includes("local"));
     assert.ok(fromBoard.roles.includes("global"));
-  });
-
-  it("scale costs 1 AP; pilot fielding costs 0 AP", () => {
-    const techs = [{ id: "a", readyYear: 2026, curve: "mature" }];
-    assert.equal(deployActionCost(techs, { will: 2 }).ap, 0);
-    assert.equal(scaleActionCost(techs, { will: 2 }).ap, 1);
   });
 });

@@ -38,22 +38,22 @@ import {
   mpEarliestInventYear,
 } from "./collapse.js";
 import {
+  aiMoveCost,
+  availableCapacity,
   techCost,
-  techBudgetRefund,
   deployActionCost,
   scaleActionCost,
   pathwayEaseGrant,
   pathwayEaseGrantFromImpacts,
   clonePathwayEasePaid,
+  readSyncRdCount,
 } from "./economy.js";
 import {
   computeDeployDrop,
   rollDeploySuccess,
   freezeStagedDropPool,
-  newNormalExtraDrop,
 } from "./deploy.js";
 import { rankSurvivors } from "./mp-rank.js";
-import { rollRoundMarketNews, cloneMarketNews } from "./market-news.js";
 import { bulletinHighlight, foresightForYear } from "./world-foresight.js";
 import {
   applyInventPhaseEvent,
@@ -61,7 +61,6 @@ import {
   isInventContentFrozen,
   isHexBoardFrozen,
 } from "./invent-phase.js";
-import { applyThinkingAiCharge } from "./ai-tax.js";
 import {
   seedLiveRules,
   liveRulesOrSeed,
@@ -181,8 +180,7 @@ export function createMpLobby(namesOrSeats = ["Alex", "Bea"], opts = {}) {
       openTable: true,
       layerEmTechOnOthers: true,
       actorPaysCosts: true,
-      waitEndsTurn: true,
-      maxWaitsPerSeatTurn: 1,
+      waitEndsTurn: false,
       deployStages: true,
       multiplayer: true,
       ...opts.settings,
@@ -211,7 +209,6 @@ export function publicMpState(session) {
           ...session.place,
           mission: cloneMission(session.place.mission),
           pressure: clonePressure(session.place.pressure),
-          marketNews: cloneMarketNews(session.place.marketNews),
           rules: liveRulesOrSeed(
             session.place.rules,
             session.place.mission?.rules,
@@ -225,7 +222,6 @@ export function publicMpState(session) {
         {
           ...f,
           stack: (f.stack || []).map((x) => ({ ...x })),
-          techAddedThisTurn: { ...(f.techAddedThisTurn || {}) },
           hexBoard: f.hexBoard ? boardForWire(f.hexBoard) : f.hexBoard,
         },
       ])
@@ -335,19 +331,21 @@ function createInvent(seat, settings, mission = null) {
   const res = mission?.resources || {};
   const apMax = res.apMax ?? settings.apMax ?? GAME.apMax ?? 3;
   const startYear = mission?.startYear ?? GAME.startYear ?? 2026;
+  const budgetCap = res.startingBudget ?? GAME.startingBudget ?? 5;
+  const willCap = res.startingWill ?? GAME.startingWill ?? 3;
   return {
     seatId: seat.id,
     displayName: seat.displayName,
     ap: apMax,
     apMax,
-    budget: res.startingBudget ?? GAME.startingBudget ?? 5,
-    will: res.startingWill ?? GAME.startingWill ?? 3,
+    budget: budgetCap,
+    budgetCap,
+    will: willCap,
+    willCap,
+    rdCount: 0,
     pathwayEasePaid: {},
     apSpentThisTurn: 0,
-    aiTaxThisTurn: false,
-    writeCommitsThisTurn: 0,
-    techAddedThisTurn: {}, // techId -> { cost, targetSeatId }
-    /** Personal invent calendar — Wait advances this, not place.year */
+    /** Personal invent calendar — Wait / +1 yr / +2 yrs advances this, not place.year */
     year: startYear,
     waits: 0,
     inventionName: "",
@@ -357,7 +355,7 @@ function createInvent(seat, settings, mission = null) {
     hexBoard: mission ? seedCrisisTiles(mission) : createEmptyBoard(),
     concernsSummoned: false,
     pathwayHeld: false,
-    /** @type {{ techId: string, addedBy: string }[]} */
+    /** @type {{ techId: string, addedBy: string, free?: boolean }[]} */
     stack: [],
     abandoned: false,
     turnPhase: "act", // act | scrutiny | …
@@ -385,8 +383,7 @@ function createInvent(seat, settings, mission = null) {
     deployStage: "none", // none | pilot_ok | scaled | new_normal
     pilotFailedThisTurn: false,
     scaleFailedThisTurn: false,
-    waitedThisTurn: false,
-    /** True if this invent Waited during the current seat-round (cleared on table wrap). */
+    /** True if this invent jumped its personal year during the current seat-round (cleared on table wrap). */
     waitedThisRound: false,
     stagedDropPool: 0,
     impactDropTotal: 0,
@@ -425,9 +422,7 @@ export function startMpQuest(session) {
     waits: 0,
     turn: 0,
     pressure: clonePressure(mission.pressure || {}),
-    lastNews: "Quest started — invent, Face Challenge, Pilot, then Scale.",
-    /** Active market news (shifts emTech costs). Set when a full seat-round completes. */
-    marketNews: null,
+    lastNews: "Quest started — invent, clear hard questions, and hold the pathway.",
     rules: seedLiveRules(mission.rules, mission.startYear ?? GAME.startYear ?? 2026),
     /** Cleared each new Quest — year foresight for HUD reopen */
     lastYearBulletin: null,
@@ -537,7 +532,6 @@ function cloneInvent(f) {
   return {
     ...f,
     stack: (f.stack || []).map((x) => ({ ...x })),
-    techAddedThisTurn: { ...(f.techAddedThisTurn || {}) },
     hexBoard: f.hexBoard ? boardForWire(f.hexBoard) : createEmptyBoard(),
     pathwayEasePaid: clonePathwayEasePaid(f.pathwayEasePaid),
   };
@@ -558,7 +552,6 @@ function cloneSession(session) {
           ...session.place,
           mission: cloneMission(session.place.mission),
           pressure: clonePressure(session.place.pressure),
-          marketNews: cloneMarketNews(session.place.marketNews),
           rules: liveRulesOrSeed(
             session.place.rules,
             session.place.mission?.rules,
@@ -601,6 +594,63 @@ function stackTechs(invent) {
 
 function domainsOf(techs) {
   return [...new Set(techs.map((t) => t.domain).filter(Boolean))];
+}
+
+function countBoardRdPathways(board) {
+  if (!board || typeof board !== "object" || !board.pathways) return null;
+  return Object.values(board.pathways).filter((p) => p && p.rdBoost).length;
+}
+
+/**
+ * Total Budget & Goodwill currently allocated by a seat across all invents' stacks + own R&D boosts.
+ * Removing/unlayering a tech or removing an R&D pathway frees 100% of its capacity immediately.
+ */
+function seatAllocatedCapacity(session, seatId) {
+  const seat = session?.invents?.[seatId];
+  let budget = Math.max(0, Math.floor(Number(seat?.rdCount) || 0));
+  let will = 0;
+  for (const inv of Object.values(session?.invents || {})) {
+    const seen = new Set();
+    for (const entry of inv?.stack || []) {
+      if (!entry?.techId || entry.addedBy !== seatId || entry.free) continue;
+      if (seen.has(entry.techId)) continue;
+      seen.add(entry.techId);
+      const cost = techCost(techById(entry.techId));
+      budget += cost.budget;
+      will += cost.will;
+    }
+  }
+  return { budget, will };
+}
+
+function ensureSeatCapacityCaps(session, seatId) {
+  const seat = session?.invents?.[seatId];
+  if (!seat) return { budget: 0, will: 0 };
+  const used = seatAllocatedCapacity(session, seatId);
+  const res = session?.place?.mission?.resources || {};
+  if (seat.budgetCap == null) {
+    seat.budgetCap =
+      (Number(seat.budget ?? res.startingBudget ?? GAME.startingBudget ?? 5) || 0) + used.budget;
+  }
+  if (seat.willCap == null) {
+    seat.willCap =
+      (Number(seat.will ?? res.startingWill ?? GAME.startingWill ?? 3) || 0) + used.will;
+  }
+  return used;
+}
+
+function syncSeatCapacity(session, seatId) {
+  const seat = session?.invents?.[seatId];
+  if (!seat) return { used: { budget: 0, will: 0 }, avail: { budget: 0, will: 0 } };
+  ensureSeatCapacityCaps(session, seatId);
+  const used = seatAllocatedCapacity(session, seatId);
+  const avail = availableCapacity(
+    { budget: seat.budgetCap, will: seat.willCap },
+    used
+  );
+  seat.budget = avail.budget;
+  seat.will = avail.will;
+  return { used, avail };
 }
 
 /**
@@ -653,13 +703,10 @@ function passToNext(session, opts = {}) {
   const wrapped = nextIdx <= prev && session.place?.status === "playing";
   const next = cloneSession(session);
   next.activeIndex = nextIdx;
-  let marketNewsEvent = null;
   if (wrapped) {
     next.round = (next.round || 1) + 1;
-    // Full seat-round completed → shared place.year +1 + market news.
-    // Invent calendars +1 only if that invent did *not* Wait this round: Wait already
-    // applied yearsPerTurn, and stacking wrap on top gave the last seat +3 in one action
-    // (yearsPerTurn 2 + wrap 1) while mid-round Waits only showed +2 until later.
+    // Full seat-round completed → shared place.year +1.
+    // Invent calendars +1 only if that invent did *not* jump ahead this round.
     const yearBefore = next.place?.year ?? GAME.startYear ?? 2026;
     const yearAfter = yearBefore + 1;
     if (next.place) {
@@ -687,7 +734,6 @@ function passToNext(session, opts = {}) {
       const f = next.invents[id];
       if (!f) continue;
       if (f.waitedThisRound) {
-        // Already advanced personal invent calendar on Wait this round — no double-count.
         f.waitedThisRound = false;
         continue;
       }
@@ -695,13 +741,6 @@ function passToNext(session, opts = {}) {
       else f.year = yearAfter;
       f.waitedThisRound = false;
     }
-    const news = rollRoundMarketNews({
-      round: next.round,
-      year: yearAfter,
-      missionId: next.place?.mission?.id || next.questMeta?.mission?.id || "mp",
-      prevId: next.place?.marketNews?.id || null,
-    });
-    next.place.marketNews = news;
     const stackIds = [];
     for (const f of Object.values(next.invents || {})) {
       for (const x of f.stack || []) if (x.techId) stackIds.push(x.techId);
@@ -720,12 +759,7 @@ function passToNext(session, opts = {}) {
       toYear: yearAfter,
       highlights: highlights.map(bulletinHighlight),
     };
-    next.place.lastNews = `Year ${yearAfter} · Market news · ${news.headline}`;
-    marketNewsEvent = {
-      type: "market_news",
-      marketNews: cloneMarketNews(news),
-      round: next.round,
-    };
+    next.place.lastNews = `Year ${yearAfter} arrived — new round started.`;
     next._lastYearTickEvent = {
       type: "year_tick",
       fromYear: yearBefore,
@@ -740,23 +774,15 @@ function passToNext(session, opts = {}) {
   if (invent) {
     invent.ap = invent.apMax;
     invent.apSpentThisTurn = 0;
-    invent.writeCommitsThisTurn = 0;
-    invent.techAddedThisTurn = {};
-    invent.aiTaxThisTurn = false;
     invent.pilotFailedThisTurn = false;
     invent.scaleFailedThisTurn = false;
-    invent.waitedThisTurn = false;
   }
   next.place.turn = (next.place.turn || 0) + 1;
   next.version = (session.version || 0) + 1;
   next.log = [
     ...(session.log || []),
     { type: "seat_turn_start", seatId: sid, round: next.round },
-    ...(marketNewsEvent ? [marketNewsEvent] : []),
   ];
-  // Transient: applyMpAction reads then deletes. Never part of public snapshots.
-  if (marketNewsEvent) next._lastMarketNewsEvent = marketNewsEvent;
-  else delete next._lastMarketNewsEvent;
   if (!next._lastYearTickEvent) delete next._lastYearTickEvent;
   return next;
 }
@@ -887,6 +913,10 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
   const maxWill = GAME.maxWill ?? 5;
   const events = [];
 
+  for (const sid of Object.keys(s.invents || {})) {
+    ensureSeatCapacityCaps(s, sid);
+  }
+
   const spendAp = (invent, n) => {
     if (!apOn || n <= 0) return true;
     if ((invent.ap ?? 0) < n) return false;
@@ -895,7 +925,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     return true;
   };
 
-  // —— Writes (own invent, or another's invent still in invent phase) ——
+  // —— Writes (own invent, or another's invent still in invent phase) — always free (0 Moves) ——
   if (type === "buffer_write" || type === "write_commit") {
     if (actor.abandoned) return { ok: false, error: "abandoned", session };
     const field = payload.field;
@@ -912,16 +942,8 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     }
     const max = field === "inventionName" ? 120 : 4000;
     target[field] = String(payload.value ?? "").slice(0, max);
-    // AP cost always on the *actor* (helper pays when writing on others)
-    if (type === "write_commit" && payload.changed) {
-      const freeLeft = Math.max(0, 2 - (actor.writeCommitsThisTurn || 0));
-      if (freeLeft <= 0 && !spendAp(actor, 1)) {
-        return { ok: false, error: "no_ap", session };
-      }
-      actor.writeCommitsThisTurn = (actor.writeCommitsThisTurn || 0) + 1;
-      if (targetSeatId !== activeId) {
-        actor.contributionApSpent = (actor.contributionApSpent || 0) + (freeLeft <= 0 ? 1 : 0);
-      }
+    if (type === "write_commit" && payload.changed && targetSeatId !== activeId) {
+      actor.contributionApSpent = (actor.contributionApSpent || 0) + 1;
     }
     events.push({ type, field, seatId: activeId, targetSeatId });
     s.version = (session.version || 0) + 1;
@@ -979,6 +1001,8 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       }
 
       const prevEcon = placedTechEconomy(target.hexBoard);
+      const nextEcon = placedTechEconomy(incomingBoard);
+      const freeSet = new Set(nextEcon.collectorOnly || []);
       const billIds = delta.newlyPaid.filter(
         (id) => !prevIds.includes(id) || prevEcon.collectorOnly.includes(id)
       );
@@ -988,40 +1012,57 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         if (!tech) return { ok: false, error: "unknown_tech", session };
         addedCosts.push({
           techId,
-          cost: techCost(tech, { market: s.place?.marketNews }),
+          cost: techCost(tech),
         });
       }
       for (const techId of delta.freeAdds) {
         if (!techById(techId)) return { ok: false, error: "unknown_tech", session };
       }
-      const needAp = addedCosts.length;
-      let needBudget = 0;
-      let needWill = 0;
-      for (const row of addedCosts) {
-        needBudget += row.cost.budget || 0;
-        needWill += row.cost.will || 0;
+
+      // Compute post-removal capacity first so swapping a Pathway frees 100% immediately
+      const affectedSeats = new Set([activeId, targetSeatId]);
+      for (const techId of removedIds) {
+        const prevEntry = prevById.get(techId);
+        if (prevEntry?.addedBy) affectedSeats.add(prevEntry.addedBy);
       }
+      const nextStack = placedIds.map((techId) => {
+        const prev = prevById.get(techId);
+        if (prev && !billIds.includes(techId)) {
+          return { ...prev, ...(freeSet.has(techId) ? { free: true } : { free: false }) };
+        }
+        return { techId, addedBy: activeId, free: freeSet.has(techId) };
+      });
+      const prevRdCount = countBoardRdPathways(incomingBoard);
+      const prevStackSnapshot = target.stack;
+      const prevRdSnapshot = target.rdCount;
+      target.stack = nextStack;
+      if (prevRdCount != null && targetSeatId === activeId) {
+        target.rdCount = prevRdCount;
+      }
+      const projectedUsed = seatAllocatedCapacity(s, activeId);
+      const needAp = addedCosts.length;
       if (needAp > 0 && (actor.ap ?? 0) < needAp) {
+        target.stack = prevStackSnapshot;
+        target.rdCount = prevRdSnapshot;
         return { ok: false, error: "no_ap", session };
       }
-      if (bwOn && (actor.budget ?? 0) < needBudget) {
+      if (bwOn && projectedUsed.budget > (actor.budgetCap ?? 0)) {
+        target.stack = prevStackSnapshot;
+        target.rdCount = prevRdSnapshot;
         return { ok: false, error: "no_budget", session };
       }
-      if (bwOn && (actor.will ?? 0) < needWill) {
+      if (bwOn && projectedUsed.will > (actor.willCap ?? 0)) {
+        target.stack = prevStackSnapshot;
+        target.rdCount = prevRdSnapshot;
         return { ok: false, error: "no_will", session };
       }
 
       for (const { techId, cost } of addedCosts) {
-        if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
-        if (bwOn) {
-          actor.budget -= cost.budget || 0;
-          actor.will -= cost.will || 0;
+        if (!spendAp(actor, 1)) {
+          target.stack = prevStackSnapshot;
+          target.rdCount = prevRdSnapshot;
+          return { ok: false, error: "no_ap", session };
         }
-        actor.techAddedThisTurn[`${targetSeatId}:${techId}`] = {
-          cost,
-          targetSeatId,
-          techId,
-        };
         if (targetSeatId !== activeId) {
           actor.contributionApSpent = (actor.contributionApSpent || 0) + 1;
           actor.contributionBudgetSpent =
@@ -1049,35 +1090,30 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       }
 
       for (const techId of removedIds) {
-        const key = `${targetSeatId}:${techId}`;
-        if (bwOn && actor.techAddedThisTurn?.[key]) {
-          const cost = actor.techAddedThisTurn[key].cost;
-          const refund = techBudgetRefund(cost);
-          actor.budget = Math.min(maxBudget, (actor.budget ?? 0) + refund);
-          delete actor.techAddedThisTurn[key];
-          events.push({
-            type: "tech_removed",
-            techId,
-            targetSeatId,
-            budgetRefund: refund,
-          });
-        } else {
-          events.push({ type: "tech_removed", techId, targetSeatId });
-        }
+        const prevEntry = prevById.get(techId);
+        const freed =
+          prevEntry && !prevEntry.free ? techCost(techById(techId)) : { budget: 0, will: 0 };
+        events.push({
+          type: "tech_removed",
+          techId,
+          targetSeatId,
+          ...(freed.budget ? { budgetRefund: freed.budget } : {}),
+          ...(freed.will ? { willRefund: freed.will } : {}),
+        });
+      }
+
+      for (const sid of affectedSeats) {
+        syncSeatCapacity(s, sid);
       }
 
       target.hexBoard = incomingBoard;
       target.concernsSummoned = Boolean(target.hexBoard.concernsSummoned);
-      // Placing / minting hex tiles is the invent action — count as engagement
       const hasInventTile = Object.values(target.hexBoard.tiles || {}).some(
         (t) => t && t.kind === "invention"
       );
       if (hasInventTile) {
         actor.apSpentThisTurn = Math.max(actor.apSpentThisTurn || 0, 1);
       }
-      target.stack = placedIds.map(
-        (techId) => prevById.get(techId) || { techId, addedBy: activeId }
-      );
       // Derive prose for consumers that still read inventionHow
       try {
         const tiles = Object.values(target.hexBoard.tiles || {});
@@ -1103,13 +1139,15 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         );
         target.pathwayEasePaid = grant.paid;
         if (grant.amount > 0) {
-          target.budget = Math.min(maxBudget, (target.budget ?? 0) + grant.amount);
+          target.budgetCap = Math.min(maxBudget, (target.budgetCap ?? GAME.startingBudget ?? 5) + grant.amount);
+          syncSeatCapacity(s, targetSeatId);
           events.push({
             type: "pathway_income",
             amount: grant.amount,
             roles: grant.roles,
             seatId: targetSeatId,
             budget: target.budget,
+            budgetCap: target.budgetCap,
           });
         }
       }
@@ -1133,7 +1171,8 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     });
     actor.pathwayEasePaid = used.paid;
     if (used.amount > 0) {
-      actor.budget = Math.min(maxBudget, (actor.budget ?? 0) + used.amount);
+      actor.budgetCap = Math.min(maxBudget, (actor.budgetCap ?? GAME.startingBudget ?? 5) + used.amount);
+      syncSeatCapacity(s, activeId);
     }
     events.push({
       type: "pathway_income",
@@ -1141,44 +1180,72 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       roles: used.roles,
       seatId: activeId,
       budget: actor.budget,
+      budgetCap: actor.budgetCap,
     });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }
 
-  // —— AP pay / refund (AI co-inventor on hotseat; rooms use server reserve) ——
+  // —— Move pay / refund + R&D allocation ——
   if (type === "pay_ap") {
     const mode = payload.mode;
     const rawAmt = Number(payload.amount);
     let n = Number.isFinite(rawAmt) ? Math.max(0, Math.floor(rawAmt)) : 1;
     if (mode) {
-      const charge = applyThinkingAiCharge(actor, mode, n || 1, {
-        tutor: Boolean(payload.tutor),
-      });
-      n = charge.cost;
-      if (charge.markPaid) actor.aiTaxThisTurn = true;
+      n = aiMoveCost(mode);
     }
     if (n > 0 && !spendAp(actor, n)) return { ok: false, error: "no_ap", session };
     events.push({ type: "pay_ap", amount: n, seatId: activeId, mode: mode || null });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }
+  if (type === "mint_rd") {
+    if (actor.abandoned) return { ok: false, error: "abandoned", session };
+    syncSeatCapacity(s, activeId);
+    if ((actor.ap ?? 0) < 1) return { ok: false, error: "no_ap", session };
+    if (bwOn && (actor.budget ?? 0) < 1) return { ok: false, error: "no_budget", session };
+    if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
+    actor.rdCount = (actor.rdCount || 0) + 1;
+    syncSeatCapacity(s, activeId);
+    events.push({
+      type: "mint_rd",
+      seatId: activeId,
+      ap: actor.ap,
+      budget: actor.budget,
+      budgetCap: actor.budgetCap,
+      rdCount: actor.rdCount,
+    });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+  if (type === "remove_rd" || type === "sync_rd_count") {
+    const count =
+      type === "sync_rd_count"
+        ? readSyncRdCount(payload)
+        : Math.max(0, (actor.rdCount || 0) - Math.max(1, Math.floor(Number(payload.amount) || 1)));
+    actor.rdCount = count;
+    syncSeatCapacity(s, activeId);
+    events.push({ type, seatId: activeId, rdCount: actor.rdCount, budget: actor.budget });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
   if (type === "pay_budget") {
+    // Legacy compatibility: allocate R&D/budget capacity cleanly
     const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
-    if (!bwOn) {
-      events.push({ type: "pay_budget", amount: 0, seatId: activeId, skipped: true });
-      s.version = (session.version || 0) + 1;
-      return { ok: true, session: s, events };
-    }
+    syncSeatCapacity(s, activeId);
     if (n > 0 && (actor.budget ?? 0) < n) {
       return { ok: false, error: "no_budget", session };
     }
-    if (n > 0) actor.budget = Math.max(0, (actor.budget ?? 0) - n);
+    if (n > 0) {
+      actor.rdCount = (actor.rdCount || 0) + n;
+      syncSeatCapacity(s, activeId);
+    }
     events.push({
       type: "pay_budget",
       amount: n,
       seatId: activeId,
       budget: actor.budget,
+      budgetCap: actor.budgetCap,
     });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
@@ -1187,37 +1254,12 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
     actor.ap = Math.min(actor.apMax || 3, (actor.ap || 0) + n);
     actor.apSpentThisTurn = Math.max(0, (actor.apSpentThisTurn || 0) - n);
-    if (n > 0) actor.aiTaxThisTurn = false;
     events.push({ type: "refund_ap", amount: n, seatId: activeId });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }
-  // Will pay / refund (e.g. scaled Sidestep cost on Challenge)
-  if (type === "pay_will") {
-    const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
-    if (!bwOn) {
-      events.push({ type: "pay_will", amount: 0, seatId: activeId, skipped: true });
-      s.version = (session.version || 0) + 1;
-      return { ok: true, session: s, events };
-    }
-    if (n > 0 && (actor.will ?? 0) < n) return { ok: false, error: "no_will", session };
-    if (n > 0) actor.will = Math.max(0, (actor.will ?? 0) - n);
-    events.push({ type: "pay_will", amount: n, seatId: activeId, will: actor.will });
-    s.version = (session.version || 0) + 1;
-    return { ok: true, session: s, events };
-  }
-  if (type === "refund_will") {
-    const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
-    if (bwOn && n > 0) {
-      actor.will = Math.min(maxWill, (actor.will ?? 0) + n);
-    }
-    events.push({ type: "refund_will", amount: n, seatId: activeId, will: actor.will });
-    s.version = (session.version || 0) + 1;
-    return { ok: true, session: s, events };
-  }
 
-  // —— Lobby: personal political capital (same as solo) ——
-  // Active seat only: 1 AP + 1 Budget → +1 Will (cap maxWill). Also writes shared place.rules.
+  // —— Lobby: 1 Move, 0 Budget → local rules + +1 Goodwill capacity (cap maxWill) ——
   if (type === "lobby") {
     if (actor.abandoned) return { ok: false, error: "abandoned", session };
     const payload = action.payload || {};
@@ -1252,24 +1294,25 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       rules = gone.rules;
       ruleEvent = { op: "remove", rule: gone.rule };
     }
-    if (bwOn && (actor.budget ?? 0) < 1) return { ok: false, error: "no_budget", session };
     if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
     if (bwOn) {
-      actor.budget -= 1;
-      actor.will = Math.min(maxWill, (actor.will ?? 0) + 1);
+      actor.willCap = Math.min(maxWill, (actor.willCap ?? GAME.startingWill ?? 3) + 1);
+      syncSeatCapacity(s, activeId);
     }
     s.place.rules = rules;
     actor.lastNews =
       ruleEvent?.op === "write"
-        ? `Lobbied ${ruleEvent.rule?.label || "a rule"} — Will ${actor.will}, Budget ${actor.budget}$.`
+        ? `Lobbied ${ruleEvent.rule?.label || "a rule"} — Goodwill ${actor.will}/${actor.willCap}.`
         : ruleEvent?.op === "remove"
-          ? `Took ${ruleEvent.rule?.label || "a rule"} off the books — Will ${actor.will}.`
-          : `Lobbied for support — Will ${actor.will}, Budget ${actor.budget}$.`;
+          ? `Took ${ruleEvent.rule?.label || "a rule"} off the books — Goodwill ${actor.will}/${actor.willCap}.`
+          : `Lobbied for local backing — Goodwill ${actor.will}/${actor.willCap}.`;
     events.push({
       type: "lobby",
       seatId: activeId,
       will: actor.will,
+      willCap: actor.willCap,
       budget: actor.budget,
+      budgetCap: actor.budgetCap,
       ap: actor.ap,
       ...(ruleEvent || {}),
     });
@@ -1332,22 +1375,24 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     const ids = stackTechIds(target);
     const tech = payload.tech || techById(techId);
     if (!tech) return { ok: false, error: "unknown_tech", session };
-    const cost = techCost(tech, { market: s.place?.marketNews });
-    const turnKey = `${targetSeatId}:${techId}`;
+    const cost = techCost(tech);
 
     if (ids.includes(techId)) {
       if (!payload.bill) return { ok: false, error: "already_on_stack", session };
-      if (actor.techAddedThisTurn?.[turnKey]) {
+      const existing = (target.stack || []).find((x) => x.techId === techId);
+      if (existing && !existing.free) {
         return { ok: true, session, events: [] };
       }
       if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
+      syncSeatCapacity(s, activeId);
       if (bwOn) {
         if ((actor.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", session };
         if ((actor.will ?? 0) < cost.will) return { ok: false, error: "no_will", session };
-        actor.budget -= cost.budget;
-        actor.will -= cost.will;
       }
-      actor.techAddedThisTurn[turnKey] = { cost, targetSeatId, techId };
+      target.stack = (target.stack || []).map((x) =>
+        x.techId === techId ? { techId, addedBy: activeId, free: false } : x
+      );
+      syncSeatCapacity(s, activeId);
       if (targetSeatId !== activeId) {
         actor.contributionApSpent = (actor.contributionApSpent || 0) + 1;
         actor.contributionBudgetSpent =
@@ -1368,7 +1413,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     if (ids.length >= MP_STACK_CAP) return { ok: false, error: "stack_full", session };
 
     if (payload.free) {
-      target.stack = [...(target.stack || []), { techId, addedBy: activeId }];
+      target.stack = [...(target.stack || []), { techId, addedBy: activeId, free: true }];
       events.push({
         type: targetSeatId === activeId ? "tech_added" : "tech_layered",
         techId,
@@ -1380,20 +1425,16 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       return { ok: true, session: s, events };
     }
 
-    if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
+    syncSeatCapacity(s, activeId);
+    if ((actor.ap ?? 0) < 1) return { ok: false, error: "no_ap", session };
     if (bwOn) {
       if ((actor.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", session };
       if ((actor.will ?? 0) < cost.will) return { ok: false, error: "no_will", session };
-      actor.budget -= cost.budget;
-      actor.will -= cost.will;
     }
+    if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
 
-    target.stack = [...(target.stack || []), { techId, addedBy: activeId }];
-    actor.techAddedThisTurn[`${targetSeatId}:${techId}`] = {
-      cost,
-      targetSeatId,
-      techId,
-    };
+    target.stack = [...(target.stack || []), { techId, addedBy: activeId, free: false }];
+    syncSeatCapacity(s, activeId);
 
     if (targetSeatId !== activeId) {
       actor.contributionApSpent = (actor.contributionApSpent || 0) + 1;
@@ -1424,10 +1465,8 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     if (!entry) return { ok: false, error: "not_on_stack", session };
 
     if (targetSeatId === activeId) {
-      // Owner may remove any tech from own stack
       if (actor.abandoned) return { ok: false, error: "abandoned", session };
     } else {
-      // Helper may only unlayer what they added
       if (entry.addedBy !== activeId) {
         return { ok: false, error: "not_your_layer", session };
       }
@@ -1436,22 +1475,26 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       return { ok: false, error: "invent_locked", session };
     }
 
+    const ownerSeatId = entry.addedBy || activeId;
+    const ownerSeat = s.invents[ownerSeatId];
+    const beforeBudget = ownerSeat?.budget ?? 0;
+    const beforeWill = ownerSeat?.will ?? 0;
     target.stack = target.stack.filter((x) => x.techId !== techId);
-    const key = `${targetSeatId}:${techId}`;
-    if (bwOn && actor.techAddedThisTurn?.[key]) {
-      const cost = actor.techAddedThisTurn[key].cost;
-      const refund = techBudgetRefund(cost);
-      actor.budget = Math.min(maxBudget, (actor.budget ?? 0) + refund);
-      delete actor.techAddedThisTurn[key];
-      events.push({ type: "tech_removed", techId, targetSeatId, budgetRefund: refund });
-    } else {
-      events.push({ type: "tech_removed", techId, targetSeatId });
-    }
+    syncSeatCapacity(s, ownerSeatId);
+    const budgetRefund = Math.max(0, (ownerSeat?.budget ?? 0) - beforeBudget);
+    const willRefund = Math.max(0, (ownerSeat?.will ?? 0) - beforeWill);
+    events.push({
+      type: "tech_removed",
+      techId,
+      targetSeatId,
+      ...(budgetRefund ? { budgetRefund } : {}),
+      ...(willRefund ? { willRefund } : {}),
+    });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }
 
-  // —— Challenge (mandatory before pilot) — owner only ——
+  // —— Challenge (mandatory before pilot) — owner only; summoning/entering is free (0 Moves) ——
   if (type === "enter_challenge") {
     if (actor.abandoned) return { ok: false, error: "abandoned", session };
     const phase = deriveInventPhase(actor);
@@ -1463,11 +1506,9 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     ) {
       return { ok: false, error: "already_past_challenge", session };
     }
-    // invent | challenge_locked | challenge (resume) only
     if (phase !== "invent" && phase !== "challenge_locked" && phase !== "challenge") {
       return { ok: false, error: "cannot_enter_challenge", session };
     }
-    if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
     const ent = applyInventPhaseEvent(actor, "enter_challenge");
     Object.assign(actor, ent.patch || {});
     actor.challengeSpeech = "";
@@ -1560,8 +1601,8 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       Object.assign(actor, passEv.patch || {});
       actor.scrutinyPublic = null;
       if (bwOn) {
-        actor.budget = Math.min(maxBudget, (actor.budget ?? 0) + 1);
-        actor.will = Math.min(maxWill, (actor.will ?? 0) + 1);
+        actor.willCap = Math.min(maxWill, (actor.willCap ?? GAME.startingWill ?? 3) + 1);
+        syncSeatCapacity(s, activeId);
       }
       // Freeze drop pool at challenge success for later Scale application
       const techs = stackTechs(actor);
@@ -1574,8 +1615,6 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         suggested: s.place.mission?.suggested || [],
         pairs: [],
         domains: domainsOf(techs),
-        will: actor.will,
-        budgetWill: true,
       });
       const frozen = freezeStagedDropPool(dropInfo.drop);
       actor.stagedDropPool = frozen.stagedDropPool;
@@ -1587,11 +1626,10 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         dropPool: actor.stagedDropPool,
       });
     } else {
-      // Fail → challenge_locked (content stays frozen; only owner retries or reopens)
+      // Fail → challenge_locked (positive-only Goodwill: fail does not shrink Goodwill)
       const failEv = applyInventPhaseEvent(actor, "challenge_fail");
       Object.assign(actor, failEv.patch || {});
       actor.scrutinyPublic = null;
-      if (bwOn) actor.will = Math.max(0, (actor.will ?? 0) - 1);
       events.push({
         type: "challenge_fail",
         verdict,
@@ -1628,17 +1666,10 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     }
 
     const techs = stackTechs(target);
-    // Same costs as solo: deployActionCost (0 AP + Budget)
-    const cost = deployActionCost(techs, { will: actor.will });
-    const apCost = Number.isFinite(cost.ap) ? Math.max(0, cost.ap) : 0;
+    const cost = deployActionCost(techs);
+    const apCost = Number.isFinite(cost.ap) ? Math.max(0, cost.ap) : 1;
     if (!spendAp(actor, apCost)) {
       return { ok: false, error: "no_ap", session };
-    }
-    if ((actor.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", session };
-    actor.budget -= cost.budget;
-    // 0-AP Pilot still counts as engagement so end_turn is allowed
-    if (apCost === 0) {
-      actor.apSpentThisTurn = Math.max(actor.apSpentThisTurn || 0, 1);
     }
     if (targetSeatId !== activeId && apCost > 0) {
       actor.contributionApSpent = (actor.contributionApSpent || 0) + apCost;
@@ -1674,8 +1705,6 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       suggested: s.place.mission?.suggested || [],
       pairs: [],
       domains: domainsOf(techs),
-      will: actor.will,
-      budgetWill: true,
     });
     target.stagedDropPool = Math.max(target.stagedDropPool || 0, dropInfo.drop);
     events.push({
@@ -1716,17 +1745,12 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       return { ok: false, error: "race_over", session };
     }
 
-    // Same costs as solo: scaleActionCost (1 AP + Budget + optional Will)
     const techsForCost = stackTechs(target);
-    const cost = scaleActionCost(techsForCost, { will: actor.will });
+    const cost = scaleActionCost(techsForCost);
     const apCost = Number.isFinite(cost.ap) ? Math.max(0, cost.ap) : 1;
     if (!spendAp(actor, apCost)) {
       return { ok: false, error: "no_ap", session };
     }
-    if ((actor.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", session };
-    if ((actor.will ?? 0) < (cost.will || 0)) return { ok: false, error: "no_will", session };
-    actor.budget -= cost.budget;
-    if (cost.will > 0) actor.will = Math.max(0, (actor.will ?? 0) - cost.will);
     if (targetSeatId !== activeId && apCost > 0) {
       actor.contributionApSpent = (actor.contributionApSpent || 0) + apCost;
     }
@@ -1748,10 +1772,8 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
 
     // Apply FULL drop pool from *target* invent (Pilot was personal readiness)
     const pool = Math.max(1, target.stagedDropPool || 1);
-    let drop = pool;
-    // Solo parity: optional New normal +1 when Will ≥ 4 and pool ≥ 4
-    const nnExtra = newNormalExtraDrop(actor.will ?? 0, pool);
-    drop += nnExtra;
+    const drop = pool;
+    const nnExtra = 0;
     const before = totalPressure(s.place.pressure);
     s.place.pressure = applyPressureDrop(s.place.pressure, drop);
     const after = totalPressure(s.place.pressure);
@@ -1770,10 +1792,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       actor.impactDropTotal = (actor.impactDropTotal || 0) + actual;
       actor.successfulScales = (actor.successfulScales || 0) + 1;
     }
-    target.lastNews =
-      nnExtra > 0
-        ? `Scaled → New normal! Removed ${actual} pressure (incl. +${nnExtra} mandate).`
-        : `Scaled → New normal! Removed ${actual} pressure from the Quest.`;
+    target.lastNews = `Scaled → New normal! Removed ${actual} pressure from the Quest.`;
     actor.lastNews =
       targetSeatId === activeId
         ? target.lastNews
@@ -1909,36 +1928,19 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     return { ok: true, session: s, events };
   }
 
-  // —— End turn ——
+  // —— End turn (always allowed — no noop gate; passes to next connected seat) ——
   if (type === "end_turn") {
-    if ((actor.apSpentThisTurn || 0) < 1 && actor.turnPhase === "act") {
-      // Allow end turn after failed attempts or writes-only: require some engagement OR free pass with spent
-      // Writers: buffer_write doesn't spend apSpent — allow end if they wrote or spent or challenged
-      const wrote =
-        (actor.inventionName || actor.inventionHow || actor.inventionImpact || "").length > 0;
-      if (
-        !wrote &&
-        (actor.apSpentThisTurn || 0) < 1 &&
-        !actor.pilotFailedThisTurn &&
-        !actor.scaleFailedThisTurn &&
-        !payload.force
-      ) {
-        return { ok: false, error: "end_turn_noop", session };
-      }
-    }
     // Incomplete Face Challenge: invent stays mid-challenge (frozen) for next seat-turn
     if (actor.turnPhase === "scrutiny" && !actor.challengePassed && !actor.abandoned) {
       actor.inventPhase = "challenge";
       actor.challengeLocked = false;
       actor.challengePassed = false;
-      // keep turnPhase === "scrutiny" so content stays frozen across handoff
     }
     const prevActive = activeId;
     events.push({ type: "end_turn", seatId: prevActive });
     s = finishEndTurn(s, {
       preferConnectedIds: payload.preferConnectedIds || opts.preferConnectedIds,
     });
-    // Same handoff event as Wait — clients need seat_turn_start to refresh turn chrome
     const nextId = activeSeatId(s);
     if (nextId) {
       events.push({
@@ -1948,10 +1950,6 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         prevSeatId: prevActive,
       });
     }
-    if (s._lastMarketNewsEvent) {
-      events.push(s._lastMarketNewsEvent);
-      delete s._lastMarketNewsEvent;
-    }
     if (s._lastYearTickEvent) {
       events.push(s._lastYearTickEvent);
       delete s._lastYearTickEvent;
@@ -1960,20 +1958,22 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     return { ok: true, session: s, events };
   }
 
-  // —— Wait (personal invent calendar only; ends seat-turn) ——
-  // Wait is a choice about *your invention's* timing claims — not a global clock and not a
-  // way for one seat to meter-kill the shared place. Shared crisis only moves on Scale (down)
-  // or if *every* invent calendar is past the fail year (unanimous calendar timeout).
+  // —— Wait / Advance personal invent year (+1 yr or +2 yrs) ——
+  // Advances ONLY the active player's personal invent calendar.
+  // Does NOT end the seat-turn and does NOT refill Moves (only End turn passes to the next seat).
+  // Allowed multiple times per turn; table wrap skips +1 on seats that already jumped that round.
   if (type === "wait") {
-    if (actor.waitedThisTurn) return { ok: false, error: "wait_once", session };
     if (actor.turnPhase === "scrutiny") {
       return { ok: false, error: "wait_blocked_phase", session };
     }
     const mission = s.place.mission || {};
-    const step = mission.yearsPerTurn || GAME.yearsPerTurn || 2;
+    const rawYears = Number(payload.years);
+    const step =
+      Number.isInteger(rawYears) && rawYears >= 1 && rawYears <= 4
+        ? rawYears
+        : mission.yearsPerTurn || GAME.yearsPerTurn || 2;
     const waiterId = activeId;
     const startY = mission.startYear ?? s.place.year ?? GAME.startYear ?? 2026;
-    // Ensure every invent has an invent calendar (legacy snapshots may omit year)
     for (const id of s.seatOrder || Object.keys(s.invents || {})) {
       const f = s.invents[id];
       if (f && f.year == null) f.year = startY;
@@ -1982,28 +1982,20 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     const prevYear = inventYear(actor, s.place);
     actor.year = prevYear + step;
     actor.waits = (inventWaits(actor, s.place) || 0) + 1;
-    // Do NOT apply shared pressureRise here — that let one player Wait-spam collapse the table
-    // while others were still inventing in the present year.
-    s.place.waits = (s.place.waits || 0) + 1; // total Wait actions taken in the run (audit)
-    actor.waitedThisTurn = true;
-    // Marks invent for wrap skip: table wrap must not also +1 this invent calendar
-    // (otherwise last seat Wait stacks yearsPerTurn + wrap → +3 unfair vs other seats).
+    s.place.waits = (s.place.waits || 0) + 1;
     actor.waitedThisRound = true;
-    // Counts as engagement (even though Wait burns leftover AP by ending the seat-turn)
-    actor.apSpentThisTurn = (actor.apSpentThisTurn || 0) + 1;
-    s.place.lastNews = `${actor.displayName} waited for their invent — year ${actor.year} (from ${prevYear}). Other invents keep their own invent year; shared crisis meters unchanged.`;
+    s.place.lastNews = `${actor.displayName} advanced their invent to ${actor.year} (+${step} yr${step === 1 ? "" : "s"}). Other invents keep their own year; shared crisis meters unchanged.`;
 
     events.push({
       type: "wait",
       year: actor.year,
       prevYear,
+      years: step,
       seatId: waiterId,
       placeYear: s.place.year ?? startY,
       pressureUnchanged: true,
     });
 
-    // Place ends on Wait only if every invent calendar is past fail year (not meters — Wait
-    // no longer raises meters). Meters still collapse the place after Scale failures etc. elsewhere.
     if (isMpPlaceCollapsed(s, { forgeYear: inventYear })) {
       const failY = s.place.collapseYear || mission.collapseYear || 2099;
       const earliest = mpEarliestInventYear(s, { forgeYear: inventYear });
@@ -2025,24 +2017,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       return { ok: true, session: s, events };
     }
 
-    // Wait ends seat-turn — emit same handoff events as end_turn so clients refresh turn chrome
-    events.push({ type: "end_turn", seatId: waiterId, from: "wait" });
-    // Same offline skip as end_turn (preferConnectedIds from room-manager payload)
-    s = passToNext(s, {
-      preferConnectedIds: payload.preferConnectedIds || opts.preferConnectedIds,
-    });
-    if (s._lastMarketNewsEvent) {
-      events.push(s._lastMarketNewsEvent);
-      delete s._lastMarketNewsEvent;
-    }
-    if (s._lastYearTickEvent) {
-      events.push(s._lastYearTickEvent);
-      delete s._lastYearTickEvent;
-    }
-    const nextId = activeSeatId(s);
-    if (nextId) {
-      events.push({ type: "seat_turn_start", seatId: nextId, round: s.round });
-    }
+    s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }
 
@@ -2075,7 +2050,10 @@ export function getOpenTable(session) {
       challengeClearMode: f?.challengeClearMode || null,
       challengeVerdict: f?.challengeVerdict || null,
       budget: f?.budget ?? 0,
+      budgetCap: f?.budgetCap ?? f?.budget ?? 5,
       will: f?.will ?? 0,
+      willCap: f?.willCap ?? f?.will ?? 3,
+      rdCount: f?.rdCount || 0,
       ap: f?.ap ?? 0,
       apMax: f?.apMax ?? 3,
       impactDropTotal: f?.impactDropTotal || 0,

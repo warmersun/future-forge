@@ -1,10 +1,12 @@
 {
-  "schema": "future-forge.capability-trend/v1",
+  "schema": "future-forge.capability-trend/v2",
   "id": "ai-training-flops-frontier",
   "techId": "ai",
+  "axis": "capacity",
   "name": "Frontier training compute",
   "summary": "The biggest published AI training runs measure how much compute went into teaching one frontier model. That compute has grown roughly three- to four-fold per year for about a decade — each year the largest runs are much larger than the year before. Future rates are uncertain: chip supply, cost, and policy can slow or speed the climb. The chart counts floating-point operations (FLOPs) for one training run — higher means a bigger training job.",
   "capability": "Scale of frontier model training",
+  "trendSummary": "Frontier AI training compute has grown roughly fourfold per year across a decade.",
   "unit": "FLOPs per training run",
   "compounding": { "kind": "cagr", "annualRate": 3.4 },
   "anchor": { "date": "2018-01-01", "value": 1e22 },
@@ -15,21 +17,42 @@
       "label": "GPT-3-era training scale",
       "date": "2020",
       "value": 3e23,
-      "status": "reached"
+      "status": "reached",
+      "useCases": [
+        {
+          "title": "General text drafting",
+          "blurb": "Generate coherent summaries, emails, and code snippets from natural-language prompts.",
+          "world": "bits"
+        }
+      ]
     },
     {
       "id": "1e25-class",
       "label": "Mid-2020s frontier scale",
       "date": "2024",
       "value": 1e25,
-      "status": "reached"
+      "status": "reached",
+      "useCases": [
+        {
+          "title": "Multimodal tool-using copilots",
+          "blurb": "Analyze documents, images, and spreadsheets in multi-step supervised workflows.",
+          "world": "bits"
+        }
+      ]
     },
     {
       "id": "1e27-pred",
       "label": "Next-order training scale (forecast)",
       "date": "2028",
       "value": 1e27,
-      "status": "predicted"
+      "status": "predicted",
+      "useCases": [
+        {
+          "title": "Autonomous scientific simulation partners",
+          "blurb": "Explore complex multi-domain hypotheses and verify long engineering plans.",
+          "world": "bits"
+        }
+      ]
     }
   ],
   "sources": [

@@ -1,10 +1,12 @@
 {
-  "schema": "future-forge.capability-trend/v1",
+  "schema": "future-forge.capability-trend/v2",
   "id": "solar-utility-lcoe",
   "techId": "solar",
+  "axis": "price",
   "name": "Utility-scale solar power cost",
   "summary": "Utility-scale solar is the large farms that feed the grid. The usual yardstick is levelized cost of energy: a lifetime average price per megawatt-hour that folds in building and running the plant. In many markets that cost has fallen by roughly half every several years since the mid-2010s. The chart is US dollars per megawatt-hour — lower means cheaper bulk solar.",
   "capability": "Cheap bulk solar generation",
+  "trendSummary": "Utility solar electricity costs fell into the lowest-cost bulk power tier in sunny markets.",
   "unit": "USD / MWh",
   "compounding": { "kind": "halving", "periodYears": 5 },
   "anchor": { "date": "2015-01-01", "value": 80 },
@@ -29,14 +31,28 @@
       "label": "Sub-$30/MWh auctions",
       "date": "2025",
       "value": 28,
-      "status": "reached"
+      "status": "reached",
+      "useCases": [
+        {
+          "title": "Lowest-cost daytime grid power",
+          "blurb": "Replace peaking fossil generation and power local pumps or cold storage at midday.",
+          "world": "atoms"
+        }
+      ]
     },
     {
       "id": "lcoe-2030-pred",
       "label": "Teens $/MWh more routine (forecast)",
       "date": "2030",
       "value": 16,
-      "status": "predicted"
+      "status": "predicted",
+      "useCases": [
+        {
+          "title": "Direct solar desalination and electrolysis",
+          "blurb": "Run energy-intensive water purification and clean fuel synthesis directly from solar farms.",
+          "world": "atoms"
+        }
+      ]
     }
   ],
   "sources": [

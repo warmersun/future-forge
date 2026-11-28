@@ -275,13 +275,6 @@ export function createHotseatBridge() {
         ? state.rules
         : [];
     state.lastNews = place.lastNews || "";
-    state.marketNews = place.marketNews
-      ? {
-          ...place.marketNews,
-          techIds: place.marketNews.techIds ? [...place.marketNews.techIds] : undefined,
-          domains: place.marketNews.domains ? [...place.marketNews.domains] : undefined,
-        }
-      : null;
     if (place.lastYearBulletin) state.lastYearBulletin = place.lastYearBulletin;
 
     // Invention = viewed invent
@@ -339,11 +332,11 @@ export function createHotseatBridge() {
     state.apMax = actor.apMax;
     state.budget = actor.budget;
     state.will = actor.will;
+    if (actor.budgetCap != null) state.budgetCap = actor.budgetCap;
+    if (actor.willCap != null) state.willCap = actor.willCap;
+    if (actor.rdCount != null) state.rdCount = actor.rdCount;
     state.pathwayEasePaid = { ...(actor.pathwayEasePaid || {}) };
     state.apSpentThisTurn = actor.apSpentThisTurn || 0;
-    state.aiTaxThisTurn = Boolean(actor.aiTaxThisTurn);
-    state.writeCommitsThisTurn = actor.writeCommitsThisTurn || 0;
-    state.techAddedThisTurn = { ...(actor.techAddedThisTurn || {}) };
     // Screen phase: owner of the viewed invent, or active actor if viewing self
     const phaseSrc = vId === aId ? actor : view;
     if (
@@ -439,11 +432,11 @@ export function createHotseatBridge() {
     actor.apMax = state.apMax;
     actor.budget = state.budget;
     actor.will = state.will;
+    if (state.budgetCap != null) actor.budgetCap = state.budgetCap;
+    if (state.willCap != null) actor.willCap = state.willCap;
+    if (state.rdCount != null) actor.rdCount = state.rdCount;
     actor.pathwayEasePaid = { ...(state.pathwayEasePaid || {}) };
     actor.apSpentThisTurn = state.apSpentThisTurn || 0;
-    actor.aiTaxThisTurn = Boolean(state.aiTaxThisTurn);
-    actor.writeCommitsThisTurn = state.writeCommitsThisTurn || 0;
-    actor.techAddedThisTurn = { ...(state.techAddedThisTurn || {}) };
     if (aId === vId) {
       actor.turnPhase = view.turnPhase;
     }
@@ -537,16 +530,15 @@ export function createHotseatBridge() {
 
   function waitShared(payload) {
     if (!session) return { ok: false, error: "no_session" };
-    // Wait advances the *active seat's* invent only — not while helping on another invent
+    // Time jump advances the active seat's invent year without ending the turn
     if (viewingOther()) {
       return { ok: false, error: "wait_own_invent_only", session };
     }
     const r = hotseatApplyAction(session, { type: "wait", payload }, getActiveId());
     if (r.ok) {
       session = r.session;
-      viewSeatId = activeSeatId(session);
     }
-    return r; // includes events (e.g. market_news on seat wrap)
+    return r;
   }
 
   /**

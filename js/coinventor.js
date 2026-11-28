@@ -146,7 +146,7 @@ export class CoInventor {
    * @param {"hex"|"legacy"} [opts.surface="legacy"] — hex workshop vs essay/stack apply
    * @param {string} [opts.placeholder] — compose box placeholder
    * @param {string} [opts.subtitle] — header subtitle default before health check
-   * @param {boolean} [opts.tutorMode=false] — active tutor session (free AP + badge)
+   * @param {boolean} [opts.tutorMode=false] — active tutor session (0 Moves + badge)
    * @param {boolean} [opts.learningQuest=false] — learning module (can resume tutoring)
    * @param {() => void} [opts.onEndTutoring] — learner ends tutor session
    * @param {() => void} [opts.onResumeTutoring] — learner resumes tutor session
@@ -326,14 +326,14 @@ export class CoInventor {
             class="btn btn-ghost btn-sm co-tutor-toggle"
             id="co-end-tutor"
             hidden
-            title="End free tutor mode — first co-inventor ask this turn costs 1 AP, then free"
+            title="Switch to co-inventor mode"
           >End tutoring</button>
           <button
             type="button"
             class="btn btn-ghost btn-sm co-tutor-toggle"
             id="co-resume-tutor"
             hidden
-            title="Resume AI tutor mode — free AP, one short idea at a time (learning quests only)"
+            title="Resume AI tutor mode — one short idea at a time (learning quests only)"
           >Resume tutoring</button>
           <button type="button" class="btn btn-ghost btn-sm" id="co-clear" title="Clear chat">Clear</button>
           <button
@@ -786,14 +786,14 @@ export class CoInventor {
       "tutor",
       "coinventor",
       "Hang up before ending tutoring",
-      "End free tutor mode — first co-inventor ask this turn costs 1 AP, then free"
+      "Switch to co-inventor mode"
     );
     paint(
       resumeBtn,
       "coinventor",
       "tutor",
       "Hang up before resuming tutoring",
-      "Resume AI tutor mode — free AP, one short idea at a time (learning quests only)"
+      "Resume AI tutor mode — one short idea at a time (learning quests only)"
     );
   }
 
@@ -902,8 +902,8 @@ export class CoInventor {
       badge.classList.toggle("is-active", Boolean(this.tutorMode));
       badge.classList.toggle("is-idle", Boolean(this.learningQuest && !this.tutorMode));
       badge.title = this.tutorMode
-        ? "Tutor mode on — co-inventor chat does not cost AP"
-        : "Tutor mode off — first ask this turn costs 1 AP, then free · Resume tutoring to turn free help back on";
+        ? "Tutor mode on — one short idea at a time"
+        : "Tutor mode off — Resume tutoring anytime";
       badge.setAttribute("aria-pressed", this.tutorMode ? "true" : "false");
     }
     if (endBtn) endBtn.hidden = !(this.learningQuest && this.tutorMode);
@@ -917,13 +917,12 @@ export class CoInventor {
     if (!status || status.classList.contains("co-offline")) return;
     if (this.tutorMode) {
       status.textContent =
-        this.subtitle ||
-        "Free AP · one short idea at a time — stack picks and fielding still cost resources";
+        this.subtitle || "Tutor mode · one short idea at a time — ask anything freely";
       status.dataset.tutorOwned = "1";
     } else if (this.learningQuest) {
       status.textContent =
         this.subtitle ||
-        "Co-inventor mode · first ask this turn 1 AP, then free — Resume tutoring anytime";
+        "Co-inventor mode · brainstorming is always free — Resume tutoring anytime";
       status.dataset.tutorOwned = "1";
     } else {
       delete status.dataset.tutorOwned;
@@ -1952,7 +1951,7 @@ export class CoInventor {
           );
         } else {
           bits.push(
-            `<button type="button" class="co-apply co-apply-tech" data-msg="${idx}" data-apply="tech" data-tech-id="${escapeHtml(id)}" title="Add to stack — pays AP, Budget, and Will like a manual pick">Add ${escapeHtml(label)}</button>`
+            `<button type="button" class="co-apply co-apply-tech" data-msg="${idx}" data-apply="tech" data-tech-id="${escapeHtml(id)}" title="Add to board — uses 1 Move and allocates reversible capacity">Add ${escapeHtml(label)}</button>`
           );
         }
       }

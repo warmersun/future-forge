@@ -108,16 +108,37 @@ export function trendValueInDomain(trend, year) {
  * use chart.scales.x and chart.chartArea for external rail alignment.
  */
 export function buildTrendChartConfig(trend, opts = {}) {
+  if (!trend || trend.hasCurve === false || !trend.compounding || !trend.anchor) {
+    return null;
+  }
   const css = defaultCss(opts.css);
   const yearNow = Number(opts.yearNow);
   const yearNext = Number(opts.yearNext);
   const unit = String(trend?.unit || "");
   const domainStart = Number(trend?.domain?.start);
   const domainEnd = Number(trend?.domain?.end);
+  const compact = Boolean(opts.compact);
+  const playable = Array.isArray(opts.playableMilestones) ? opts.playableMilestones : [];
+  const playableYears = playable.map((m) => Number(m.year)).filter(Number.isFinite);
+  const effMax =
+    opts.displayMax != null && Number.isFinite(Number(opts.displayMax))
+      ? Number(opts.displayMax)
+      : Number.isFinite(domainEnd)
+        ? Math.max(domainEnd, ...(playableYears.length ? playableYears : [domainEnd]), Number.isFinite(yearNow) ? yearNow + 1 : domainEnd)
+        : undefined;
+
   const curve = sampleCurve(trend, opts.curveSteps ?? 40).map((p) => ({
     x: p.x,
     y: p.y,
   }));
+  // If playable forecasts extend slightly past domainEnd, add a dashed continuation tail
+  const extraTail = [];
+  if (Number.isFinite(domainEnd) && Number.isFinite(effMax) && effMax > domainEnd && curve.length) {
+    const endVal = valueAtYear(trend, effMax);
+    if (Number.isFinite(endVal) && endVal > 0) {
+      extraTail.push(curve.at(-1), { x: effMax, y: endVal });
+    }
+  }
 
   const reached = (trend?.milestones || [])
     .filter((m) => m.status === "reached")
@@ -137,6 +158,30 @@ export function buildTrendChartConfig(trend, opts = {}) {
       status: m.status,
       date: m.date,
     }));
+
+  const playableReached = [];
+  const playableForecast = [];
+  for (const pm of playable) {
+    const py = Number(pm.year);
+    if (!Number.isFinite(py)) continue;
+    const val = Number.isFinite(Number(pm.value)) && Number(pm.value) > 0
+      ? Number(pm.value)
+      : valueAtYear(trend, py);
+    if (!Number.isFinite(val) || val <= 0) continue;
+    const pt = {
+      x: py,
+      y: val,
+      label: pm.label || `${py} milestone`,
+      status: pm.status === "reached" ? "reached" : "predicted",
+      date: String(py),
+      milestoneId: pm.id,
+      dealt: Boolean(pm.dealt),
+      early: Number.isFinite(yearNow) && py > yearNow,
+      useCount: Array.isArray(pm.useCases) ? pm.useCases.length : 0,
+    };
+    if (pt.status === "reached") playableReached.push(pt);
+    else playableForecast.push(pt);
+  }
 
   /** @type {Record<string, object>} */
   const annotations = {};
@@ -179,61 +224,125 @@ export function buildTrendChartConfig(trend, opts = {}) {
 
   const lineColor = opts.spotlight ? css.warn : css.accent;
 
+  const datasets = [
+    {
+      type: "line",
+      label: opts.dashedModel ? "Trend model" : "Trend",
+      data: curve,
+      borderColor: lineColor,
+      backgroundColor: "transparent",
+      borderWidth: 2,
+      ...(opts.dashedModel ? { borderDash: [6, 4] } : {}),
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      tension: 0,
+      order: 4,
+    },
+    {
+      type: "scatter",
+      label: "Reached",
+      data: reached,
+      backgroundColor: playable.length ? "rgba(52, 211, 153, 0.55)" : css.reached,
+      borderColor: playable.length ? "rgba(52, 211, 153, 0.8)" : css.reached,
+      pointRadius: playable.length ? 3 : 5,
+      pointHoverRadius: playable.length ? 5 : 7,
+      order: 3,
+    },
+    {
+      type: "scatter",
+      label: "Predicted",
+      data: predicted,
+      backgroundColor: "transparent",
+      borderColor: css.predicted,
+      borderWidth: 2,
+      pointRadius: playable.length ? 3.5 : 5,
+      pointHoverRadius: playable.length ? 5.5 : 7,
+      order: 3,
+    },
+  ];
+
+  if (extraTail.length) {
+    datasets.push({
+      type: "line",
+      label: "Forecast curve",
+      data: extraTail,
+      borderColor: css.predicted,
+      backgroundColor: "transparent",
+      borderWidth: 1.8,
+      borderDash: [5, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      order: 4,
+    });
+  }
+  if (playableReached.length) {
+    datasets.push({
+      type: "scatter",
+      label: "Playable reached",
+      data: playableReached,
+      backgroundColor: css.reached,
+      borderColor: (ctx) => (ctx.raw?.dealt ? "#ffffff" : "#0c1220"),
+      borderWidth: (ctx) => (ctx.raw?.dealt ? 2.5 : 1.8),
+      pointRadius: (ctx) => (ctx.raw?.dealt ? 7.5 : 6.5),
+      pointHoverRadius: 9,
+      order: 1,
+    });
+  }
+  if (playableForecast.length) {
+    datasets.push({
+      type: "scatter",
+      label: "Playable forecast",
+      data: playableForecast,
+      backgroundColor: "#0c1220",
+      borderColor: (ctx) => (ctx.raw?.early && ctx.raw?.dealt ? "#fb7185" : css.predicted),
+      borderWidth: 2.5,
+      pointRadius: (ctx) => (ctx.raw?.dealt ? 7.5 : 6.5),
+      pointHoverRadius: 9,
+      order: 1,
+    });
+  }
+
   return {
     type: "scatter",
     ...(typeof opts.onLayout === "function" ? {
       plugins: [{ id: "trendChartLayout", afterLayout(chart) { opts.onLayout(chart); } }],
     } : {}),
-    data: {
-      datasets: [
-        {
-          type: "line",
-          label: opts.dashedModel ? "Trend model" : "Trend",
-          data: curve,
-          borderColor: lineColor,
-          backgroundColor: "transparent",
-          borderWidth: 2,
-          ...(opts.dashedModel ? { borderDash: [6, 4] } : {}),
-          pointRadius: 0,
-          pointHoverRadius: 0,
-          tension: 0,
-          order: 3,
-        },
-        {
-          type: "scatter",
-          label: "Reached",
-          data: reached,
-          backgroundColor: css.reached,
-          borderColor: css.reached,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          order: 1,
-        },
-        {
-          type: "scatter",
-          label: "Predicted",
-          data: predicted,
-          backgroundColor: "transparent",
-          borderColor: css.predicted,
-          borderWidth: 2,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          order: 2,
-        },
-      ],
-    },
+    data: { datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
       interaction: { mode: "nearest", intersect: true },
+      ...(typeof opts.onClickMilestone === "function"
+        ? {
+            onClick(_evt, elements, chart) {
+              const hit = elements.find((el) => {
+                const raw = chart?.data?.datasets?.[el.datasetIndex]?.data?.[el.index];
+                return Boolean(raw?.milestoneId);
+              });
+              if (hit) {
+                const raw = chart.data.datasets[hit.datasetIndex].data[hit.index];
+                opts.onClickMilestone(raw.milestoneId);
+              }
+            },
+            onHover(_evt, elements, chart) {
+              const canvas = chart?.canvas;
+              if (!canvas) return;
+              const clickable = elements.some((el) => {
+                const raw = chart?.data?.datasets?.[el.datasetIndex]?.data?.[el.index];
+                return Boolean(raw?.milestoneId);
+              });
+              canvas.style.cursor = clickable ? "pointer" : "default";
+            },
+          }
+        : {}),
       plugins: {
         legend: { display: false },
         title: { display: false },
         tooltip: {
           filter(item) {
             // Hide dense curve points; keep milestone scatters
-            return item.datasetIndex !== 0;
+            return item.datasetIndex !== 0 && item.dataset?.label !== "Forecast curve";
           },
           callbacks: {
             title(items) {
@@ -243,6 +352,14 @@ export function buildTrendChartConfig(trend, opts = {}) {
             },
             label(item) {
               const raw = item.raw || {};
+              if (raw.milestoneId) {
+                const state = raw.early
+                  ? `Forecast · Too early (~${raw.x})`
+                  : raw.status === "predicted"
+                    ? `Forecast · In play (~${raw.x})`
+                    : `Reached (${raw.x})`;
+                return `${state} · Click to ${raw.dealt ? "re-deal" : "deal"} ${raw.useCount || 2} use cases`;
+              }
               const bits = [
                 formatTrendValue(raw.y ?? item.parsed?.y, unit),
                 raw.status ? String(raw.status) : "",
@@ -261,15 +378,16 @@ export function buildTrendChartConfig(trend, opts = {}) {
           type: "linear",
           min: opts.displayMin != null && Number.isFinite(Number(opts.displayMin))
             ? Number(opts.displayMin) : Number.isFinite(domainStart) ? domainStart : undefined,
-          max: opts.displayMax != null && Number.isFinite(Number(opts.displayMax))
-            ? Number(opts.displayMax) : Number.isFinite(domainEnd) ? domainEnd : undefined,
+          max: effMax,
           title: {
-            display: true,
+            display: !compact,
             text: "Year",
             color: css.textMute,
           },
           ticks: {
             color: css.textMute,
+            maxTicksLimit: compact ? 5 : undefined,
+            font: compact ? { size: 10 } : undefined,
             callback(v) {
               return Number.isInteger(v) ? String(v) : "";
             },
@@ -279,12 +397,13 @@ export function buildTrendChartConfig(trend, opts = {}) {
         y: {
           type: "logarithmic",
           title: {
-            display: true,
+            display: !compact,
             text: unit || "Capability",
             color: css.textMute,
           },
           ticks: {
             color: css.textMute,
+            font: compact ? { size: 10 } : undefined,
             callback(v) {
               const n = Number(v);
               if (!Number.isFinite(n) || n <= 0) return "";
@@ -313,6 +432,7 @@ export function mountTrendChart(canvas, trend, opts = {}) {
   const Chart = typeof globalThis !== "undefined" ? globalThis.Chart : null;
   if (!Chart || !canvas) return null;
   const config = buildTrendChartConfig(trend, opts);
+  if (!config) return null;
   return new Chart(canvas, config);
 }
 

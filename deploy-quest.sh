@@ -5,7 +5,7 @@
 #        [--plan-dir <new-directory>] (v2 --dry-run only)
 # V2 dry-run validates and builds an offline loose-publication plan. --plan-dir
 # saves it locally. V2 production requires a live runtime health marker.
-# --force bypasses economy checks and permits replacing mutable collisions.
+# --force permits replacing mutable collisions.
 # FF_REPO and WARMERSUN_DIR may override the checkout locations.
 set -euo pipefail
 # Projections include gated quest text; do not make new plan files world-readable.
@@ -96,7 +96,7 @@ ARGS=("$PKG")
 [[ -z "$ADAPTER" ]] || ARGS+=(--package-adapter "$ADAPTER")
 if ((DRY)) || [[ "$VERSION" == 2 ]]; then
   if [[ "$VERSION" == 2 ]]; then
-    # The v2 publisher performs the same craft and economy checks without writes.
+    # The v2 publisher performs the same craft lint checks without writes.
     V2ARGS=("$PKG" --dry-run); ((FORCE == 0)) || V2ARGS+=(--force)
     node "$FF_REPO/scripts/publish-quest-package.mjs" "${V2ARGS[@]}"
     REVISION="$(python3 - "$WORK/meta.json" <<'PYREV'

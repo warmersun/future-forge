@@ -34,10 +34,14 @@ const COMPACT_MQ =
  */
 export const CO_TAB_MQ =
   "(max-width: 1199px), (max-height: 900px), (max-width: 1399px) and (any-pointer: coarse)";
+const VISION_STACK_MQ = "(max-width: 1024px)";
 const RAIL_COLLAPSED_KEY = "future-forge:tech-rail-collapsed";
+const VISION_COLLAPSED_KEY = "future-forge:vision-rail-collapsed";
 
 /** @type {MediaQueryList|null} */
 let compactMql = null;
+/** @type {MediaQueryList|null} */
+let visionStackMql = null;
 
 /**
  * @returns {boolean}
@@ -401,6 +405,7 @@ export function wireTechDrawer(layout) {
 export function initTechDrawers(root = document) {
   const layouts = root.querySelectorAll?.(".workshop-layout") || [];
   layouts.forEach((el) => wireTechDrawer(/** @type {HTMLElement} */ (el)));
+  initVisionDocks(root);
 
   if (document.body.dataset.techDrawerGlobal === "1") return;
   document.body.dataset.techDrawerGlobal = "1";
@@ -485,4 +490,265 @@ export function workshopLayoutFor(el) {
         document.querySelector(".workshop-layout")
     )
   );
+}
+
+/* ==========================================================================
+   Right-hand Vision / Co-Inventor / Log / AI Inspect Slide-Out Dock
+   Mirrors the desktop emTech dock on the right edge (≥1025px).
+   ========================================================================== */
+
+export function isVisionStackMode() {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia(VISION_STACK_MQ).matches;
+}
+
+export function isVisionRailCollapsed(layout) {
+  return !!layout?.classList.contains("is-vision-collapsed");
+}
+
+export function isVisionRailPeek(layout) {
+  return !!layout?.classList.contains("is-vision-peek");
+}
+
+export function readVisionRailCollapsedPref() {
+  try {
+    if (typeof localStorage === "undefined") return false;
+    return localStorage.getItem(VISION_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeVisionRailCollapsedPref(collapsed) {
+  try {
+    if (typeof localStorage === "undefined") return;
+    if (collapsed) localStorage.setItem(VISION_COLLAPSED_KEY, "1");
+    else localStorage.removeItem(VISION_COLLAPSED_KEY);
+  } catch {
+    /* private mode / quota */
+  }
+}
+
+function notifyLayoutWidthChange() {
+  if (typeof window === "undefined") return;
+  const fire = () => {
+    try {
+      window.dispatchEvent(new Event("resize"));
+    } catch {
+      /* ignore */
+    }
+  };
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(fire);
+  else fire();
+  setTimeout(fire, 300);
+}
+
+function syncVisionDockChrome(layout) {
+  if (!layout) return;
+  const stacked = isVisionStackMode();
+  const tucked = isVisionRailCollapsed(layout) && !stacked;
+  const peeking = tucked && isVisionRailPeek(layout);
+
+  layout.querySelectorAll("[data-vision-dock-handle]").forEach((btn) => {
+    btn.hidden = !tucked;
+    btn.setAttribute("aria-expanded", peeking || !tucked ? "true" : "false");
+    btn.setAttribute(
+      "aria-label",
+      peeking
+        ? "Pin Future vision and side panel open"
+        : tucked
+          ? "Show Future vision and side panel"
+          : "Future vision and side panel"
+    );
+    btn.setAttribute(
+      "title",
+      peeking ? "Pin side panel into layout" : "Show Future vision & Co-Inventor"
+    );
+  });
+
+  layout.querySelectorAll("[data-vision-dock-edge]").forEach((el) => {
+    el.hidden = !tucked;
+  });
+
+  layout.querySelectorAll("[data-vision-rail-toggle]").forEach((btn) => {
+    btn.setAttribute("aria-expanded", tucked && !peeking ? "false" : "true");
+    btn.setAttribute(
+      "aria-label",
+      tucked ? "Pin Future vision and side panel open" : "Slide side panel out to the right"
+    );
+    btn.setAttribute(
+      "title",
+      tucked ? "Pin side panel open" : "Slide panel out to the right"
+    );
+  });
+}
+
+export function setVisionRailPeek(layout, peek) {
+  if (!layout) return;
+  if (!isVisionRailCollapsed(layout) || isVisionStackMode()) {
+    layout.classList.remove("is-vision-peek");
+    syncVisionDockChrome(layout);
+    return;
+  }
+  layout.classList.toggle("is-vision-peek", !!peek);
+  syncVisionDockChrome(layout);
+}
+
+export function setVisionRailCollapsed(layout, collapsed, opts = {}) {
+  if (!layout) return;
+  const want = !!collapsed;
+  const changed = layout.classList.contains("is-vision-collapsed") !== want;
+  layout.classList.toggle("is-vision-collapsed", want);
+  if (!want) layout.classList.remove("is-vision-peek");
+
+  syncVisionDockChrome(layout);
+
+  if (opts.persist !== false) writeVisionRailCollapsedPref(want);
+  if (changed) notifyLayoutWidthChange();
+
+  if (opts.focus === false || isVisionStackMode()) return;
+  if (want) {
+    layout.querySelector("[data-vision-dock-handle]")?.focus?.();
+  } else {
+    layout.querySelector("[data-vision-rail-toggle]")?.focus?.();
+  }
+}
+
+export function revealVisionPanel(layout) {
+  const target = layout || workshopLayoutFor(null);
+  if (!target || isVisionStackMode()) return;
+  if (isVisionRailCollapsed(target) && !isVisionRailPeek(target)) {
+    setVisionRailPeek(target, true);
+  }
+}
+
+function applyVisionRailPref(layout) {
+  if (!layout || isVisionStackMode()) {
+    syncVisionDockChrome(layout);
+    return;
+  }
+  setVisionRailCollapsed(layout, readVisionRailCollapsedPref(), {
+    persist: false,
+    focus: false,
+  });
+}
+
+export function wireVisionDock(layout) {
+  if (!layout || layout.dataset.visionDockWired === "1") return;
+  const panel = layout.querySelector(".vision-panel");
+  if (!panel) return;
+  layout.dataset.visionDockWired = "1";
+
+  let handle = layout.querySelector("[data-vision-dock-handle]");
+  if (!handle) {
+    handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "vision-dock-handle";
+    handle.hidden = true;
+    handle.setAttribute("data-vision-dock-handle", "");
+    handle.setAttribute("aria-expanded", "false");
+    handle.innerHTML =
+      '<span class="vision-dock-handle-chevron" aria-hidden="true"></span>' +
+      '<span class="vision-dock-handle-pin" aria-hidden="true"></span>';
+    layout.appendChild(handle);
+  }
+
+  let edge = layout.querySelector("[data-vision-dock-edge]");
+  if (!edge) {
+    edge = document.createElement("div");
+    edge.className = "vision-dock-edge";
+    edge.hidden = true;
+    edge.setAttribute("data-vision-dock-edge", "");
+    edge.setAttribute("aria-hidden", "true");
+    layout.appendChild(edge);
+  }
+
+  layout.querySelectorAll("[data-vision-rail-toggle]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (isVisionStackMode()) return;
+      setVisionRailCollapsed(layout, !isVisionRailCollapsed(layout));
+    });
+  });
+
+  layout.querySelectorAll("[data-vision-dock-handle]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (isVisionStackMode() || !isVisionRailCollapsed(layout)) return;
+      if (isVisionRailPeek(layout)) {
+        setVisionRailCollapsed(layout, false);
+      } else {
+        setVisionRailPeek(layout, true);
+      }
+    });
+  });
+
+  const openPeekTargets = [edge, ...layout.querySelectorAll("[data-vision-dock-handle]")];
+  openPeekTargets.forEach((el) => {
+    el.addEventListener("pointerenter", () => {
+      if (isVisionStackMode() || !isVisionRailCollapsed(layout)) return;
+      if (document.body.classList.contains("is-quest-briefing")) return;
+      setVisionRailPeek(layout, true);
+    });
+  });
+
+  layout.addEventListener("pointerdown", (e) => {
+    if (isVisionStackMode() || !isVisionRailCollapsed(layout) || !isVisionRailPeek(layout)) return;
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    if (t.closest(".vision-panel, [data-vision-dock-handle], [data-vision-dock-edge]")) return;
+    setVisionRailPeek(layout, false);
+  });
+
+  applyVisionRailPref(layout);
+}
+
+export function initVisionDocks(root = document) {
+  const layouts = root.querySelectorAll?.(".workshop-layout") || [];
+  layouts.forEach((el) => wireVisionDock(/** @type {HTMLElement} */ (el)));
+
+  if (document.body.dataset.visionDockGlobal === "1") return;
+  document.body.dataset.visionDockGlobal = "1";
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || isVisionStackMode()) return;
+    if (document.body.classList.contains("is-quest-briefing")) return;
+    const active = document.activeElement;
+    const layout = workshopLayoutFor(active instanceof Element ? active : null);
+    if (!layout) return;
+
+    if (isVisionRailPeek(layout)) {
+      e.preventDefault();
+      setVisionRailPeek(layout, false);
+      layout.querySelector("[data-vision-dock-handle]")?.focus?.();
+      return;
+    }
+
+    if (
+      !isVisionRailCollapsed(layout) &&
+      active instanceof Element &&
+      active.closest(".vision-panel") &&
+      !active.closest("input, textarea, select")
+    ) {
+      e.preventDefault();
+      setVisionRailCollapsed(layout, true);
+    }
+  });
+
+  if (typeof window !== "undefined" && window.matchMedia) {
+    visionStackMql = window.matchMedia(VISION_STACK_MQ);
+    const onChange = () => {
+      document.querySelectorAll(".workshop-layout").forEach((layout) => {
+        const el = /** @type {HTMLElement} */ (layout);
+        el.classList.remove("is-vision-peek");
+        if (isVisionStackMode()) {
+          syncVisionDockChrome(el);
+        } else {
+          applyVisionRailPref(el);
+        }
+      });
+    };
+    if (visionStackMql.addEventListener) visionStackMql.addEventListener("change", onChange);
+    else visionStackMql.addListener?.(onChange);
+  }
 }

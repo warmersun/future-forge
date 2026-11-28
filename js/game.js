@@ -173,6 +173,16 @@ import {
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
 import { createHexWorkshop } from "./hex/hex-workshop.js?v=calm-stage-2";
+import { createPathwayWorkshop } from "./board/pathway-workshop.js?v=ontology-2";
+import {
+  isPathwayBoard,
+  migrateToPathwayBoard,
+  projectToTiles,
+  effectiveTiming,
+  boardHolds as pathwayBoardHolds,
+  isImpactRolePending,
+  pathwayContentFingerprint,
+} from "./board/pathway-model.js";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=calm-stage-1";
 import {
   boardHolds,
@@ -180,6 +190,7 @@ import {
   techIdsFromBoard,
   placedTechEconomy,
   stackPlacementPlan,
+  stackBatchPlacementGate,
   creditedTechIdsFromBoard,
   techIdsWithUnplacedInventions,
   cloneBoard,
@@ -258,20 +269,16 @@ import {
   simSliceFromState,
   applySimSliceToState,
 } from "./sim/actions.js";
-import { applyThinkingAiCharge, thinkingAiApCost } from "./sim/ai-tax.js";
 import {
   techCost as techCostRaw,
+  isHeavyTechCost,
+  aiMoveCost,
+  legacyWalletCaps,
   deployActionCost,
   scaleActionCost,
   pathwayEaseGrant,
   clonePathwayEasePaid,
 } from "./sim/economy.js";
-import {
-  describeMarketEffects,
-  marketAffectsTech,
-  cloneMarketNews,
-  marketNewsImagePath,
-} from "./sim/market-news.js";
 import {
   bulletinHighlight,
   foresightForStack,
@@ -336,6 +343,9 @@ import {
   paintQuestBriefing,
   paintQuestJob,
   resetQuestBriefing,
+  setBriefingDismissed,
+  hasQuestBriefing,
+  replayQuestBriefing,
 } from "./briefing-ui.js?v=calm-stage-2";
 import {
   WORKSHOP_STAGES,
@@ -380,6 +390,8 @@ import {
   isTechDrawerMode,
   isTechDrawerOpen,
   isCoInventorTabMode,
+  isVisionStackMode,
+  revealVisionPanel,
   CO_TAB_MQ,
 } from "./tech-drawer.js";
 import {
@@ -410,12 +422,6 @@ import { deriveInventPhase } from "./sim/invent-phase.js";
 import { featuresForPlayMode, forgetLegacySparkKey } from "./sim/play-mode.js";
 import { splitTray, whyHere, capabilityLine, pickTechsForCrisis, spotlightAdvanceForAi } from "./tech-why.js";
 import { termHtml, bindGlossaryTaps } from "./glossary.js";
-import {
-  resolveConceptCard,
-  conceptById,
-  readMutedConcepts,
-  setConceptMuted,
-} from "./concept-cards.js";
 
 /** Hotseat session bridged into solo workshop / challenge / deploy */
 const hotseatBridge = createHotseatBridge();
@@ -437,49 +443,60 @@ function mpBridge() {
 }
 
 /**
- * End-turn button copy: rooms never say "Pass device".
+ * End-turn button copy (unified "End turn →" in multiplayer rooms & hotseat).
  * @returns {string}
  */
 function endTurnButtonLabel() {
-  // Prefer body class (set as soon as room play starts) over bridge races
   if (
     isOnlineRoomMp() ||
     document.body.classList.contains("mp-room") ||
-    state.mp?.mode === "room"
+    state.mp?.mode === "room" ||
+    hotseatBridge.isHotseat() ||
+    document.body.classList.contains("mp-hotseat") ||
+    state.mp?.mode === "hotseat"
   ) {
     return "End turn →";
-  }
-  if (hotseatBridge.isHotseat() || document.body.classList.contains("mp-hotseat")) {
-    return "Pass device →";
   }
   return "End turn";
 }
 
 /**
- * Keep End turn / Pass device chrome consistent (rooms never show Pass device).
+ * Keep End turn chrome consistent across online rooms and hotseat.
  */
 function applyEndTurnChrome() {
   const room = isOnlineRoomMp() || document.body.classList.contains("mp-room");
   const hotseat = !room && (hotseatBridge.isHotseat() || document.body.classList.contains("mp-hotseat"));
+  const mp = room || hotseat;
   const label = endTurnButtonLabel();
   for (const sel of ["#btn-end-turn", "#btn-challenge-end-turn"]) {
     const el = $(sel);
     if (!el) continue;
-    // Always rewrite label so stale "Pass device" cannot stick after room entry
     if (!el.hidden) el.textContent = label;
-    else if (room) el.textContent = "End turn →";
+    else if (mp) el.textContent = "End turn →";
   }
-  const passDev = $("#btn-mp-pass-device");
-  if (passDev) {
-    if (room || !hotseat) {
-      passDev.hidden = true;
-      passDev.setAttribute("hidden", "");
-      passDev.style.display = "none";
+  const mpEndBtn = $("#btn-mp-workshop-end-turn");
+  if (mpEndBtn) {
+    if (!mp) {
+      mpEndBtn.hidden = true;
+      mpEndBtn.setAttribute("hidden", "");
+      mpEndBtn.style.display = "none";
+      mpEndBtn.classList.remove("is-moves-empty");
     } else {
-      passDev.hidden = false;
-      passDev.removeAttribute("hidden");
-      passDev.style.display = "";
-      passDev.textContent = "Pass device →";
+      mpEndBtn.hidden = false;
+      mpEndBtn.removeAttribute("hidden");
+      mpEndBtn.style.display = "";
+      mpEndBtn.textContent = "End turn →";
+      const b = mpBridge();
+      const myTurn = !b || Boolean(b.isMyTurn?.());
+      const busy = isInventActionBusy() || isChallengeCombatBlocking() || isMpTurnGateBlocking();
+      mpEndBtn.disabled = !myTurn || busy;
+      mpEndBtn.title = !myTurn
+        ? "Not your turn — wait for the active inventor"
+        : busy
+          ? inventActionBusyReason()
+          : "End your turn and pass to the next inventor (refills Moves)";
+      const movesEmpty = apEnabled() && myTurn && !busy && getSpendableAp() <= 0;
+      mpEndBtn.classList.toggle("is-moves-empty", movesEmpty);
     }
   }
   // Never leave body in both modes
@@ -513,15 +530,16 @@ function mpFriendlyError(err) {
     not_in_challenge:
       "Not mid-Challenge — combat actions only while facing a challenger on your invent.",
     cannot_enter_challenge: "Cannot enter Challenge on this invent right now.",
-    no_ap: "Not enough AP for that action.",
-    no_budget: "Not enough Budget for that action.",
+    no_ap: "No Moves left this turn — advance the year or end your turn.",
+    no_budget: "Not enough Budget capacity — remove a pathway to free Budget, or ease a crisis.",
+    no_will: "Not enough Goodwill capacity — Lobby or clear a roadblock to grow Goodwill.",
     rules_full: "Too many local rules on the books.",
     rule_missing: "That rule is no longer on the books.",
     rule_empty_label: "Name the rule first.",
     rule_bad_kind: "Pick a regulation, law, policy, or ban.",
     no_target: "Could not find that invent.",
     target_abandoned: "That invent was abandoned.",
-    abandoned: "You abandoned your invent — help others or Wait.",
+    abandoned: "You abandoned your invent — help others or jump the year.",
     race_over: "The race is over.",
     run_over: "This run is over.",
     field_locked: "Someone else is editing that field.",
@@ -529,12 +547,10 @@ function mpFriendlyError(err) {
     player_session_quota: "Session AI quota reached.",
     room_quota: "Room AI budget exhausted.",
     pose_judge_busy: "Another pose/judge is in flight.",
-    end_turn_noop: "Do something this turn first (write, tech, Pilot/Scale, or Wait).",
     not_connected: "Not connected to the room.",
-    wait_once: "You already Waited this seat-turn.",
-    wait_blocked_phase: "Cannot Wait during Challenge — finish or End turn first.",
+    wait_blocked_phase: "Finish or leave Challenge before jumping the year.",
     wait_own_invent_only:
-      "Wait is only for your own invent — switch to your seat tab first (not while helping someone else).",
+      "Time jumps are for your own invent — switch to your seat tab first.",
   };
   return map[code] || code;
 }
@@ -631,10 +647,6 @@ const state = {
   challengeVisionBeat: null,
   lastNews: "",
   waitReport: "",
-  /** @type {import("./sim/market-news.js").MarketNews | null} */
-  marketNews: null,
-  /** Last market news id we already showed in the modal */
-  marketNewsShownId: null,
   outcome: null,
   runReport: null,
   aiBusy: false,
@@ -669,22 +681,21 @@ const state = {
    * Push on select, remove on deselect; Learn modal shows this order.
    */
   learnOrder: [],
-  // G1 action economy
+  // Quiet Guardrails: Moves (internal ap/apMax) + reversible Budget & Goodwill capacity
   ap: GAME.apMax ?? 3,
   apMax: GAME.apMax ?? 3,
   apSpentThisTurn: 0,
-  aiTaxThisTurn: false,
-  writeCommitsThisTurn: 0,
-  learnOpenedThisTurn: false,
   turnPhase: "act",
   pendingAi: null,
   lastWriteSnapshot: { name: "", how: "", impact: "" },
-  // G2 budget + political will (never state.trust)
+  budgetCap: GAME.startingBudget ?? 5,
+  willCap: GAME.startingWill ?? 3,
   budget: GAME.startingBudget ?? 5,
   will: GAME.startingWill ?? 3,
+  rdCount: 0,
+  freeTechIds: [],
   pathwayEasePaid: {},
   rules: [],
-  techAddedThisTurn: {},
   /** G3 multi-encounter scrutiny (null when essay mode) */
   scrutiny: null,
   elegancePivotPenalty: false,
@@ -801,34 +812,26 @@ function coInventorAiTutorContext() {
   return bindPackageMediaUrls(raw, roots);
 }
 
-/** AP to reserve for invent co-inventor panel; 0 while tutoring, or after the season tax is paid. */
+/** Thinking with the co-inventor is always free (0 Moves). */
 function coInventorReserveAp() {
-  if (!apEnabled()) return 0;
-  if (isLearningTutorSessionActive()) return 0;
-  return thinkingAiApCost(state, "chat", 1);
+  return 0;
 }
 
 function coInventorHelpSubtitle({ onChallenge = false, learning = false, tutorOn = false } = {}) {
   if (tutorOn) {
-    return "Free AP · one idea at a time — stack picks and fielding still cost resources";
+    return "Tutor mode · one idea at a time — ask anything freely";
   }
   if (learning) {
-    return thinkingAiApCost(state, "chat", 1) > 0
-      ? "Co-inventor mode · first ask this turn 1 AP, then free — Resume tutoring anytime"
-      : "Co-inventor mode · more help this turn is free — Resume tutoring anytime";
+    return "Co-inventor mode · brainstorming is always free — Resume tutoring anytime";
   }
   if (onChallenge) {
-    return thinkingAiApCost(state, "coach-challenge", 1) > 0
-      ? "First AI ask this turn costs 1 Attention; more help this turn is free"
-      : "More co-inventor help this turn is free";
+    return "Coach, draft, or ask freely — thinking with AI never spends a Move";
   }
-  return thinkingAiApCost(state, "chat", 1) > 0
-    ? "First AI ask this turn costs 1 Attention; more help this turn is free"
-    : "More co-inventor help this turn is free. Placing tech still costs Attention.";
+  return "Brainstorming, lenses, and drafting are always free";
 }
 
 /**
- * End free tutor session (learner or AI). Learning quests can Resume.
+ * End tutor session (learner or AI). Learning quests can Resume.
  * @param {"learner"|"ai"} [who]
  */
 function endTutorSession(who = "learner") {
@@ -840,9 +843,9 @@ function endTutorSession(who = "learner") {
   syncCoInventorTutorUi();
   const msg =
     who === "ai"
-      ? "Tutoring ended — co-inventor chat costs **1 AP** for the first ask this turn, then free. **Resume tutoring** anytime on this lesson (your tutor chat is kept)."
-      : "Tutoring ended — first co-inventor ask this turn costs **1 AP**, then free. **Resume tutoring** anytime; your tutor chat is kept separately.";
-  flashToast(who === "ai" ? "Tutor signed off — AP applies again" : "Tutoring ended — AP applies again");
+      ? "Tutoring ended — co-inventor mode is active. **Resume tutoring** anytime on this lesson (your tutor chat is kept)."
+      : "Tutoring ended — co-inventor mode is active. **Resume tutoring** anytime; your tutor chat is kept separately.";
+  flashToast(who === "ai" ? "Tutor signed off — co-inventor active" : "Tutoring ended — co-inventor active");
   // Local note only on the co-inventor lane (active after switch)
   if (state.coInventor) {
     state.coInventor.pushAssistant(
@@ -864,13 +867,13 @@ function resumeTutorSession() {
   state.tutorSessionActive = true;
   // Swaps back to tutor chat history
   syncCoInventorTutorUi();
-  flashToast("Tutoring resumed — free AP");
+  flashToast("Tutoring resumed");
   // Only seed a resume line if tutor history was empty (avoid spam every toggle)
   if (state.coInventor && state.coInventor.historyLength?.("tutor") === 0) {
     state.coInventor.pushAssistant(
       {
         message:
-          "Tutoring is **on** — free AP, one short idea at a time. Stack picks and fielding still cost resources. Ask questions anytime; say when you want to invent on your own.",
+          "Tutoring is **on** — chat and ideas are always free, one short thought at a time. Ask questions anytime; say when you want to invent on your own.",
         proposals: emptyProps(),
         teaching: [],
       },
@@ -1108,6 +1111,9 @@ function syncRoomResourcesFromSnapshot() {
     if (!f) return;
     noteSnapshotResources(f);
     if (f.apMax != null) state.apMax = Number(f.apMax) || state.apMax;
+    if (f.budgetCap != null) state.budgetCap = Number(f.budgetCap);
+    if (f.willCap != null) state.willCap = Number(f.willCap);
+    if (f.rdCount != null) state.rdCount = Number(f.rdCount) || 0;
     state.ap = getSpendableAp();
     state.budget = getSpendableBudget();
     state.will = getSpendableWill();
@@ -1118,7 +1124,6 @@ function syncRoomResourcesFromSnapshot() {
           ? Math.max(snapSpent, state.apSpentThisTurn || 0, snapSpent + pendingSpend.ap)
           : snapSpent;
     }
-    if (f.aiTaxThisTurn != null) state.aiTaxThisTurn = Boolean(f.aiTaxThisTurn);
   } catch {
     /* ignore */
   }
@@ -1151,22 +1156,16 @@ function techsForTray() {
   return [...TECHS];
 }
 
-/** Active market card (solo state or shared place in multiplayer). */
-function currentMarketNews() {
-  return state.marketNews || null;
-}
-
 /**
- * emTech cost including active market news (Budget/Will only; AP always 1).
+ * emTech capacity cost (Budget / Goodwill allocated while on board; 1 Move to commit).
  * @param {object} t
  */
 function techCost(t) {
-  return techCostRaw(t, { market: currentMarketNews() });
+  return techCostRaw(t);
 }
 
 /**
- * Can the local player pay to add this emTech right now?
- * (AP + Budget + Will — never optimistically select when false.)
+ * Can the local player commit this emTech right now?
  * @param {object|null|undefined} t
  * @returns {{ ok: boolean, error?: "no_ap"|"no_budget"|"no_will" }}
  */
@@ -1185,22 +1184,28 @@ function canAffordTech(t) {
 function flashUnaffordableTech(id, error) {
   const t = techById(id);
   const cost = techCost(t);
+  const mp = Boolean(mpBridge() || state.mp);
   if (error === "no_ap") {
-    flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
+    flashToast(
+      mp
+        ? "No Moves left this turn — click End turn → to pass."
+        : "No Moves left this year — click +1 yr → to continue.",
+      { resource: "ap" }
+    );
   } else if (error === "no_budget") {
     flashToast(
-      `Need ${cost.budget ?? 1}$ Budget to add ${t?.name || "this"} (you have ${state.budget ?? 0}$).`,
+      `Need ${cost.budget ?? 1} Budget for ${t?.name || "this"} (${state.budget ?? 0} free). Remove a pathway to free Budget, or ease a crisis.`,
       { resource: "budget" }
     );
   } else if (error === "no_will") {
     flashToast(
-      `Need ${cost.will ?? 1} Support to add ${t?.name || "this"} (you have ${state.will ?? 0}).`,
+      `Need ${cost.will ?? 1} Goodwill for ${t?.name || "this"} (${state.will ?? 0} free). Lobby or clear a roadblock to grow Goodwill.`,
       { resource: "will" }
     );
   } else if (error === "stack full" || error === "stack_full") {
-    flashToast(`Stack full (${stackCapLimit()}). Lift a tile off the board first.`);
+    flashToast(`Stack full (${stackCapLimit()}). Remove a pathway first.`);
   } else {
-    flashToast("Not enough resources to add this tech.");
+    flashToast("Not enough capacity to add this tech.");
   }
 }
 
@@ -1224,6 +1229,24 @@ function canPlaceInventionOnStack(tile) {
   if (!plan.charge) return { ok: true };
   const tech = techById(tile.techId);
   return canAffordTech(tech);
+}
+
+/** Several new tiles share one budget, one will pool, and one stack cap. */
+function canPlaceInventionsOnStack(tiles) {
+  return stackBatchPlacementGate(tiles, {
+    selectedTechIds: state.selectedTechIds,
+    board: state.hexBoard,
+    stackCap: stackCapLimit(),
+    apEnabled: apEnabled(),
+    budgetWillEnabled: budgetWillEnabled(),
+    spendableAp: getSpendableAp(),
+    spendableBudget: getSpendableBudget(),
+    spendableWill: getSpendableWill(),
+    costFor: (id) => {
+      const tech = techById(id);
+      return tech ? techCost(tech) : null;
+    },
+  });
 }
 
 function paintAfterStackReconcile() {
@@ -1274,10 +1297,8 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
       paintAfterStackReconcile();
       return { ok: true };
     }
-    const targetSeatId = roomBridge.getViewId?.() || roomBridge.myId?.();
     const checkpoint = {
       selectedTechIds: [...prev],
-      techAddedThisTurn: { ...(state.techAddedThisTurn || {}) },
       apSpentThisTurn: state.apSpentThisTurn || 0,
       pending: { ...pendingSpend },
     };
@@ -1285,7 +1306,6 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
       pendingSpend.ap = checkpoint.pending.ap;
       pendingSpend.budget = checkpoint.pending.budget;
       pendingSpend.will = checkpoint.pending.will;
-      state.techAddedThisTurn = checkpoint.techAddedThisTurn;
       state.apSpentThisTurn = checkpoint.apSpentThisTurn;
       state.selectedTechIds = checkpoint.selectedTechIds;
       getSpendableAp();
@@ -1294,15 +1314,16 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
     };
     for (const id of prev) {
       if (wantedSet.has(id)) continue;
-      const key = targetSeatId ? `${targetSeatId}:${id}` : id;
-      const rec = state.techAddedThisTurn?.[key] || state.techAddedThisTurn?.[id];
-      if (rec && budgetWillEnabled()) {
-        const cost = rec.cost || rec;
-        const refund = Math.floor((Number(cost.budget) || 0) / 2);
-        pendingSpend.budget -= refund;
-        if (state.techAddedThisTurn) {
-          delete state.techAddedThisTurn[key];
-          delete state.techAddedThisTurn[id];
+      // 100% reversible allocated capacity: removing any paid tech frees its full Budget & Goodwill.
+      const wasPaid = prevPaid.has(id) || !prevCollector.has(id);
+      if (wasPaid && budgetWillEnabled()) {
+        const tech = techById(id);
+        if (tech) {
+          const cost = techCost(tech);
+          pendingSpend.budget -= cost.budget || 0;
+          pendingSpend.will -= cost.will || 0;
+          getSpendableBudget();
+          getSpendableWill();
         }
       }
       removeFromLearnOrder(id);
@@ -1333,14 +1354,6 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
         pendingSpend.will += cost.will || 0;
         getSpendableBudget();
         getSpendableWill();
-        if (!state.techAddedThisTurn) state.techAddedThisTurn = {};
-        if (targetSeatId) {
-          state.techAddedThisTurn[`${targetSeatId}:${id}`] = {
-            cost,
-            targetSeatId,
-            techId: id,
-          };
-        }
       }
       if (!prev.includes(id)) pushLearnOrder(id);
     }
@@ -1350,6 +1363,23 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
   }
 
   if (hotseatBridge.isHotseat()) {
+    const sessionSnap = hotseatBridge.getSession?.() ?? null;
+    const learnSnap = [...(state.learnOrder || [])];
+    let mutated = false;
+    // A later tech must not keep an earlier charge when this reconcile is discarded.
+    const undoHotseat = (error, techId) => {
+      if (mutated && sessionSnap) {
+        hotseatBridge.setSession(sessionSnap);
+        hotseatBridge.hydrateSoloState(state, {
+          global: state.global,
+          keepLocalHexBoard: true,
+        });
+        state.learnOrder = learnSnap;
+        paintAfterStackReconcile();
+      }
+      flashUnaffordableTech(techId, error);
+      return { ok: false, error, techId };
+    };
     for (const id of prev) {
       if (wantedSet.has(id)) continue;
       if (!hotseatBridge.canEditStack?.()) continue;
@@ -1357,6 +1387,7 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
       if (r.ok) {
         hotseatBridge.setSession(r.session);
         removeFromLearnOrder(id);
+        mutated = true;
       }
     }
     const viewStackIds = () =>
@@ -1368,7 +1399,7 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
       const freeing = freeIds.includes(id);
       if (!charging && !freeing) continue;
       if (!hotseatBridge.canEditStack?.()) {
-        return { ok: false, error: "stack_locked", techId: id };
+        return undoHotseat("stack_locked", id);
       }
       const onView = viewStackIds().includes(id);
       const r = freeing
@@ -1378,11 +1409,11 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
         : hotseatBridge.layerTechOnView(id, techById(id), onView ? { bill: true } : {});
       if (!r.ok) {
         if (r.error === "already_on_stack") continue;
-        flashUnaffordableTech(id, r.error);
-        return { ok: false, error: r.error, techId: id };
+        return undoHotseat(r.error, id);
       }
       if (r.session) hotseatBridge.setSession(r.session);
       if (!prev.includes(id)) pushLearnOrder(id);
+      mutated = true;
     }
     hotseatBridge.hydrateSoloState(state, {
       global: state.global,
@@ -1393,10 +1424,25 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
     return { ok: true };
   }
 
+  const simSnap = simSliceFromState(state);
+  const learnSnap = [...(state.learnOrder || [])];
+  let soloMutated = false;
+  const undoSolo = (error, techId) => {
+    if (soloMutated) {
+      applySimSliceToState(state, simSnap);
+      state.learnOrder = learnSnap;
+      paintAfterStackReconcile();
+    }
+    flashUnaffordableTech(techId, error);
+    return { ok: false, error, techId };
+  };
   for (const id of prev) {
     if (wantedSet.has(id)) continue;
     const r = dispatchSim("deselect_tech", { techId: id });
-    if (r.ok) removeFromLearnOrder(id);
+    if (r.ok) {
+      removeFromLearnOrder(id);
+      soloMutated = true;
+    }
   }
   for (const id of wanted) {
     const charging = chargeSet.has(id);
@@ -1409,11 +1455,9 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
       free: freeing,
       bill: charging && already,
     });
-    if (!r.ok) {
-      flashUnaffordableTech(id, r.error);
-      return { ok: false, error: r.error, techId: id };
-    }
+    if (!r.ok) return undoSolo(r.error, id);
     if (!state.learnOrder.includes(id)) pushLearnOrder(id);
+    soloMutated = true;
   }
   state.aiTiming = null;
   scheduleAiTimingAssess();
@@ -1435,12 +1479,6 @@ function dispatchSim(type, payload = {}) {
   if (result.ok) {
     applySimSliceToState(state, result.sim);
     mpSyncFromSolo();
-    // 0$ is a floor (cannot buy). Do not collapse mid-turn — a pending
-    // pathway score can still pay Budget back.
-    const newsEv = (result.events || []).find((e) => e.type === "market_news");
-    if (newsEv?.marketNews) {
-      queueMarketNewsModal(newsEv.marketNews, { force: true });
-    }
     // Year tick: store bulletin + pulse HUD year (no auto popup — click year to read)
     const yearEv = (result.events || []).find((e) => e.type === "year_tick");
     if (yearEv?.bulletin) {
@@ -1651,7 +1689,6 @@ function mpHydrateAndRender(opts = {}) {
     const drafts = captureFocusedInventDrafts();
     const yearBefore = state.year;
     const viewBefore = state.mp?.viewSeatId;
-    const marketBeforeId = state.marketNews?.id || null;
     prepareStoryHydration(b);
     b.hydrateSoloState(state, {
       global: state.global,
@@ -1665,10 +1702,6 @@ function mpHydrateAndRender(opts = {}) {
       onInventYearChangedForTiming();
     }
     flushStoryEdits();
-    // Multiplayer: full seat-round wrap ships new market news on the place
-    if (state.marketNews?.id && state.marketNews.id !== marketBeforeId) {
-      queueMarketNewsModal(state.marketNews, { force: true });
-    }
     renderMpChrome();
     if (state.screen === "workshop") renderWorkshop();
     else if (state.screen === "deploy") {
@@ -1858,7 +1891,9 @@ function foresightPoolOpts(extra = {}) {
 
 function ensureHexWorkshop() {
   if (hexWorkshop) return hexWorkshop;
-  hexWorkshop = createHexWorkshop({
+  const ontology = typeof document !== "undefined" && document.querySelector("#ontology-board");
+  const factory = ontology ? createPathwayWorkshop : createHexWorkshop;
+  hexWorkshop = factory({
     $: (sel) => $(sel),
     isIntroductionHidden: (id) => crisisIntroduction.isHidden(id),
     getBoard: () => state.hexBoard || createEmptyBoard(),
@@ -1878,6 +1913,30 @@ function ensureHexWorkshop() {
     getPlace: () => state.mission?.place || "",
     getMissionTitle: () => state.mission?.title || "",
     getMission: () => state.mission || null,
+    isTutorial: () => Boolean(state.tutorialRun),
+    getPredictions: () => activePinnedBank()?.predictions || [],
+    getTrends: (techId) =>
+      mergeTrendsForStack({
+        catalog: state.hostedTrends || [],
+        questTrends: state.mission?.trends || [],
+        spotlightTrendIds: state.mission?.spotlightTrends || [],
+        selectedTechIds: techId
+          ? [String(techId)]
+          : state.selectedTechIds || [],
+        spotlightTechId: state.mission?.spotlight?.techId || null,
+        limit: techId ? 32 : 16,
+      }),
+    openLearnTech: (techId) => {
+      if (techId) openTechModal(String(techId));
+    },
+    openCoInventor: () => {
+      revealVisionPanel(workshopLayoutFor(null));
+      if (isCoInventorTabMode() || visionPaneAway()) setSideTab("coinventor");
+      else setCoInventorCollapsed(false);
+      ensureCoInventor();
+      $("#co-inventor-root")?.querySelector?.("textarea, input")?.focus?.();
+    },
+    enforceWorlds: () => GAME.enforceWorldDocking !== false,
     getRunWorld: () => state.runWorld,
     getRunId: () => state.cloudRunId || state.runWorld,
     getRequestIdentity: () => !roomBridge.isRoom() && hotseatBridge.isHotseat()
@@ -1911,6 +1970,7 @@ function ensureHexWorkshop() {
       state.selectedTechIds = ids;
     },
     canPlaceInvention: (tile) => canPlaceInventionOnStack(tile),
+    canPlaceInventions: (tiles) => canPlaceInventionsOnStack(tiles),
     isSignedIn: () => isClerkSignedIn(),
     onSignedIn: (fn) => onClerkSession(fn),
     listCollectorCards: () => listCollectorCards(),
@@ -1950,6 +2010,7 @@ function ensureHexWorkshop() {
       return fetchIdeaImage({
         id: opts.ideaId,
         ideaId: opts.ideaId,
+        artId: opts.artId,
         techId: opts.techId,
         imagePrompt: opts.imagePrompt,
         title: opts.ideaId,
@@ -1966,23 +2027,29 @@ function ensureHexWorkshop() {
       applyEndTurnChrome?.();
     },
     playChallengerReel: (opts) => playChallengerReel(opts),
-    spendIdeaAp: () => {
-      if (!apEnabled()) return { ok: true };
-      return spendContributionAp("idea-sparks");
-    },
+    spendIdeaAp: () => ({ ok: true }),
     spendChallengeAp: () => {
       if (!apEnabled()) return { ok: true };
-      return spendContributionAp("judge-challenge");
+      const pay = spendContributionAp("judge-challenge");
+      if (pay?.ok && !pay.roomPaid && state.pendingAi) {
+        dispatchSim("resolve_ai");
+        renderHud();
+      }
+      return pay;
     },
-    spendFirstSummonAp: () => spendFirstSummonAp(),
-    refundFirstSummonAp: () => refundFirstSummonAp(),
+    spendFirstSummonAp: () => ({ ok: true }),
+    refundFirstSummonAp: () => {},
     apEnabled: () => apEnabled(),
     budgetWillEnabled: () => budgetWillEnabled(),
+    isMultiplayer: () => Boolean(mpBridge() || state.mp),
+    getMovesLeft: () => (apEnabled() ? getSpendableAp() : null),
+    advanceYear: (years) => advanceBoardYear(years),
     spendRdMint: () => spendRdMint(),
+    syncRdCount: (count) => syncRdCountFromBoard(count),
     spendArgumentAp: () => {
       if (!apEnabled()) return { ok: true };
       const pay = spendContributionAp("fact-check-argument");
-      // Settle now so the 1 AP sticks and the turn is not left in ai_pending.
+      // Settle now so the 1 Move sticks and the turn is not left in ai_pending.
       if (pay?.ok && !pay.roomPaid && state.pendingAi) {
         dispatchSim("resolve_ai");
         renderHud();
@@ -2196,7 +2263,7 @@ function softPersistInventDrafts() {
 }
 
 const MP_LOCK_CONTROL_IDS = [
-  "#btn-mp-pass-device",
+  "#btn-mp-workshop-end-turn",
 
   "#btn-end-turn",
   "#btn-challenge-end-turn",
@@ -2379,20 +2446,17 @@ function syncInventActionButtons() {
       lobbyBtn.hidden = false;
       lobbyBtn.removeAttribute("hidden");
       const spendableAp = apEnabled() ? getSpendableAp() : 1;
-      const spendableBudget = getSpendableBudget();
-      const can =
-        !spectator && !busy && spendableAp >= 1 && spendableBudget >= 1;
+      const can = !spectator && !busy && spendableAp >= 1;
       lobbyBtn.disabled = !can;
       if (spectator) lobbyBtn.title = spectatorReason;
       else if (busy) lobbyBtn.title = busyReason;
-      else if (spendableBudget < 1) lobbyBtn.title = "Need 1 Budget to lobby";
       else if (apEnabled() && spendableAp < 1)
-        lobbyBtn.title = "Need 1 AP to lobby";
-      else lobbyBtn.title = "Write a local rule — 1 AP + 1 Budget, +1 Support. Does not drop crisis meters.";
+        lobbyBtn.title = "No Moves left this turn — advance the year or end your turn";
+      else lobbyBtn.title = "Write a local rule — uses 1 Move, builds +1 Goodwill.";
     }
   }
 
-  // —— Look Ahead → Wait +2 years confirm (always available in Spark; crisis clock) ——
+  // —— Look Ahead → Wait +2 years confirm ——
   const waitBtn = $("#btn-wait");
   if (waitBtn) {
     if (spectator) {
@@ -2405,15 +2469,13 @@ function syncInventActionButtons() {
         ? busyReason
         : !waitGate.ok
           ? mpFriendlyError(waitGate.error)
-          : "Look Ahead — capability trends for your stack, then confirm Wait +2 years (ends seat-turn; others keep their year)";
+          : "Look Ahead — preview trends, then jump your invent +2 years (does not end your turn)";
     } else if (busy) {
       waitBtn.disabled = true;
       waitBtn.title = busyReason;
     } else {
       waitBtn.disabled = false;
-      waitBtn.title = apEnabled()
-        ? "Look Ahead — see compounding trends, then confirm Wait +2 years (raises crisis; unspent AP burned)"
-        : "Look Ahead — see compounding trends, then confirm Wait +2 years (raises crisis)";
+      waitBtn.title = "Look Ahead — see compounding trends, then jump +2 years (refills Moves; crises rise)";
     }
   }
 
@@ -3001,10 +3063,10 @@ function applyWrapYearPressureToHex() {
 }
 
 function mpPassDevice() {
-  // Online rooms never use Pass device — only hotseat
+  // Online rooms never use hotseat passDevice
   if (!hotseatBridge.isHotseat()) {
     if (roomBridge.isRoom() || state.mp?.mode === "room") {
-      flashToast("Use End turn — this is an online room, not hotseat.");
+      endTurn();
     }
     return;
   }
@@ -3015,40 +3077,27 @@ function mpPassDevice() {
   mpSyncFromSolo();
   const r = hotseatBridge.passDevice();
   if (!r.ok) {
-    flashToast(
-      r.error === "end_turn_noop"
-        ? "Do something this turn first (or Wait)."
-        : r.error || "Cannot pass"
-    );
+    flashToast(mpFriendlyError(r.error) || "Cannot end turn");
     return;
   }
   appendCaptainLog({
     kind: "action",
     title: "Ended turn",
-    detail: "Passed the device.",
+    detail: "Passed the turn to the next inventor.",
   });
   showScreen("workshop");
-  // Reset so maybeNotifyMpTurnStart always fires for the new seat
   state.mpLastActiveSeatId = null;
-  state.mpTurnNoticePrimed = true; // avoid double first-join path
+  state.mpTurnNoticePrimed = true;
   const nextId = hotseatBridge.getActiveId();
-  state.mpLastActiveSeatId = null; // force change detection
+  state.mpLastActiveSeatId = null;
 
-  // Round wrap → market + year bulletins first (must run before turn popup)
-  const marketEv = (r.events || []).find((e) => e?.type === "market_news");
-  if (marketEv?.marketNews) {
-    queueMarketNewsModal(marketEv.marketNews, { force: true });
-  }
   const yearEv = (r.events || []).find((e) => e?.type === "year_tick");
   if (yearEv?.bulletin) {
     noteYearAdvance(yearEv.bulletin);
   }
 
-  mpHydrateAndRender({
-    skipTurnNotice: Boolean(marketEv?.marketNews),
-  });
+  mpHydrateAndRender();
   if (yearEv) applyWrapYearPressureToHex();
-  // Turn notice after market (or immediately if no market card)
   const nextName = r.seat?.displayName || hotseatBridge.activeSeat()?.displayName || "next";
   if (nextId) {
     state.mpLastActiveSeatId = nextId;
@@ -3231,11 +3280,6 @@ function openRoomQuestOutcomeIfEnded(client, evt) {
 function handleRoomPlayEvent(client, evt) {
   const place = client.snapshot?.place || client.snapshot?.mp?.place;
   const eventsEarly = evt?.events || [];
-  // Round market + year bulletins — fire as soon as the seat-wrap event lands
-  const marketEv = eventsEarly.find((e) => e?.type === "market_news");
-  if (marketEv?.marketNews) {
-    queueMarketNewsModal(marketEv.marketNews, { force: true });
-  }
   const yearEv = eventsEarly.find((e) => e?.type === "year_tick");
   if (yearEv?.bulletin) {
     noteYearAdvance(yearEv.bulletin);
@@ -3816,7 +3860,7 @@ function leaveRoomPlay(opts = {}) {
     const endBtn = $("#btn-end-turn");
     if (endBtn) {
       endBtn.textContent = "End turn";
-      endBtn.title = "Refill AP and advance calendar +1 year (crisis meters unchanged)";
+      endBtn.title = "Advance calendar +1 year and refill Moves";
     }
     ["#invention-name", "#invention-how", "#invention-impact"].forEach((sel) => {
       const el = $(sel);
@@ -3852,12 +3896,12 @@ function leaveHotseat() {
     const endBtn = $("#btn-end-turn");
     if (endBtn) {
       endBtn.textContent = "End turn";
-      endBtn.title = "Refill AP and advance calendar +1 year (crisis meters unchanged)";
+      endBtn.title = "Advance calendar +1 year and refill Moves";
     }
     const chEnd = $("#btn-challenge-end-turn");
     if (chEnd) {
       chEnd.textContent = "End turn";
-      chEnd.title = "Refill AP and advance calendar +1 year (crisis meters unchanged)";
+      chEnd.title = "Advance calendar +1 year and refill Moves";
     }
     ["#invention-name", "#invention-how", "#invention-impact"].forEach((sel) => {
       const el = $(sel);
@@ -3879,13 +3923,13 @@ function pathwayEaseToast(roles, amount) {
   const labels = { local: "local crisis", global: "root cause", support: "support" };
   const names = (roles || []).map((r) => labels[r] || r);
   if (amount === 1) {
-    return `Pathway eased the ${names[0] || "crisis"} — +1$ Budget.`;
+    return `Pathway eased the ${names[0] || "crisis"} — +1 Budget capacity.`;
   }
-  return `Pathway eased ${names.join(" and ")} — +${amount}$ Budget.`;
+  return `Pathway eased ${names.join(" and ")} — +${amount} Budget capacity.`;
 }
 
 /**
- * +1 Budget per crisis role a settled pathway newly eases (once per role).
+ * +1 Budget capacity per crisis role a settled pathway newly eases (once per role).
  * Solo/hotseat: applyAction. Rooms: board_commit is authority; toast here.
  */
 function grantPathwayEase(opts = {}) {
@@ -3902,8 +3946,12 @@ function grantPathwayEase(opts = {}) {
     if (!mine) return preview;
     state.pathwayEasePaid = preview.paid;
     if (preview.amount > 0) {
-      const cap = GAME.maxBudget ?? 10;
-      state.budget = Math.min(cap, (state.budget ?? 0) + preview.amount);
+      const maxCap = GAME.maxBudget ?? 10;
+      const prevCap = state.budgetCap ?? GAME.startingBudget ?? 5;
+      const nextCap = Math.min(maxCap, prevCap + preview.amount);
+      const gain = Math.max(0, nextCap - prevCap);
+      state.budgetCap = nextCap;
+      state.budget = Math.min(nextCap, (state.budget ?? 0) + gain);
       flashToast(pathwayEaseToast(preview.roles, preview.amount), { resource: "budget" });
       renderHud();
     }
@@ -4081,7 +4129,11 @@ let cloudImportDone = false;
 let cloudDbEnabled = null;
 
 async function listCollectorCards() {
-  const res = await apiFetch("/api/me/cards");
+  const init =
+    typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+      ? { signal: AbortSignal.timeout(12000) }
+      : {};
+  const res = await apiFetch("/api/me/cards", init);
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.ok) {
     throw new Error(data.error || "cards_failed");
@@ -4258,6 +4310,7 @@ function cloudRunStatePayload() {
       inventionHow: state.inventionHow,
       inventionImpact: state.inventionImpact,
       selectedTechIds: [...state.selectedTechIds],
+      freeTechIds: [...(state.freeTechIds || [])],
       learnOrder: [...(state.learnOrder || [])],
       domainFilter: state.domainFilter || "all",
       sideTab: "vision",
@@ -4266,6 +4319,9 @@ function cloudRunStatePayload() {
       pressure: state.pressure,
       ap: state.ap,
       apMax: state.apMax,
+      budgetCap: state.budgetCap,
+      willCap: state.willCap,
+      rdCount: state.rdCount || 0,
       budget: state.budget,
       will: state.will,
       pathwayEasePaid: clonePathwayEasePaid(state.pathwayEasePaid),
@@ -4289,8 +4345,69 @@ function cloudRunStatePayload() {
 }
 
 
+const PATHWAY_MIRROR_PREFIX = "ff.pathwayContinue.v1:";
+
+function saveLocalPathwayBoardMirror(questId, runId, board) {
+  if (!questId || !isPathwayBoard(board) || typeof localStorage === "undefined") return;
+  try {
+    const payload = {
+      questId: String(questId),
+      runId: runId ? String(runId) : null,
+      rev: Number(board.rev) || 0,
+      savedAt: Date.now(),
+      board: boardForWire(board),
+    };
+    localStorage.setItem(`${PATHWAY_MIRROR_PREFIX}${questId}`, JSON.stringify(payload));
+  } catch {
+    /* private mode or storage quota */
+  }
+}
+
+function clearLocalPathwayBoardMirror(questId) {
+  if (!questId || typeof localStorage === "undefined") return;
+  try {
+    localStorage.removeItem(`${PATHWAY_MIRROR_PREFIX}${questId}`);
+  } catch {
+    /* private mode */
+  }
+}
+
+function readLocalPathwayBoardMirror(questId, runId, cloudBoard) {
+  if (!questId || typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(`${PATHWAY_MIRROR_PREFIX}${questId}`);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (!saved || saved.questId !== String(questId) || !isPathwayBoard(saved.board)) return null;
+    const sameRun = Boolean(runId && saved.runId && String(saved.runId) === String(runId));
+    if (isPathwayBoard(cloudBoard)) {
+      if (sameRun && (Number(saved.board.rev) || 0) > (Number(cloudBoard.rev) || 0)) {
+        return saved.board;
+      }
+      return null;
+    }
+    if (sameRun) return saved.board;
+    if (!runId || !saved.runId) {
+      const cloudInvs = Object.values(cloudBoard?.tiles || {})
+        .filter((t) => t?.kind === "invention")
+        .map((t) => t.id);
+      const localTileIds = new Set(Object.keys(saved.board.tiles || {}));
+      if (!cloudInvs.length || cloudInvs.every((id) => localTileIds.has(id))) {
+        return saved.board;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function scheduleCloudRunState() {
-  if (!isClerkSignedIn() || !state.mission?.id) return;
+  if (!state.mission?.id) return;
+  if (isPathwayBoard(state.hexBoard) && !state.tutorialRun) {
+    saveLocalPathwayBoardMirror(state.mission.id, state.cloudRunId, state.hexBoard);
+  }
+  if (!isClerkSignedIn()) return;
   const mission = state.mission;
   clearTimeout(cloudRunStateTimer);
   cloudRunStateTimer = setTimeout(() => {
@@ -4332,7 +4449,7 @@ function scheduleCloudRunState() {
 
 let continueSaveWarned = false;
 
-function applyRestoredPlay(play) {
+function applyRestoredPlay(play, board) {
   if (!play || typeof play !== "object") return;
   if (play.inventionName != null) state.inventionName = String(play.inventionName);
   if (play.inventionHow != null) state.inventionHow = String(play.inventionHow);
@@ -4348,8 +4465,45 @@ function applyRestoredPlay(play) {
   }
   if (play.ap != null) state.ap = play.ap;
   if (play.apMax != null) state.apMax = play.apMax;
+  if (play.rdCount != null) state.rdCount = Math.max(0, Math.floor(Number(play.rdCount) || 0));
+  if (Array.isArray(play.freeTechIds)) {
+    const selected = new Set(state.selectedTechIds);
+    state.freeTechIds = [
+      ...new Set(play.freeTechIds.filter((id) => typeof id === "string" && selected.has(id))),
+    ];
+  } else if (board) {
+    const selected = new Set(state.selectedTechIds);
+    state.freeTechIds = placedTechEconomy(board).collectorOnly.filter((id) => selected.has(id));
+  }
   if (play.budget != null) state.budget = play.budget;
   if (play.will != null) state.will = play.will;
+  const inferBudget = play.budgetCap == null && play.budget != null;
+  const inferWill = play.willCap == null && play.will != null;
+  const inferred =
+    inferBudget || inferWill
+      ? legacyWalletCaps({
+          budget: play.budget,
+          will: play.will,
+          baseBudgetCap: state.budgetCap ?? GAME.startingBudget ?? 5,
+          baseWillCap: state.willCap ?? GAME.startingWill ?? 3,
+          selectedTechIds: state.selectedTechIds,
+          freeTechIds: state.freeTechIds,
+          rdCount: state.rdCount || 0,
+          techById,
+          maxBudget: GAME.maxBudget ?? 10,
+          maxWill: GAME.maxWill ?? 5,
+        })
+      : null;
+  if (play.budgetCap != null) {
+    state.budgetCap = Math.min(GAME.maxBudget ?? 10, Math.max(0, Number(play.budgetCap) || 0));
+  } else if (inferBudget) {
+    state.budgetCap = inferred.budgetCap;
+  }
+  if (play.willCap != null) {
+    state.willCap = Math.min(GAME.maxWill ?? 5, Math.max(0, Number(play.willCap) || 0));
+  } else if (inferWill) {
+    state.willCap = inferred.willCap;
+  }
   if (play.pathwayEasePaid && typeof play.pathwayEasePaid === "object") {
     state.pathwayEasePaid = clonePathwayEasePaid(play.pathwayEasePaid);
   }
@@ -4877,8 +5031,8 @@ function shuffleCopy(arr) {
 
 /**
  * Home CTAs.
- * - Tutorial not done: primary Start tutorial → (Spark); Start a Quest secondary.
- * - Tutorial done: Start tutorial hidden; primary Start a Quest →; Reset tutorial in small text.
+ * Start a Quest stays the catalog door. The quick-try button stays visible
+ * and keeps the 90-second label after the player finishes it once.
  */
 function renderTitleCtas() {
   const start = $("#btn-start");
@@ -4909,10 +5063,10 @@ function renderTitleCtas() {
     const done = readTutorialDone();
     tut.hidden = false;
     tut.removeAttribute("hidden");
-    tut.textContent = done ? "Replay tutorial" : "Tutorial";
+    tut.textContent = done ? "Try the 90-Second Quest again →" : "Try a 90-Second Quest →";
     tut.title = done
-      ? "Walk the Paddy Step Wells Quest again"
-      : "Guided Quest: Clean Water, the Paddy Step Wells";
+      ? "Walk the Paddy Step Wells Quest again. No typing."
+      : "90-second Clean Water quest: the Paddy Step Wells. No typing.";
   }
 }
 
@@ -5961,6 +6115,7 @@ async function refreshHostedTrends(opts = {}) {
     return [];
   } finally {
     syncCapabilityExplorer();
+    if (state.screen === "workshop") hexWorkshop?.paint?.();
   }
 }
 
@@ -7396,13 +7551,6 @@ function openQuestCatalogInspect(entry) {
         ${
           pressureRows
             ? `<p class="muted" style="margin:0.5rem 0 0.25rem">Pressure</p><ul class="quest-dev-list">${pressureRows}</ul>`
-            : ""
-        }
-        ${
-          !isMod && state.developer
-            ? `<p style="margin:0.75rem 0 0"><a class="btn btn-ghost btn-sm" href="/tools/quest-economy?id=${encodeURIComponent(
-                entry.id || m.id || ""
-              )}" target="_blank" rel="noopener">Economy lab</a></p>`
             : ""
         }
       </section>`;
@@ -8882,6 +9030,11 @@ function startMission(mission, opts = {}) {
   resetQuestBriefing({
     clearDismissed: !opts.restore,
   });
+  // resetQuestBriefing just cleared every dismiss flag. The 90-second quest
+  // is the board itself, so mark this mission briefed again before the walk paints.
+  if (state.tutorialRun && merged?.id) {
+    setBriefingDismissed(merged.id, true);
+  }
   const restored = applyContinueSnapshot(
     {
       cloudRunId: null,
@@ -8944,10 +9097,9 @@ function startMission(mission, opts = {}) {
   state.challengeVisionBeat = null;
   state.lastNews = "";
   state.waitReport = "";
-  state.marketNews = null;
-  state.marketNewsShownId = null;
   state.lastYearBulletin = null;
   lastYearPulseKey = null;
+  resetInfoBannerTimers();
   state.outcome = null;
   state.runReport = null;
   state.aiTiming = null;
@@ -8964,27 +9116,33 @@ function startMission(mission, opts = {}) {
   const res = state.mission?.resources || mission.resources || {};
   state.apMax = res.apMax ?? GAME.apMax ?? 3;
   state.ap = state.apMax;
+  // The 90-second loop places two techs, asks once, and answers one roadblock.
+  // Default AP 3 runs out on that last reply. The economy formulas stay as they are.
+  if (state.tutorialRun && state.apMax < 4) {
+    state.apMax = 4;
+    state.ap = 4;
+  }
   state.apSpentThisTurn = 0;
-  state.aiTaxThisTurn = false;
-  state.writeCommitsThisTurn = 0;
-  state.learnOpenedThisTurn = false;
   state.turnPhase = "act";
   state.pendingAi = null;
   state.lastWriteSnapshot = { name: "", how: "", impact: "" };
-  state.budget = res.startingBudget ?? GAME.startingBudget ?? 5;
-  state.will = res.startingWill ?? GAME.startingWill ?? 3;
+  state.budgetCap = res.startingBudget ?? GAME.startingBudget ?? 5;
+  state.willCap = res.startingWill ?? GAME.startingWill ?? 3;
+  state.budget = state.budgetCap;
+  state.will = state.willCap;
+  state.rdCount = 0;
+  state.freeTechIds = [];
   state.pathwayEasePaid = {};
   state.rules = seedLiveRules(
     state.mission?.rules || merged.rules,
     state.mission?.startYear ?? GAME.startYear ?? 2026
   );
-  applyRestoredPlay(restored.play);
+  applyRestoredPlay(restored.play, restored.hexBoard);
   state.lastWriteSnapshot = {
     name: state.inventionName || "",
     how: state.inventionHow || "",
     impact: state.inventionImpact || "",
   };
-  state.techAddedThisTurn = {};
   state.scrutiny = null;
   state.elegancePivotPenalty = false;
   state.challengeClearMode = null;
@@ -9000,14 +9158,21 @@ function startMission(mission, opts = {}) {
   try {
     const hex = ensureHexWorkshop();
     if (restored.skipSeed && restored.hexBoard) {
-      state.hexBoard = restored.hexBoard;
-      hex.paint();
-      hex.syncPathwayScores?.();
-      if (restored.year != null) hex.refreshAfterYearChange?.();
-      hex.importSparkBatches?.(restored.play?.sparkBatches);
-      // resetCreateMode ran before this board existed and put the two blanks back.
-      hex.resumeArgumentWrite?.();
-      const trayTiles = Object.values(restored.hexBoard.tiles || {});
+      let incoming = restored.hexBoard;
+      const isOntologyUi =
+        typeof document !== "undefined" && Boolean(document.querySelector("#ontology-board"));
+      if (isOntologyUi) {
+        const mirrored = readLocalPathwayBoardMirror(
+          state.mission?.id,
+          state.cloudRunId,
+          incoming
+        );
+        if (mirrored) incoming = mirrored;
+        incoming = projectToTiles(migrateToPathwayBoard(incoming));
+        if (incoming && typeof incoming === "object") incoming.questYear = state.year;
+      }
+      state.hexBoard = incoming;
+      const trayTiles = Object.values(incoming.tiles || {});
       const sparkTech = trayTiles.find(
         (t) =>
           t &&
@@ -9018,13 +9183,27 @@ function startMission(mission, opts = {}) {
       )?.techId;
       const focus =
         focusedTechId || restored.play?.focusedTechId || sparkTech || null;
-      if (focus) {
-        focusedTechId = focus;
-        hex.focusTech(focus);
+      if (focus) focusedTechId = focus;
+      if (hex.restoreFromBoard) {
+        hex.restoreFromBoard(incoming, { focusedTechId: focus });
+        hex.importSparkBatches?.(restored.play?.sparkBatches);
+        hex.syncPathwayScores?.();
+        if (restored.year != null) hex.refreshAfterYearChange?.();
       } else {
         hex.paint();
+        hex.syncPathwayScores?.();
+        if (restored.year != null) hex.refreshAfterYearChange?.();
+        hex.importSparkBatches?.(restored.play?.sparkBatches);
+        // resetCreateMode ran before this board existed and put the two blanks back.
+        hex.resumeArgumentWrite?.();
+        if (focus) {
+          hex.focusTech(focus);
+        } else {
+          hex.paint();
+        }
       }
     } else {
+      clearLocalPathwayBoardMirror(state.mission?.id);
       seedingMissionBoard = true;
       try {
         hex.seedFromMission(state.mission);
@@ -9039,7 +9218,10 @@ function startMission(mission, opts = {}) {
   } catch (e) {
     console.warn("[hex board seed]", e);
   }
-  crisisIntroduction.prepare(state.hexBoard, !opts.restore);
+  crisisIntroduction.prepare(
+    state.hexBoard,
+    !opts.restore && !state.tutorialRun && !isPathwayBoard(state.hexBoard)
+  );
   resetWorkshopScroll();
   showScreen("workshop");
   setSideTab(state.sideTab || "vision");
@@ -9269,6 +9451,23 @@ function renderWorkshop() {
   paintWorkshopCompanion(m);
   const sceneEl = $("#ws-mission-scene");
   const visionRoot = $("#vision-root");
+  const syncBannerBriefingActions = () => {
+    const fullBriefBtn = $("#btn-ws-full-briefing");
+    const replayBriefBtn = $("#btn-ws-replay-briefing");
+    const hasWalk = visionRoot ? hasQuestBriefing(visionRoot) : false;
+    if (fullBriefBtn) {
+      const panel = $("#crisis-briefing");
+      const open = Boolean(panel && !panel.hidden && panel.open);
+      fullBriefBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      fullBriefBtn.classList.toggle("is-on", open);
+      fullBriefBtn.hidden = !Boolean(
+        m.scene || m.problem || m.briefMd || hasWalk || sceneEl?.textContent?.trim()
+      );
+    }
+    if (replayBriefBtn) {
+      replayBriefBtn.hidden = !hasWalk;
+    }
+  };
   if (visionRoot) {
     const briefing = paintQuestBriefing(visionRoot, m, {
       sceneEl,
@@ -9278,6 +9477,7 @@ function renderWorkshop() {
         if (snap?.mode === "walk") {
           const panel = $("#crisis-briefing");
           if (panel) panel.hidden = true;
+          syncBannerBriefingActions();
           refreshCoachMarks();
           return;
         }
@@ -9285,6 +9485,7 @@ function renderWorkshop() {
         resetWorkshopScroll();
         crisisIntroduction.show();
         syncWorkshopStage();
+        syncBannerBriefingActions();
         renderFeasibility();
         ensureCoInventor();
         try {
@@ -9292,6 +9493,11 @@ function renderWorkshop() {
           // without forcing a duplicate live generation.
           state.vision?.attach?.(visionRoot);
           updateVision({ debounceMs: 80 });
+        } catch {
+          /* ignore */
+        }
+        try {
+          window.dispatchEvent(new Event("resize"));
         } catch {
           /* ignore */
         }
@@ -9307,10 +9513,12 @@ function renderWorkshop() {
       if (panel) panel.hidden = true;
       syncWorkshopStage();
     }
+    syncBannerBriefingActions();
   } else if (sceneEl) {
     sceneEl.hidden = false;
     sceneEl.textContent = m.scene || m.problem || "";
     attachReadAloud(sceneEl);
+    syncBannerBriefingActions();
   }
   $("#ws-stakeholder").textContent = m.stakeholder ? `Stakeholder: ${m.stakeholder}` : "";
   const spotChip = $("#ws-spotlight-chip");
@@ -9341,7 +9549,6 @@ function renderWorkshop() {
     spotEncourage.style.display = "none";
     spotEncourage.textContent = "";
   }
-  renderMarketBanner();
   renderMpChrome();
 
   // Compact crisis HUD: full copy lives on title + Help (?)
@@ -9354,17 +9561,7 @@ function renderWorkshop() {
         : `Hit 5 on any meter or year ${m.collapseYear} and the mission ends. Open ? for more.`);
   }
 
-  const wr = $("#wait-report");
-  if (wr) {
-    if (state.waitReport) {
-      wr.hidden = false;
-      wr.innerHTML = state.waitReport;
-      attachReadAloud(wr);
-    } else {
-      wr.hidden = true;
-      refreshReadAloud(wr);
-    }
-  }
+  renderWaitReportBanner();
 
   const nameEl = $("#invention-name");
   // Never wipe the name field while the player is mid-keystroke
@@ -9809,11 +10006,11 @@ function assessFeasibility() {
       storyLevel === "green"
     ) {
       scaleLevel = "green";
-      scaleNote = `Scale-ready: multi-tech stack, solid story, capital (Budget ${b}, Support ${w}).`;
+      scaleNote = `Scale-ready: multi-tech stack, solid story, capital (Budget ${b}, Goodwill ${w}).`;
     } else if (capitalThin || techs.length === 1 || !opsReady || timingLevel === "yellow") {
       scaleLevel = "yellow";
       scaleNote = capitalThin
-        ? `Scale is thin on capital (Budget ${b}, Support ${w}) — expansion may stall.`
+        ? `Scale is thin on capital (Budget ${b}, Goodwill ${w}) — expansion may stall.`
         : techs.length === 1
           ? "Single-tech pilot can scale, but ops breadth is limited."
           : "Scale is possible but shaky — strengthen story, capital, or timing claims.";
@@ -10096,6 +10293,13 @@ function syncEconomyChromeVisibility() {
   }
 }
 
+function formatMovesPips(ap, apMax) {
+  const max = Math.max(1, Math.floor(Number(apMax) || GAME.apMax || 3));
+  const have = Math.max(0, Math.min(max, Math.floor(Number(ap) || 0)));
+  if (max > 6) return `${have}/${max}`;
+  return `${"●".repeat(have)}${"○".repeat(max - have)}`;
+}
+
 function paintResourceChips(prefix) {
   // prefix: "" | "ch-" | "dep-"
   const apEl = $(`#${prefix}hud-ap`);
@@ -10104,7 +10308,10 @@ function paintResourceChips(prefix) {
   if (apEnabled()) {
     showHudChip(apEl, true);
     if (apEl) {
-      apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
+      const ap = state.ap ?? 0;
+      const apMax = state.apMax ?? GAME.apMax ?? 3;
+      apEl.textContent = `Moves ${formatMovesPips(ap, apMax)}`;
+      apEl.classList.toggle("is-empty", ap <= 0);
     }
   } else {
     showHudChip(apEl, false);
@@ -10112,8 +10319,18 @@ function paintResourceChips(prefix) {
   if (budgetWillEnabled()) {
     showHudChip(budgetEl, true);
     showHudChip(willEl, true);
-    if (budgetEl) budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
-    if (willEl) willEl.textContent = `Support ${state.will ?? 0}`;
+    const budgetAvail = state.budget ?? 0;
+    const budgetCap = Math.max(budgetAvail, state.budgetCap ?? GAME.startingBudget ?? 5);
+    const willAvail = state.will ?? 0;
+    const willCap = Math.max(willAvail, state.willCap ?? GAME.startingWill ?? 3);
+    if (budgetEl) {
+      budgetEl.textContent = `Budget ${budgetAvail}/${budgetCap}`;
+      budgetEl.classList.toggle("is-empty", budgetAvail <= 0);
+    }
+    if (willEl) {
+      willEl.textContent = `Goodwill ${willAvail}/${willCap}`;
+      willEl.classList.toggle("is-empty", willAvail <= 0);
+    }
   } else {
     showHudChip(budgetEl, false);
     showHudChip(willEl, false);
@@ -10135,17 +10352,19 @@ function renderHud() {
   paintResourceChips("");
   const apEl = $("#hud-ap");
   if (apEl && apEnabled()) {
-    apEl.title = "Action points this invent turn. Wait burns leftover AP; End Turn refills.";
+    apEl.title = mp
+      ? "Moves left this turn. Thinking & AI are free. Click End turn → to pass and refill Moves."
+      : "Moves left this year. Thinking & AI are free. Advance the year (+1 yr / +2 yrs) to refill Moves.";
   }
   const budgetEl = $("#hud-budget");
   if (budgetEl && budgetWillEnabled()) {
     budgetEl.title =
-      "Capital for techs, Lobby, and R&D. Earned when a docked pathway eases a crisis. Not refilled by End turn. 0$ cannot buy.";
+      "Available Budget capacity across active pathways and R&D. Removing a pathway frees 100% of its Budget immediately; easing a crisis expands capacity (+1).";
   }
   const willEl = $("#hud-will");
   if (willEl && budgetWillEnabled()) {
     willEl.title =
-      "Support (public + policy) — not a crisis meter. ≥4 boosts deploy drop; 0 hurts it. Lobby raises Support.";
+      "Available Goodwill capacity for early or frontier technologies. Removing a pathway frees 100% immediately; Lobby or clearing roadblocks expands capacity (+1).";
   }
   syncEconomyChromeVisibility();
   paintHudPressureMeters($("#hud-pressure"));
@@ -10155,6 +10374,7 @@ function renderHud() {
   updateWaitPreview();
   // Lobby / Wait / End turn / Face challenge / Co-inventor (mp spectator + busy gates)
   syncInventActionButtons();
+  applyEndTurnChrome();
 }
 
 /** Highlight Invent · Challenge · Field pills on workshop + challenge + deploy top bars */
@@ -10290,50 +10510,29 @@ function renderTechList() {
       const canStem = canDo.replace(/[.…]+$/, "");
       const showCan = !why || !canStem || !why.startsWith(canStem);
       const cost = budgetWillEnabled() ? techCost(t) : null;
-      const baseCost = budgetWillEnabled() ? techCostRaw(t) : null;
-      const marketHit =
-        budgetWillEnabled() && marketAffectsTech(currentMarketNews(), t);
+      const heavyCost = cost && isHeavyTechCost(cost);
       const costTitle = cost
-        ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: ${cost.budget} Budget${cost.will ? `, ${cost.will} Support` : ""}${
-            apEnabled() ? ", 1 AP" : ""
-          }${cost.frontierRisk ? ` · early-tech risk ${cost.frontierRisk}` : ""}${
-            marketHit ? " · market news active" : ""
-          }${unaffordable ? " · cannot afford" : ""}`
-        : apEnabled()
-          ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: 1 AP`
-          : "";
-      // Visible cost chips — not only in tooltip
+        ? ` | Capacity: ${cost.budget} Budget${cost.will ? `, ${cost.will} Goodwill` : ""} (100% reversible if removed)${
+            unaffordable ? " · not enough capacity" : ""
+          }`
+        : "";
+      // Quiet capacity chips: shown only on heavy/frontier techs (Budget > 1 or Goodwill > 0)
       let costHtml = "";
-      if (cost && !sel) {
-        const bDelta =
-          marketHit && baseCost ? cost.budget - baseCost.budget : 0;
-        const wDelta = marketHit && baseCost ? cost.will - baseCost.will : 0;
-        const bits = [
-          `<span class="tech-cost-chip tech-cost-budget${
-            bDelta > 0 ? " tech-cost-up" : bDelta < 0 ? " tech-cost-down" : ""
-          }" title="${isHexInventUi() ? "Budget when you place on the board" : "Budget to add this to your stack"}">${cost.budget}$${
-            bDelta ? ` (${bDelta > 0 ? "+" : ""}${bDelta})` : ""
-          }</span>`,
-        ];
-        if (cost.will > 0 || wDelta) {
+      if (heavyCost && !sel) {
+        const bits = [];
+        if (cost.budget > 1) {
           bits.push(
-            `<span class="tech-cost-chip tech-cost-will${
-              wDelta > 0 ? " tech-cost-up" : wDelta < 0 ? " tech-cost-down" : ""
-            }" title="Support needed to adopt this">Support ${cost.will}${
-              wDelta ? ` (${wDelta > 0 ? "+" : ""}${wDelta})` : ""
-            }</span>`
+            `<span class="tech-cost-chip tech-cost-budget" title="Reversible Budget capacity allocated while on the board">${cost.budget} Budget</span>`
           );
         }
-        if (apEnabled()) {
+        if (cost.will > 0) {
           bits.push(
-            `<span class="tech-cost-chip tech-cost-ap" title="Attention this turn">1 AP</span>`
+            `<span class="tech-cost-chip tech-cost-will" title="Reversible Goodwill capacity allocated while on the board">${cost.will} Goodwill</span>`
           );
         }
-        costHtml = `<span class="tech-cost-row" aria-label="${isHexInventUi() ? "Cost when placed" : "Cost to add"}">${bits.join("")}</span>`;
+        costHtml = `<span class="tech-cost-row" aria-label="Capacity required">${bits.join("")}</span>`;
       } else if (sel) {
-        costHtml = `<span class="tech-cost-row tech-cost-in-stack"><span class="tech-cost-chip tech-cost-owned">In stack</span></span>`;
-      } else if (apEnabled()) {
-        costHtml = `<span class="tech-cost-row"><span class="tech-cost-chip tech-cost-ap">1 AP</span></span>`;
+        costHtml = `<span class="tech-cost-row tech-cost-in-stack"><span class="tech-cost-chip tech-cost-owned">On board</span></span>`;
       }
       // Green ✓ = on stack (placed). Accent outline = focused invent tech.
       const focused = focusedTechId === t.id;
@@ -10676,21 +10875,11 @@ function ideaSparksCached(techId) {
   return ideaSparkCache.has(ideaSparksKey(techId));
 }
 
-function ideaSparksWouldCostAp(techId) {
-  if (!apEnabled()) return false;
-  const key = ideaSparksKey(techId);
-  const needsFetch = !ideaSparkCache.has(key) && !ideaSparkInflight.has(key);
-  if (!needsFetch) return false;
-  return thinkingAiApCost(state, "idea-sparks", 1) > 0;
+function ideaSparksWouldCostAp() {
+  return false;
 }
 
 function chargeIdeaSparksAp() {
-  if (!apEnabled()) return { ok: true };
-  const pay = spendContributionAp("idea-sparks");
-  if (!pay.ok) return { ok: false };
-  if (!pay.roomPaid && state.pendingAi) dispatchSim("resolve_ai");
-  renderHud();
-  mpSyncFromSolo?.();
   return { ok: true };
 }
 
@@ -10775,16 +10964,6 @@ async function openIdeaDeck(techId) {
   if (blockIfMpTurnGate("generating ideas")) return;
 
   focusedTechId = id;
-  const paid = ideaSparksWouldCostAp(id);
-  if (paid) {
-    const pay = chargeIdeaSparksAp();
-    if (!pay.ok) {
-      flashToast("No AP left for ideas — End Turn or Wait.", { resource: "ap" });
-      renderIdeaFocusBar();
-      return;
-    }
-    ideaSparksBusy = true;
-  }
 
   const deck = ensureIdeaDeck();
   if (!deck) {
@@ -10799,13 +10978,10 @@ async function openIdeaDeck(techId) {
   try {
     await deck.open(tech, {
       hint: onStack
-        ? "Pick a spark to add to How it works, or close. Refresh is free after the first AI ask this turn."
-        : "Close if none fit — nothing is added. Picking a spark adds this tech (normal costs) and a starter to How it works.",
+        ? "Pick a spark to add to How it works, or close. Brainstorming is always free."
+        : "Close if none fit — nothing is added. Picking a spark adds this tech and a starter to How it works.",
       pickLabel: onStack ? "Add to how it works" : "Add tech + how it works",
-      refreshLabel:
-        apEnabled() && thinkingAiApCost(state, "idea-sparks", 1) > 0
-          ? "Refresh · 1 AP"
-          : "Refresh",
+      refreshLabel: "Refresh",
       selectedIds: ideaSparkPicked.get(ideaSparksKey(id)) || [],
     });
   } finally {
@@ -10829,11 +11005,6 @@ async function refreshIdeaDeck(techId, current = []) {
     return false;
   }
   if (blockIfMpTurnGate("generating ideas")) return false;
-  const pay = chargeIdeaSparksAp();
-  if (!pay.ok) {
-    flashToast("No AP left for ideas — End Turn or Wait.", { resource: "ap" });
-    return false;
-  }
   ideaSparksBusy = true;
   renderIdeaFocusBar();
   const key = ideaSparksKey(id);
@@ -10881,17 +11052,13 @@ function renderIdeaFocusBar() {
         deckOpen
           ? `<button type="button" class="btn btn-secondary btn-sm" data-idea-refresh-bar ${
               busy ? "disabled" : ""
-            }>${
-              apEnabled() && thinkingAiApCost(state, "idea-sparks", 1) > 0
-                ? "Refresh · 1 AP"
-                : "Refresh"
-            }</button>
+            }>Refresh</button>
              <button type="button" class="btn btn-ghost btn-sm" data-idea-close-bar ${
                busy ? "disabled" : ""
              }>Close ideas</button>`
           : `<button type="button" class="btn btn-secondary btn-sm" data-idea-ask ${
               busy ? "disabled" : ""
-            }>${askAp ? "Ask for ideas · 1 AP" : "Ask for ideas"}</button>`
+            }>Ask for ideas</button>`
       }
       ${
         onStack
@@ -11253,7 +11420,10 @@ function challengeBlockReason() {
   const panel = hexPathwayPanel(state.hexBoard);
   if (panel.overall !== "red") return "";
   if (panel.bonds.level === "red") {
-    return `${panel.bonds.note}. Connect an idea to every crisis hex before the hard questions.`;
+    const connectCopy = document?.body?.classList?.contains?.("ontology-board")
+      ? "Plug a pathway into every crisis before summoning the hard questions."
+      : "Connect an idea to every crisis hex before the hard questions.";
+    return `${panel.bonds.note}. ${connectCopy}`;
   }
   if (panel.coverage.level === "red") return panel.coverage.note;
   return "Pathway is red.";
@@ -11342,21 +11512,16 @@ function updateChallengeButton() {
 
   const reason = challengeBlockReason();
   const ready = !reason && inventReadyForChallenge();
-  const noAp = apEnabled() && getSpendableAp() < 1;
-  const apBlock = noAp ? "No AP — End turn or Wait first." : "";
-  btn.disabled = !ready || isInventActionBusy() || noAp;
+  btn.disabled = !ready || isInventActionBusy();
   btn.textContent = "Answer the hard questions →";
   btn.title =
     reason ||
-    apBlock ||
     "Summon challengers one at a time — Mother Nature, Moloch, Ethicist, Stakeholder";
   if (hint) {
     hint.textContent =
       reason ||
-      apBlock ||
       "Ready to be challenged — face each hard question, one by one.";
-    hint.className =
-      reason || noAp ? "challenge-ready-hint blocked" : "challenge-ready-hint ready";
+    hint.className = reason ? "challenge-ready-hint blocked" : "challenge-ready-hint ready";
   }
 }
 
@@ -11397,11 +11562,11 @@ function buildWaitImplicationsHtml(ctx = {}) {
     return `
       <p><strong>What happens</strong></p>
       <ul class="wait-confirm-list">
-        <li>Your invent calendar moves <strong>${year} → ${nextYear}</strong> (wait #${waits + 1} on this invent).</li>
+        <li>Your invent calendar moves <strong>${year} → ${nextYear}</strong> (jump #${waits + 1} on this invent).</li>
         <li>Feasibility / timing for <em>your</em> how-it-works is judged against <strong>${nextYear}</strong>.</li>
         <li>Other players keep their invent years — they can still solve in the present.</li>
-        <li>Shared crisis meters <strong>do not rise</strong> on Wait.</li>
-        <li>Your seat-turn <strong>ends</strong> (unspent AP are burned). Next player acts.</li>
+        <li>Shared crisis meters <strong>do not rise</strong> until the full table completes a round.</li>
+        <li><strong>Your turn stays active</strong> (Moves do not refill). Click <strong>End turn →</strong> when ready to pass.</li>
       </ul>
       <p><strong>When the place can still fall</strong></p>
       <ul class="wait-confirm-list">
@@ -11409,21 +11574,21 @@ function buildWaitImplicationsHtml(ctx = {}) {
         <li>Your invent alone at ${nextYear}${
           yearsLeft === 0 ? " (fail year)" : ` (${yearsLeft}y before fail year)`
         } does <em>not</em> end the race.</li>
-        <li>Meters maxed by deploy play can still end the table for everyone.</li>
+        <li>Meters maxed by crisis rise or deploy play can still end the table for everyone.</li>
       </ul>
-      <p class="muted sm">EmTech categories stay pickable either way — Wait is for claim timing, not unlocking cards.</p>`;
+      <p class="muted sm">EmTech categories stay pickable either way — jumping years is for claim timing, not unlocking cards.</p>`;
   }
 
   const apLine = apEnabled()
-    ? "<li>Unspent AP are burned; AP refills after Wait.</li>"
+    ? "<li>Your Moves refill for the new year.</li>"
     : "";
   return `
     <p><strong>What happens</strong></p>
     <ul class="wait-confirm-list">
-      <li>Calendar moves <strong>${year} → ${nextYear}</strong> (waits ${waits + 1}).</li>
-      <li>Crisis meters rise once per year jumped (${step} years): ${crisisLine || "—"}. Wait is a bigger skip than End turn, not a different crisis formula.</li>
+      <li>Calendar moves <strong>${year} → ${nextYear}</strong> (jumps ${waits + 1}).</li>
+      <li>Crisis meters rise once per year jumped (${step} years): ${crisisLine || "—"}.</li>
       ${apLine}
-      <li>Feasibility re-checks whether your how-it-works over-claims <strong>${nextYear}</strong>.</li>
+      <li>Feasibility re-checks whether your how-it-works fits <strong>${nextYear}</strong>.</li>
     </ul>
     <p><strong>Implications</strong></p>
     <ul class="wait-confirm-list">
@@ -11572,6 +11737,7 @@ function trendsForWaitConfirm(ctx = {}) {
     spotlightTrendIds: m?.spotlightTrends || [],
     selectedTechIds: techIds,
     spotlightTechId: m?.spotlight?.techId || null,
+    curvesOnly: true,
     includeAll: Boolean(state.developer && _waitTrendsDevView),
   });
 }
@@ -11856,7 +12022,7 @@ function openWaitConfirm(onOk, ctx = {}) {
 }
 
 /** Click handler: confirm, then run waitTurn. */
-function requestWaitTurn() {
+function requestWaitTurn(years = 2) {
   if (isInventActionBusy()) {
     flashToast(inventActionBusyReason());
     return;
@@ -11866,7 +12032,31 @@ function requestWaitTurn() {
     flashToast(mpFriendlyError(waitGate.error));
     return;
   }
-  openWaitConfirm(() => waitTurn({ skipConfirm: true }));
+  const step = Number(years) === 1 ? 1 : 2;
+  if (step === 1 && mpBridge()) {
+    waitTurn({ skipConfirm: true, years: 1 });
+    return;
+  }
+  openWaitConfirm(() => waitTurn({ skipConfirm: true, years: step }));
+}
+
+/**
+ * Board topbar time jump (+1 yr / +2 yrs):
+ * - Solo: +1 yr advances the quest year & refills Moves (`endTurn`); +2 yrs opens Look Ahead.
+ * - Multi-user (Rooms & Hotseat): jumps personal invent year (+1 or +2) without ending the turn
+ *   or refilling Moves. Dedicated `End turn →` button passes the turn.
+ */
+function advanceBoardYear(years = 1) {
+  const n = Number(years) === 2 ? 2 : 1;
+  if (mpBridge()) {
+    requestWaitTurn(n);
+    return;
+  }
+  if (n === 2) {
+    requestWaitTurn(2);
+    return;
+  }
+  endTurn();
 }
 
 function updateEndTurnButton() {
@@ -11879,11 +12069,11 @@ function updateEndTurnButton() {
       btn.setAttribute("hidden", "");
     }
     updateDeployFooterButtons();
+    applyEndTurnChrome();
     return;
   }
   const b = mpBridge();
   const label = endTurnButtonLabel();
-  // Deploy helpers are NOT watch-only when they can Pilot/Scale — they may End turn after an action
   const challengeWatch = isChallengeWatchOnly();
   const deploySpectator =
     state.screen === "deploy" &&
@@ -11892,23 +12082,14 @@ function updateEndTurnButton() {
   const gate = isMpTurnGateBlocking();
   const inventBusy = isInventActionBusy();
   const challengeBusy = isChallengeCombatBlocking();
-  // Do not treat *viewed* invent scrutiny as "you may end turn" (spectator hydrate used to)
-  const ownScrutiny =
-    state.turnPhase === "scrutiny" &&
-    !challengeWatch &&
-    (!b || !b.viewingOther?.());
-  const spent = (state.apSpentThisTurn || 0) >= 1;
-  const apNotFull = (state.ap ?? 0) < (state.apMax ?? GAME.apMax ?? 3);
-  // Must have taken an action this seat-turn (no free End turn just for being on Deploy)
-  const hasEngagement = spent || apNotFull || ownScrutiny;
+  // Quiet Guardrails: ending your turn is ALWAYS allowed on your turn (no noop gate).
   const canAct =
     !challengeWatch &&
     !deploySpectator &&
     !notMyTurn &&
     !gate &&
     !inventBusy &&
-    !challengeBusy &&
-    hasEngagement;
+    !challengeBusy;
 
   for (const sel of endTurnSels) {
     const btn = $(sel);
@@ -11940,16 +12121,13 @@ function updateEndTurnButton() {
       continue;
     }
     btn.disabled = !canAct;
-    btn.title = canAct
-      ? b
-        ? isOnlineRoomMp()
-          ? "End your seat-turn (next player becomes active)"
-          : "End your seat-turn and pass to the next player"
-        : "Refill AP and advance calendar +1 year (crisis meters unchanged)"
-      : "Spend AP on an action first (Pilot, Scale, tech, write…), then End turn";
+    btn.title = b
+      ? "End your turn and pass to the next inventor (refills Moves)"
+      : "Advance calendar +1 year and refill Moves";
   }
   if (challengeWatch) applyChallengeWatchOnlyLock();
   updateDeployFooterButtons();
+  applyEndTurnChrome();
 }
 
 /** Look-only on Deploy (follow Pilot/Scale, not your turn). Helpers fielding stay interactive. */
@@ -11996,7 +12174,7 @@ function updateDeployFooterButtons() {
   } else {
     abandon.disabled = false;
     abandon.title =
-      "Unlock invent for rework — clears Challenge and Pilot progress. Facing Challenge again costs AP.";
+      "Unlock invent for rework — clears Challenge and Pilot progress.";
   }
 
   // Pilot/Scale button: only when fielding is allowed
@@ -12094,7 +12272,7 @@ function endTurn() {
     }
     return;
   }
-  // Hotseat (Invent / Challenge / Deploy): End turn = pass device to next seat
+  // Hotseat (Invent / Challenge / Deploy): End turn = pass to next seat
   if (
     hotseatBridge.isHotseat() &&
     (state.screen === "workshop" ||
@@ -12104,45 +12282,13 @@ function endTurn() {
     mpPassDevice();
     return;
   }
-  // Allow end turn on challenge/deploy if AP was spent even with full bar edge cases
-  if (apEnabled() && (state.apSpentThisTurn || 0) < 1 && (state.ap ?? 0) >= (state.apMax ?? 3)) {
-    if (
-      state.turnPhase !== "scrutiny" &&
-      state.screen !== "challenge-step" &&
-      state.screen !== "deploy"
-    ) {
-      flashToast("Do something this turn, or Wait.");
-      return;
-    }
-  }
-  // If on challenge/deploy with spent AP, patch spent counter so sim accepts end_turn
-  if (
-    apEnabled() &&
-    (state.apSpentThisTurn || 0) < 1 &&
-    isChallengeOrDeployScreen() &&
-    (state.ap ?? 0) < (state.apMax ?? 3)
-  ) {
-    state.apSpentThisTurn = 1;
-  }
   const endYearBefore = state.year;
   const endPressureBefore = clonePressure(state.pressure);
   const r = dispatchSim("end_turn");
   if (!r.ok) {
-    if (r.error === "end_turn_noop") {
-      if (isChallengeOrDeployScreen() && (state.ap ?? 0) < (state.apMax ?? 3)) {
-        state.ap = state.apMax ?? 3;
-        state.apSpentThisTurn = 0;
-        state.writeCommitsThisTurn = 0;
-        flashToast(`End turn · AP refilled (${state.ap})`);
-        if (state.screen === "deploy") renderDeployHud();
-        else renderChallengeHud();
-        return;
-      }
-      flashToast("Do something this turn, or Wait.");
-    }
     return;
   }
-  flashToast(`End turn · year ${state.year} · crises rose · AP refilled (${state.ap})`);
+  flashToast(`Year ${state.year} · Moves refilled`);
   // Solo end_turn: +1 year and crisis rise — re-assess timing
   if ((r.events || []).some((e) => e.type === "year_tick")) {
     onInventYearChangedForTiming();
@@ -12157,9 +12303,9 @@ function endTurn() {
   }
   appendCaptainLog({
     kind: "action",
-    title: "End turn",
+    title: "Next year",
     detail: [
-      `Year ${endYearBefore} → ${state.year}. Turn ended. Crises rose one year. AP refilled.`,
+      `Year ${endYearBefore} → ${state.year}. Crises rose one year. Moves refilled.`,
       crisisMeterLogLine(endPressureBefore, state.pressure),
     ]
       .filter(Boolean)
@@ -12249,7 +12395,7 @@ function paintPolicyWeather() {
           )}</span> ${escapeHtml(r.label)}</button>
           <button type="button" class="policy-weather-x" data-rule-id="${escapeHtml(
             r.id
-          )}" title="Remove · 1 AP + 1$ → +1 Support" aria-label="Remove ${escapeHtml(
+          )}" title="Remove · Uses 1 Move · +1 Goodwill" aria-label="Remove ${escapeHtml(
             name
           )}">×</button>
         </li>`;
@@ -12357,7 +12503,6 @@ function clearLobbyComposeFields() {
 function canAffordLobby() {
   if (!budgetWillEnabled()) return { ok: false, error: "off" };
   if (apEnabled() && getSpendableAp() < 1) return { ok: false, error: "no_ap" };
-  if (getSpendableBudget() < 1) return { ok: false, error: "no_budget" };
   return { ok: true };
 }
 
@@ -12380,9 +12525,7 @@ function commitLobby(payload = {}) {
   const afford = canAffordLobby();
   if (!afford.ok) {
     if (afford.error === "no_ap") {
-      flashToast("No AP to lobby — End turn or Wait first.", { resource: "ap" });
-    } else if (afford.error === "no_budget") {
-      flashToast("Need 1 Budget to lobby.", { resource: "budget" });
+      flashToast("No Moves left to lobby — advance the year or end your turn.", { resource: "ap" });
     }
     return false;
   }
@@ -12399,20 +12542,22 @@ function commitLobby(payload = {}) {
       state.ap = Math.max(0, getSpendableAp() - 1);
       state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
     }
-    state.budget = Math.max(0, (state.budget ?? 0) - 1);
-    state.will = Math.min(GAME.maxWill ?? 5, (state.will ?? 0) + 1);
+    const maxWill = GAME.maxWill ?? 5;
+    const prevWillCap = state.willCap ?? GAME.startingWill ?? 3;
+    const nextWillCap = Math.min(maxWill, prevWillCap + 1);
+    const gain = Math.max(0, nextWillCap - prevWillCap);
+    state.willCap = nextWillCap;
+    state.will = Math.min(nextWillCap, (state.will ?? 0) + gain);
     applyLobbyPayloadLocally(payload);
-    // Toast on server patch so a reject cannot flash success then roll back.
     finishLobbyCommit(payload);
     return true;
   }
 
   const r = dispatchSim("lobby", payload);
   if (!r.ok) {
-    if (r.error === "no_ap") flashToast("No AP — End Turn or Wait.", { resource: "ap" });
-    else if (r.error === "no_budget")
-      flashToast("Need 1 Budget to lobby.", { resource: "budget" });
-    else if (r.error === "rule_empty_label") flashToast("Name the rule first.");
+    if (r.error === "no_ap") {
+      flashToast("No Moves left to lobby — advance the year or end your turn.", { resource: "ap" });
+    } else if (r.error === "rule_empty_label") flashToast("Name the rule first.");
     else if (r.error === "rules_full") flashToast("Too many local rules on the books.");
     else if (r.error === "rule_missing") flashToast("That rule is no longer on the books.");
     else flashToast("Cannot lobby now.");
@@ -12437,15 +12582,16 @@ function finishLobbyCommit(payload) {
 function lobbyToast(payload, events) {
   const ev = (events || []).find((e) => e.type === "lobby");
   const label = ev?.rule?.label || payload?.write?.label || "";
+  const cap = state.willCap ?? GAME.startingWill ?? 3;
   if (payload.write) {
-    return `On the books: ${label || "new rule"} · Support ${state.will}`;
+    return `On the books: ${label || "new rule"} · Goodwill ${state.will}/${cap}`;
   }
   if (payload.remove) {
-    return `Off the books: ${ev?.rule?.label || "rule"} · Support ${state.will}`;
+    return `Off the books: ${ev?.rule?.label || "rule"} · Goodwill ${state.will}/${cap}`;
   }
-  if (payload.suspend) return `Paused a local rule · Support ${state.will}`;
-  if (payload.restore) return `Restored a local rule · Support ${state.will}`;
-  return `Lobbied · Budget ${state.budget} · Support ${state.will}`;
+  if (payload.suspend) return `Paused a local rule · Goodwill ${state.will}/${cap}`;
+  if (payload.restore) return `Restored a local rule · Goodwill ${state.will}/${cap}`;
+  return `Lobbied · Goodwill ${state.will}/${cap}`;
 }
 
 function lobbyAction() {
@@ -12505,20 +12651,21 @@ function waitTurn(opts = {}) {
     return;
   }
 
-  // Online room: personal invent Wait on server (also ends your seat-turn)
+  const mpYears = opts.years != null ? Math.max(1, Math.min(2, Math.floor(Number(opts.years) || 2))) : (state.mission?.yearsPerTurn || GAME.yearsPerTurn || 2);
+
+  // Online room: personal invent year jump (does NOT end turn or refill Moves)
   if (roomBridge.isRoom()) {
     if (!roomBridge.isMyTurn()) {
       flashToast("Not your turn.");
       return;
     }
     try {
-      roomBridge.send({ type: "wait" });
+      roomBridge.send({ type: "wait", payload: { years: mpYears } });
       appendCaptainLog({
         kind: "action",
-        title: "Waited",
-        detail: "Invent +2 years. Seat-turn ends.",
+        title: `Jumped +${mpYears} yr${mpYears === 1 ? "" : "s"}`,
+        detail: `Invent advanced +${mpYears} year${mpYears === 1 ? "" : "s"}. Turn stays active.`,
       });
-      // Clear any leftover challenge/pose locks so we don't look "frozen" until the patch
       state.challengeSpectator = false;
       state.challengePosePending = false;
       challengeCombatBusy = false;
@@ -12530,21 +12677,20 @@ function waitTurn(opts = {}) {
       );
       setMpContributionLock(false);
       showScreen("workshop");
-      // Optimistic: Wait ends your seat-turn — disable act chrome until patch confirms next seat
       flashToast(
-        "Wait — your invent +2 years · seat-turn ends (others keep their year; place only falls if meters max or every invent is late)."
+        `Your invent +${mpYears} yr${mpYears === 1 ? "" : "s"} · your turn stays active (click End turn → when ready to pass).`
       );
       renderWorkshop();
       renderMpChrome();
       applyEndTurnChrome();
       updateEndTurnButton();
     } catch (e) {
-      flashToast(mpFriendlyError(e.message) || "Cannot Wait now.");
+      flashToast(mpFriendlyError(e.message) || "Cannot jump year now.");
     }
     return;
   }
 
-  // Hotseat: personal invent Wait via session, then pass device
+  // Hotseat: personal invent year jump via session (does NOT end turn or pass device)
   if (hotseatBridge.isHotseat()) {
     mpSyncFromSolo();
     const m = state.mission;
@@ -12560,9 +12706,10 @@ function waitTurn(opts = {}) {
       mission: m,
       techs: techsNow,
       stretchLevel: stretch.level,
+      years: mpYears,
     });
     if (!r.ok) {
-      flashToast(r.error || "Cannot Wait now.");
+      flashToast(mpFriendlyError(r.error) || "Cannot jump year now.");
       return;
     }
     hotseatBridge.setSession(r.session);
@@ -12572,10 +12719,6 @@ function waitTurn(opts = {}) {
       finishOutcome("collapse", { multiparty: true, mpOutcome });
       return;
     }
-    const marketEv = (r.events || []).find((e) => e?.type === "market_news");
-    if (marketEv?.marketNews) {
-      queueMarketNewsModal(marketEv.marketNews, { force: true });
-    }
     const yearEv = (r.events || []).find((e) => e?.type === "year_tick");
     if (yearEv?.bulletin) {
       noteYearAdvance(yearEv.bulletin);
@@ -12583,24 +12726,19 @@ function waitTurn(opts = {}) {
     const waiterYear =
       r.session.invents?.[waiterId]?.year ??
       (r.events || []).find((e) => e.type === "wait")?.year ??
-      yearBefore + (m.yearsPerTurn || 2);
+      yearBefore + mpYears;
     appendCaptainLog({
       kind: "action",
-      title: "Waited",
-      detail: `Invent year ${waiterYear}.`,
+      title: `Jumped +${mpYears} yr${mpYears === 1 ? "" : "s"}`,
+      detail: `Invent year ${waiterYear}. Turn stays active.`,
     });
-    flashToast(`Wait → your invent ${waiterYear} · next player keeps their year`);
+    flashToast(`Your invent → ${waiterYear} (other players keep their year; click End turn → to pass)`);
     showScreen("workshop");
-    mpHydrateAndRender({ skipTurnNotice: Boolean(marketEv?.marketNews) });
-    // Explicit turn notice for next seat (deferred if market modal is up)
-    const nextSeat = hotseatBridge.activeSeat?.();
-    if (nextSeat) {
-      state.mpLastActiveSeatId = nextSeat.id;
-      showTurnStartNotice({
-        name: nextSeat.displayName || "Player",
-        isYou: true,
-        mode: "hotseat",
-      });
+    mpHydrateAndRender({ skipTurnNotice: true });
+    try {
+      ensureHexWorkshop().refreshAfterYearChange();
+    } catch {
+      /* ignore */
     }
     return;
   }
@@ -12619,7 +12757,6 @@ function waitTurn(opts = {}) {
     mission: m,
     techs: techsNow,
     stretchLevel: stretch.level,
-    riskSeed: `${m.id}:${(state.waits || 0) + 1}:${(state.turn || 0) + 1}`,
   });
   if (!r.ok) {
     flashToast(r.error || "Cannot Wait now.");
@@ -12637,14 +12774,9 @@ function waitTurn(opts = {}) {
     .map((k) => `${k} ${prevPressure[k]}→${state.pressure[k]}`)
     .join(" · ");
 
-  const riskEv = (r.events || []).find((e) => e.type === "frontier_risk");
-  const riskLine = riskEv
-    ? `<br/><span class="bad">Frontier risk:</span> hype spiked <strong>${escapeHtml(riskEv.meter)}</strong> +1.`
-    : "";
-
-  state.waitReport = `<strong>→ ${state.year}</strong> (Wait from ${prevYear}; waits ${state.waits})<br/>
+  state.waitReport = `<strong>→ ${state.year}</strong> (Jumped from ${prevYear}; jumps ${state.waits})<br/>
     <span class="ok">Capability horizon:</span> ${escapeHtml(horizon)}<br/>
-    <span class="bad">Crisis rose:</span> ${escapeHtml(crisisLine)}${riskLine}<br/>
+    <span class="bad">Crisis rose:</span> ${escapeHtml(crisisLine)}<br/>
     <span class="muted">${escapeHtml(news)}</span>`;
   state.lastNews = `→ ${state.year}. ${horizon}. Crisis tightened. ${news}`.trim();
   onInventYearChangedForTiming(); // re-evaluate claims in new year (monotonic vs last settle)
@@ -12653,16 +12785,16 @@ function waitTurn(opts = {}) {
   const years = m.yearsPerTurn || GAME.yearsPerTurn || 2;
   try {
     const rise = m.pressureRise || {};
-    ensureHexWorkshop().afterYearPressureRise?.(rise, years, riskEv || null);
+    ensureHexWorkshop().afterYearPressureRise?.(rise, years);
   } catch (e) {
     console.warn("[hex wait pressure]", e);
   }
 
   appendCaptainLog({
     kind: "action",
-    title: `Wait ${years} years`,
+    title: `Look Ahead +${years} years`,
     detail: [
-      `${prevYear} → ${state.year}. Turn ended. AP refilled. Crises rose once for each year — ${years} years, so the yearly rise landed ${years} times.`,
+      `${prevYear} → ${state.year}. Moves refilled. Crises rose once for each year — ${years} years, so the yearly rise landed ${years} times.`,
       crisisMeterLogLine(prevPressure, state.pressure),
     ]
       .filter(Boolean)
@@ -12675,7 +12807,7 @@ function waitTurn(opts = {}) {
     return;
   }
 
-  flashToast(`Clock → ${state.year} · crisis rose · AP refilled`);
+  flashToast(`Clock → ${state.year} · crisis rose · Moves refilled`);
   try {
     ensureHexWorkshop().refreshAfterYearChange();
   } catch {
@@ -13189,6 +13321,7 @@ const LEAN_EVAL_MODES = new Set([
   "score-pathway",
   "assess-feasibility",
   "idea-sparks",
+  "workbench-lens",
   "assess-plain",
   "pose-challenge",
   "judge-scrutiny-move",
@@ -13590,24 +13723,13 @@ async function enterChallenge() {
     flashToast("Finish the invention first (name, stack, both story faces; fix red feasibility).");
     return;
   }
-  // Online room: spend enter_challenge AP on the server, then use the same Challenge screen as solo/hotseat
+  // Online room: enter challenge on server (summoning/entering is free — 0 Moves)
   if (roomBridge.isRoom()) {
-    const apNow = getSpendableAp();
-    if (apEnabled() && apNow < 1) {
-      flashToast("No AP to face the challenge — End turn or Wait first.", { resource: "ap" });
-      return;
-    }
     try {
       roomBridge.send({ type: "enter_challenge" });
     } catch (e) {
       flashToast(e.message || "Could not enter challenge");
       return;
-    }
-    // Optimistic AP spend so Challenge HUD matches server before the patch arrives
-    // (mid-Challenge full hydrate is often paused — without this, chip stays stale).
-    if (apEnabled()) {
-      state.ap = Math.max(0, apNow - 1);
-      state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
     }
     // Local freeze immediately — Face the challenge locks invent for everyone
     // (server invent_locked once turnPhase=scrutiny; helpers cannot edit story/stack)
@@ -14135,16 +14257,15 @@ function renderChallengeHud() {
   paintResourceChips("ch-");
   const apEl = $("#ch-hud-ap");
   if (apEl && apEnabled()) {
-    apEl.title = "Action points. Defense, fix, sidestep, AI help, and deploy cost AP.";
+    apEl.title = "Moves left this turn. Submitting a defense, fix, or sidestep uses 1 Move. AI coaching is free.";
   }
   const budgetEl = $("#ch-hud-budget");
   if (budgetEl && budgetWillEnabled()) {
-    budgetEl.title =
-      "Capital (same as invent). Earned when a docked pathway eases a crisis. 0$ cannot buy.";
+    budgetEl.title = "Available Budget capacity across your active pathways.";
   }
   const willEl = $("#ch-hud-will");
   if (willEl && budgetWillEnabled()) {
-    willEl.title = "Support (same as invent). Sidestep costs 1 Support.";
+    willEl.title = "Available Goodwill capacity. Clearing a challenger expands Goodwill (+1).";
   }
   syncEconomyChromeVisibility();
   // Crisis meters (same as invent top bar, beside Future Forge brand)
@@ -14168,9 +14289,7 @@ function currentSidestepCost() {
 
 function formatSidestepCostShort(cost) {
   if (!cost?.ok) return "—";
-  const bits = [`${cost.ap} AP`];
-  if (budgetWillEnabled()) bits.push(`${cost.will} Support`);
-  return bits.join(" · ");
+  return `${cost.ap || 1} Move`;
 }
 
 function updateSidestepAvailability() {
@@ -14184,8 +14303,6 @@ function updateSidestepAvailability() {
   const costEl = pivotBtn?.querySelector(".scrutiny-move-cost");
   const cost = currentSidestepCost();
   const costLabel = formatSidestepCostShort(cost);
-  const hearts = cost.ok ? cost.hearts : 0;
-  // Spectators / pose lock: keep ALL move buttons grayed (do not re-enable Sidestep)
   const forceDisabled = spectating || poseBusy;
   if (pivotBtn) {
     pivotBtn.disabled = forceDisabled || used;
@@ -14194,31 +14311,23 @@ function updateSidestepAvailability() {
       ? "Read-only — watching the active seat"
       : used
         ? "Sidestep already used this mission (once per run)"
-        : cost.ok
-          ? `Skip this challenger once per Quest (${hearts}♥ left → ${costLabel}; softens elegance ★)`
-          : "Skip this challenger once per Quest (cost = remaining resolve hearts)";
+        : `Skip this challenger once per Quest (${costLabel}; softens elegance ★)`;
   }
   if (costEl) {
     costEl.textContent = used
       ? "used this mission"
-      : cost.ok
-        ? `${hearts}♥ left · ${costLabel} · softens elegance`
-        : "once/mission · cost = remaining ♥ · softens elegance";
+      : `${costLabel} · softens elegance`;
   }
   if (blurb) {
     blurb.textContent = used
       ? "Already used this mission — Defend or Fix if you face Challenge again."
-      : cost.ok
-        ? `Skip without winning. Cost equals remaining resolve (${hearts}♥ → ${costLabel}). Once per mission. Softens ★ elegance — not free. Lobby if you need more Support.`
-        : "Skip without winning the argument. Cost equals remaining resolve hearts. Once per mission.";
+      : `Skip without winning (${costLabel}). Once per mission. Softens ★ elegance.`;
   }
   if (confirmBtn) {
     confirmBtn.disabled = forceDisabled || used;
     confirmBtn.textContent = used
       ? "Sidestep already used"
-      : cost.ok
-        ? `Confirm sidestep (${costLabel})`
-        : "Confirm sidestep";
+      : "Confirm sidestep";
   }
   // Spectators: force Defend + Fix to the same disabled/gray look as Sidestep
   if (spectating || poseBusy) {
@@ -14295,10 +14404,8 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
     else submit.setAttribute("hidden", "");
     submit.disabled = busy;
     if (m === "defend" && !opts.spectator) {
-      submit.textContent = apEnabled() ? "Submit defense (1 AP)" : "Submit defense";
-      submit.title = apEnabled()
-        ? "Submit written defense (costs 1 AP)"
-        : "Submit written defense";
+      submit.textContent = "Submit defense";
+      submit.title = "Submit written defense (uses 1 Move)";
     }
   }
   const applyFix = $("#btn-challenge-apply-fix");
@@ -14351,14 +14458,8 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
     const lead = $("#mode-panel-sidestep .mode-panel-lead");
     const sc = currentSidestepCost();
     if (lead) {
-      if (sc.ok) {
-        lead.innerHTML = `You dodge this challenger without answering. Cost equals <strong>remaining resolve</strong>: <strong>${sc.hearts}♥</strong> → <strong>${escapeHtml(
-          formatSidestepCostShort(sc)
-        )}</strong>. Only once per Quest. Lobby on Invent if you need more Support.`;
-      } else {
-        lead.innerHTML =
-          "You dodge this challenger without answering. Cost equals remaining resolve hearts (e.g. 2♥ → 2 AP · 2 Support). Only once per Quest.";
-      }
+      lead.innerHTML =
+        "You dodge this challenger without answering. Uses <strong>1 Move</strong> and softens elegance. Only once per Quest.";
     }
     // status line for spectators
     const status = $("#scrutiny-status");
@@ -14495,10 +14596,9 @@ async function scrutinyArgue() {
     if (roomBridge.isRoom()) syncRoomResourcesFromSnapshot();
     const apHave = getSpendableAp();
     if (apHave < 1) {
-      flashToast(
-        `No AP to submit defense (have ${apHave}, need 1). End turn to refill.`,
-        { resource: "ap" }
-      );
+      flashToast("No Moves left to submit defense — advance the year or end your turn.", {
+        resource: "ap",
+      });
       renderChallengeHud();
       return;
     }
@@ -14507,7 +14607,7 @@ async function scrutinyArgue() {
         roomBridge.send({ type: "pay_ap", payload: { amount: 1 } });
         roomApPaid = true;
       } catch (e) {
-        flashToast(mpFriendlyError(e.message) || "Could not spend AP to defend");
+        flashToast(mpFriendlyError(e.message) || "Could not spend a Move to defend");
         return;
       }
       state.ap = Math.max(0, apHave - 1);
@@ -14519,7 +14619,9 @@ async function scrutinyArgue() {
         clientActionId: `argue-${Date.now()}`,
       });
       if (!r.ok) {
-        flashToast("No AP to Argue — End turn on Invent first.", { resource: "ap" });
+        flashToast("No Moves left to defend — advance the year or end your turn.", {
+          resource: "ap",
+        });
         return;
       }
       usedReserveAi = true;
@@ -14734,10 +14836,9 @@ function scrutinyPatch() {
     if (roomBridge.isRoom()) syncRoomResourcesFromSnapshot();
     const apHave = getSpendableAp();
     if (apHave < 1) {
-      flashToast(
-        `No AP to apply the fix (have ${apHave}, need 1). End turn first.`,
-        { resource: "ap" }
-      );
+      flashToast("No Moves left to apply the fix — advance the year or end your turn.", {
+        resource: "ap",
+      });
       renderChallengeHud();
       return;
     }
@@ -14745,7 +14846,7 @@ function scrutinyPatch() {
       try {
         roomBridge.send({ type: "pay_ap", payload: { amount: 1 } });
       } catch (e) {
-        flashToast(mpFriendlyError(e.message) || "Could not spend AP");
+        flashToast(mpFriendlyError(e.message) || "Could not spend a Move");
         return;
       }
     }
@@ -14754,27 +14855,15 @@ function scrutinyPatch() {
     if (hotseatBridge.isHotseat()) mpSyncFromSolo();
     renderChallengeHud();
   }
-  let funded = Boolean($("#challenge-fund-patch")?.checked);
-  if (funded && budgetWillEnabled()) {
-    if ((state.budget ?? 0) < 1) {
-      flashToast("Not enough Budget for a funded fix — uncheck it or free up Budget.", { resource: "budget" });
-      funded = false;
-    } else {
-      state.budget -= 1;
-      if (maybeBudgetGameOver({ from: "funded_fix" })) return;
-    }
-  }
   state.inventionHow = how;
   const inventHow = $("#invention-how");
   if (inventHow) inventHow.value = how;
-  const result = applyPatchResult(state.scrutiny, enc.id, funded);
+  const result = applyPatchResult(state.scrutiny, enc.id);
   state.scrutiny = result.scrutiny;
   appendCaptainLog({
     kind: "action",
     title: `Fixed ${enc.label || "the challenge"}`,
-    detail: funded
-      ? "How it works was updated, and the fix was funded."
-      : "How it works was updated under fire.",
+    detail: "How it works was updated under fire.",
     tone: "yellow",
   });
   state.hadChallengeAttempt = true;
@@ -14782,7 +14871,6 @@ function scrutinyPatch() {
   fb.hidden = false;
   fb.className = "challenge-feedback partial";
   fb.innerHTML = `<strong>FIX APPLIED</strong> (−${result.damage} resolve) — Your how-it-works was updated under fire.`;
-  if ($("#challenge-fund-patch")) $("#challenge-fund-patch").checked = false;
   refreshChallengeVision(
     {
       angle: enc.angleId,
@@ -14849,90 +14937,40 @@ function scrutinyPivot() {
     return;
   }
   const needAp = apEnabled() ? cost.ap : 0;
-  const needWill = budgetWillEnabled() ? cost.will : 0;
   const apHave = getSpendableAp();
-  const willHave = getSpendableWill();
   if (apEnabled() && apHave < needAp) {
-    flashToast(
-      `No AP to sidestep (have ${apHave}, need ${needAp} for ${cost.hearts}♥). End turn to refill.`,
-      { resource: "ap" }
-    );
-    renderChallengeHud();
-    return;
-  }
-  if (budgetWillEnabled() && willHave < needWill) {
-    flashToast(
-      `Sidestep needs ${needWill} Support for ${cost.hearts}♥ left (have ${willHave}). Lobby on Invent first.`,
-      { resource: "will" }
-    );
+    flashToast("No Moves left to sidestep — advance the year or end your turn.", {
+      resource: "ap",
+    });
     renderChallengeHud();
     return;
   }
 
-  // Spend AP + Will (rooms: server-authoritative so invent stays in sync)
   let roomApPaid = 0;
-  let roomWillPaid = 0;
   if (apEnabled() && needAp > 0) {
     if (roomBridge.isRoom()) {
       try {
         roomBridge.send({ type: "pay_ap", payload: { amount: needAp } });
         roomApPaid = needAp;
       } catch (e) {
-        flashToast(mpFriendlyError(e.message) || "Could not spend AP to sidestep");
+        flashToast(mpFriendlyError(e.message) || "Could not spend a Move to sidestep");
         return;
       }
     }
-    // Optimistic local HUD (snapshot may lag mid-Challenge)
     state.ap = Math.max(0, apHave - needAp);
     state.apSpentThisTurn = (state.apSpentThisTurn || 0) + needAp;
-    if (hotseatBridge.isHotseat()) mpSyncFromSolo();
-  }
-  if (budgetWillEnabled() && needWill > 0) {
-    if (roomBridge.isRoom()) {
-      try {
-        roomBridge.send({ type: "pay_will", payload: { amount: needWill } });
-        roomWillPaid = needWill;
-      } catch (e) {
-        // Refund AP if Will pay failed
-        if (roomApPaid > 0) {
-          try {
-            roomBridge.send({ type: "refund_ap", payload: { amount: roomApPaid } });
-          } catch {
-            /* best-effort */
-          }
-          state.ap = Math.min(state.apMax ?? 3, (state.ap || 0) + roomApPaid);
-          state.apSpentThisTurn = Math.max(0, (state.apSpentThisTurn || 0) - roomApPaid);
-        }
-        flashToast(mpFriendlyError(e.message) || "Could not spend Support to sidestep");
-        renderChallengeHud();
-        return;
-      }
-    }
-    state.will = Math.max(0, willHave - needWill);
     if (hotseatBridge.isHotseat()) mpSyncFromSolo();
   }
   renderChallengeHud();
 
   const result = applyPivotResult(state.scrutiny, enc.id);
   if (!result.ok) {
-    // Refund if the pivot couldn't apply
     if (apEnabled() && needAp > 0) {
       state.ap = Math.max(0, (state.ap || 0) + needAp);
       state.apSpentThisTurn = Math.max(0, (state.apSpentThisTurn || 0) - needAp);
       if (roomApPaid > 0 && roomBridge.isRoom()) {
         try {
           roomBridge.send({ type: "refund_ap", payload: { amount: roomApPaid } });
-        } catch {
-          /* best-effort */
-        }
-      }
-      if (hotseatBridge.isHotseat()) mpSyncFromSolo();
-    }
-    if (budgetWillEnabled() && needWill > 0) {
-      state.will = Math.min(GAME.maxWill ?? 5, (state.will || 0) + needWill);
-      if (roomWillPaid > 0 && roomBridge.isRoom()) {
-        try {
-          roomBridge.send({ type: "refund_will", payload: { amount: roomWillPaid } });
         } catch {
           /* best-effort */
         }
@@ -15104,7 +15142,6 @@ function setChallengePoseBusy(busy, opts = {}) {
     "#btn-scrutiny-patch",
     "#btn-scrutiny-pivot",
     "#btn-challenge-submit",
-    "#challenge-fund-patch",
     "#btn-challenge-apply-fix",
     "#btn-challenge-confirm-sidestep",
     "#btn-challenge-coach",
@@ -16650,63 +16687,12 @@ async function coachChallenge(mode, userText) {
     flashToast("Wait for the challenge to load first.");
     return;
   }
-  // First thinking ask of the turn is 1 AP; further coach/draft this turn is free.
-  let roomApPaid = false;
-  let reservedLocal = false;
-  const helpCost = apEnabled() ? thinkingAiApCost(state, mode, 1) : 0;
-  if (apEnabled() && helpCost > 0) {
-    if (roomBridge.isRoom()) syncRoomResourcesFromSnapshot();
-    const apHave = getSpendableAp();
-    if (apHave < helpCost) {
-      flashToast(
-        `No AP for AI help (have ${apHave}, need ${helpCost}). End turn to refill, or answer without coaching.`,
-        { resource: "ap" }
-      );
-      renderChallengeHud();
-      return;
-    }
-    if (roomBridge.isRoom()) {
-      try {
-        roomBridge.send({ type: "pay_ap", payload: { amount: helpCost, mode } });
-        roomApPaid = true;
-        state.ap = Math.max(0, apHave - helpCost);
-        state.apSpentThisTurn = (state.apSpentThisTurn || 0) + helpCost;
-        const charge = applyThinkingAiCharge(state, mode, helpCost);
-        if (charge.markPaid) state.aiTaxThisTurn = true;
-      } catch (e) {
-        flashToast(mpFriendlyError(e.message) || "Could not spend AP for AI help");
-        return;
-      }
-    } else {
-      const reserve = dispatchSim("reserve_ai", {
-        mode,
-        reservedAp: 1,
-        clientActionId: `ch-ai-${Date.now()}`,
-      });
-      if (!reserve.ok) {
-        flashToast(
-          "No AP left for AI help — End turn, or submit without coaching.",
-          { resource: "ap" }
-        );
-        return;
-      }
-      reservedLocal = true;
-      if (hotseatBridge.isHotseat()) mpSyncFromSolo();
-    }
-    renderChallengeHud();
-  }
+  // Thinking & coaching with AI is always free (0 Moves).
   state.aiBusy = true;
   setChallengeHelpBusy(true);
   const pendingLabel =
-    mode === "draft-challenge"
-      ? helpCost > 0
-        ? "Drafting an answer… (1 AP)"
-        : "Drafting an answer…"
-      : helpCost > 0
-        ? "Coaching… (1 AP)"
-        : "Coaching…";
+    mode === "draft-challenge" ? "Drafting an answer…" : "Coaching…";
   showChallengeCoach(aiPendingHtml(pendingLabel));
-  let requestOk = false;
   try {
     const data = await apiCoInvent(mode, userText || "[Help with challenge]", {
       challengeAngle: state.challengeAngle,
@@ -16726,10 +16712,7 @@ async function coachChallenge(mode, userText) {
       if (panel) panel.dataset.draft = draft;
     }
     showChallengeCoach(html);
-    requestOk = true;
   } catch (e) {
-    // local fallback — AP still spent (same as invent co-inventor on soft failure)
-    requestOk = true;
     const angle = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle) || CHALLENGE_ANGLES[0];
     const place = state.mission?.place || "this place";
     const name = state.inventionName || "your invention";
@@ -16745,17 +16728,13 @@ async function coachChallenge(mode, userText) {
       const panel = $("#challenge-coach-panel");
       if (panel) panel.dataset.draft = draft;
       showChallengeCoach(
-        `<div>Draft for this ${angle.label} attack — edit before submit.${
-          helpCost > 0 ? ` <span class="muted">(1 AP spent)</span>` : ""
-        }</div><div class="draft-block"><strong>Draft answer</strong><p>${escapeHtml(
+        `<div>Draft for this ${angle.label} attack — edit before submit.</div><div class="draft-block"><strong>Draft answer</strong><p>${escapeHtml(
           draft
         )}</p><div class="draft-actions"><button type="button" class="btn btn-primary btn-sm" id="btn-apply-draft">Use this draft</button></div></div>`
       );
     } else {
       showChallengeCoach(
-        `<div><strong>${angle.label} coaching</strong>${
-          helpCost > 0 ? ` <span class="muted">(1 AP spent)</span>` : ""
-        }<br/>${escapeHtml(
+        `<div><strong>${angle.label} coaching</strong><br/>${escapeHtml(
           angle.blurb
         )}<br/><br/>• Answer the exact question asked.<br/>• Name a concrete actor, cost, or physical limit in ${escapeHtml(
           place
@@ -16763,15 +16742,6 @@ async function coachChallenge(mode, userText) {
       );
     }
   } finally {
-    // Solo/hotseat: resolve reserved AP. Rooms already paid via pay_ap.
-    if (apEnabled() && reservedLocal) {
-      if (requestOk) dispatchSim("resolve_ai");
-      else dispatchSim("reject_ai");
-      if (hotseatBridge.isHotseat()) mpSyncFromSolo();
-    }
-    // If room request truly failed before work started we already returned;
-    // transport fallback still keeps the AP spend (same as invent AI).
-    void roomApPaid;
     state.aiBusy = false;
     setChallengeHelpBusy(false);
     renderChallengeHud();
@@ -16987,14 +16957,9 @@ function renderDeployBay() {
   const fieldCost = currentDeployFieldCost();
   const scaleCost = currentScaleCost();
   const pilotBits = [];
-  if (apEnabled() && (fieldCost.ap || 0) > 0) pilotBits.push(`${fieldCost.ap} AP`);
-  if (budgetWillEnabled()) pilotBits.push(`${fieldCost.budget}$`);
+  if (apEnabled() && (fieldCost.ap || 0) > 0) pilotBits.push(`${fieldCost.ap} Move`);
   const scaleBits = [];
-  if (apEnabled() && (scaleCost.ap || 0) > 0) scaleBits.push(`${scaleCost.ap} AP`);
-  if (budgetWillEnabled()) {
-    scaleBits.push(`${scaleCost.budget}$`);
-    if (scaleCost.will > 0) scaleBits.push(`${scaleCost.will} Support`);
-  }
+  if (apEnabled() && (scaleCost.ap || 0) > 0) scaleBits.push(`${scaleCost.ap} Move`);
 
   if (status) {
     const last = state.lastDeployRoll;
@@ -17099,15 +17064,15 @@ function renderDeployHud() {
   paintResourceChips("dep-");
   const apEl = $("#dep-hud-ap");
   if (apEl && apEnabled()) {
-    apEl.title = "Action points. Scale and AI help cost AP; Pilot is free attention.";
+    apEl.title = "Moves left this turn. Pilot and Scale each use 1 Move.";
   }
   const budgetEl = $("#dep-hud-budget");
   if (budgetEl && budgetWillEnabled()) {
-    budgetEl.title = "Capital (same as invent). Deploy spends Budget.";
+    budgetEl.title = "Available Budget capacity across your active pathways.";
   }
   const willEl = $("#dep-hud-will");
   if (willEl && budgetWillEnabled()) {
-    willEl.title = "Support (same as invent).";
+    willEl.title = "Available Goodwill capacity.";
   }
   syncEconomyChromeVisibility();
   paintHudPressureMeters($("#dep-hud-pressure"));
@@ -17154,9 +17119,9 @@ function payPilotAttempt() {
   });
   if (!pay.ok) {
     if (pay.error === "no_ap") {
-      flashToast("No AP to try Pilot — End turn, then try again.", { resource: "ap" });
+      flashToast("No Moves left to try Pilot — end your turn, then try again.", { resource: "ap" });
     } else if (pay.error === "no_budget") {
-      flashToast(`Need ¤${fieldCost.budget} Budget to try Pilot (you have ${state.budget ?? 0}).`, {
+      flashToast(`Need ${fieldCost.budget} Budget to try Pilot (you have ${state.budget ?? 0}).`, {
         resource: "budget",
       });
     } else {
@@ -17168,23 +17133,23 @@ function payPilotAttempt() {
   return { ok: true, fieldCost };
 }
 
-/** Pay Scale attempt: AP + Budget + optional Will. */
+/** Pay Scale attempt: 1 Move. */
 function payScaleAttempt() {
   const techs = selectedTechs();
   const cost = currentScaleCost(techs);
   if (apEnabled() && (state.ap ?? 0) < cost.ap) {
-    flashToast("No AP to try Scale — End turn first.", { resource: "ap" });
+    flashToast("No Moves left to try Scale — end your turn first.", { resource: "ap" });
     return { ok: false, cost };
   }
   if (budgetWillEnabled()) {
     if ((state.budget ?? 0) < cost.budget) {
-      flashToast(`Need ¤${cost.budget} Budget to try Scale (you have ${state.budget ?? 0}).`, {
+      flashToast(`Need ${cost.budget} Budget to try Scale (you have ${state.budget ?? 0}).`, {
         resource: "budget",
       });
       return { ok: false, cost };
     }
     if ((state.will ?? 0) < cost.will) {
-      flashToast(`Need ${cost.will} Support to try Scale (you have ${state.will ?? 0}). Lobby first.`, {
+      flashToast(`Need ${cost.will} Goodwill to try Scale (you have ${state.will ?? 0}). Lobby first.`, {
         resource: "will",
       });
       return { ok: false, cost };
@@ -17196,7 +17161,7 @@ function payScaleAttempt() {
       budgetCost: budgetWillEnabled() ? cost.budget : 0,
     });
     if (!pay.ok) {
-      if (pay.error === "no_ap") flashToast("No AP to try Scale.", { resource: "ap" });
+      if (pay.error === "no_ap") flashToast("No Moves left to try Scale.", { resource: "ap" });
       else if (pay.error === "no_budget")
         flashToast("Not enough Budget for Scale.", { resource: "budget" });
       else flashToast("Cannot scale right now.");
@@ -17257,23 +17222,20 @@ function attemptDeployStage(stage) {
         const c = currentDeployFieldCost(techs);
         const apCost = Number.isFinite(c.ap) ? Math.max(0, c.ap) : 0;
         if (apEnabled() && apCost > 0 && getSpendableAp() < apCost) {
-          flashToast(
-            `No AP to try Pilot (have ${getSpendableAp()}, need ${apCost}).`,
-            { resource: "ap" }
-          );
+          flashToast("No Moves left to try Pilot — end your turn, then try again.", {
+            resource: "ap",
+          });
           return;
         }
         if (budgetWillEnabled() && (state.budget ?? 0) < c.budget) {
-          flashToast(`Need ¤${c.budget} Budget to try Pilot.`, { resource: "budget" });
+          flashToast(`Need ${c.budget} Budget to try Pilot.`, { resource: "budget" });
           return;
         }
-        // Optimistic local spend (server is authority; patch re-syncs)
         if (apEnabled()) {
           if (apCost > 0) {
             state.ap = Math.max(0, getSpendableAp() - apCost);
             state.apSpentThisTurn = (state.apSpentThisTurn || 0) + apCost;
           } else {
-            // 0-AP Pilot still counts as engagement for end_turn
             state.apSpentThisTurn = Math.max(state.apSpentThisTurn || 0, 1);
           }
         }
@@ -17282,18 +17244,17 @@ function attemptDeployStage(stage) {
         const c = currentScaleCost(techs);
         const apCost = Number.isFinite(c.ap) ? Math.max(0, c.ap) : 1;
         if (apEnabled() && apCost > 0 && getSpendableAp() < apCost) {
-          flashToast(
-            `No AP to try Scale (have ${getSpendableAp()}, need ${apCost}).`,
-            { resource: "ap" }
-          );
+          flashToast("No Moves left to try Scale — end your turn, then try again.", {
+            resource: "ap",
+          });
           return;
         }
         if (budgetWillEnabled() && (state.budget ?? 0) < c.budget) {
-          flashToast(`Need ¤${c.budget} Budget to try Scale.`, { resource: "budget" });
+          flashToast(`Need ${c.budget} Budget to try Scale.`, { resource: "budget" });
           return;
         }
         if (budgetWillEnabled() && (state.will ?? 0) < (c.will || 0)) {
-          flashToast(`Need ${c.will} Support to try Scale.`, { resource: "will" });
+          flashToast(`Need ${c.will} Goodwill to try Scale.`, { resource: "will" });
           return;
         }
         if (apEnabled() && apCost > 0) {
@@ -17695,14 +17656,14 @@ function reopenInventToWorkshop(opts = {}) {
     const ok = window.confirm(
       "Abandon this Challenge?\n\n" +
         "Your invent unlocks for rework — others can contribute again. " +
-        "Challenge progress is cleared. Facing the challenge again costs AP."
+        "Challenge progress is cleared."
     );
     if (!ok) return;
   }
 
   const doneMsg =
     source === "challenge"
-      ? "Challenge abandoned — invent unlocked. Helpers can contribute. Face the challenge again when ready (costs AP)."
+      ? "Challenge abandoned — invent unlocked. Helpers can contribute. Face the challenge again when ready."
       : "Invent reopened — Challenge & Pilot progress cleared. Edit freely (helpers can layer). Face the challenge again when ready.";
 
   if (roomBridge.isRoom()) {
@@ -17755,7 +17716,7 @@ function reopenInventToWorkshop(opts = {}) {
   updateChallengeButton();
   flashToast(
     source === "challenge"
-      ? "Challenge abandoned — invent unlocked. Rework, then Face the challenge again (costs AP)."
+      ? "Challenge abandoned — invent unlocked. Rework, then Face the challenge again."
       : "Invent reopened — Challenge & Pilot progress cleared. Rework, then Face the challenge again."
   );
 }
@@ -17801,7 +17762,7 @@ function updateChallengeAbandonButton() {
   btn.disabled = busy;
   btn.title = busy
     ? inventActionBusyReason()
-    : "Leave Challenge and unlock invent for rework — helpers can contribute again. Facing again costs AP.";
+    : "Leave Challenge and unlock invent for rework — helpers can contribute again.";
 }
 
 function attemptDeploy() {
@@ -18867,7 +18828,7 @@ function renderOutcome() {
     if (sidestepped) {
       lessons.push({
         type: "grow",
-        text: `Challenge (${o.meta?.angle || "stress-test"}): sidestepped — you bought past the critic (1 AP + 1 Support). Deploy unlocked, but elegance softens.`,
+        text: `Challenge (${o.meta?.angle || "stress-test"}): sidestepped — you stepped past the critic. Deploy unlocked, but elegance softens.`,
       });
     } else {
       lessons.push({
@@ -19377,6 +19338,8 @@ function ensureVision() {
   state.vision.onTrace = (info) => recordAiTrace(info);
   const chRoot = $("#challenge-vision-root");
   if (chRoot) state.vision.addMirror(chRoot);
+  const miniRoot = $("#ws-vision-mini");
+  if (miniRoot) state.vision.addMirror(miniRoot);
 }
 
 /** Build challengeBeat for Imagine from current scrutiny / last response */
@@ -19475,6 +19438,8 @@ function updateVision(opts = {}) {
   const inventName = $("#vision-stage-name");
   const inventBlurb = $("#vision-stage-blurb");
   if (inventName) inventName.textContent = `${stage.name} · ${state.year}`;
+  const miniStage = $("#ws-vision-mini-stage");
+  if (miniStage) miniStage.textContent = `${stage.name} · ${state.year}`;
   if (inventBlurb) {
     const who =
       roomBridge.isRoom() && roomBridge.viewingOther?.()
@@ -19502,6 +19467,7 @@ function updateVision(opts = {}) {
     state.vision.attach($("#vision-root"));
     state.vision.addMirror($("#challenge-vision-root"));
     state.vision.addMirror($("#deploy-vision-root"));
+    state.vision.addMirror($("#ws-vision-mini"));
   }
 
   const challengeBeat = onChallenge ? buildChallengeVisionBeat() : null;
@@ -19928,7 +19894,7 @@ function maybeSeedCoInventorWelcome() {
   const place = mission.place || "this place";
   const year = mission.startYear || GAME.startYear;
   const welcome = tutor
-    ? `**${place}**, ${year} — I'm your **AI tutor** (**free AP**). Look at this place in **Future vision**: what's one thing you notice first?`
+    ? `**${place}**, ${year} — I'm your **AI tutor**. Look at this place in **Future vision**: what's one thing you notice first?`
     : `Ready when you are at **${place}** (${year}) — pick an emTech on the left, or ask what could help here. Use **Look Ahead** whenever an idea needs the curve to catch up.`;
   state.coInventor.pushAssistant(
     {
@@ -20082,27 +20048,23 @@ function ensureCoInventor() {
         flashToast("Not your turn — you can browse and use Learn, but only the active seat acts.");
         return false;
       }
-      const cost =
-        !apEnabled() || isLearningTutorSessionActive()
-          ? 0
-          : thinkingAiApCost(state, mode || "chat", 1);
+      const cost = !apEnabled() ? 0 : aiMoveCost(mode || "chat");
       if (cost <= 0) return true;
       if (roomBridge.isRoom()) {
-        // requestAi (transport) charges the server; do not local-only reserve_ai.
         if ((state.ap ?? 0) < cost) {
-          flashToast("No AP left for co-inventor — End turn or Wait.", { resource: "ap" });
+          flashToast("No Moves left this turn — click End turn → to pass.", { resource: "ap" });
           return false;
         }
         return true;
       }
       const r = dispatchSim("reserve_ai", {
         mode: mode || "chat",
-        reservedAp: 1,
+        reservedAp: cost,
         tutor: isLearningTutorSessionActive(),
         clientActionId: `co-${Date.now()}`,
       });
       if (!r.ok) {
-        flashToast("No AP left for co-inventor — End turn or Wait.", { resource: "ap" });
+        flashToast("No Moves left — advance the year or end your turn.", { resource: "ap" });
         return false;
       }
       renderHud();
@@ -20587,185 +20549,158 @@ function contribFaceForField(field) {
 }
 
 /**
- * Spend 1 AP for the first hex challenger draw (before pose-challenge).
- * Rooms/hotseat use pay_ap so invent stays on the board (no enter_challenge screen).
- * Solo uses enter_challenge as the existing AP spend; caller restores turnPhase act.
- * @returns {{ ok: boolean, reason?: string }}
+ * Summoning roadblocks / challengers is always free (0 Moves).
+ * Submitting a defense uses 1 Move.
  */
 function spendFirstSummonAp() {
-  if (!apEnabled()) return { ok: true };
-  const apNow = getSpendableAp();
-  if (apNow < 1) {
-    return { ok: false, reason: "No AP — End Turn or Wait first." };
-  }
-  if (roomBridge.isRoom()) {
-    try {
-      roomBridge.send({ type: "pay_ap", payload: { amount: 1 } });
-      state.ap = Math.max(0, apNow - 1);
-      state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
-      renderHud();
-      return { ok: true };
-    } catch {
-      return { ok: false, reason: "Could not spend AP." };
-    }
-  }
-  if (hotseatBridge.isHotseat()) {
-    const payer = hotseatBridge.captureSummonPayer();
-    const r = hotseatBridge.applyActiveAction?.({
-      type: "pay_ap",
-      payload: { amount: 1 },
-    });
-    if (!r?.ok) {
-      return {
-        ok: false,
-        reason:
-          r?.error === "no_ap"
-            ? "No AP — End Turn or Wait first."
-            : mpFriendlyError(r?.error) || "Cannot summon concerns",
-      };
-    }
-    hotseatBridge.hydrateSoloState?.(state, { global: state.global });
-    renderHud();
-    return { ok: true, refund: () => {
-      if (!hotseatBridge.refundSummonPayer(payer)) return;
-      if (hotseatBridge.getActiveId() === payer.seat) {
-        const actor = hotseatBridge.getSession().invents[payer.seat];
-        state.ap = actor.ap;
-        state.apSpentThisTurn = actor.apSpentThisTurn;
-        renderHud();
-      }
-    } };
-  }
-  const r = dispatchSim("enter_challenge");
-  if (!r.ok) {
-    return {
-      ok: false,
-      reason:
-        r.error === "no_ap"
-          ? "No AP — End Turn or Wait first."
-          : r.error || "Cannot summon concerns",
-    };
-  }
-  renderHud();
   return { ok: true };
 }
 
-/**
- * Undo first-summon AP if pose/place fails after spendFirstSummonAp.
- * Solo also leaves scrutiny so invent stays playable.
- */
-function refundFirstSummonAp() {
-  if (!apEnabled()) return;
-  if (roomBridge.isRoom()) {
-    try {
-      roomBridge.send({ type: "refund_ap", payload: { amount: 1 } });
-      state.ap = Math.min(state.apMax || 3, (state.ap || 0) + 1);
-      state.apSpentThisTurn = Math.max(0, (state.apSpentThisTurn || 0) - 1);
-      renderHud();
-    } catch {
-      /* ignore */
-    }
-    return;
-  }
-  if (hotseatBridge.isHotseat()) {
-    hotseatBridge.applyActiveAction?.({
-      type: "refund_ap",
-      payload: { amount: 1 },
-    });
-    hotseatBridge.hydrateSoloState?.(state, { global: state.global });
-    renderHud();
-    return;
-  }
-  dispatchSim("refund_ap", { amount: 1 });
-  if (state.turnPhase === "scrutiny") {
-    dispatchSim("abandon_scrutiny");
-  }
-  state.turnPhase = "act";
-  renderHud();
-}
+function refundFirstSummonAp() {}
 
 /**
- * Spend 1 AP for co-invent / contribution judge.
- * Room: server pay_ap (+ optimistic local HUD).
- * Hotseat/solo: reserve_ai then resolve (spend sticks; not refunded on content reject).
+ * Spend 1 Move for judgment commitments (`judge-challenge`, `judge-scrutiny-move`,
+ * `fact-check-argument`). Thinking/brainstorming modes are always 0 Moves.
  * @param {string} [mode]
- * @returns {{ ok: boolean, roomPaid: boolean }}
+ * @returns {{ ok: boolean, roomPaid: boolean, amount?: number, reason?: string }}
  */
 function spendContributionAp(mode = "contribution") {
-  if (!apEnabled()) return { ok: true, roomPaid: false };
-  const charge = applyThinkingAiCharge(state, mode, 1, {
-    tutor: isLearningTutorSessionActive(),
-  });
-  const cost = charge.cost;
+  if (!apEnabled()) return { ok: true, roomPaid: false, amount: 0 };
+  const cost = aiMoveCost(mode);
+  if (cost <= 0) return { ok: true, roomPaid: false, amount: 0 };
+  const mp = Boolean(mpBridge() || state.mp);
+  const noMovesMsg = mp
+    ? "No Moves left this turn — click End turn → to pass."
+    : "No Moves left this year — click +1 yr → to continue.";
   if (roomBridge.isRoom()) {
-    if (cost <= 0) return { ok: true, roomPaid: false, amount: 0 };
-    if ((state.ap ?? 0) < cost) return { ok: false, roomPaid: false };
+    if (getSpendableAp() < cost) return { ok: false, roomPaid: false, reason: noMovesMsg };
     try {
       roomBridge.send({ type: "pay_ap", payload: { amount: cost, mode } });
-      state.ap -= cost;
+      state.ap = Math.max(0, (state.ap ?? 0) - cost);
       state.apSpentThisTurn = (state.apSpentThisTurn || 0) + cost;
-      if (charge.markPaid) state.aiTaxThisTurn = true;
       renderHud();
       return { ok: true, roomPaid: true, amount: cost };
     } catch {
-      return { ok: false, roomPaid: false };
+      return { ok: false, roomPaid: false, reason: "Could not spend a Move." };
     }
   }
-  if (cost <= 0) return { ok: true, roomPaid: false, amount: 0 };
   const res = dispatchSim("reserve_ai", {
     mode,
-    reservedAp: 1,
+    reservedAp: cost,
     tutor: isLearningTutorSessionActive(),
     clientActionId: `${mode}-${Date.now()}`,
   });
-  if (!res.ok) return { ok: false, roomPaid: false };
+  if (!res.ok) return { ok: false, roomPaid: false, reason: noMovesMsg };
   renderHud();
   mpSyncFromSolo();
   return { ok: true, roomPaid: false, amount: cost };
 }
 
 /**
- * Pay 1 AP + 1 Budget to mint an R&D tile (Lobby-shaped cost).
- * Room: pay_ap + pay_budget. Solo/hotseat: mint_rd sim action.
+ * Allocate 1 Move + 1 reversible Budget capacity for an R&D boost (once per Pathway).
  * @returns {{ ok: boolean, reason?: string }}
  */
 function spendRdMint() {
   const apOn = apEnabled();
   const bwOn = budgetWillEnabled();
+  const mp = Boolean(mpBridge() || state.mp);
   if (apOn && getSpendableAp() < 1) {
-    return { ok: false, reason: "Not enough AP to mint R&D." };
+    return {
+      ok: false,
+      reason: mp
+        ? "No Moves left for R&D — click End turn → to pass."
+        : "No Moves left for R&D — click +1 yr → to continue.",
+    };
   }
-  if (bwOn && (state.budget ?? 0) < 1) {
-    return { ok: false, reason: "Need 1 Budget to mint R&D." };
+  if (bwOn && getSpendableBudget() < 1) {
+    return {
+      ok: false,
+      reason: "Need 1 free Budget capacity for R&D — remove a pathway or ease a crisis.",
+    };
   }
   if (roomBridge.isRoom()) {
     try {
+      roomBridge.send({ type: "mint_rd" });
       if (apOn) {
-        roomBridge.send({ type: "pay_ap", payload: { amount: 1 } });
-        state.ap = Math.max(0, (state.ap ?? 0) - 1);
+        pendingSpend.ap += 1;
         state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
+        getSpendableAp();
       }
       if (bwOn) {
-        roomBridge.send({ type: "pay_budget", payload: { amount: 1 } });
-        state.budget = Math.max(0, (state.budget ?? 0) - 1);
+        state.rdCount = (state.rdCount || 0) + 1;
+        pendingSpend.budget += 1;
+        getSpendableBudget();
       }
       renderHud();
       return { ok: true };
     } catch {
-      return { ok: false, reason: "Could not pay for R&D." };
+      return { ok: false, reason: "Could not apply R&D boost." };
     }
   }
   const res = dispatchSim("mint_rd");
   if (!res.ok) {
-    if (res.error === "no_ap") return { ok: false, reason: "Not enough AP to mint R&D." };
-    if (res.error === "no_budget") {
-      return { ok: false, reason: "Need 1 Budget to mint R&D." };
+    if (res.error === "no_ap") {
+      return {
+        ok: false,
+        reason: mp
+          ? "No Moves left for R&D — click End turn → to pass."
+          : "No Moves left for R&D — click +1 yr → to continue.",
+      };
     }
-    return { ok: false, reason: "Cannot mint R&D now." };
+    if (res.error === "no_budget") {
+      return {
+        ok: false,
+        reason: "Need 1 free Budget capacity for R&D — remove a pathway or ease a crisis.",
+      };
+    }
+    return { ok: false, reason: "Cannot apply R&D boost now." };
   }
   renderHud();
   mpSyncFromSolo();
   return { ok: true };
+}
+
+/**
+ * Keep allocated R&D count aligned with active pathways on the board so removing
+ * or fusing an R&D-boosted pathway frees 100% of its Budget capacity immediately.
+ * @param {number} count
+ */
+function syncRdCountFromBoard(count) {
+  const nextCount = Math.max(0, Math.floor(Number(count) || 0));
+  const prevCount = Math.max(0, Math.floor(Number(state.rdCount) || 0));
+  if (nextCount === prevCount) return;
+  if (roomBridge.isRoom()) {
+    if (roomBridge.isMyTurn?.()) {
+      try {
+        roomBridge.send({ type: "sync_rd_count", payload: { rdCount: nextCount } });
+      } catch {
+        /* best-effort */
+      }
+      if (budgetWillEnabled()) {
+        pendingSpend.budget += nextCount - prevCount;
+        getSpendableBudget();
+      }
+      state.rdCount = nextCount;
+      renderHud();
+    }
+    return;
+  }
+  if (hotseatBridge.isHotseat()) {
+    const r = hotseatBridge.applyActiveAction?.({
+      type: "sync_rd_count",
+      payload: { rdCount: nextCount },
+    });
+    if (r?.ok) {
+      hotseatBridge.hydrateSoloState(state, {
+        global: state.global,
+        keepLocalHexBoard: true,
+      });
+      renderHud();
+    }
+    return;
+  }
+  dispatchSim("sync_rd_count", { rdCount: nextCount });
+  renderHud();
 }
 
 /**
@@ -20990,10 +20925,12 @@ async function callCoInventMode(mode, userLabel) {
   if (apEnabled()) {
     const pay = spendContributionAp(mode);
     if (!pay.ok) {
-      flashToast("No AP left for AI — End Turn or Wait.", { resource: "ap" });
+      flashToast(pay.reason || "No Moves left — advance the year or end your turn.", {
+        resource: "ap",
+      });
       return;
     }
-    reservedAp = true;
+    reservedAp = Boolean(pay.amount > 0);
     roomApPaid = pay.roomPaid;
   }
   state.aiBusy = true;
@@ -21107,7 +21044,6 @@ async function callCoInventMode(mode, userLabel) {
           title: "Contribution failed",
           reason:
             "The co-inventor did not return a usable draft for the other story face. Try again or type your help.",
-          apNote: "AP spent on AI help is not returned.",
           face: completePictureTargetFace(),
         };
         if (reservedAp && state.pendingAi && !roomApPaid) dispatchSim("resolve_ai");
@@ -21138,13 +21074,12 @@ async function callCoInventMode(mode, userLabel) {
             ok: false,
             title: "Contribution rejected",
             reason: verdict.reason,
-            apNote: "AP spent on AI help is not returned.",
             face: verdict.face || completePictureTargetFace(),
           };
           ensureCoInventor();
           state.coInventor?.pushAssistant?.(
             {
-              message: `**Rejected contribution** — ${verdict.reason}\n\nHelp must *layer on* their idea, not gut it. AP for this AI help stays spent.`,
+              message: `**Rejected contribution** — ${verdict.reason}\n\nHelp must *layer on* their idea, not gut it.`,
               proposals: emptyProps(),
               teaching: [],
             },
@@ -21157,7 +21092,6 @@ async function callCoInventMode(mode, userLabel) {
             reason: verdict.blank
               ? "Your help was applied to their invent (filled an empty story face)."
               : "Your help was applied to their invent (additive check passed).",
-            apNote: "1 AP spent on co-inventor help.",
             face: verdict.face || completePictureTargetFace(),
           };
         }
@@ -21362,12 +21296,6 @@ async function commitWriteIfNeeded() {
   }
 
   const r = dispatchSim("write_commit", { changed: true });
-  if (!r.ok && r.error === "no_ap_buffer") {
-    flashToast("No AP for more edits — End Turn or Wait (changes kept).", { resource: "ap" });
-    state.lastWriteSnapshot = snap;
-    mpSyncFromSolo();
-    return;
-  }
   if (r.ok) {
     state.lastWriteSnapshot = snap;
     mpSyncFromSolo();
@@ -21794,29 +21722,18 @@ function clearStoryFacePending() {
   });
 }
 
-/* —— Round market news (illustrated card) —— */
-// Same reliability model as mp-turn-modal (plain fixed div, display:flex, no opacity traps).
-// Multiplayer order: market bulletin FIRST → year flash → deferred "your turn" notice.
+/* —— Turn notices & year foresight flash —— */
 
-const marketImageCache = new Map();
-/** Id currently open or about to open (blocks turn notice) */
-let marketNewsOpenId = null;
-/** Auto-dismiss timer for market bulletin (cleared on manual Got it) */
-let marketNewsAutoCloseT = null;
-/** Default ms before market bulletin auto-closes if not dismissed (read headline + body + effects) */
-const MARKET_NEWS_AUTO_CLOSE_MS = 4000;
 /** @type {{ name?: string, isYou?: boolean, mode?: string } | null} */
 let deferredTurnNotice = null;
 /** Year advance banner/HUD pulse is on-screen — hold turn popup so it isn't covered */
 let yearFlashActive = false;
 let yearFlashReleaseT = null;
-/** Year advanced while market modal owned the screen — replay flash after dismiss */
-let yearFlashNeedsReplay = false;
 
 /**
  * Multiplayer: block spend/act until the player acks "It's your turn!" (Let's go).
  * Arms as soon as your seat becomes active — even while the popup is deferred
- * behind market news / year flash — so Challenge cannot be clicked early.
+ * behind year flash — so Challenge cannot be clicked early.
  */
 let mpTurnGateActive = false;
 /** Seat whose “Let's go” we already acked this seat-turn (hex edits stay locked until then). */
@@ -21835,16 +21752,9 @@ function mpHexEditsAllowed() {
   return Boolean(activeId && mpTurnAckedSeatId === activeId);
 }
 
-function isMarketNewsModalOpen() {
-  const el = document.getElementById("market-news-modal");
-  return Boolean(el && !el.hidden && el.style.display !== "none" && el.dataset.reread !== "1");
-}
-
 /** True while a modal/flash should keep "your turn" queued. */
 function shouldDeferTurnNotice() {
-  return Boolean(
-    isMarketNewsModalOpen() || marketNewsOpenId || yearBulletinOpen || yearFlashActive
-  );
+  return Boolean(yearBulletinOpen || yearFlashActive);
 }
 
 /** @param {boolean} on */
@@ -21923,57 +21833,6 @@ function releaseDeferredTurnNotice() {
   requestAnimationFrame(() => showTurnStartNotice(pending));
 }
 
-/**
- * Queue / show market bulletin. New cards always take the screen.
- * @param {object} news
- * @param {{ force?: boolean }} [opts]
- */
-function queueMarketNewsModal(news, opts = {}) {
-  if (!news?.id) return;
-  state.marketNews = cloneMarketNews(news);
-  // Already showing this exact card
-  if (marketNewsOpenId === news.id && isMarketNewsModalOpen()) {
-    renderMarketBanner({ pulse: false });
-    return;
-  }
-  // Already dismissed this id unless force (e.g. explicit event / re-open from banner)
-  if (!opts.force && state.marketNewsShownId === news.id && !isMarketNewsModalOpen()) {
-    renderMarketBanner({ pulse: false });
-    return;
-  }
-  // Show immediately — do not wait; turn popup must queue behind us
-  showMarketNewsModal(news);
-}
-
-function closeMarketNewsModal(opts = {}) {
-  const el = document.getElementById("market-news-modal");
-  if (!el) return;
-  stopReadAloud();
-  if (marketNewsAutoCloseT) {
-    clearTimeout(marketNewsAutoCloseT);
-    marketNewsAutoCloseT = null;
-  }
-  marketNewsOpenId = null;
-  el.dataset.reread = "1";
-  document.body.classList.remove("market-news-open");
-  el.hidden = true;
-  el.setAttribute("hidden", "");
-  el.style.display = "none";
-  el.classList.remove("is-open", "is-entering", "is-leaving");
-
-  // After dismiss: pulse market banner, re-show year flash if market covered it,
-  // then deferred turn notice (year flash still holds the queue while active).
-  if (opts.highlightBanner !== false) {
-    renderMarketBanner({ pulse: true, scrollIntoView: true });
-  }
-  if (yearFlashNeedsReplay && state.lastYearBulletin?.toYear != null) {
-    yearFlashNeedsReplay = false;
-    pulseYearHud(state.lastYearBulletin.toYear);
-    flashYearAdvanceBanner(state.lastYearBulletin);
-  }
-  releaseDeferredTurnNotice();
-}
-
 /* —— Year bulletin (world clock + foresight highlights) —— */
 let yearBulletinOpen = false;
 let lastYearPulseKey = null;
@@ -22034,10 +21893,6 @@ function pulseYearHud(toYear) {
  */
 function flashYearAdvanceBanner(bulletin) {
   if (!bulletin?.toYear) return;
-  // If market owns the screen, still arm the hold but mark for replay after dismiss
-  if (isMarketNewsModalOpen() || marketNewsOpenId) {
-    yearFlashNeedsReplay = true;
-  }
   const hosts = [
     $("#year-advance-banner"),
     $("#hs-year-advance-banner"),
@@ -22280,281 +22135,121 @@ function showYearBulletinModal(bulletin, opts = {}) {
   }
 }
 
-/**
- * Full-screen market bulletin — same shell pattern as "It's your turn".
- * @param {object} news
- */
-function showMarketNewsModal(news) {
-  if (!news) return;
-  state.marketNews = cloneMarketNews(news);
-  marketNewsOpenId = news.id;
+const WAIT_REPORT_AUTO_HIDE_MS = 8000;
+const INFO_BANNER_RESUME_MS = 2500;
+const INFO_BANNER_FADE_MS = 450;
 
-  // Turn popup must wait — hide it if already up
-  try {
-    closeMpTurnModal();
-  } catch {
-    /* ignore */
-  }
-
-  let el = document.getElementById("market-news-modal");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "market-news-modal";
-    el.className = "market-news-modal";
-    el.setAttribute("role", "alertdialog");
-    el.setAttribute("aria-modal", "true");
-    el.setAttribute("aria-labelledby", "market-news-headline");
-    el.innerHTML = `
-      <div class="market-news-dialog" role="document">
-        <div class="market-news-art" id="market-news-art" aria-hidden="true">
-          <div class="market-news-art-fallback" id="market-news-art-fallback"></div>
-          <img id="market-news-img" alt="" hidden />
-          <div class="market-news-art-loading" id="market-news-art-loading" hidden>Illustrating…</div>
-        </div>
-        <div class="market-news-copy">
-          <p class="market-news-kicker" id="market-news-kicker">Market bulletin</p>
-          <h3 id="market-news-headline"></h3>
-          <p id="market-news-body" class="market-news-body"></p>
-          <div class="market-news-effects" id="market-news-effects"></div>
-          <p class="market-news-note muted">AP stays 1. Only Budget and Will for matching emTechs shift this round.</p>
-          <button type="button" class="btn btn-primary" id="market-news-ok">Got it</button>
-        </div>
-      </div>`;
-    if (!hostNewsInBrief(el, "News")) document.body.appendChild(el);
-    el.addEventListener("click", (ev) => {
-      if (ev.target === el || ev.target?.id === "market-news-ok" || ev.target?.closest?.("#market-news-ok")) {
-        closeMarketNewsModal();
-      }
-    });
-    document.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape") {
-        const live = document.getElementById("market-news-modal");
-        if (live && !live.hidden) closeMarketNewsModal();
-      }
-    });
-  }
-
-  const tone = news.tone || "mixed";
-  el.dataset.tone = tone;
-
-  // Identical visibility recipe as mp-turn-modal (proven to work in multiplayer)
-  delete el.dataset.reread;
-  el.hidden = false;
-  el.removeAttribute("hidden");
-  el.style.display = "flex";
-  el.classList.add("is-open");
-  hostNewsInBrief(el, `News · ${news.headline || "Market"}`);
-  document.body.classList.add("market-news-open");
-
-  // Card fly-in each open
-  const dialog = el.querySelector(".market-news-dialog");
-  if (dialog) {
-    dialog.classList.remove("market-news-dialog-enter");
-    void dialog.offsetWidth;
-    dialog.classList.add("market-news-dialog-enter");
-  }
-
-  const kicker = el.querySelector("#market-news-kicker");
-  const headline = el.querySelector("#market-news-headline");
-  const body = el.querySelector("#market-news-body");
-  const effectsEl = el.querySelector("#market-news-effects");
-  const fallback = el.querySelector("#market-news-art-fallback");
-  const img = el.querySelector("#market-news-img");
-  const loading = el.querySelector("#market-news-art-loading");
-  const okBtn = el.querySelector("#market-news-ok");
-
-  if (kicker) {
-    kicker.textContent =
-      news.round != null ? `Breaking · Round ${news.round}` : "Breaking market news";
-  }
-  if (headline) headline.textContent = news.headline || "Market shift";
-  if (body) {
-    body.textContent = news.body || "";
-    syncReadAloud(body, {
-      getText: () =>
-        [news.headline, news.body].filter(Boolean).join(". "),
-    });
-  }
-  if (fallback) {
-    fallback.hidden = false;
-    fallback.textContent = news.icon || "📰";
-    fallback.dataset.tone = tone;
-  }
-  if (okBtn) {
-    okBtn.type = "button";
-    okBtn.onclick = (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      closeMarketNewsModal();
-    };
-  }
-
-  const desc = describeMarketEffects(news, {
-    techName: (id) => techById(id)?.name || id,
-    domainLabel: (d) => DOMAINS[d]?.label || d,
-  });
-  if (effectsEl) {
-    effectsEl.innerHTML = `
-      <span class="market-effect-scope">${escapeHtml(desc.scope)}</span>
-      ${desc.effects
-        .map((e) => {
-          const up = e.includes("+");
-          const down = e.includes("-");
-          const cls = up ? "up" : down ? "down" : "";
-          return `<span class="market-effect-chip ${cls}">${escapeHtml(e)}</span>`;
-        })
-        .join("")}`;
-  }
-
-  // Illustration: prebuilt static asset (dev-time Imagine batch). Icon fallback if missing.
-  if (img) {
-    img.hidden = true;
-    img.removeAttribute("src");
-    img.onerror = null;
-  }
-  if (loading) loading.hidden = true;
-  if (fallback) {
-    fallback.hidden = false;
-    fallback.textContent = news.icon || "📰";
-  }
-
-  const staticUrl = marketNewsImageUrl(news);
-  if (staticUrl && img) {
-    img.onload = () => {
-      if (state.marketNews?.id !== news.id) return;
-      img.hidden = false;
-      if (fallback) fallback.hidden = true;
-      if (loading) loading.hidden = true;
-      marketImageCache.set(news.id, staticUrl);
-      renderMarketBanner({ pulse: false });
-    };
-    img.onerror = () => {
-      img.hidden = true;
-      if (fallback) fallback.hidden = false;
-      if (loading) loading.hidden = true;
-    };
-    // Show loading briefly only when we don't already know the asset works
-    if (!marketImageCache.has(news.id) && loading) loading.hidden = false;
-    img.src = staticUrl;
-  }
-
-  // Mark shown only after the overlay is actually on screen
-  state.marketNewsShownId = news.id;
-  renderMarketBanner({ pulse: false });
-
-  try {
-    flashToast(`📰 Market news · ${news.headline || "costs shifted"}`, {
-      durationMs: 3500,
-    });
-  } catch {
-    /* ignore */
-  }
-
-  setTimeout(() => {
-    try {
-      okBtn?.focus?.({ preventScroll: true });
-    } catch {
-      /* ignore */
-    }
-  }, 30);
-
-  // Auto-dismiss if the player does not click Got it
-  if (marketNewsAutoCloseT) {
-    clearTimeout(marketNewsAutoCloseT);
-    marketNewsAutoCloseT = null;
-  }
-  marketNewsAutoCloseT = setTimeout(() => {
-    marketNewsAutoCloseT = null;
-    if (marketNewsOpenId === news.id && isMarketNewsModalOpen()) {
-      closeMarketNewsModal();
-    }
-  }, MARKET_NEWS_AUTO_CLOSE_MS);
+function clearBannerTimers(el) {
+  if (!el) return;
+  clearTimeout(el._autoFadeT);
+  clearTimeout(el._autoHideT);
+  clearTimeout(el._pulseTimer);
+  el._autoFadeT = null;
+  el._autoHideT = null;
+  el._pulseTimer = null;
 }
 
-/**
- * Static illustration URL for a market card (pre-generated at build time).
- * @param {object} news
- * @returns {string|null}
- */
-function marketNewsImageUrl(news) {
-  if (!news?.id) return null;
-  if (marketImageCache.has(news.id)) return marketImageCache.get(news.id);
-  const p = marketNewsImagePath(news);
-  return p || null;
+function resetInfoBannerTimers() {
+  const els = [$("#wait-report")].filter(Boolean);
+  for (const el of els) {
+    clearBannerTimers(el);
+    el._dismissing = false;
+    el.hidden = true;
+    el.innerHTML = "";
+    el.classList.remove("is-pulse", "is-fly-in", "is-fading");
+    delete el.dataset.bannerKey;
+    delete el.dataset.reportKey;
+  }
 }
 
-/**
- * Compact persistent banner under the mission scene.
- * @param {{ pulse?: boolean, scrollIntoView?: boolean }} [opts]
- */
-function renderMarketBanner(opts = {}) {
-  const hosts = [
-    $("#market-news-banner"),
-    $("#hs-market-news-banner"),
-    $("#mp-market-news-banner"),
-  ].filter(Boolean);
-  if (!hosts.length) return;
-  const news = currentMarketNews();
-  if (!news) {
-    for (const host of hosts) {
-      host.hidden = true;
-      host.innerHTML = "";
-      host.classList.remove("is-pulse", "is-fly-in");
+function dismissWaitReportBanner(wr, { immediate = false } = {}) {
+  if (!wr) return;
+  clearBannerTimers(wr);
+  wr._dismissing = true;
+  state.waitReport = "";
+  const finish = () => {
+    wr._dismissing = false;
+    wr.hidden = true;
+    wr.innerHTML = "";
+    wr.classList.remove("is-fading");
+    delete wr.dataset.reportKey;
+    refreshReadAloud(wr);
+  };
+  if (immediate || wr.hidden) {
+    finish();
+    return;
+  }
+  wr.classList.add("is-fading");
+  wr._autoHideT = setTimeout(finish, INFO_BANNER_FADE_MS);
+}
+
+function armWaitReportTimeout(wr, delayMs) {
+  if (!wr || wr.hidden || wr._dismissing) return;
+  clearTimeout(wr._autoFadeT);
+  clearTimeout(wr._autoHideT);
+  wr.classList.remove("is-fading");
+  wr._autoFadeT = setTimeout(() => {
+    wr._autoFadeT = null;
+    dismissWaitReportBanner(wr);
+  }, delayMs);
+}
+
+function renderWaitReportBanner() {
+  const wr = $("#wait-report");
+  if (!wr) return;
+  const html = String(state.waitReport || "").trim();
+  if (!html) {
+    if (wr._dismissing) return;
+    clearBannerTimers(wr);
+    wr._dismissing = false;
+    wr.hidden = true;
+    wr.innerHTML = "";
+    wr.classList.remove("is-fading");
+    delete wr.dataset.reportKey;
+    refreshReadAloud(wr);
+    return;
+  }
+  if (wr.dataset.reportKey === html && !wr.hidden && !wr._dismissing) {
+    if (!wr._autoFadeT && !wr._autoHideT && !wr._hovered) {
+      armWaitReportTimeout(wr, WAIT_REPORT_AUTO_HIDE_MS);
     }
     return;
   }
-  const desc = describeMarketEffects(news, {
-    techName: (id) => techById(id)?.name || id,
-    domainLabel: (d) => DOMAINS[d]?.label || d,
-  });
-  const thumb = marketNewsImageUrl(news);
-  const html = `
-    <button type="button" class="market-news-banner-btn" data-market-open="1" title="Open market bulletin">
-      <span class="market-news-banner-thumb" aria-hidden="true">
-        ${
-          thumb
-            ? `<img src="${escapeHtml(thumb)}" alt="" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.hidden=false)" /><span class="market-news-banner-icon" hidden>${escapeHtml(news.icon || "📰")}</span>`
-            : `<span class="market-news-banner-icon">${escapeHtml(news.icon || "📰")}</span>`
-        }
-      </span>
-      <span class="market-news-banner-text">
-        <span class="market-news-banner-kicker">Market · Round ${escapeHtml(
-          String(news.round ?? state.turn ?? 1)
-        )}</span>
-        <strong>${escapeHtml(news.headline)}</strong>
-        <span class="market-news-banner-effects">
-          ${escapeHtml(desc.scope)} · ${desc.effects.map(escapeHtml).join(" · ")}
-        </span>
-      </span>
-    </button>`;
-
-  for (const host of hosts) {
-    // Only paint hosts that exist in the active layout (others may be on hidden screens)
-    if (!host.isConnected) continue;
-    host.hidden = false;
-    host.dataset.tone = news.tone || "mixed";
-    host.innerHTML = html;
-    host.querySelector("[data-market-open]")?.addEventListener("click", () => {
-      showMarketNewsModal(news);
-    });
-
-    if (opts.pulse || opts.scrollIntoView) {
-      host.classList.remove("is-pulse", "is-fly-in");
-      void host.offsetWidth;
-      host.classList.add("is-fly-in", "is-pulse");
-      if (opts.scrollIntoView && host.offsetParent !== null) {
-        try {
-          host.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        } catch {
-          host.scrollIntoView();
-        }
+  clearBannerTimers(wr);
+  wr._dismissing = false;
+  wr.classList.remove("is-fading");
+  wr.hidden = false;
+  wr.dataset.reportKey = html;
+  wr._hovered = false;
+  wr.innerHTML = `<button type="button" class="info-banner-close" data-dismiss-wait-report="1" aria-label="Dismiss turn update" title="Dismiss">×</button><div class="wait-report-body">${html}</div>`;
+  attachReadAloud(wr);
+  if (!wr._bannerWired) {
+    wr._bannerWired = true;
+    wr.addEventListener("click", (ev) => {
+      if (ev.target?.closest?.("[data-dismiss-wait-report]")) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        dismissWaitReportBanner(wr);
       }
-      clearTimeout(host._pulseTimer);
-      host._pulseTimer = setTimeout(() => {
-        host.classList.remove("is-pulse");
-      }, 2200);
-    }
+    });
+    wr.addEventListener("mouseenter", () => {
+      if (wr._dismissing) return;
+      wr._hovered = true;
+      clearTimeout(wr._autoFadeT);
+      clearTimeout(wr._autoHideT);
+      wr._autoFadeT = null;
+      wr._autoHideT = null;
+      wr.classList.remove("is-fading");
+    });
+    wr.addEventListener("mouseleave", () => {
+      wr._hovered = false;
+      if (wr._dismissing) return;
+      if (!wr.hidden && state.waitReport) {
+        armWaitReportTimeout(wr, INFO_BANNER_RESUME_MS);
+      }
+    });
   }
+  armWaitReportTimeout(wr, WAIT_REPORT_AUTO_HIDE_MS);
 }
 
 /**
@@ -22839,84 +22534,143 @@ function tourWorkshopLayout() {
   return workshopLayoutFor($("#screen-workshop") || document.body);
 }
 
-function isTechCatalogHidden() {
-  const layout = tourWorkshopLayout();
-  if (!layout) return false;
-  if (isTechDrawerMode()) return !isTechDrawerOpen(layout);
-  return isTechRailCollapsed(layout) && !isTechRailPeek(layout);
-}
-
 function tourSnapshot() {
   const board = state.hexBoard || {};
-  const tiles = Object.values(board.tiles || {});
-  const inventions = tiles.filter((t) => t && t.kind === "invention");
-  const unplaced = inventions.filter((t) => t.q == null || t.r == null);
-  const placed = inventions.filter((t) => t.q != null && t.r != null);
-  const panel = hexPathwayPanel(board);
   const brief = lastBriefingPaint() || {};
   const mission = state.mission || {};
   const spotlightId = mission.spotlight?.techId || null;
   const spotlightTech = spotlightId ? techById(spotlightId) : null;
-  const focusId =
-    focusedTechId || hexWorkshop?.getFocusedTechId?.() || null;
-  const focusTech = focusId ? techById(focusId) : null;
-  const concerns = tiles.filter((t) => t && t.kind === "concern");
-  const unanswered = concerns.find(
-    (t) => !String(t.playerAnswer || "").trim() && !t.answerPending
-  );
-  const pendingAnswer = concerns.some((t) => t.answerPending);
-  const redGiven =
-    (panel.givens || []).find((t) => t && t.lamp === "red") ||
-    tiles.find(
-      (t) =>
-        (t.kind === "crisis" || t.kind === "concern") &&
-        t.lamp === "red" &&
-        t.q != null
-    );
-  const redInvention = placed.find((t) => t.timingLevel === "red");
-  const uncoveredIds = Array.isArray(panel.bonds?.uncoveredIds)
-    ? panel.bonds.uncoveredIds
+  const suggestedIds = Array.isArray(mission.suggested)
+    ? mission.suggested.filter(Boolean)
     : [];
-  const uncoveredTile = uncoveredIds[0]
-    ? tiles.find((t) => t && t.id === uncoveredIds[0]) ||
-      board.tiles?.[uncoveredIds[0]]
-    : null;
-  const howHost = $("#hex-island-how");
-  const howBoxes = howHost ? [...howHost.querySelectorAll("textarea")] : [];
-  const islandHowEmpty = Boolean(
-    howHost &&
-      !howHost.hidden &&
-      howBoxes.length &&
-      !howBoxes.some((ta) => String(ta.value || "").trim())
-  );
-  const co = state.coInventor;
-  const coinventorUsed = Boolean(
-    (Array.isArray(co?.messages) && co.messages.length) ||
-      (Array.isArray(co?.histories?.coinventor) && co.histories.coinventor.length)
-  );
-  const popup = $("#hex-tile-popup");
-  const conv = $("#hex-convergence-dialog");
-  const draw = $("#hex-challenger-draw");
-  const waitBd = $("#wait-confirm-backdrop");
-  const passBtn = $("#btn-mp-pass-device");
-  const lobbyBtn = $("#btn-lobby");
-  const mp = mpBridge();
   let hex = null;
   try {
     hex = hexWorkshop || ensureHexWorkshop();
   } catch {
     hex = hexWorkshop;
   }
+  const uiState = hex?.getTourUiState?.() || {};
+  const wbState = uiState.workbench || hex?.getWorkbenchState?.() || {};
+
+  const techTracks = board.techTracks || {};
+  const trackIds = Object.keys(techTracks);
+  const focusId =
+    uiState.focusedTechId ||
+    focusedTechId ||
+    hex?.getFocusedTechId?.() ||
+    trackIds[0] ||
+    null;
+  const focusTech = focusId ? techById(focusId) : null;
+
+  const useCases = board.useCases || {};
+  const pathways = Object.values(board.pathways || {}).filter(Boolean);
+  pathways.sort(
+    (a, b) => (Number(a.createdOrder) || 0) - (Number(b.createdOrder) || 0)
+  );
+  const wires = Object.values(board.wires || {}).filter(Boolean);
+  const crises = Object.values(board.crises || {}).filter(Boolean);
+  const challengers = Object.values(board.challengers || {}).filter(Boolean);
+
+  const questYear = Number(state.year) || Number(board.questYear) || 2026;
+  const primaryPathway =
+    (uiState.focusedPathwayId && board.pathways?.[uiState.focusedPathwayId]) ||
+    pathways[pathways.length - 1] ||
+    null;
+
+  const wiredCrisisIds = new Set(
+    wires.filter((w) => board.pathways?.[w.pathwayId]).map((w) => w.crisisId)
+  );
+  const unpluggedCrises = crises.filter((c) => !wiredCrisisIds.has(c.id));
+  const firstUnplugged = unpluggedCrises[0] || null;
+
+  const liveWireIds = new Set(
+    wires
+      .filter((w) => board.pathways?.[w.pathwayId] && board.crises?.[w.crisisId])
+      .map((w) => w.id)
+  );
+  const redChallenger =
+    challengers.find((ch) => liveWireIds.has(ch.wireId) && ch.lamp === "red") ||
+    challengers.find((ch) => ch.lamp === "red") ||
+    null;
+  const redChallengerWire = redChallenger
+    ? wires.find((w) => w.id === redChallenger.wireId)
+    : null;
+  const challengerAnswerPending = challengers.some((ch) =>
+    Boolean(ch.answerPending)
+  );
+
+  let timingPending = false;
+  let timingLevel = "green";
+  let redPathwayId = null;
+  let hasEarlyForecastWire = false;
+  const rank = { red: 0, yellow: 1, green: 2 };
+  const timingByPathwayId = new Map();
+  for (const pw of pathways) {
+    const t = effectiveTiming(pw, useCases, questYear);
+    timingByPathwayId.set(pw.id, t);
+    if (t.pending) timingPending = true;
+    const lvl = t.early ? "red" : t.timingLevel || "yellow";
+    if (t.early && wires.some((w) => w.pathwayId === pw.id)) {
+      hasEarlyForecastWire = true;
+    }
+    if ((rank[lvl] ?? 1) < (rank[timingLevel] ?? 1)) {
+      timingLevel = lvl;
+    }
+    if (lvl === "red" && !redPathwayId) redPathwayId = pw.id;
+  }
+
+  let impactPending = false;
+  for (const w of wires) {
+    const pw = board.pathways?.[w.pathwayId];
+    const cr = board.crises?.[w.crisisId];
+    if (!pw || !cr) continue;
+    if (timingByPathwayId.get(pw.id)?.early) continue;
+    const fp = pathwayContentFingerprint(pw, board);
+    const impact = board.pathwayImpacts?.[fp];
+    if (isImpactRolePending(impact, cr.role || "local")) {
+      impactPending = true;
+      break;
+    }
+  }
+  const scoringPending = Boolean(uiState.scoringPending || impactPending);
+
+  const wiredRedCrises = crises.filter(
+    (c) => wiredCrisisIds.has(c.id) && c.lamp === "red"
+  );
+  const firstRedCrisis = wiredRedCrises[0] || null;
+
+  const onBoardAngles = new Set(
+    challengers.map((ch) => ch.angle).filter(Boolean)
+  );
+  const roster = Array.isArray(board.concernRoster)
+    ? board.concernRoster.filter(Boolean)
+    : [];
+  const remainingConcernsCount = roster.length
+    ? roster.filter((a) => !onBoardAngles.has(a)).length
+    : remainingConcernAngles(board).length;
+  const concernsOnBoardCount =
+    challengers.length || concernAnglesOnBoard(board).length;
+
+  const popup = $("#hex-tile-popup");
+  const ontPopup = $("#ontology-roadblock");
+  const conv = $("#hex-convergence-dialog");
+  const draw = $("#hex-challenger-draw");
+  const waitBd = $("#wait-confirm-backdrop");
+  const mpEndBtn = $("#btn-mp-workshop-end-turn");
+  const mp = mpBridge();
   const beatCount = Array.isArray(brief.beats) ? brief.beats.length : 0;
+  const holds = isPathwayBoard(board)
+    ? pathwayBoardHolds(board, questYear)
+    : boardHolds(board);
+
   return {
     screen: state.screen,
     place: mission.place || "",
     spotlightTechId: spotlightId,
     spotlightName: spotlightTech?.name || "",
     spotlightEncourage: String(mission.spotlight?.encourageCopy || "").trim(),
-    suggestedIds: Array.isArray(mission.suggested) ? mission.suggested : [],
-    focusedTechId: focusId,
-    focusedTechName: focusTech?.name || "",
+    hasRecommended: suggestedIds.length > 0,
+    suggestedIds,
     isLearning: Boolean(mission.isLearningModule),
     tutorOn: isLearningTutorSessionActive(),
     sideTab: state.sideTab || "vision",
@@ -22926,63 +22680,70 @@ function tourSnapshot() {
       index: Number(brief.index) || 0,
       beatCount,
     },
-    crisisIntroductionPending: crisisIntroduction.count(),
-    firstPlacedTileId: placed[0]?.id || null,
-    convergedTileId: placed.find((t) => Number(t.convergenceFactor) > 1)?.id || null,
-    unplacedInventionCount: unplaced.length,
-    placedInventionCount: placed.length,
-    howTextLength:
-      hexWorkshop?.effectiveHowLength?.() ??
-      String($("#hex-how-text")?.value || "").trim().length,
-    hasSparkBatch: Boolean(focusId && hex?.hasSparkBatch?.(focusId)),
-    pathway: {
-      overall: panel.overall,
-      bonds: panel.bonds?.level || "red",
-      coverage: panel.coverage?.level || "red",
-      timingLevel: panel.timingLevel || panel.timing?.level || "red",
-      timingPending: Boolean(
-        panel.timing?.pending || boardPathwayReevaluating(board)
-      ),
-    },
-    concernsOnBoard: concernAnglesOnBoard(board).length,
-    remainingConcerns: remainingConcernAngles(board).length,
-    concernsSummoned: Boolean(board.concernsSummoned),
-    boardHolds: boardHolds(board),
-    unansweredConcernId: unanswered?.id || null,
-    concernAnswerPending: pendingAnswer,
-    redGivenId: redGiven?.id || null,
-    redInventionId: redInvention?.id || null,
-    uncoveredGivenId: uncoveredTile?.id || uncoveredIds[0] || null,
-    uncoveredGivenName: String(uncoveredTile?.name || "").trim(),
-    uncoveredCount: Number(panel.bonds?.uncovered) || uncoveredIds.length,
-    bondsNote: String(panel.bonds?.note || "").trim(),
-    coverageNote: String(panel.coverage?.note || "").trim(),
-    coverageReds: Number(panel.reds) || 0,
-    ap: getSpendableAp(),
-    apEnabled: apEnabled(),
-    budget: Number(state.budget) || 0,
-    budgetWillEnabled: budgetWillEnabled(),
-    will: Number(state.will) || 0,
-    lobbyVisible: Boolean(lobbyBtn && !lobbyBtn.hidden),
     mp: {
       spectator: isMpInventSpectator(),
       viewingOther: Boolean(mp?.viewingOther?.()),
       hotseat: Boolean(hotseatBridge.isHotseat?.()),
-      needPassDevice: Boolean(passBtn && !passBtn.hidden),
+      needPassDevice: Boolean(mpEndBtn && !mpEndBtn.hidden),
     },
     ui: {
-      techCatalogHidden: isTechCatalogHidden(),
       waitConfirmOpen: Boolean(waitBd?.classList.contains("open")),
-      tilePopupOpen: Boolean(popup && !popup.hidden),
-      convergenceOpen: Boolean(conv && !conv.hidden),
-      createBusy: Boolean(hex?.isCreateBusy?.()),
-      summonBusy: Boolean(hex?.isSummonBusy?.()),
+      pickerOpen: Boolean(uiState.pickerOpen),
+      openChallengerId: uiState.openChallengerId || null,
+      argumentModalOpen: Boolean(uiState.argumentModalOpen),
+      argumentBusy: Boolean(uiState.argumentBusy),
+      createBusy: Boolean(uiState.createBusy ?? hex?.isCreateBusy?.()),
+      summonBusy: Boolean(uiState.summonBusy ?? hex?.isSummonBusy?.()),
       challengerDrawOpen: Boolean(draw && !draw.hidden),
+      scoringPending,
+      timingPending,
+      tilePopupOpen: Boolean(
+        (popup && !popup.hidden) || ontPopup || uiState.openChallengerId
+      ),
+      convergenceOpen: Boolean(conv && !conv.hidden),
     },
-    islandHowEmpty,
-    coinventorUsed,
-    learnOpenedThisTurn: Boolean(state.learnOpenedThisTurn),
-    waitUsed: (Number(state.waits) || 0) > 0,
+    wb: {
+      open: Boolean(wbState.open),
+      diamond: wbState.diamond || "solution",
+      busy: Boolean(wbState.busy),
+      hasHmwBrief: Boolean(String(wbState.hmwBrief || "").trim()),
+      hmwLocked: Boolean(wbState.hmwLocked),
+      ideaCount: Number(wbState.ideaCount) || 0,
+    },
+    tracks: trackIds.length,
+    focusedTechId: focusId,
+    focusedTechName: focusTech?.name || "",
+    useCaseCount: Object.keys(useCases).length,
+    sparksCount: Number(uiState.sparksCount) || 0,
+    writeOpen: Boolean(uiState.writeOpen),
+    draftHowLength: Number(uiState.draftHowLength) || 0,
+    pathwayCount: pathways.length,
+    primaryPathwayId: primaryPathway?.id || null,
+    unpluggedCrisisId: firstUnplugged?.id || null,
+    unpluggedCrisisName: String(firstUnplugged?.name || "").trim(),
+    unpluggedCount: unpluggedCrises.length,
+    redChallengerId: redChallenger?.id || null,
+    redChallengerCrisisId: redChallengerWire?.crisisId || null,
+    challengerAnswerPending,
+    timingLevel,
+    redPathwayId,
+    hasEarlyForecastWire,
+    redCrisisId: firstRedCrisis?.id || null,
+    redCrisisName: String(firstRedCrisis?.name || "").trim(),
+    redCrisisCount: wiredRedCrises.length,
+    concernsOnBoard: concernsOnBoardCount,
+    remainingConcerns: remainingConcernsCount,
+    concernsSummoned: Boolean(board.concernsSummoned),
+    boardHolds: Boolean(holds),
+    pathway: {
+      timingLevel,
+      timingPending,
+    },
+    ap: getSpendableAp(),
+    apEnabled: apEnabled(),
+    isMultiplayer: Boolean(mpBridge() || state.mp),
+    budget: Number(state.budget) || 0,
+    budgetWillEnabled: budgetWillEnabled(),
   };
 }
 
@@ -23024,7 +22785,6 @@ function tutorialSnapshot() {
     },
     turn: Number(state.turn) || 0,
     year: Number(state.year) || 0,
-    marketNewsOpen: isMarketNewsModalOpen(),
     summonBusy: Boolean(hex?.isSummonBusy?.()),
     timingPending: Boolean(base.pathway?.timingPending),
     challengeDisabled: Boolean(challengeBtn?.disabled),
@@ -23042,6 +22802,17 @@ function tutorialSnapshot() {
     ),
     visionUrl: String(
       document.querySelector("#vision-root .vision-image")?.getAttribute("src") || ""
+    ),
+    useCaseCount: Object.keys(board.useCases || {}).length,
+    pathwayCount: Object.keys(board.pathways || {}).length,
+    batteryUseCount: Object.values(board.useCases || {}).filter((uc) => uc?.techId === "battery").length,
+    hasBattery: Object.values(board.pathways || {}).some((pw) =>
+      (pw?.ingredients || []).some((ing) => ing?.techId === "battery")
+    ),
+    fused: Object.values(board.pathways || {}).some((pw) => (pw?.ingredients || []).length >= 2),
+    wired: Object.keys(board.wires || {}).length > 0,
+    roadblockClear: Object.values(board.challengers || {}).some(
+      (ch) => ch && (ch.lamp === "yellow" || ch.lamp === "green")
     ),
   };
 }
@@ -23064,6 +22835,7 @@ function tuckSoloTechRail() {
 async function ensureTutorialTargetsVisible(step) {
   if (step?.openSideTab) {
     try {
+      revealVisionPanel(workshopLayoutFor(null));
       setSideTab(step.openSideTab);
     } catch {
       /* ignore */
@@ -23207,8 +22979,23 @@ function startTutorial() {
   state.tutorialGraduated = false;
   keepTutorialOnTitle = true;
   state.tutorialRun = true;
+  const mission = tutorialPaddyMission();
+  try {
+    setBriefingDismissed(mission?.id, true);
+  } catch {
+    /* briefing store unavailable */
+  }
   syncWorkshopStage();
-  if (state.screen !== "title") showScreen("title");
+  try {
+    startMission(mission);
+    if (state.ap < 5) {
+      state.ap = 5;
+      state.apMax = Math.max(state.apMax || 5, 5);
+      renderHud();
+    }
+  } catch {
+    /* mission not ready */
+  }
   keepTutorialOnTitle = false;
   tutorialCtl?.start?.();
 }
@@ -23255,30 +23042,44 @@ function finishTutorial() {
 }
 
 async function ensureTourTargetVisible(step) {
-  if (step?.openSideTab) {
+  if (step?.openSideTab || step?.id === "D1") {
     try {
-      setSideTab(step.openSideTab);
+      revealVisionPanel(workshopLayoutFor(null));
+      setSideTab(step.openSideTab || "coinventor");
     } catch {
       /* ignore */
-    }
-  }
-  const needsCatalog =
-    step?.target?.kind === "tech" ||
-    Boolean(step?.openTray) ||
-    step?.id === "E0" ||
-    step?.id === "E1" ||
-    step?.id === "E2" ||
-    step?.id === "E3";
-  const layout = tourWorkshopLayout();
-  if (layout && needsCatalog) {
-    if (isTechDrawerMode()) {
-      setTechDrawerOpen(layout, true, { focus: false });
-    } else if (isTechRailCollapsed(layout)) {
-      setTechRailPeek(layout, true);
     }
     await new Promise((r) => {
       requestAnimationFrame(() => requestAnimationFrame(r));
     });
+  }
+  if (step?.expandCard?.kind && step?.expandCard?.id) {
+    try {
+      const hex = hexWorkshop || ensureHexWorkshop();
+      const { kind, id } = step.expandCard;
+      const expanded = hex?.expandCard?.(kind, id);
+      if (!expanded && hex?.isCardCollapsed?.(kind, id)) {
+        hex.toggleCardCollapse?.(`${kind}:${id}`);
+      }
+    } catch {
+      /* ignore */
+    }
+    await new Promise((r) => {
+      requestAnimationFrame(r);
+    });
+  }
+  if (step?.target?.kind === "tech") {
+    const layout = tourWorkshopLayout();
+    if (layout) {
+      if (isTechDrawerMode()) {
+        setTechDrawerOpen(layout, true, { focus: false });
+      } else if (isTechRailCollapsed(layout)) {
+        setTechRailPeek(layout, true);
+      }
+      await new Promise((r) => {
+        requestAnimationFrame(() => requestAnimationFrame(r));
+      });
+    }
   }
   const el = queryTourTarget(step);
   try {
@@ -23293,16 +23094,6 @@ const guidedTour = createGuidedTour({
   restoreFocusEl: () => $("#btn-help"),
   ensureTargetVisible: ensureTourTargetVisible,
   snapshot: () => tourSnapshot(),
-  onOpenConcept: (id) => {
-    const card = conceptById(id);
-    if (!card) return;
-    void guidedTour.openConcept(card, tourSnapshot(), { opener: $("#btn-help") });
-  },
-  onMuteConcept: (id, on) => {
-    setConceptMuted(id, on);
-    flashToast(on ? "Okay — this concept stays in ? but won't pop up." : "This concept will pop up again in new Quests.");
-  },
-  isConceptMuted: (id) => readMutedConcepts().has(id),
 });
 
 const tutorialCtl = createTutorial({
@@ -23329,8 +23120,7 @@ function helpModalOpen() {
 }
 
 /**
- * Coach-marks after any workshop change: follow an open card, or auto-open the
- * next Friend's-seven concept card at its first relevant moment this Quest.
+ * Follow an active tutorial or guided tour spotlight.
  */
 function refreshCoachMarks() {
   if (state.tutorialRun && tutorialCtl?.isOpen?.()) {
@@ -23338,36 +23128,10 @@ function refreshCoachMarks() {
     return;
   }
   if (guidedTour.isOpen()) {
-    if (guidedTour.mode?.() === "concept") {
-      // A concept card whose anchor vanished (dialog closed) should not float.
-      const cur = guidedTour.currentStep();
-      if (cur && !queryTourTarget(cur)) guidedTour.close();
-      else void guidedTour.refresh(tourSnapshot());
-      return;
-    }
     void guidedTour.refresh(tourSnapshot());
     return;
   }
   if (helpModalOpen()) return;
-  if (!state.mission) return;
-  const snap = tourSnapshot();
-  const card = resolveConceptCard(snap, {
-    seen: state.conceptSeen || [],
-    muted: readMutedConcepts(),
-  });
-  if (!card) return;
-  // Only count a card as shown when its anchor is actually visible on screen.
-  if (!coachTargetVisible(queryTourTarget(card))) return;
-  if (!Array.isArray(state.conceptSeen)) state.conceptSeen = [];
-  state.conceptSeen.push(card.id);
-  void guidedTour.openConcept(card, snap);
-}
-
-function coachTargetVisible(el) {
-  if (!el) return false;
-  if (el.closest?.("[hidden]")) return false;
-  const r = el.getBoundingClientRect?.();
-  return Boolean(r && r.width > 0 && r.height > 0);
 }
 
 function openRulesHelp() {
@@ -23378,6 +23142,10 @@ function openRulesHelp() {
 function openGuidedTour(ev) {
   if (state.tutorialRun && tutorialCtl?.isOpen?.()) {
     tutorialCtl.nudge();
+    return;
+  }
+  if (guidedTour.isOpen()) {
+    guidedTour.close();
     return;
   }
   const opener =
@@ -23507,13 +23275,12 @@ function bind() {
       enterRoomPlay,
       leaveRoomPlay,
       openWaitConfirm,
-      queueMarketNewsModal,
     });
   } catch (e) {
     console.error("[bind] initFriendsUi failed", e);
   }
 
-  $("#btn-mp-pass-device")?.addEventListener("click", () => mpPassDevice());
+  $("#btn-mp-workshop-end-turn")?.addEventListener("click", () => endTurn());
   $("#quest-file-input")?.addEventListener("change", async (e) => {
     const file = e.target?.files?.[0];
     e.target.value = "";
@@ -24325,6 +24092,7 @@ async function loadPredictionsFromServer() {
     /* offline / static — no bank; bulletins read as a quiet year */
   } finally {
     syncCapabilityExplorer();
+    if (state.screen === "workshop") hexWorkshop?.paint?.();
   }
 }
 
@@ -24364,6 +24132,49 @@ export function init() {
   bind();
   syncDeveloperAiTraceTab();
   initTechDrawers();
+  $("#ws-vision-mini")?.addEventListener("click", () => {
+    const layout = workshopLayoutFor(null);
+    if (isVisionStackMode()) {
+      layout?.querySelector(".vision-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      revealVisionPanel(layout);
+    }
+    setSideTab("vision");
+  });
+
+  const syncFullBriefingBtn = () => {
+    const panel = $("#crisis-briefing");
+    const btn = $("#btn-ws-full-briefing");
+    if (!btn) return;
+    const isOpen = Boolean(panel && !panel.hidden && panel.open);
+    btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    btn.classList.toggle("is-on", isOpen);
+  };
+  $("#crisis-briefing")?.addEventListener("toggle", syncFullBriefingBtn);
+  $("#btn-ws-full-briefing")?.addEventListener("click", () => {
+    const panel = $("#crisis-briefing");
+    if (!panel) return;
+    const willOpen = panel.hidden || !panel.open;
+    if (willOpen) {
+      panel.hidden = false;
+      panel.open = true;
+      const fullStory = panel.querySelector(".quest-brief-full");
+      if (fullStory && "open" in fullStory) fullStory.open = true;
+    } else {
+      panel.open = false;
+    }
+    syncFullBriefingBtn();
+  });
+  $("#btn-ws-replay-briefing")?.addEventListener("click", () => {
+    const panel = $("#crisis-briefing");
+    if (panel) panel.open = false;
+    syncFullBriefingBtn();
+    setSideTab("vision");
+    const visionRoot = $("#vision-root");
+    if (!replayQuestBriefing(visionRoot)) {
+      document.querySelector(".quest-briefing-replay")?.click();
+    }
+  });
   try {
     ensureHexWorkshop().wireDom();
   } catch (e) {

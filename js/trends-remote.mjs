@@ -280,53 +280,128 @@ async function fetchOneRemoteCatalog(url, opts = {}) {
   }
 
   const list = Array.isArray(catalog?.trends) ? catalog.trends : [];
+  const bundleFile = String(catalog?.bundle || "").trim();
 
-  for (const entry of list) {
-    const file = String(entry?.file || "").trim();
-    if (!file) {
-      errors.push({ file: String(entry?.id || "?"), error: "missing_file" });
-      continue;
-    }
-    const tileUrl = resolveTrendTileUrl(url, file);
-    let raw;
+  if (bundleFile) {
+    const bundleUrl = resolveTrendTileUrl(url, bundleFile);
     try {
-      raw = await fetchText(tileUrl, {
+      const bundleRaw = await fetchText(bundleUrl, {
         timeoutMs: opts.timeoutMs,
         local: localMode,
         force: opts.force,
         fetchImpl: opts.fetchImpl,
       });
-    } catch (e) {
-      errors.push({
-        file,
-        error:
-          e?.name === "AbortError" ? "timeout" : e?.message || "tile_fetch_failed",
-      });
-      continue;
-    }
+      const bundle = JSON.parse(bundleRaw);
+      const items = Array.isArray(bundle?.trends) ? bundle.trends : null;
+      if (items) {
+        for (const item of items) {
+          const idHint = String(item?.id || "?");
+          const file = `${idHint}.json`;
+          const v = validateCapabilityTrend(item);
+          if (!v.ok) {
+            errors.push({
+              file,
+              error: v.error || "validation_failed",
+              details: v.details,
+            });
+            continue;
+          }
+          trends.push({
+            ...v.trend,
+            file,
+            remoteUrl: resolveTrendTileUrl(url, file),
+            source: "catalog",
+          });
+        }
 
-    const parsed = parseTrendJson(raw);
-    if (!parsed.ok) {
-      errors.push({ file, error: parsed.error || "invalid_json" });
-      continue;
+        const result = {
+          url,
+          ok: true,
+          trends,
+          errors,
+          cached: false,
+        };
+        cache = {
+          url,
+          at: Date.now(),
+          ttlMs,
+          trends,
+          errors,
+          ok: true,
+        };
+        return result;
+      }
+    } catch {
+      /* fall back to per-file parallel fetch */
     }
+  }
 
-    const v = validateCapabilityTrend(parsed.value);
-    if (!v.ok) {
-      errors.push({
-        file,
-        error: v.error || "validation_failed",
-        details: v.details,
-      });
-      continue;
+  const CONCURRENCY = 8;
+  for (let i = 0; i < list.length; i += CONCURRENCY) {
+    const batch = list.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (entry) => {
+        const file = String(entry?.file || "").trim();
+        if (!file) {
+          return {
+            ok: false,
+            error: { file: String(entry?.id || "?"), error: "missing_file" },
+          };
+        }
+        const tileUrl = resolveTrendTileUrl(url, file);
+        let raw;
+        try {
+          raw = await fetchText(tileUrl, {
+            timeoutMs: opts.timeoutMs,
+            local: localMode,
+            force: opts.force,
+            fetchImpl: opts.fetchImpl,
+          });
+        } catch (e) {
+          return {
+            ok: false,
+            error: {
+              file,
+              error:
+                e?.name === "AbortError"
+                  ? "timeout"
+                  : e?.message || "tile_fetch_failed",
+            },
+          };
+        }
+        const parsed = parseTrendJson(raw);
+        if (!parsed.ok) {
+          return {
+            ok: false,
+            error: { file, error: parsed.error || "invalid_json" },
+          };
+        }
+        const v = validateCapabilityTrend(parsed.value);
+        if (!v.ok) {
+          return {
+            ok: false,
+            error: {
+              file,
+              error: v.error || "validation_failed",
+              details: v.details,
+            },
+          };
+        }
+        return {
+          ok: true,
+          trend: {
+            ...v.trend,
+            file,
+            remoteUrl: tileUrl,
+            source: "catalog",
+          },
+        };
+      })
+    );
+    for (const r of results) {
+      if (r.ok) trends.push(r.trend);
+      else errors.push(r.error);
     }
-
-    trends.push({
-      ...v.trend,
-      file,
-      remoteUrl: tileUrl,
-      source: "catalog",
-    });
   }
 
   const result = {

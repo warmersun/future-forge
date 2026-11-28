@@ -48,7 +48,7 @@ function freshSim() {
 }
 
 describe("ai_jobs quotas", () => {
-  it("allows reserve under limits and spends AP", () => {
+  it("allows thinking reserve under limits without spending Moves", () => {
     const sim = freshSim();
     const quota = createRoomAiQuotaState();
     const startAp = sim.ap;
@@ -60,14 +60,15 @@ describe("ai_jobs quotas", () => {
       { features: sim.featureFlags }
     );
     assert.equal(r.ok, true);
-    assert.equal(r.sim.ap, startAp - 1);
+    assert.equal(r.sim.ap, startAp);
     assert.equal(r.sim.turnPhase, "ai_pending");
     assert.equal(r.sim.pendingAi.mode, "chat");
+    assert.equal(r.sim.pendingAi.reservedAp, 0);
     assert.equal(quota.roomCoInventUsed, 1);
     assert.equal(quota.byPlayer.p1.session, 1);
   });
 
-  it("second thinking request of the turn is free", () => {
+  it("commitment AI modes spend 1 Move while thinking modes stay free", () => {
     const sim = freshSim();
     const quota = createRoomAiQuotaState();
     const startAp = sim.ap;
@@ -75,21 +76,22 @@ describe("ai_jobs quotas", () => {
       sim,
       quota,
       "p1",
-      { mode: "chat", reservedAp: 1, clientActionId: "c-a" },
+      { mode: "chat", reservedAp: 0, clientActionId: "c-a" },
       { features: sim.featureFlags }
     );
     assert.equal(a.ok, true);
+    assert.equal(a.sim.ap, startAp);
     Object.assign(sim, resolveRoomAiJob(a.sim, quota, "c-a").sim);
     const b = reserveRoomAiJob(
       sim,
       quota,
       "p1",
-      { mode: "chat", reservedAp: 1, clientActionId: "c-b" },
+      { mode: "judge-challenge", reservedAp: 1, clientActionId: "c-b" },
       { features: sim.featureFlags }
     );
     assert.equal(b.ok, true);
     assert.equal(b.sim.ap, startAp - 1);
-    assert.equal(b.sim.pendingAi.reservedAp, 0);
+    assert.equal(b.sim.pendingAi.reservedAp, 1);
   });
 
   it("rejects over per-player/min without spending AP", () => {
@@ -178,7 +180,7 @@ describe("ai_jobs quotas", () => {
     assert.equal(quota.poseJudgeBusy, false);
   });
 
-  it("reject refunds AP", () => {
+  it("reject refunds commitment Move", () => {
     const sim = freshSim();
     const quota = createRoomAiQuotaState();
     const startAp = sim.ap;
@@ -186,7 +188,7 @@ describe("ai_jobs quotas", () => {
       sim,
       quota,
       "p1",
-      { mode: "chat", reservedAp: 1, clientActionId: "fail1" },
+      { mode: "judge-challenge", reservedAp: 1, clientActionId: "fail1" },
       { features: sim.featureFlags }
     );
     assert.equal(r.sim.ap, startAp - 1);
@@ -195,10 +197,9 @@ describe("ai_jobs quotas", () => {
     assert.equal(rej.sim.ap, startAp);
     assert.equal(rej.sim.pendingAi, null);
     assert.equal(rej.sim.apSpentThisTurn, 0);
-    assert.equal(rej.sim.aiTaxThisTurn, false);
   });
 
-  it("reservedAp 0 without tutor still spends first thinking AP", () => {
+  it("thinking modes always cost 0 Moves even if reservedAp is passed", () => {
     const sim = freshSim();
     const quota = createRoomAiQuotaState();
     const startAp = sim.ap;
@@ -206,13 +207,12 @@ describe("ai_jobs quotas", () => {
       sim,
       quota,
       "p1",
-      { mode: "chat", reservedAp: 0, clientActionId: "sneak" },
+      { mode: "idea-sparks", reservedAp: 1, clientActionId: "sparks" },
       { features: sim.featureFlags }
     );
     assert.equal(r.ok, true);
-    assert.equal(r.sim.ap, startAp - 1);
-    assert.equal(r.sim.aiTaxThisTurn, true);
-    assert.equal(r.sim.pendingAi.reservedAp, 1);
+    assert.equal(r.sim.ap, startAp);
+    assert.equal(r.sim.pendingAi.reservedAp, 0);
   });
 
   it("idempotent clientActionId does not double-spend", () => {

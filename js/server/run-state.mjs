@@ -180,6 +180,7 @@ export function sanitizePlay(raw) {
     inventionHow: clipStr(raw.inventionHow, PLAY_STRING_MAX),
     inventionImpact: clipStr(raw.inventionImpact, PLAY_STRING_MAX),
     selectedTechIds: sanitizeTechIds(raw.selectedTechIds),
+    ...(Array.isArray(raw.freeTechIds) ? { freeTechIds: sanitizeTechIds(raw.freeTechIds) } : {}),
     learnOrder: sanitizeTechIds(raw.learnOrder),
     domainFilter: clipStr(raw.domainFilter || "all", 40) || "all",
     sideTab,
@@ -190,6 +191,15 @@ export function sanitizePlay(raw) {
     apMax: optionalInt(raw.apMax, 1, 20),
     budget: optionalInt(raw.budget, 0, 99),
     will: optionalInt(raw.will, 0, 99),
+    ...(optionalInt(raw.budgetCap, 0, 99) != null
+      ? { budgetCap: optionalInt(raw.budgetCap, 0, 99) }
+      : {}),
+    ...(optionalInt(raw.willCap, 0, 99) != null
+      ? { willCap: optionalInt(raw.willCap, 0, 99) }
+      : {}),
+    ...(optionalInt(raw.rdCount, 0, 99) != null
+      ? { rdCount: optionalInt(raw.rdCount, 0, 99) }
+      : {}),
     tutorSessionActive: Boolean(raw.tutorSessionActive),
     mission: sanitizeMissionStub(raw.mission),
     focusedTechId: sanitizeQuestId(raw.focusedTechId),

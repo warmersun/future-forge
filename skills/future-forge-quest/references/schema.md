@@ -28,7 +28,7 @@ Write for the surface, not the file. These are the real clips (`js/game.js`, `js
 | `spotlight.advanceTitle` / `advanceSummary` / `asOf` | Chip tooltip (`advanceSummary`); `whyHere` fallback | **Tutor mode only** (`isLearningModule`): the tutor names the advance after the learner has the story | 200 / 600 / 32 |
 | `aiTutorContext` | — | Conversational tutor only (never fast-eval) | 50k |
 | `rules` | HUD weather | Fast-eval `mission.rules` | body 280 |
-| `resources` | **Start ·** chip; starting wallet | Economy lab | — |
+| `resources` | **Start ·** chip; starting Moves / Budget / Goodwill capacity | — | — |
 | `trends` / `spotlightTrends` | Look Ahead charts | — | 8 series |
 | `companion` | Stage before play, catalog From-line, workshop premise | `sourceConstraint` beside `grounding` (≤500); claim and grants in `sourceInquiry` | pair table in `companion.md` |
 
@@ -42,7 +42,7 @@ Write for the surface, not the file. These are the real clips (`js/game.js`, `js
 | `kind` | `"quest"` (playable) or `"module"` (learning-path wrapper; not playable). A multi-lesson path ships as one `.ffquest`: the wrapper plus the lesson quests it lists. The kind string `quest-pack` is invalid |
 | `globalId` | Valid theme id from game `GLOBALS` / theme list. Use `other` only when the place fits none of the named themes |
 | `spotlight.techId` | One valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`) |
-| `mission.suggested` | **Spotlight-first array, 1–5 valid unique tech ids**: `[spotlight.techId, …supporting]`. This is the **For this place** shelf. Supporting ids are convergence partners (one aimed at the global meter for act two; the economy lab plans with them). Errors: `suggested_spotlight_not_first`, `suggested_too_many` (>5), `suggested_bad_id:<id>`. Duplicates fold. Supporting techs stay offstage in player prose like the spotlight |
+| `mission.suggested` | **Spotlight-first array, 1–5 valid unique tech ids**: `[spotlight.techId, …supporting]`. This is the **For this place** shelf. Supporting ids are convergence partners (one aimed at the global meter for act two). Errors: `suggested_spotlight_not_first`, `suggested_too_many` (>5), `suggested_bad_id:<id>`. Duplicates fold. Supporting techs stay offstage in player prose like the spotlight |
 | `mission.suggestedWhy` | `{ [techId]: string }` — **one entry per suggested id**, one everyday-words sentence (≤120 chars): what the family could do *here* and which crisis meter label it eases. Under each shelf card and in the crisis-hex "What could help here?" list — a reason ranks first for a hex only if it **contains that meter's label as a literal substring** (`js/tech-why.js`). Family name allowed; no product names. Unknown ids / non-strings dropped; a non-object is rejected (`suggestedWhy_not_object`). Lint: `suggestedWhy_missing:<id>`, `suggestedWhy_no_meter_label:<id>` |
 | `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **The place** and **The bigger problem** required. **Your job** optional. The UI steps paragraphs (see `brief-beats.md`) |
 | `title`, `summary`, `spotlight.encourageCopy` | `summary` is the instance, as short as clarity allows (≤420 chars, shown **whole**). `title` is the situation or the place. `encourageCopy` is the outcome. Do **not** name the spotlight or a supporting tech or a sponsor product. See `scene-prose.md` |
@@ -77,7 +77,7 @@ Each active entry:
 | `pressureRise` | Rise **per calendar year** 0–3. End turn ×1; Wait × `yearsPerTurn`. **New tiles:** local **1**, global **1**, support **0** (time does not grind trust). |
 | `winMax` | Hold at or under this after deploy 0–5 (typically **1**) |
 
-Local is more urgent than global (lint `pressure_local_not_hotter`); support rise stays 0 unless trust is meant to rot (lint `pressure_support_rises`). Untreated local 3↑1 hits 5 in 2028. A first island should not also finish the global meter (`economy.md`).
+Local is more urgent than global (lint `pressure_local_not_hotter`); support rise stays 0 unless trust is meant to rot (lint `pressure_support_rises`). Untreated local 3↑1 hits 5 in 2028. Lint `clock_immediate_collapse` catches meters that start ≥ 5 or hit 5 on turn 1.
 
 ```json
 "pressure": {
@@ -103,17 +103,18 @@ Local is more urgent than global (lint `pressure_local_not_hotter`); support ris
 
 Subset of roles → selection UI shows a **Crisis · Local · Support** chip.
 
-## Optional `resources` (starting player resources)
+## Optional `resources` (starting Moves, Budget, and Goodwill)
 
-Override invent start values for this Quest only. Omitted keys keep game defaults (`apMax: 3`, `startingBudget: 5`, `startingWill: 3`).
+Override town defaults for this Quest only (omit by default). Omitted keys keep game defaults: **3 Moves / year (`apMax: 3`)**, **5 Budget (`startingBudget: 5`, max 10)**, and **3 Goodwill (`startingWill: 3`, max 5)**.
 
-Budget is a stock (not refilled by End turn). A scored pathway that **eases** a crisis role pays **+1 Budget per newly eased role**, once per role — the lab counts this, so a two-act tile should not need `startingBudget: 8` just to afford the second island. Raise start only when the **first** tile cannot be bought. Details: **`economy.md`**.
+- **Moves (`apMax`):** Refilled on solo year advance (`+1 yr` / `+2 yrs`) or multi-user `End turn →`. Thinking, AI ideation/coaching, browsing, wiring, summoning roadblocks, and removing pathways are always free (0 Moves). Only committing a new emTech, Lobby, R&D boost (once per Pathway), submitting a Roadblock defense, or filing a fact-checked argument uses 1 Move.
+- **Budget & Goodwill (`startingBudget`, `startingWill`):** 100% reversible town capacity allocated across active pathways and R&D boosts — removing a pathway immediately returns 100% of its Budget & Goodwill. Easing a crisis role expands Budget capacity (+1, max 10); Lobby (1 Move, 0 Budget) and clearing roadblocks expand Goodwill capacity (+1, max 5).
 
 | Field | Type |
 |-------|------|
-| `apMax` | integer ≥ 0 |
-| `startingBudget` | integer ≥ 0 |
-| `startingWill` | integer ≥ 0 |
+| `apMax` | integer ≥ 1 (UI label: **Moves**) |
+| `startingBudget` | integer 0–10 (UI label: **Budget**) |
+| `startingWill` | integer 0–5 (UI label: **Goodwill**) |
 
 ```json
 "resources": {
@@ -123,7 +124,7 @@ Budget is a stock (not refilled by End turn). A scored pathway that **eases** a 
 }
 ```
 
-Selection UI shows **Start · …** when values differ from defaults. Tile top-level or under `mission`.
+Selection UI shows **Start · …** when values differ from defaults (e.g., `Start · Moves 4 · Budget 6 · Goodwill 4`). Tile top-level or under `mission`.
 
 ## Optional `rules` (local policy weather)
 
@@ -152,14 +153,6 @@ Omit when unused. 1–3 named local rules already on the books in this place (a 
 Tile top-level or under `mission`. Empty array rejected — omit the key.
 
 Side effect: any authored rule marks the Quest as having its own policy weather, which switches off the default theme backlash on the `automation` / `rogue-si` themes (`js/sim/policy-rules.js`). Author a rule because the place lives under it, not to tune backlash.
-
-Tune starting wallet and crisis numbers with the evaluator (full guide: **`economy.md`**; in the game repo also `docs/quest-economy-lab.md`):
-
-```bash
-npm run economy:quest -- path/to/quest.json
-```
-
-`--write` applies the recommended patch (resources + pressure integers + optional collapseYear) after validation. Developer UI: `/tools/quest-economy` when the game server is started with `--developer`. Target verdict: **challenging** on both solo-no-AI and solo-AI, same calendar year. `too_easy` on either solo path is a failing quest verdict too. Lint flags `startingBudget` ≥ 7 (`resources_budget_high`).
 
 ## Optional `trends` / `spotlightTrends` (Wait charts)
 
@@ -190,6 +183,10 @@ Markdown **`grounding`** stays AI SoT prose — it is **not** a substitute for c
 ],
 "spotlightTrends": ["gene-seq-cost-per-genome"]
 ```
+
+## Optional `ontology` (lanes 1–2, no model call)
+
+Omit the key and the board still fills lanes 1–2 from `grounding` plus the catalog. When present, `ontology` is an array of `{ techId, capability?, trendSummary?, milestones[] }`. Each milestone is `{ year, label, status: "reached"|"predicted", useCases[] }`. `techId` must be a catalog id. An empty array is invalid (`ontology_empty`). An unknown id is `ontology_unknown_tech:<id>`. A predicted milestone stays predicted when the quest year passes it. The wire only changes from dashed to solid.
 
 ## Optional `grounding` (AI source of truth)
 
@@ -335,7 +332,7 @@ Optional fields (`resources`, `rules`, `grounding`, learning fields, sponsor fie
 | Player text (`title`, `summary`, `scene`, `encourageCopy`, `briefMd`, beats) | `do_not_say:<field>:<word>`, `template_placeholder:<field>` |
 | `briefMd` | `brief_missing_section:place`, `brief_missing_section:strain`, `brief_cards_over_cap:<n>`, `brief_ai_clip:<chars>` |
 | `pressure` | `pressure_support_rises`, `pressure_local_not_hotter`, `pressure_missing_description:<role>` |
-| `resources` | `resources_budget_high`, `resources_present` |
+| `resources` & clock | `resources_over_cap`, `resources_spotlight_unaffordable:<techId>`, `clock_immediate_collapse:<role|years>` |
 | `grounding` | `grounding_missing`, `grounding_limits_past_clip:<offset>`, `grounding_limits_missing`, `grounding_unknown_heading:<h>` |
 | `research` | `research_sources_empty`, `research_sources_missing`, `research_source_not_https:<url>`, `research_source_placeholder:<url>` |
 | `suggestedWhy` | `suggestedWhy_missing:<id>`, `suggestedWhy_no_meter_label:<id>` |

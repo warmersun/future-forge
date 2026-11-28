@@ -83,32 +83,29 @@ describe("scrutiny", () => {
     assert.equal(r2.ok, false);
   });
 
-  it("sidestep cost equals remaining hearts", () => {
+  it("sidestep always costs 1 Move and 0 Goodwill while encounter is active", () => {
     const full = buildEncounters([ANGLES[0]], 2)[0];
     const c2 = sidestepCostForEncounter(full);
     assert.equal(c2.ok, true);
     assert.equal(c2.hearts, 2);
-    assert.equal(c2.ap, 2);
-    assert.equal(c2.will, 2);
+    assert.equal(c2.ap, 1);
+    assert.equal(c2.will, 0);
 
     const half = { ...full, hp: 1 };
     const c1 = sidestepCostForEncounter(half);
     assert.equal(c1.ok, true);
+    assert.equal(c1.hearts, 1);
     assert.equal(c1.ap, 1);
-    assert.equal(c1.will, 1);
-
-    const noWill = sidestepCostForEncounter(full, { budgetWill: false });
-    assert.equal(noWill.ap, 2);
-    assert.equal(noWill.will, 0);
+    assert.equal(c1.will, 0);
 
     const dead = sidestepCostForEncounter({ ...full, hp: 0, cleared: true });
     assert.equal(dead.ok, false);
   });
 
-  it("patch deals 1 or 2", () => {
+  it("patch deals 1 damage", () => {
     let s = { missCount: 0, pivotUsed: false, encounters: buildEncounters([ANGLES[0]], 2) };
     const id = s.encounters[0].id;
-    const r = applyPatchResult(s, id, false);
+    const r = applyPatchResult(s, id);
     assert.equal(r.damage, 1);
     assert.equal(r.scrutiny.encounters[0].hp, 1);
   });

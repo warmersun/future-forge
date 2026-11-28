@@ -20,7 +20,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 /**
  * Validate quest tiles and upsert them into the private Neon quests bucket.
  *
- *   npm run publish:quest -- <quest.json | dir> [--access open|account|paid] [--dry-run] [--skip-economy]
+ *   npm run publish:quest -- <quest.json | dir> [--access open|account|paid] [--dry-run]
  *
  * Downloads the live catalog.json, adds or replaces those ids, and uploads
  * the tiles plus the merged catalog. Other catalog entries stay. Secrets are
@@ -124,9 +124,6 @@ const { parseQuestTileJson, validateQuestDocument } = await import(
 const { lintQuestTile, formatLintWarnings } = await import(
   pathToFileURL(path.join(ROOT, "js/quest-lint.js")).href
 );
-const { evaluateQuestEconomy } = await import(
-  pathToFileURL(path.join(ROOT, "js/sim/quest-economy.js")).href
-);
 
 /** @type {object[]} */
 const documents = [];
@@ -143,14 +140,6 @@ for (const abs of collectTilePaths(args.inputs)) {
   if (lint.warnings.length) {
     for (const line of formatLintWarnings(lint.warnings)) console.error(line);
     fail(`${abs}: ${lint.warnings.length} lint warning(s)`);
-  }
-  const kind = validated.kind || validated.tile?.kind || "quest";
-  if (kind !== "module" && !args.skipEconomy) {
-    const report = evaluateQuestEconomy(validated);
-    const verdict = report.questVerdict;
-    if (verdict !== "challenging") {
-      fail(`${abs}: economy verdict ${verdict} (need challenging)`);
-    }
   }
   documents.push(parsed.value);
 }

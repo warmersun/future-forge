@@ -64,9 +64,7 @@ export async function readArchivePackage(archive) {
 }
 
 /** Injection is for offline tests and embedding; adapter factory is invoked only
- * AFTER full archive verification, strict craft lint, and both solo economy
- * paths accepting a challenging verdict in the same year (unless --force bypasses
- * economy acceptance only). Package verification
+ * AFTER full archive verification and strict craft lint. Package verification
  * alone is not authoring acceptance. Dry-run runs the same gates and never calls
  * the adapter factory.
  */
@@ -99,7 +97,7 @@ export async function main(argv, {
   if (!archive) throw new Error("Usage: node scripts/publish-quest-package.mjs <package.ffquest> [--dry-run] [--force] [--prefix path] [--adapter module.mjs]");
   const files = await readArchive(archive);
   const plan = planPublishPackage({ files, prefix, access, force });
-  if (force) stderr("Warning: --force bypasses economy acceptance only; package integrity, craft lint, access controls and immutable storage checks remain enforced.");
+  if (force) stderr("Warning: --force preserves package integrity, craft lint, access controls and immutable storage checks.");
   const adapter = dryRun ? undefined : await loadAdapter(adapterPath);
   const result = await publishPackagePlan(plan, { dryRun, adapter });
   stdout(JSON.stringify(result, null, 2));

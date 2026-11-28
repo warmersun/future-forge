@@ -178,9 +178,9 @@ export function canMintPlain(opts = {}) {
   return Boolean(opts.freeWrite) && !opts.busy;
 }
 
-/** Every argument mint costs 1 AP when Attention is on. Not the season thinking tax. */
-export function mintArgumentButtonLabel(apOn) {
-  return apOn ? "Mint argument · 1 AP" : "Mint argument";
+/** Every argument mint costs 1 Move when Moves are on. */
+export function mintArgumentButtonLabel() {
+  return "Mint argument";
 }
 
 /**
@@ -263,15 +263,10 @@ export function createHexWorkshop(api) {
   }
 
   function refreshLabel() {
-    return api.apEnabled?.() ? "Refresh · 1 AP" : "Refresh";
+    return "Refresh";
   }
 
   function mintRdLabel() {
-    const ap = api.apEnabled?.();
-    const bw = api.budgetWillEnabled?.();
-    if (ap && bw) return "Mint R&D · 1 AP · 1$";
-    if (ap) return "Mint R&D · 1 AP";
-    if (bw) return "Mint R&D · 1$";
     return "Mint R&D";
   }
 
@@ -1159,9 +1154,9 @@ export function createHexWorkshop(api) {
     }
     if (concernAnswerBusy) return;
     if (api.apEnabled?.()) {
-      const pay = api.spendChallengeAp?.() ?? api.spendIdeaAp?.();
+      const pay = api.spendChallengeAp?.();
       if (pay && pay.ok === false) {
-        api.flashToast?.("Not enough AP.");
+        api.flashToast?.(pay.reason || "No Moves left — advance the year or end your turn.");
         return;
       }
     }
@@ -2510,25 +2505,19 @@ export function createHexWorkshop(api) {
    * After calendar years jump: rise pressureBase once per year, then re-apply deltas.
    * @param {Record<string, number>} rise
    * @param {number} [years=1]
-   * @param {{ meter?: string }|null} [frontierRisk]
    */
-  function afterYearPressureRise(rise, years = 1, frontierRisk = null) {
+  function afterYearPressureRise(rise, years = 1) {
     let b = cloneBoard(board());
     if (!b.pressureBase) {
       b.pressureBase = { ...(api.getPressure?.() || {}) };
     }
     b.pressureBase = applyPressureRiseYears(b.pressureBase, rise || {}, years);
-    if (frontierRisk?.meter && b.pressureBase[frontierRisk.meter] != null) {
-      b.pressureBase[frontierRisk.meter] = clampPressure(
-        (b.pressureBase[frontierRisk.meter] || 0) + 1
-      );
-    }
     setBoard(b);
     syncPathwayScores();
   }
 
-  function afterWaitPressureRise(rise, frontierRisk = null) {
-    afterYearPressureRise(rise, 2, frontierRisk);
+  function afterWaitPressureRise(rise) {
+    afterYearPressureRise(rise, 2);
   }
 
   function schedulePathwayScore(fp) {
@@ -3270,13 +3259,6 @@ export function createHexWorkshop(api) {
     setCreateBusy("ideas", true);
     paintIdeaCardSkeletons();
     try {
-      const pay = api.spendIdeaAp?.();
-      if (pay && pay.ok === false) {
-        api.flashToast?.(pay.reason || "Not enough AP");
-        renderIdeaCards();
-        return;
-      }
-
       api.openLearnWhileIdeas?.(techId);
 
       const mission = api.getMission?.() || null;
@@ -3629,7 +3611,7 @@ export function createHexWorkshop(api) {
     }
     const pay = api.spendArgumentAp?.();
     if (pay && pay.ok === false) {
-      api.flashToast?.(pay.reason || "Not enough Attention to check that case.");
+      api.flashToast?.(pay.reason || "No Moves left — advance the year or end your turn.");
       return;
     }
     const year = api.getYear?.() || 2026;
@@ -3927,21 +3909,6 @@ export function createHexWorkshop(api) {
     const remaining = remainingConcernAngles(b);
     if (!remaining.length) return b;
 
-    const isFirstDraw = concernAnglesOnBoard(b).length === 0;
-    let paidFirstSummon = false;
-    let paymentRefund = null;
-    if (isFirstDraw && api.apEnabled?.()) {
-      const pay = api.spendFirstSummonAp?.();
-      if (pay && pay.ok === false) {
-        api.flashToast?.(pay.reason || "No AP — End Turn or Wait first.", {
-          resource: "ap",
-        });
-        return board();
-      }
-      paidFirstSummon = Boolean(pay && pay.ok !== false);
-      paymentRefund = pay?.refund;
-    }
-
     const pickAngle =
       remaining.length === 1
         ? remaining[0]
@@ -3952,13 +3919,7 @@ export function createHexWorkshop(api) {
         label: CONCERN_LABELS[pickAngle] || pickAngle,
       };
 
-    const job = {};
-    job.refund = () => {
-      if (!paidFirstSummon) return;
-      paidFirstSummon = false;
-      if (paymentRefund) paymentRefund();
-      else if (sameRun()) api.refundFirstSummonAp?.();
-    };
+    const job = { refund: () => {} };
     summonJob = job;
     setCreateBusy("summon", true);
     api.setAiBusy?.(true, { summon: true });
@@ -4155,7 +4116,6 @@ export function createHexWorkshop(api) {
         return board();
       }
       placedOk = true;
-      paidFirstSummon = false;
       setBoard(placed.board);
       const posed = concernPoseText(placed.board?.tiles?.[`concern-${pickAngle}`]);
       logChallengerConcern(

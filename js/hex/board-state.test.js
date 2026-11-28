@@ -24,6 +24,7 @@ import {
   createEmptyBoard,
   placedTechEconomy,
   stackPlacementPlan,
+  stackBatchPlacementGate,
   stackBillingDelta,
   seedCrisisTiles,
   boardCrisisRoles,
@@ -1236,6 +1237,58 @@ test("a collector tile is free to place and does not prepay its emTech", () => {
   assert.deepEqual(delta.newlyPaid, ["drones"]);
   assert.deepEqual(delta.freeAdds, []);
   assert.deepEqual(delta.addedIds, []);
+});
+
+test("a batch of new techs is priced together, not once per full wallet", () => {
+  const board = createEmptyBoard();
+  const tile = (techId) => ({
+    id: "pending",
+    kind: "invention",
+    techId,
+    q: null,
+    r: null,
+    origin: "pathway",
+  });
+  const ctx = {
+    selectedTechIds: [],
+    board,
+    stackCap: 6,
+    apEnabled: false,
+    budgetWillEnabled: true,
+    spendableAp: 0,
+    spendableBudget: 3,
+    spendableWill: 5,
+    costFor: () => ({ budget: 2, will: 1 }),
+  };
+  assert.equal(stackBatchPlacementGate([tile("drones")], ctx).ok, true);
+  const both = stackBatchPlacementGate([tile("drones"), tile("battery")], ctx);
+  assert.equal(both.ok, false);
+  assert.equal(both.error, "no_budget");
+  assert.equal(both.techId, "battery");
+
+  const oneSlot = stackBatchPlacementGate([tile("drones"), tile("battery")], {
+    ...ctx,
+    selectedTechIds: ["a", "b", "c", "d", "e"],
+    stackCap: 6,
+    spendableBudget: 20,
+  });
+  assert.equal(oneSlot.ok, false);
+  assert.equal(oneSlot.error, "stack full");
+  assert.equal(oneSlot.techId, "battery");
+
+  const twice = stackBatchPlacementGate([tile("drones"), tile("drones")], ctx);
+  assert.equal(twice.ok, true);
+
+  const collector = {
+    ...tile("drones"),
+    origin: "collector",
+    collectorCardId: "11111111-1111-4111-8111-111111111111",
+  };
+  const afterCollector = stackBatchPlacementGate([collector, tile("drones")], {
+    ...ctx,
+    spendableBudget: 2,
+  });
+  assert.equal(afterCollector.ok, true);
 });
 
 test("a plain invention has no tech, keeps polarity, and takes no stack slot", () => {
