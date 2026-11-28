@@ -1027,8 +1027,7 @@ export function createPathwayWorkshop(api) {
       draftHow,
       argumentModalOpen,
       argumentBusy,
-      voiceSupported: Boolean(api.toggleVoice),
-      voiceActive: Boolean(api.isVoiceActive?.()),
+      coInventorSupported: Boolean(api.openCoInventor),
       selectedUseCaseIds,
       enforceWorlds: enforceWorlds(),
       catalog: TECHS.map((tech) => {
@@ -4504,9 +4503,8 @@ export function createPathwayWorkshop(api) {
       return;
     } else if (action === "toggle-write") {
       writeOpen = !writeOpen;
-    } else if (action === "toggle-voice") {
-      api.toggleVoice?.();
-      paint();
+    } else if (action === "ask-co-inventor") {
+      api.openCoInventor?.();
       return;
     } else if (action === "ask-ideas") {
       askForIdeas({ refresh: false }).catch((e) => console.warn(e));

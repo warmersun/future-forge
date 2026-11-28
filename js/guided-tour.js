@@ -409,8 +409,8 @@ export function resolveTourStep(raw) {
     if (s.writeOpen && s.draftHowLength >= MINT_HOW_MIN) {
       return step(
         "L4",
-        "Form Pathway",
-        `Click Form Pathway to place your ${techName(s)} idea into Lane 3.`,
+        "Add Invention",
+        `Click Add Invention to place your ${techName(s)} idea into Lane 3.`,
         sel('[data-action="write-pathway"]', "#ontology-lane-pathway")
       );
     }

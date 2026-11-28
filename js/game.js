@@ -1929,14 +1929,13 @@ function ensureHexWorkshop() {
     openLearnTech: (techId) => {
       if (techId) openTechModal(String(techId));
     },
-    toggleVoice: () => {
+    openCoInventor: () => {
       revealVisionPanel(workshopLayoutFor(null));
-      if (isCoInventorTabMode()) setSideTab("coinventor");
+      if (isCoInventorTabMode() || visionPaneAway()) setSideTab("coinventor");
       else setCoInventorCollapsed(false);
-      document.querySelector("#co-voice")?.click();
+      ensureCoInventor();
+      $("#co-inventor-root")?.querySelector?.("textarea, input")?.focus?.();
     },
-    isVoiceActive: () =>
-      document.querySelector("#co-voice")?.getAttribute("aria-pressed") === "true",
     enforceWorlds: () => GAME.enforceWorldDocking !== false,
     getRunWorld: () => state.runWorld,
     getRunId: () => state.cloudRunId || state.runWorld,

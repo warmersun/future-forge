@@ -663,8 +663,7 @@ export function renderOntologyBoard(view) {
     createBusy: Boolean(view?.createBusy),
     writeOpen: Boolean(view?.writeOpen),
     draftHow: view?.draftHow || "",
-    voiceActive: Boolean(view?.voiceActive),
-    voiceSupported: Boolean(view?.voiceSupported),
+    coInventorSupported: Boolean(view?.coInventorSupported),
   });
 
   const renderPathwayCardForLane = (pw) =>
@@ -1265,8 +1264,8 @@ function renderPathwayComposer(opts) {
           <textarea class="ontology-textarea" data-role="draft-how" rows="3" maxlength="2000" placeholder="Who does what, with what hardware/workflow, here this year…">${escapeHtml(opts.draftHow || "")}</textarea>
         </label>
         <div class="ontology-inline-actions">
-          <button type="button" class="btn btn-primary btn-sm" data-action="write-pathway">Form Pathway</button>
-          ${opts.voiceSupported ? `<button type="button" class="btn btn-secondary btn-sm${opts.voiceActive ? " is-voice-live" : ""}" data-action="toggle-voice" title="Talk through your idea with the AI co-inventor">🎙️ ${opts.voiceActive ? "Listening…" : "Speak"}</button>` : ""}
+          <button type="button" class="btn btn-primary btn-sm" data-action="write-pathway">Add Invention</button>
+          ${opts.coInventorSupported ? `<button type="button" class="btn btn-secondary btn-sm" data-action="ask-co-inventor" title="Open the AI Co-Inventor to brainstorm your idea">💬 Ask Co-Inventor</button>` : ""}
           <button type="button" class="btn btn-ghost btn-sm" data-action="toggle-write">Close</button>
         </div>
       </div>`
@@ -1278,7 +1277,7 @@ function renderPathwayComposer(opts) {
       <button type="button" class="btn btn-secondary btn-sm${opts.createBusy ? " is-busy" : ""}" id="btn-ask-ideas" data-action="ask-ideas" ${!opts.focusedTechId || opts.createBusy ? "disabled" : ""}>
         ${opts.createBusy ? `<span class="ontology-spinner" aria-hidden="true"></span> Generating ideas…` : `✨ Ask for ideas${opts.focusedTechName ? ` (${escapeHtml(opts.focusedTechName)})` : ""}`}
       </button>
-      <button type="button" class="btn btn-ghost btn-sm${opts.writeOpen ? " is-on" : ""}" data-action="toggle-write">✍️ Write${opts.voiceSupported ? " / 🎙️" : ""}</button>
+      <button type="button" class="btn btn-ghost btn-sm${opts.writeOpen ? " is-on" : ""}" data-action="toggle-write">✍️ Write</button>
     </div>
     ${opts.createBusy ? `<div class="ontology-busy-banner" role="status"><span class="ontology-spinner" aria-hidden="true"></span> Drafting 3 local ideas &amp; card art…</div>` : ""}
     ${opts.selectedCount ? `<p class="ontology-selected-hint">✓ ${opts.selectedCount} use case${opts.selectedCount === 1 ? "" : "s"} linked into your next invention</p>` : ""}
@@ -2570,7 +2569,7 @@ function renderWorkbenchDiamond2(
         <div class="wb-prompt-actions">
           <button type="button" class="btn btn-primary btn-sm" data-action="wb-add-player-draft">+ Save Idea</button>
           <button type="button" class="btn btn-ghost btn-sm" data-action="wb-add-human-draft" title="Create a Human Bridge idea card">+ Human Idea</button>
-          ${view?.voiceSupported ? `<button type="button" class="btn btn-ghost btn-sm${view?.voiceActive ? " is-voice-live" : ""}" data-action="toggle-voice" title="Talk through this lens with the AI co-inventor">🎙️</button>` : ""}
+          ${view?.coInventorSupported ? `<button type="button" class="btn btn-ghost btn-sm" data-action="ask-co-inventor" title="Open the AI Co-Inventor to brainstorm this lens">💬 Ask Co-Inventor</button>` : ""}
           <span class="wb-actions-sep"></span>
           ${aiDealBtns}
         </div>

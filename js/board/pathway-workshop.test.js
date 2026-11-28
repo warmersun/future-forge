@@ -2332,4 +2332,49 @@ describe("pathway workshop", () => {
     assert.doesNotMatch(pickerHtml, /data-action="learn-tech"/);
     assert.doesNotMatch(pickerHtml, /📖/);
   });
+
+  it("renders Add Invention and Ask Co-Inventor labels without microphone emojis and opens Co-Inventor on click", () => {
+    let opened = 0;
+    const listeners = {};
+    const customRoot = {
+      innerHTML: "",
+      addEventListener(type, fn) {
+        listeners[type] = fn;
+      },
+      querySelector() { return null; },
+      querySelectorAll() { return []; },
+      contains() { return true; },
+    };
+    const h = harness({
+      api: {
+        $: (sel) => (sel === "#ontology-board" ? customRoot : null),
+        openCoInventor: () => { opened += 1; },
+      },
+    });
+    h.ws.seedFromMission({ place: "Paddy Step Wells", pressure: { "Clean Water": 3 }, spotlight: { techId: "drones" } });
+    assert.match(customRoot.innerHTML, /data-action="toggle-write">✍️ Write</);
+    assert.doesNotMatch(customRoot.innerHTML, /🎙️/);
+
+    // Open the write box and verify labels + Ask Co-Inventor action
+    const makeBtn = (action) => ({
+      getAttribute: (k) => (k === "data-action" ? action : null),
+      closest: (sel) => (sel === "[data-action]" ? { getAttribute: (k) => (k === "data-action" ? action : null) } : null),
+    });
+    listeners.click({ target: makeBtn("toggle-write") });
+    assert.match(customRoot.innerHTML, /data-action="write-pathway">Add Invention</);
+    assert.match(customRoot.innerHTML, /data-action="ask-co-inventor"[^>]*>💬 Ask Co-Inventor</);
+    assert.doesNotMatch(customRoot.innerHTML, /Form Pathway/);
+    assert.doesNotMatch(customRoot.innerHTML, /🎙️/);
+
+    listeners.click({ target: makeBtn("ask-co-inventor") });
+    assert.equal(opened, 1);
+
+    // Open Workbench (Solution diamond) and verify Ask Co-Inventor label
+    h.ws.openWorkbench();
+    h.ws.setWorkbenchDiamond("solution");
+    assert.match(customRoot.innerHTML, /data-action="ask-co-inventor"[^>]*>💬 Ask Co-Inventor</);
+    assert.doesNotMatch(customRoot.innerHTML, /🎙️/);
+    listeners.click({ target: makeBtn("ask-co-inventor") });
+    assert.equal(opened, 2);
+  });
 });

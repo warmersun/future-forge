@@ -333,7 +333,7 @@ describe("resolveTourStep", () => {
       })
     );
     assert.equal(l4Write.id, "L4");
-    assert.equal(l4Write.title, "Form Pathway");
+    assert.equal(l4Write.title, "Add Invention");
     assert.equal(l4Write.target.selector, '[data-action="write-pathway"]');
 
     const l4Ap = resolveTourStep(
